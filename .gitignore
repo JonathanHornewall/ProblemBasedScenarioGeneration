@@ -1,0 +1,31 @@
+# Environments
+Manifest.toml
+env/conda/conda_env/
+
+# LaTeX intermediate files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+
+# Output PDF
+*.pdf
+
+# OS and editor metadata
+*.DS_Store
+*~
+*.swp
+.vscode/
+.idea/

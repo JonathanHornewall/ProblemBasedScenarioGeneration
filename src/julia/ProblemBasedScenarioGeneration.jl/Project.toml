@@ -1,0 +1,12 @@
+name = "ProblemBasedScenarioGeneration"
+uuid = "1798cd49-b424-40cc-af70-c698faff1a67"
+authors = ["Jonathan <jonathan.hornevall@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[compat]
+Einsum = "0.4.1"
+LinearAlgebra = "1.11.0"
