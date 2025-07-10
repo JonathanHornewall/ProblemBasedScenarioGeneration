@@ -5,6 +5,11 @@ abstract type LP end
 
 """
 Concrete type representing a linear program in canonical form
+This type is used to represent linear programs in the form:
+    min c'x
+    subject to Ax = b
+    x >= 0
+where A is the constraint matrix, b is the right-hand side vector, and c is the cost vector.
 """
 mutable struct CanLP{A<:AbstractMatrix, B<:AbstractVector, C<:AbstractVector} <: LP
     constraint_matrix::A  # Matrix of constraints (A)
