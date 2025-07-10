@@ -121,7 +121,7 @@ Derivative of optimal solution with respect to constraint matrix
 function diff_opt_A(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix::AbstractMatrix=[], solver=standard_solver)
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_solution, KKT_matrix, solver)
     n = size(instance.linear_program.constraint_matrix, 2)
-    n = size(instance.linear_program.constraint_matrix, 1)
+    m = size(instance.linear_program.constraint_matrix, 1)
     D_A_KKT = diff_KKT_A(instance, optimal_state, optimal_dual)
     D_A_KKT=reshape(A, n+m, :)
     D_A = - KKT_matrix \ D_A_KKT
