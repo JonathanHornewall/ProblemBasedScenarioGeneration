@@ -1,32 +1,46 @@
+
+# Abstract type for Linear Programs
 abstract type LP end
 
+
+# Canonical Linear Program structure
 mutable struct CanLP{A<:AbstractMatrix, B<:AbstractVector, C<:AbstractVector} <: LP
-    constraint_matrix::A
-    constraint_vector::B
-    cost_vector::C
+    constraint_matrix::A  # Matrix of constraints (A)
+    constraint_vector::B  # Right-hand side vector (b)
+    cost_vector::C        # Cost vector (c)
 end
 
+
+# Constructor for CanLP with dimension checks
 function CanLP(constraint_matrix::A, constraint_vector::B, cost_vector::C) where {A<:AbstractMatrix, B<:AbstractVector, C<:AbstractVector}
     size(constraint_matrix, 2) == length(cost_vector) || error("Mismatched cost vector size")
     size(constraint_matrix, 1) == length(constraint_vector) || error("Mismatched constraint vector size")
     new{A, B, C}(constraint_matrix, constraint_vector, cost_vector)
 end
 
+
+# Structure for Log-Barrier Canonical LP
 struct LogBarCanLP{U <: Real}
-    linear_program::LP
-    regularization_parameter::U
+    linear_program::LP              # Underlying linear program
+    regularization_parameter::U     # Log-barrier regularization parameter (mu)
 end
 
+
+# Compute the KKT matrix for the log-barrier LP
 function diff_KKT_Y(instance::LogBarCanLP, state)
     # Rename variables for notational convenience
     x = state
     A = instance.linear_program.constraint_matrix
     mu = instance.regularization_parameter
 
+    # D is the diagonal of log-barrier Hessian
     D = [mu/y^2 for y in x]
+    # KKT matrix: [D  A'; A  0]
     K = Symmetric([D  A'; A  zeros(eltype(D), size(A,1), size(A,1))])
 end
 
+
+# Compute the derivative of the KKT matrix with respect to A
 function diff_KKT_A(instance::LogBarCanLP, state, dual_state)
     n = length(instance.linear_program.cost_vector)
     m = length(instance.linear_program.constraint_vector)
@@ -35,36 +49,46 @@ function diff_KKT_A(instance::LogBarCanLP, state, dual_state)
     D_A = zeros(Float64, n+m, m, n)
     for j in 1:m
         for k in 1:n
-            D_A[k,j,k] = lambda[j]
-            D_A[n+j,j,k] = x[k]
+            D_A[k,j,k] = lambda[j]      # Derivative wrt A in primal block
+            D_A[n+j,j,k] = x[k]         # Derivative wrt A in dual block
         end
+    end
     return D_A
 end
 
+
+# Compute the derivative of the KKT matrix with respect to b
 function diff_KKT_b(instance::LogBarCanLP, state, dual_state)
     n = length(instance.linear_program.cost_vector)
     m = length(instance.linear_program.constraint_vector)
     D_b = zeros(Float64, n+m, m)
     for j in 1:m
+        # Fill in the derivative structure for b
         D_b[:,j][zeros(n), -ones(m)]
     end
     return D_b
 end
 
+
+# Compute the derivative of the KKT matrix with respect to c
 function diff_KKT_c(instance::LogBarCanLP, state, dual_state)
     n = length(instance.linear_program.cost_vector)
     m = length(instance.linear_program.constraint_vector)
     D_b = zeros(Float64, n+m, n)
     for j in 1:n
+        # Fill in the derivative structure for c
         D_b[:,j][ones(n), zeros(m)]
     return D_c
     end
 end
 
+
+# Compute and cache optimal state, dual, and KKT matrix
 function diff_cache_computation(instance, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=standard_solver)
     if optimal_state == [] 
-            optimal_state = solve(solver, instance)
-            # Here you add the logic for computing the optimal dual
+        optimal_state = solve(solver, instance)
+        # Here you add the logic for computing the optimal dual
+    end
     if KKT_matrix == []
         KKT_matrix = diff_KKT_Y(instance, optimal_solution)
         KKT_matrix = ldlt(KKT_matrix)  # Perform factorization   
@@ -72,6 +96,8 @@ function diff_cache_computation(instance, optimal_state=[], optimal_dual=[], KKT
     return optimal_state, optimal_dual, KKT_matrix
 end
 
+
+# Compute the derivative of the optimal solution with respect to A
 function diff_opt_A(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix::AbstractMatrix=[], solver=standard_solver)
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_solution, KKT_matrix, solver)
     n = size(instance.linear_program.constraint_matrix, 2)
@@ -82,9 +108,10 @@ function diff_opt_A(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KK
     D_A=reshape(D_A, n+m, m, n)
     D_A = D_A[1:n, :]  # To get the derivative for the optimal solution specifically, ignoring the dual
     return D_A
-    end
 end
 
+
+# Compute the derivative of the optimal solution with respect to b
 function diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=standard_solver)
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_state, optimal_dual, KKT_matrix, solver)
     D_b_KKT = diff_KKT_b(instance, optimal_state, optimal_dual)
@@ -93,6 +120,8 @@ function diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KK
     return D_b
 end
 
+
+# Compute the derivative of the optimal solution with respect to c
 function diff_opt_c(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=standard_solver)
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_state, optimal_dual, KKT_matrix, solver)
     D_c_KKT = diff_KKT_c(instance, optimal_state, optimal_dual)
@@ -101,6 +130,8 @@ function diff_opt_c(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KK
     return D_c
 end
 
+
+# Compute the derivatives of the optimal solution with respect to A, b, and c
 function diff_opt(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=standard_solver, params=["A", "b", "c"])
     if !all(x -> x in ["A", "b", "c"], params)
         error("Can not differentiate with respect to parameter ", params)
@@ -113,14 +144,13 @@ function diff_opt(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_
         
     if "A" in params
         D_A = diff_opt_A(instance::LogBarCanLP, optimal_solution, KKT_matrix)
-        end
+    end
 
     if " b" in params
         D_b = diff_opt_b(instance::LogBarCanLP, optimal_state, optimal_dual, KKT_matrix)
-        end
+    end
     if "c" in params
         D_c = diff_opt_c(instance::LogBarCanLP, optimal_state, optimal_dual, KKT_matrix)
-        end
     end
     return D_A, D_b, D_c
 end
