@@ -3,61 +3,41 @@
 
 include("parameters.jl")
 
+I = 20 # number of resources
+J = 30 # number of clients 
+
+#define c
 c = cz
 
-I = 20
-J = 30
+# define q
+q = zeros(J + I*J + I + J)
+q[1:J] .= qw[:]
+
+#define W
+W = zeros(I+J, J + I*J + I + J)
+
+for i in 1:I
+    for j in 1:J
+        W[i,J + J*(i-1) +j] = 1
+    end
+    W[i, J + I*J + i] = 1
+end 
+
+for j in 1:J
+    W[j,j] = 1
+    for i in 1:I
+        W[j,J + J*(i-1) +j] = μᵢⱼ[i,j]
+    end
+    W[j, J + I*J + I + j] = -1
+end 
+
+#define T
+T = zeros(I+J,I)
+for i in 1:I
+    T[i,i] = -ρᵢ[i]
+end
 
 function second_stage_problem(ξ)
-
-    # define q
-    q = zeros(J + I*J + I + J)
-    q[1:J] .= qw[:]
-
-    #define W
-    W = zeros(I+J, J + I*J + I + J)
-
-    for i in 1:I
-        for j in 1:J
-            W[i,J + J*(i-1) +j] = 1
-        end
-        W[i, J + I*J + i] = 1
-    end 
-
-    for j in 1:J
-        W[j,j] = 1
-        for i in 1:I
-            W[j,J + J*(i-1) +j] = μᵢⱼ[i,j]
-        end
-        W[j, J + I*J + I + j] = -1
-    end 
-
-    #define h
-    h = zeros(I+J)
-    h[I+1:I+J] .= ξ
-
-    #define T
-    T = zeros(I+J,I)
-    for i in 1:I
-        T[i,i] = -ρᵢ[i]
-    end
-
+    h = vcat(zeros(I), ξ) # avoid in space mutations that are not allowed if we want to derivate using Zygote 
     return q, W, h, T
 end
-
-function second_stage_derivatives(ξ)
-    # compute the derivatives of the second stage matrices with respect to the scenario ξ
-
-    Dq = zeros(J + I*J + I + J,J)
-    DW = zeros(I+J, J + I*J + I + J,J)
-
-    Dh = zeros(I+J,J)
-    for j in 1:J
-        Dh[I+j,j] = 1
-    end
-
-    DT = zeros(I+J,I,J)
-
-    return Dq, DW, Dh, DT
-end
-    

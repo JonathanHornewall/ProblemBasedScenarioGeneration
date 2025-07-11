@@ -1,5 +1,5 @@
 # Initialise momentum 
-opt_state = Flux.setup(Momentum(0.01, 0.9), model)
+opt_state = Flux.setup(Adam(0.01, 0.9), model)
 
 for data in train_set
   grads = # grads with respect to w 
