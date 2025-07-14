@@ -11,8 +11,6 @@ struct TwoStageSLP{T<:Real, M<:AbstractMatrix{T}, V<:AbstractVector{T}}
     qs :: Vector{V}
 end
 
-
-
 """
     recourse_derivative_canLP(s1_decision, coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=standard_solver)
 Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
@@ -82,7 +80,7 @@ end
     solver=standard_solver, projection=false) where P
 Generates a large, extensive form of a two stage stochastic linear program in canonical form, with log barrier regularization.
 """
-function extensive_form_2s_can_log_lp(two_slp::TwoStageSLP, regularization_parameter)
+function extensive_form_canonical(two_slp::TwoStageSLP)
     s1_constraint_matrix = two_slp.A1
     s1_constraint_vector = two_slp.b1
     s1_cost_vector = two_slp.c1
@@ -113,7 +111,7 @@ function extensive_form_2s_can_log_lp(two_slp::TwoStageSLP, regularization_param
         vcat(A_e, matrix_row)
     end
 
-    extensive_form_LP = LogBarCanLP(CanLP(A_e, b_e, c_e), regularization_parameter)
+    extensive_form_LP = CanLP(A_e, b_e, c_e)
     return extensive_form_LP
 end
 
@@ -121,5 +119,25 @@ end
     D_xiY(optimal_state, optimal_dual, )
 Derivative of optimal first-stage decision with respect to the scenario parameters. Leverages an extensive form formulation of the optimization problem.
 """
-function D_xiY(optimal_state, optimal_dual, )
+function D_xiY(two_slp::TwoStageSLP, regularization_parameter, solver=standard_solver)
+# Compute derivatives for extensive form problem
+extensive_prob = extensive_form_canonical(two_slp)
+extensive_prob_regularized = LogBarCanLP(extensive_prob, regularization_parameter)
+D_A, D_b, D_c = diff_opt(extensive_prob_regularized)
+
+# Recover derivatives with respect to relevant scenarios
+s1_constraint_matrix = two_slp.A1
+s1_constraint_vector = two_slp.b1
+s1_cost_vector = two_slp.c1
+coupling_matrices = two_slp.Ts
+s2_constraint_matrices = two_slp.Ws 
+s2_constraint_vectors = two_slp.hs
+s2_cost_vectors = two_slp.qs
+
+S = length(coupling_matrices)  # number of scenarios
+n_1 = length(s1_cost_vector)  # dimension of first stage decision
+m_1  = size(s1_constraint_matrix, 1)  # number of first stage constraints
+n_2 = size(s2_cost_vectors[1])  # dimension of second stage decision
+m_2 = size(s2_constraint_matrices[1], 1)  # number of second stage constraints
+
 end
