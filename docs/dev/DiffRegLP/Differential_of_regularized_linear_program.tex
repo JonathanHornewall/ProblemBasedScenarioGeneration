@@ -1,0 +1,571 @@
+\documentclass[12pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,mathtools}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{enumerate}
+%\usepackage{cite}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage[backend=biber,style=authoryear]{biblatex}
+\usepackage{comment}
+\usepackage{amsthm}
+
+
+\addbibresource{../../../references.bib}
+%Examples
+%\renewcommand{\vec}[1]{\boldsymbol{#1}}
+%\newcommand{\dd}[1]{\mathrm{d}#1}
+%\newcommand{\der}[2]{\frac{\mathrm{d}#1}{\mathrm{d}#2}}
+%\renewcommand{\Re}[1]{\operatorname{Re}#1}
+%\renewcommand{\Im}[1]{\operatorname{Im}#1}
+%\newcommand{\diff}{\mathop{}\!d}
+%\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1, #2}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
+\DeclareMathOperator{\grad}{\mathop{\nabla}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\laplace}{\Delta}
+\newcommand{\dotprod}[2]{#1\mathbin{\cdot}#2}
+\newcommand{\matmul}[2]{#1 #2}
+\newcommand{\rv}[1]{\textbf{\MakeUppercase{#1}}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\norm}[1]{\ensuremath{\left\lvert\left\lvert #1 \right\rvert\right\rvert}}
+
+\newcommand{\pa}[1]{\left( #1 \right)}
+\newcommand{\bpa}[1]{\big( #1 \big)}
+\newcommand{\bbpa}[1]{\bigg( #1 \bigg)}
+\newcommand{\Bpa}[1]{\Bigg( #1 \Bigg)}
+
+\newcommand{\br}[1]{\left[ #1 \right]}
+\newcommand{\bbr}[1]{\big[ #1 \big]}
+\newcommand{\bbbr}[1]{\bigg[ #1 \bigg]}
+\newcommand{\Bbr}[1]{\Big[ #1 \Big]}
+
+\newcommand{\st}{\text{s.t.}}
+
+\newcommand{\nb}[3]{
+		{\colorbox{#2}{\bfseries\sffamily\tiny\textcolor{white}{#1}}}
+		{\textcolor{#2}{\text{$\blacktriangleright$}{\textcolor{#2}{#3}}\text{$\blacktriangleleft$}}}}
+\newcommand{\vl}[1]{\nb{VL}{blue}{#1}}
+\newcommand{\jh}[1]{\nb{JH}{violet}{#1}}
+\newcommand{\sg}[1]{\nb{SG}{orange}{#1}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{remark}{Remark}
+
+\title{Differentiability of the optimal solution of log-barrier regularized linear programs}
+
+\begin{document}
+
+\maketitle
+
+In this document we derive closed-form expressions for the derivatives of the optimal solution 
+of a log-barrier regularized linear program, viewed as a function of its constraint matrix $A$, 
+its constraint vector $b$ and its cost vector $c$. 
+We consider both the case of a standard form and canonical form log-barrier regularized linear program.
+Our strategy is to leverage first-order conditions of optimality
+along with the implicit function theorem, to obtain the desired closed form
+expressions in terms of derivatives of the log-barrier at the optimum with respect to $A$, $b$ 
+and the decision variable $x$.
+For both the standard form and canonical form case, our only assumption on the linear programs is that 
+optimal solution should exist for the considered choice of parameters $c, b , A$, and that the 
+constraint matrix $A$ has full row-rank in the standard form case and column-rank in the canonical form case.
+
+The derivation strategy is equally valid for the more general case of log-barrier 
+regularized convex programs, as well as for entropic barrier and exponential penalty 
+regularizations.
+
+Finally, we discuss the application of these results for the specific case of a two-stage stochastic 
+linear program in extensive form with log-barrier regularization.
+
+\section{Standard form linear program}
+\label{sec::Standard_form_linear_program}
+\newcommand{\xopt}{\hat{x}(A,b,c)}
+
+\begin{theorem}[Derivatives for standard form program]
+    \label{thm::Std_form_derivatives}
+Consider a log-barrier regularized linear program in standard form with constraint matrix $A \in \R^{m \times n}$, 
+constraint vector $b \in \R^{m}$ and cost vector $c \in \R^{n}$ 
+\begin{align}
+    \label{prob::Log_bar_reg_LP_std}
+    \min_x \bpa{\dotprod{c}{x} + \mu V(x, b, A)}
+\end{align}
+
+where $V(x,b,A)$ denotes the log-barrier map 
+
+\begin{align}
+    \label{eq::log_barrier_map}
+    V(x,b,A) = -\sum_l\log\pa{b_l - \dotprod{A_l}{x}} 
+\end{align}
+
+and $\mu \in \R^+$ is a positive real parameter.
+
+Assume that log-barrier regularized linear program (\ref{prob::Log_bar_reg_LP_std}) has a solution, 
+and that the constraint matrix $A$ has full row-rank. Then the optimal solution map
+
+\begin{align}
+    \label{eq::optimal_solution_map}
+    \xopt = \argmin_x \bpa{\dotprod{c}{x} + \mu V(x, b, A)}
+\end{align}
+
+will be well defined in a neighborhood of $(\R^{m\times n} \times \R^{m} \times \R^{n} )$ around  $(A, b, c)$,
+with partial derivatives given by
+
+\begin{subequations}
+\label{eq::Main_result}
+
+
+\begin{align}
+    \label{eq::std_constraint_matrix_derivative}
+    & \grad_A \xopt = - \bbr{\grad_{x,x}V\bpa{\xopt, A, b}}^{-1}\grad_{x, A}V\bpa{\xopt, A, b} \\
+    \label{eq::std_constraint_vector_derivative}
+    & \grad_b \xopt = - \bbr{\grad_{x,x}V\bpa{\xopt, A, b}}^{-1} \grad_{x, b}V\bpa{\xopt, A, b}\\
+    \label{eq::std_cost_vector_derivative}
+    & \grad_c \xopt = -  \bbr{\grad_{x,x}V(\xopt, A, b)}^{-1}
+\end{align}
+\end{subequations}
+
+where 
+
+\begin{subequations}
+\label{eq::log_bar_derivatives}
+\begin{align}
+    \label{eq::log_bar_der_x_x}
+    &\br{\grad_{x,x} V(x, A, b)}_{ij} = \frac{\partial^2 V(x, A, b)}{\partial x_i \partial x_j} 
+    = \sum_l \frac{A_{li}A_{lj}}{\pa{b_l - \dotprod{A_l}{x}}^2} \\
+    \label{eq::log_bar_der_x_A}
+    &\br{\grad_{A,x} V(x, A, b)}_{ijk}
+    = \frac{\partial^2 V(x, A, b)}{\partial x_i \partial A_{jk}} 
+    = \frac{\delta_{ik}}{(b_j-\dotprod{A_{j}}{x})} + \frac{A_{ji}x_k}{\pa{b_j - \dotprod{A_j}{x}}^2} \\
+    \label{eq::log_bar_der_x_b}
+    & \br{\grad_{x,b} V(x, A, b)}_{ij} 
+    = \frac{\partial^2 V(x, A, b)}{\partial x_i \partial b_j}
+    = -\frac{A_{ji}}{b_j-\dotprod{A_j}{x}}
+\end{align}
+\end{subequations}
+
+\end{theorem}
+\begin{proof}
+    By first-order conditions of optimality, any solution $\hat x$ of problem (\ref{prob::Log_bar_reg_LP_std}), 
+    will fulfill the following equation:
+
+    \begin{align}
+    \label{eq::first_order_condition}
+    c + \mu \grad_x V\bpa{\xopt, A, b} = 0
+    \end{align}
+
+    Clearly, the l.h.s. of the above equation (\ref{eq::first_order_condition}) is differentiable with respect to
+    $A, b$ and $c$. 
+    Additionally, its derivative with respect to $x$ is given by 
+    
+    \begin{align}
+        \label{eq::der_x_lhs_first_order}
+        \nabla_x(c + \mu \grad_x V\bpa{\xopt, A, b}) =  \mu \nabla^2_x V(x, A, b)
+    \end{align}
+
+    A classical result guarantees that if $A$ has full row-rank, the Hessian $\mu \nabla^2_x V(x, A, b)$ is positive definite, hence invertible 
+    (we refer to the appendix (\ref{appendix:: Strict_convexity}) for a simple demonstration).
+    All the conditions are met for us to apply the implicit function theorem (\ref{appendix:: Implicit_function_theorem}),
+    which straight forwardly gives us \crefrange{eq::std_constraint_matrix_derivative}{eq::std_cost_vector_derivative}.
+
+    Finally, \crefrange{eq::log_bar_der_x_x}{eq::log_bar_der_x_b} are obtained by standard differentiation rules applied
+    to (\ref{eq::log_barrier_map}).
+
+
+\end{proof}
+
+\begin{remark}[A note on computational complexity]
+Let $n$ denote the dimension of the decision variable $x$ and let $m$ denote the dimension
+of the constraint vector $b$.
+
+The computation of $\grad_{x,x}V(x,A, b)$ requires $\mathcal{O}(n^2m + nm^2)$ elementary operations, and 
+the computation of its inverse requires $\mathcal{O}(n^3)$ operations. 
+The evaluation of $\grad_{x, A}V\bpa{\xopt, A, b}$, as well as the matrix 
+multiplication in (\ref{eq::log_bar_der_x_A}) both have complexity $\mathcal{O}(n^2m)$.
+Finally the derivative $\grad_{x, b}V\bpa{\xopt, A, b}$ can be evaluated in $\mathcal{O}(nm)$
+operations.
+
+We conclude that the time complexity for evaluating the derivatives of the optimal solution with respect to both $A, b$ and $c$ will be 
+$\mathcal{O}(n^3 + n^2m + nm^2)$.
+
+It is worth remarking that the computations involved in evaluating the derivative is of the exact same kind as the ones appearing
+in one iteration of Newton's method in classical interior point methods.
+\end{remark}
+
+\section{Canonical form linear program}
+\label{sec::Canonical_form_linear_program}
+
+\begin{theorem}[Derivatives for canonical form program]
+Consider a log-barrier regularized linear program in canonical form with constraint matrix $A \in \R^{m \times n}$, 
+constraint vector $b \in \R^{m}$ and cost vector $c \in \R^{n}$ 
+\begin{align}
+    \label{prob::Log_bar_reg_LP_can}
+    \min_{ x , \; Ax = b } \pa{\dotprod{c}{x} - \mu \sum_j \log(x_j)} 
+\end{align}
+
+where $\mu \in \R^+$ is a positive real parameter.
+
+Assume that log-barrier regularized linear program (\ref{prob::Log_bar_reg_LP_can}) has a solution, 
+and that the constraint matrix $A$ has full column-rank. Then the primal-dual optimal solution map
+
+\newcommand{\dualopt}{\hat{{\lambda}}(A,b,c)}
+\newcommand{\primaldualopt}{\hat Y(A,b,c)}
+
+\begin{subequations}
+    \label{eq::optimal_solution_maps_can}
+\begin{align}
+    \label{eq::optimal_solution_map_primal_dual}
+    &\primaldualopt = \br{\xopt, \dualopt} \\
+    \text{with} \nonumber \\
+    \label{eq::optimal_solution_map_primal}
+    &\xopt = \argmin_{ x , \; Ax = b } \pa{\dotprod{c}{x} - \mu \sum_j \log(x_j)} \\
+    \label{eq::optimal_solution_map_dual}
+    &\dualopt = \argmax_{ \lambda , \; c + A^\top \lambda \mathbin{>} 0 } \pa{-\dotprod{b}{\lambda} + \mu \sum_j \log(c_j + \dotprod{A^{\top}_j}{\lambda})} 
+\end{align}
+\end{subequations}
+
+will be well-defined in a neighborhood of $(\R^{m\times n} \times \R^{m} \times \R^{n} )$ around  $(A, b, c)$,
+with partial derivatives given by
+
+\begin{subequations}
+\label{eq::Main_result}
+
+
+\begin{align}
+    \label{eq::can_constraint_matrix_derivative}
+    & \grad_A \primaldualopt = - \bbr{\grad_{Y}F\bpa{\primaldualopt, A, b}}^{-1}\grad_{A}F\bpa{\primaldualopt, A, b} \\
+    \label{eq::can_constraint_vector_derivative}
+    & \grad_b \primaldualopt = - \bbr{\grad_{Y}F\bpa{\primaldualopt, A, b}}^{-1}\grad_{b}F\bpa{\primaldualopt, A, b} \\
+    \label{eq::can_cost_vector_derivative}
+    & \grad_c \primaldualopt = - \bbr{\grad_{Y}F\bpa{\primaldualopt, A, b}}^{-1}
+\end{align}
+\end{subequations}
+
+where $F$ is the l.h.s. of the KKT equation for optimality
+
+\begin{align}
+    \label{eq::LHS_KKT_can_LP}
+    [F(Y, A, b, c)]_i = \br{c_i - \dotprod{A^T_i}{\lambda} - \frac{\mu}{x_i}
+    , \dotprod{A_i}{x} - b_i}
+\end{align}
+
+$Y$ is defined by $Y = [x, \lambda]$, and 
+
+\newcommand{\uvec}[2]{\mathbf{e}_{#1}^{\pa{#2}}}
+\newcommand{\zerovec}[1]{\mathbf{0}^{\pa{#1}}}
+\newcommand{\onevec}[1]{\mathbf{1}^{\pa{#1}}}
+
+\begin{subequations}
+    \label{eq::der_can_LP}
+    \begin{align}
+    \label{eq::der_Y_can_LP}
+    & \grad_Y F(x, \lambda, A, b, c) =
+    \begin{bmatrix}
+    \frac{\mu}{x^2} & A^\top \\
+    A & 0
+    \end{bmatrix} \\
+    \label{eq::der_A_can_LP}
+    &\frac{\partial F(x, \lambda, A, b, c)}{\partial A_{jk}} = \br{\lambda_j\uvec{k}{n}, x_k\uvec{j}{m}} \\
+    \label{eq::der_b_can_LP}
+    &\frac{\partial F(x, \lambda, A, b, c)}{\partial b_{j}} = \br{\zerovec{n}, -\uvec{j}{m}} \\
+    \label{eq::der_c_can_LP}
+    & \frac{\partial F_i(x, \lambda, A, b, c)}{\partial c_{j}}
+    = \br{\uvec{j}{n}, \zerovec{m}}
+    \end{align}
+\end{subequations}
+
+Where $\frac{\mu}{x^2}$ denotes a diagonal matrix defined by 
+$\br{\frac{\mu}{x^2}}_{ij}x =\delta_{ij}\frac{\mu}{x_i^2}$.
+
+\end{theorem}
+\begin{proof}
+We will follow the same strategy as in the proof for the standard form case (\ref{thm::Std_form_derivatives}), applying 
+the implicit function theorem on optimality conditions to derive the expression for the derivative of the optimal solution.
+
+By the KKT conditions, the optimal primal variables $\hat{x}$ and dual variables
+$\hat{\lambda}$ are given as the solution of following system:
+\begin{subequations}
+    \label{eq:: KKT_Canonical_form_LP}
+\begin{align}
+    \label{eq:: KKT_Canonical_form_LP_primal}
+& c_j - \dotprod{A^T_j}{\hat{\lambda}} - \frac{\mu}{\hat{x}_j} = 0 \\
+    \label{eq:: KKT_Canonical_form_LP_dual}
+& \dotprod{A_j}{\hat{x}} - b_j = 0
+\end{align}
+\end{subequations}
+
+or, using the notation of (\ref{eq::LHS_KKT_can_LP})xex
+
+\begin{align}
+    \label{eq::F_form_KKT_can_form_LP}
+    F(Y, A, b, c) = 0
+\end{align}
+
+\Crefrange{eq::der_Y_can_LP}{eq::der_c_can_LP}, giving the derivatives of $F$, follow from standard computations. 
+
+If the s.c. KKT matrix $\grad_Y F(x, \lambda, A, b, c) =
+    \begin{bmatrix}
+    \frac{\mu}{x^2} & A^\top \\
+    A & 0
+    \end{bmatrix}$
+
+is invertible, the implicit function theorem yields our desired result.
+Fortunately, the invertibility of (\ref{eq::der_Y_can_LP}) is guaranteed under the
+assumption of full column-rank of $A$. This is a classical result, but we never-the-less state the proof for the sake of completeness:
+
+The strategy will be to show that the kernel of the matrix is trivial.
+Assume that a vector $\br{x^*, y^*}$ is in the kernel of 
+$\begin{bmatrix}
+    \frac{\mu}{x^2} & A^\top \\
+    A & 0
+    \end{bmatrix}$.
+
+    Then 
+
+\begin{subequations}
+\begin{align}
+    \label{eq::KKT_matrix_row_1}
+    &\mu\frac{x^*_j}{x_j^2} + \dotprod{A^\top_j}{\lambda^*} = 0 \\
+    \label{eq::KKT_matrix_row_2}
+    &\dotprod{A_j}{x^*} = 0
+\end{align}
+\end{subequations}
+Taking the inner product of (\ref{eq::KKT_matrix_row_1}) with respect to $x^*$, and leveraging (\ref{eq::KKT_matrix_row_2}) gives 
+
+\begin{align}
+    \label{eq::KKT_matrix_zero_x}
+    \nonumber \mu \frac{(x_j^*)^2}{x_j^2} &= 0 \\
+    \implies x^* & = 0
+\end{align}
+
+where the implication follows from the fact that by necessity $x\geq 0$. Inserting (\ref{eq::KKT_matrix_zero_x}) into (\ref{eq::KKT_matrix_row_1}) gives
+
+\begin{align}
+    A^\top \lambda^* = 0
+\end{align}
+
+which finally, by the full column-rank of $A$, gives
+
+\begin{align}
+    \lambda^*=0
+\end{align}
+
+The matrix
+$\begin{bmatrix}
+    \frac{\mu}{x^2} & A^\top \\
+    A & 0
+    \end{bmatrix}$
+has no non-zero elements in its kernel is thus invertible. We are done.
+
+\end{proof}
+
+\begin{remark}[A note on computational complexity]
+To compute the derivatives in \Crefrange{eq::can_constraint_matrix_derivative}{eq::can_cost_vector_derivative}, the cost of inverting (\ref{eq::der_Y_can_LP})
+represents the clear computational bottleneck. Being a ($n\times m$) matrix, the complexity will be given by $(\mathcal{O}(n+m)^3)$.
+We note a slightly higher complexity compared to \Crefrange{eq::std_constraint_matrix_derivative}{eq::std_cost_vector_derivative}.
+Once again, the computations are identical to those involved in performing a single Newton step within an interior point method
+for solving a linear programs in canonical form.
+\end{remark}
+
+\section{Extensive form two-stage stochastic linear program}
+A two-stage stochastic canonical form linear program is a linear program of the form
+
+\begin{align}
+    \label{prob::Two_stage_linear_extensive_form}
+    & \min_{y \geq 0, z_k \geq 0}  \dotprod{c}{y} + \sum_k \dotprod{d_k}{z_k} \\
+    & \st \quad  \begin{aligned}[t] 
+        & \matmul{A}{y} = b \\
+        & \matmul{A_k}{y} + \matmul{B_k}{z_k} = b_k
+    \end{aligned}\\
+\end{align}
+
+We interpret the $y$ variable to represent a first-stage decision, and $z_k$ to represent
+decisions made after some uncertain event has occurred.
+The uncertainty itself is encoded in $A_k$, $B_k$, $d_k$ and $b_k$.
+
+If we employ a log-barrier regularization, the resulting optimization program
+will be
+
+\begin{align}
+    \label{prob::Two_stage_linear_extensive_form}
+    & \min_{y, z_k}  \dotprod{c}{y} + \sum_k \dotprod{d_k}{z_k} - \sum_j \log(y_j) - \sum_{k,j} \log(z_{k,j}) \\
+    & \st \quad  \begin{aligned}[t] 
+        & \matmul{A}{y} = b \\
+        & \matmul{A_k}{y} + \matmul{B_k}{z_k} = b_k
+    \end{aligned}\\
+\end{align}
+
+The optimal solution of this program can clearly be differentiated with respect to the noise
+random parameters $A_k$, $B_k$, $d_k$ and $b_k$ according to the methods outlined 
+in (\ref{sec::Canonical_form_linear_program}).
+
+The only condition is that the full constraint matrix of the program
+
+\[
+\begin{bmatrix}
+A & 0 & 0 & \cdots & 0 \\
+A_{1} & B_{2} & 0 & \cdots & 0 \\
+\vdots  & \vdots  & \vdots & \vdots & 0 \\
+A_{k} & \cdots & B_{k} & \cdots & 0 \\
+\vdots  & \vdots  & \vdots & \vdots & 0 \\
+A_{n,1} & 0 & 0 & \cdots & B_{k}
+\end{bmatrix}
+\]
+
+Must have full column-rank. This in turn is guaranteed as long as the  
+first-stage constraint matrix $A$, and each second-stage constraint 
+matrix  $B_k$ has full column-rank.
+
+
+
+
+\appendix
+\section*{Appendix}
+\addcontentsline{toc}{section}{Appendix}
+
+\section{Strict convexity of standard form log-barrier for full row-rank constraint matrix}
+
+
+\label{appendix:: Strict_convexity}
+
+By (\ref{eq::log_bar_der_x_A}), the second second derivative of the log-barrier with 
+respect to the decision variable is given by
+
+\begin{align}
+    \nonumber
+    \frac{\partial^2 V(x, A, b)}{\partial x_i \partial x_j} = \sum_l \frac{A_{li}A_{lj}}{\pa{b_l - \dotprod{A_l}{x}}^2}
+\end{align}
+
+Alternatively, this can be formulated as
+\begin{align}
+    \label{eq::log_bar_der_xx_diagform}
+    \frac{\partial^2 V(x, A, b)}{\partial x_i \partial x_j} = \sum_l \frac{A_{l}\otimes A_{l}}{(b_l-\dotprod{A_l}{x})^2}
+\end{align}
+
+Since $\frac{\partial^2 V(x, A, b)}{\partial x_i \partial x_j}$ is the sum of rank one matrices, it is clearly symmetric and positively semi-definite.
+
+Assume now that $A$ has full rank. (\ref{eq::log_bar_der_xx_diagform}) shows that for any vector $y$:
+
+\begin{align}
+    \label{eq::quadratic_form_der_x}
+   \sum_{i,j}y_i \frac{\partial^2 V(x, A, b)}{\partial x_i \partial x_j}y_j = 
+    \sum_l \frac{ \pa{\dotprod{A_{l}}{y}}^2 }{(b_l-\dotprod{A_l}{x})^2}
+\end{align}
+
+clearly, the r.h.s. of (\ref{eq::quadratic_form_der_x}) is zero if and only if $\dotprod{A_l}{y}$
+is zero for each index $l$. By the full row-rank of $A$, this would imply that
+$y$ is zero. Therefore, since $\frac{\partial^2 V(x, A, b)}
+{\partial x_i \partial x_j}$ has no non-trivial kernel element, it must be stricly positive definite. 
+It follows that $V(x,A,b)$ is stricly convex in $x$. 
+
+\section{The Implicit Function Theorem}
+\label{appendix:: Implicit_function_theorem}
+
+
+
+Let \( F : \mathbb{R}^{n + m} \to \mathbb{R}^m \) be a continuously differentiable function, and suppose that \( F(x_0, y_0) = 0 \) for some \( (x_0, y_0) \in \mathbb{R}^n \times \mathbb{R}^m \). Assume that the \( m \times m \) Jacobian matrix \( D_y F(x_0, y_0) \) is invertible. 
+
+Then there exist open neighborhoods \( U \subseteq \mathbb{R}^n \) of \( x_0 \) and \( V \subseteq \mathbb{R}^m \) of \( y_0 \), and a continuously differentiable function \( f : U \to V \) such that
+\[
+F(x, f(x)) = 0 \quad \text{for all } x \in U.
+\]
+Moreover, the derivative of \( f \) is given by
+\[
+\mathop{D}f(x) = -\br{\mathop{D_y} F(x, f(x))}^{-1} \mathop{D_x} F(x, f(x)).
+\]
+
+%\section{Generalization to Canonical Form LP}
+%\label{appendix::Canonical_form_LP}
+
+%A canonical form log-barrier regularized LP is an optimization problem of the 
+%following form
+%
+%\begin{align}
+%    \min_x \dotprod{c}{x} - \mu \sum\log(x_l) \quad \st \; Ax = b 
+%\end{align}
+%
+%By the KKT conditions, the optimal primal variables $\hat{x}$ and dual variables
+%$\hat{\lambda}$ are given as the solution of following system:
+%\begin{subequations}
+%    \label{eq:: KKT_Canonical_form_LP}
+%\begin{align}
+%    \label{eq:: KKT_Canonical_form_LP_primal}
+%& c_j - \dotprod{A^T_i}{\hat{\lambda}} - \frac{\mu}{\hat{x}_i} = 0 \\
+%    \label{eq:: KKT_Canonical_form_LP_dual}
+% \dotprod{A_i}{\hat{x}} - b_i = 0
+%\end{align}
+%\end{subequations}
+
+%We want to apply the implicit function theorem to obtain expressions
+%for the derivatives of $\hat{x}$ and $\hat{\lambda}$ in the same
+%way that we did for the standard form LP. 
+%Denote the l.h.s. of (\ref{eq:: KKT_Canonical_form_LP})
+%by 
+
+%\begin{align}
+%    \label{eq::LHS_KKT_can_LP}
+%    [F(x,\lambda, A, b, c)]_i = \br{c_i - \dotprod{A^T_i}{\lambda} - \frac{\mu}{x_i}
+%    , \dotprod{A_i}{x} - b_i}
+%\end{align}
+
+%Clearly, we can very easily differentiate $F$ with respect to $A$, $b$ and $c$. 
+
+%\newcommand{\uvec}[2]{\mathbf{e}_{#1}^{\pa{#2}}}
+%\newcommand{\zerovec}[1]{\mathbf{0}^{\pa{#1}}}
+%\newcommand{\onevec}[1]{\mathbf{1}^{\pa{#1}}}
+
+%\begin{subequations}
+%    \begin{align}
+%    \frac{\partial F(x, \lambda, A, b, c)}{\partial A_{jk}}
+%    = \br{\lambda_j\uvec{k}{n}, x_k\uvec{j}{m}}
+%    \end{align}
+
+%    \begin{align}
+%    \frac{\partial F(x, \lambda, A, b, c)}{\partial b_{j}}
+%    = \br{\zerovec{n}, -\uvec{j}{m}}
+%    \end{align}
+
+%    \begin{align}
+%        \br{\grad_c F(x, \lambda, A, b, c)}_{ij} 
+%    = \frac{\partial F_i(x, \lambda, A, b, c)}{\partial c_{j}}
+%    = \br{\uvec{j}{n}, \zerovec{m}}
+%    \end{align}
+
+%\end{subequations}
+
+%Additionally, if we differentiate with respect to the variable $Y=(x,\lambda)$
+%we obtain 
+
+%\begin{align}
+%    \label{der_xx_LHS_KKT_can_LP}
+%    \grad_Y F(x, \lambda, A, b, c) =
+%    \begin{bmatrix}
+%    \frac{\mu}{x^2} & A^\top \\
+%    A & 0
+%    \end{bmatrix}
+%\end{align}
+
+%Where $\frac{\mu}{x^2}$ denotes a diagonal matrix defined by 
+%$\br{\frac{\mu}{x^2}}_{ij}x =\delta_{ij}\frac{\mu}{x_i^2}$.
+
+%By a similar argument to what we present in (\ref{appendix:: Strict_convexity}), 
+%it can be shown that the (\ref{der_xx_LHS_KKT_can_LP}) is invertible if $A$ 
+%is of full row-rank. 
+
+%Hence, we obtain the following 
+
+
+
+\end{document}
