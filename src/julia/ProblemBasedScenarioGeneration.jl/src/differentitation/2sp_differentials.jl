@@ -1,88 +1,53 @@
 """
+---------------------------------------------------------------------------------------------
+Basic functionalities for two-stage stochastic linear programs
+---------------------------------------------------------------------------------------------
+"""
+
+"""
 Struct encoding the data of a two-stage stochastic linear program in extensive form and canonical formulation
 """
-struct TwoStageSLP{T<:Real, M<:AbstractMatrix{T}, V<:AbstractVector{T}}
-    A1 :: M  # First stage constraint matrix
-    b1 :: V  # First stage constraint vector
-    c1 :: V  # First stage cost vector
-    Ts :: Vector{M}  # Coupling matrix
-    Ws :: Vector{M}  # Second stage constraint matrix
-    hs :: Vector{V}  # Second stage constraint vector
-    qs :: Vector{V}  # Second stage cost vector
+struct TwoStageSLP{T<:Real,                # the numeric scalar type
+                M<:AbstractMatrix{T},   # matrix whose entries are T
+                V<:AbstractVector{T}}   # vector whose entries are T
+    A1 :: M           # first–stage constraint matrix
+    b1 :: V           # first–stage RHS
+    c1 :: V           # first–stage cost
+    Ws :: Vector{M}   # second–stage constraint matrices
+    Ts :: Vector{M}   # coupling matrices
+    hs :: Vector{V}   # second–stage RHS vectors
+    qs :: Vector{V}   # second–stage cost vectors
+    ps :: Vector{T}   # scenario probabilities
 end
 
-"""
-    recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=standard_solver)
-Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
-first stage decision variable.
-"""
-function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=standard_solver)
-    return - diff_opt_b(s2_logbar_lp; solver=solver) * coupling_matrix
-end
 
 """
-    recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, regularization_parameter,
-    solver=standard_solver)
-Provides the derivative of the second stage recourse function for a two-stage stochastic log-barrier regularized linear program
+    TwoStageSLP(A_1, b1, c1, Ws, Ts, hs, qs, ps)
+Constructor for TwoStageSLP
 """
-function recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, regularization_parameter,
-    solver=standard_solver)
-    # Rename variables for notational convenience
-    A = s2_constraint_matrix
-    b = s2_constraint_vector - coupling_matrix * s1_decision
-    c = s2_cost_vector
-    mu = regularization_parameter
-    s2_logbar_lp = LogBarCanLP(CanLP(A, b, c), mu)
-    return recourse_derivative_canLP(coupling_matrix, s2_logbar_lp, solver)
-end
-
-"""
-    project_to_affine_space(point, matrix, rhs_vector)
-Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A simple helper function.
-"""
-function project_to_affine_space(point, matrix, rhs_vector)
-    y = point
-    A = matrix
-    b = rhs_vector
-
-    At = transpose(A)
-    correction = A * ((At * A) \ (At * (A * y - b)))
-    return y - correction
-end
-
-"""
-    diff_value_2ScanLP_can(s1_decision, two_slp::TwoStageSLP, regularization_parameter,
-    solver=standard_solver, project_derivative=false)
-Returns the derivative of the value function with respect to the first stage decision, for a two-stage linear program in canonical form with log-barrier regularization
-"""
-function diff_value_2ScanLP_can(s1_decision, two_slp::TwoStageSLP, regularization_parameter,
-    solver=standard_solver, project_derivative=false)
-    s1_constraint_matrix = two_slp.A1
-    s1_constraint_vector = two_slp.b1
-    s1_cost_vector = two_slp.c1
-    coupling_matrices = two_slp.Ts
-    s2_constraint_matrices = two_slp.Ws 
-    s2_constraint_vectors = two_slp.hs
-    s2_cost_vectors = two_slp.qs
-    if !(length(coupling_matrices) == length(s2_constraint_matrices) == length(s2_constraint_vectors) == length(s2_cost_vectors))
-        error("Number of scenarios inconsistent across problem data")
+function TwoStageSLP(A_1, b1, c1, Ws, Ts, hs, qs, ps = nothing)
+    if ps  isnothing
+        ps = ones(length(Ws)) ./ length(Ws)  # Default to equiprobable scenarios
     end
+    @assert length(Ws) == length(Ts) == length(hs) == length(qs) == length(ps)
+    n_1 = size(A_1, 2)  # Number of first stage decision variables
+    m_1 = size(A_1, 1)  # Number of first stage constraints
+    n_2 = size(Ws[1], 2)  # Number of second stage decision variables
+    m_2 = size(Ws[1], 1)  # Number of second stage constraints
+    @assert length(Ws) == length(Ts) == length(hs) == length(qs) == length(ps)  # Number of scenarios must be consistent across all parameters
+    @assert all(size(Ws[s]) == (m_2, n_2) for s in eachindex(Ws))  # Each second stage constraint matrix must have the same size
+    @assert all(size(Ts[s]) == (m_2, n_1) for s in eachindex(Ts))  # Each coupling matrix must have the same size
+    @assert all(length(hs[s]) == m_2 for s in eachindex(hs))  # Each second stage constraint vector must have the same size
+    @assert all(length(qs[s]) == n_2 for s in eachindex(qs))  # Each second stage cost vector must have the same size
+    @assert all(p -> isa(p, Real) && p > 0, ps)  # Each scenario probability must be a positive real number
+    @assert sum(ps) ≈ 1.0  # Scenario probabilities must sum to 1.0
 
-    S = length(coupling_matrices)  # number of scenarios
-    Dx = s1_cost_vector
-    for s in 1:S
-        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices, s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], regularization_parameter,
-        solver)
-    end
-    if project_derivative==true
-        Dx = project_to_affine_space(Dx, s1_constraint_matrix, s1_constraint_vector)
-    end
-    return Dx
+    return TwoStageSLP{eltype(A_1), typeof(A_1), typeof(b1)}(A_1, b1, c1, Ws, Ts, hs, qs, ps)
 end
 
 """
     extensive_form_canonical(two_slp::TwoStageSLP)
-Generates a large, extensive form of a two stage stochastic linear program in canonical form, with log barrier regularization.
+Generates an extensive form of two stage stochastic linear program in canonical form, with log barrier regularization.
 """
 function extensive_form_canonical(two_slp::TwoStageSLP)
     s1_constraint_matrix = two_slp.A1
@@ -92,6 +57,7 @@ function extensive_form_canonical(two_slp::TwoStageSLP)
     s2_constraint_matrices = two_slp.Ws 
     s2_constraint_vectors = two_slp.hs
     s2_cost_vectors = two_slp.qs
+    s2_probability_vector = two_slp.ps
     if !(length(coupling_matrices) == length(s2_constraint_matrices) == length(s2_constraint_vectors) == length(s2_cost_vectors))
         error("Number of scenarios inconsistent across problem data")
     end
@@ -102,7 +68,8 @@ function extensive_form_canonical(two_slp::TwoStageSLP)
     n_2 = length(s2_cost_vectors[1])  # dimension of second stage decision
     m_2 = size(s2_constraint_matrices[1], 1)  # number of second stage constraints
 
-    c_e = vcat(s1_cost_vector,vcat(s2_cost_vectors...))  # cost vector of extensive form program
+    probability_adjusted_s2_cost_vectors = [s2_probability_vector[s] * s2_cost_vectors[s] for s in 1:S]
+    c_e = vcat(s1_cost_vector,vcat(probability_adjusted_s2_cost_vectors...))  # cost vector of extensive form program
     b_e = vcat(s1_constraint_vector, vcat(s2_constraint_vectors...))
 
     # We build the extensive form constraint matrix
@@ -133,6 +100,134 @@ function extensive_form_canonical(two_slp::TwoStageSLP)
     return extensive_form_LP
 end
 
+function LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter::Real)
+    """
+    Constructor for log barrier regularized version of a two-stage stochastic linear program in canonical form.
+    """
+    lp = extensive_form_canonical(two_slp)
+    n_1 = length(two_slp.c1)  # Number of decision variables
+    n_2 = length(two_slp.qs[1])  # Number of second stage decision variables
+    S = length(two_slp.Ts)  # Number of scenarios
+    p = two_slp.ps  # Scenario probabilities
+    regularization_parameters = regularization_parameter * ones(n)
+    for s in 1:S
+        regularization_parameters = vcat(regularization_parameters, regularization_parameter * p[s] * ones(n_2))
+    end
+    return LogBarCanLP(regularization_parameters, lp)
+end
+
+"""
+---------------------------------------------------------------------------------------------
+Differentiation functionalities for cost function
+---------------------------------------------------------------------------------------------
+"""
+
+
+"""
+    cost_2s_LogBarCanLP(s1_decision, two_slp::TwoStageSLP, regularization_parameters, solver=LogBarCanLP_standard_solver, project_derivative=false)
+Gives the cost function of a two-stage stochastic linear program with respect to the first-stage decision.
+"""
+function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameter,
+    solver=LogBarCanLP_standard_solver, project_derivative=false)
+    s1_constraint_matrix = two_slp.A1
+    s1_constraint_vector = two_slp.b1
+    s1_cost_vector = two_slp.c1
+    coupling_matrices = two_slp.Ts
+    s2_constraint_matrices = two_slp.Ws 
+    s2_constraint_vectors = two_slp.hs
+    s2_cost_vectors = two_slp.qs
+    s2_probability_vector = two_slp.ps
+    S = length(coupling_matrices)  # Represents the number of scenarios
+
+    s1_lp = CanLP(s1_constraint_matrix, s1_constraint_vector, s1_cost_vector)
+    s1_reg_lp = LogBarCanLP(s1_lp, regularization_parameter)
+    cost = cost(s1_reg_lp, s1_cost_vector)
+    for s in 1:S
+        constraint_matrix = s2_constraint_matrices[s]
+        constraint_vector = s2_constraint_vectors[s] - coupling_matrices[s] * s1_decision
+        cost_vector = s2_cost_vectors[s] * s2_probability_vector[s]
+        s2_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
+        s2_reg_lp = LogBarCanLP(s2_lp, regularization_parameter * s2_probability_vector[s])
+        cost += optimal_value(s2_reg_lp, solver=solver)  # Optimal value of the second stage LP
+    end
+    return cost
+end
+
+"""
+    recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
+Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
+first stage decision variable.
+"""
+function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
+    return - diff_opt_b(s2_logbar_lp; solver=solver) * coupling_matrix
+end
+
+"""
+    recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, regularization_parameter,
+    solver=LogBarCanLP_standard_solver)
+Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
+first stage decision variable.
+"""
+function recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, s2_probability, regularization_parameter,
+    solver=LogBarCanLP_standard_solver)
+    # Rename variables for notational convenience
+    A = s2_constraint_matrix
+    b = s2_constraint_vector - coupling_matrix * s1_decision
+    c = s2_cost_vector * s2_probability
+    mu = regularization_parameter * s2_probability
+    s2_logbar_lp = LogBarCanLP(CanLP(A, b, c), mu)
+    return recourse_derivative_canLP(coupling_matrix, s2_logbar_lp, solver)
+end
+
+"""
+    project_to_affine_space(point, matrix, rhs_vector)
+Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_cost_2s_LogBarCanLP.
+"""
+function project_to_affine_space(point, matrix, rhs_vector)
+    y = point
+    A = matrix
+    b = rhs_vector
+
+    At = transpose(A)
+    correction = A * ((At * A) \ (At * (A * y - b)))
+    return y - correction
+end
+
+"""
+    diff_cost_2s_LogBarCanLP(s1_decision, two_slp::TwoStageSLP, regularization_parameter,
+    solver=LogBarCanLP_standard_solver, project_derivative=false)
+Returns the derivative of the cost function with respect to the first stage decision, for a two-stage linear program in canonical form with log-barrier regularization
+"""
+function diff_cost_2s_LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter, s1_decision,
+    solver=LogBarCanLP_standard_solver, project_derivative=true)
+    s1_constraint_matrix = two_slp.A1
+    s1_constraint_vector = two_slp.b1
+    s1_cost_vector = two_slp.c1
+    coupling_matrices = two_slp.Ts
+    s2_constraint_matrices = two_slp.Ws 
+    s2_constraint_vectors = two_slp.hs
+    s2_cost_vectors = two_slp.qs
+    s2_probability_vector = two_slp.ps
+    @assert (length(coupling_matrices) == length(s2_constraint_matrices) == length(s2_constraint_vectors) == length(s2_cost_vectors))
+
+    S = length(coupling_matrices)  # number of scenarios
+    
+    Dx = s1_cost_vector - regularization_parameter * sum(log, s1_decision)  # Initialize the derivative with respect to the first stage decision
+    for s in 1:S
+        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices, s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
+        s2_probability_vector, regularization_parameter, solver)
+    end
+    if project_derivative==true
+        Dx = project_to_affine_space(Dx, s1_constraint_matrix, s1_constraint_vector)
+    end
+    return Dx
+end
+
+"""
+---------------------------------------------------------------------------------------------
+Differentiation functionalities for scenario parameters
+---------------------------------------------------------------------------------------------
+"""
 
 """
     ScenarioType{W<:Bool, T<:Bool, H<:Bool,Q<:Bool} end   # each parameter is boolean
@@ -147,22 +242,19 @@ Flags{true, false, true, false}()
 """
 struct ScenarioType{W<:Bool, T<:Bool, H<:Bool,Q<:Bool} end   # each parameter is boolean
 
+"""
+Constructor for ScenarioType    
+"""
 ScenarioType(params::Symbol...) = ScenarioType{(:W in params), (:T in params), (:H in params), (:Q in params)}()
 
-
-
 """
-    D_xiY(two_slp::TwoStageSLP, regularization_parameter, solver=standard_solver)
+    D_xiY(two_slp::TwoStageSLP, regularization_parameter, solver=LogBarCanLP_standard_solver)
 Derivative of optimal first-stage decision with respect to the scenario parameters. Leverages an extensive form formulation of the optimization problem.
 NOTE: This should be rewritten in a way so that we can tune which scenarios are variable and which ones aren't.
 """
-function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=ScenarioType(:T, :W, :H, :Q), solver=standard_solver)
-    # Compute derivatives for extensive form problem
-    extensive_prob = extensive_form_canonical(two_slp)
-    extensive_prob_regularized = LogBarCanLP(extensive_prob, regularization_parameter)
-    D_A, D_b, D_c = diff_opt(extensive_prob_regularized)
+function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=ScenarioType(:T, :W, :H, :Q), solver=LogBarCanLP_standard_solver)
 
-    # Recover derivatives with respect to relevant scenarios
+    # Renaming for notational convenience
     s1_constraint_matrix = two_slp.A1
     s1_constraint_vector = two_slp.b1
     s1_cost_vector = two_slp.c1
@@ -170,33 +262,42 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
     s2_constraint_matrices = two_slp.Ws 
     s2_constraint_vectors = two_slp.hs
     s2_cost_vectors = two_slp.qs
+    s2_probability_vector = two_slp.ps
+    S = length(coupling_matrices)  # Represents the number of scenarios
+
+    # Compute derivatives of extensive form lp
+    extensive_prob = extensive_form_canonical(two_slp)
+    regularization_parameters = regularization_parameter * ones(length(extensive_prob.c))
+    for s in S
+        regularization_parameters = vcat(regularization_parameters, regularization_parameter * s2_probability_vector[s] * ones(length(s2_cost_vectors[s])))
+    end
+    extensive_prob_regularized = LogBarCanLP(extensive_prob, regularization_parameters)
+    D_A, D_b, D_c = diff_opt(extensive_prob_regularized)
 
     S = length(coupling_matrices)  # number of scenarios
     n_1 = length(s1_cost_vector)  # dimension of first stage decision
     m_1  = length(s1_constraint_vector)  # number of first stage constraints
     n_2 = length(s2_cost_vectors[1])  # dimension of second stage decision
     m_2 = length(s2_constraint_vectors[1])  # number of second stage constraints
-    return_value = ()
 
     has_W, has_T, has_h, has_q = typeof(scenariotype).parameters
 
+    D_Ws = []; D_Ts = []; D_hs = []; D_qs=[]
+
     # Derivative with respect to second stage constraint matrices W
-    if has_W==true
-    D_Ws = []
-    for s in 1:S
-        start_index_row = 1 + m_1 + (s-1)*m_2
-        end_index_row = m_1 + s*m_2
-        start_index_column = 1
-        end_index_column = n_1
-        D_W = D_A[:, start_index_row:end_index_row, start_index_column:end_index_column]  # Extract D_W from full extensive form derivative
-        push!(D_Ws, D_W)
-    end
-    return_value = (return_value..., D_Ws)
+    if has_W
+        for s in 1:S
+            start_index_row = 1 + m_1 + (s-1)*m_2
+            end_index_row = m_1 + s*m_2
+            start_index_column = 1
+            end_index_column = n_1
+            D_W = D_A[:, start_index_row:end_index_row, start_index_column:end_index_column]  # Extract D_W from full extensive form derivative
+            push!(D_Ws, D_W)
+        end
     end
 
     # Derivative with respect to coupling matrices T
     if has_T==true
-    D_Ts = []
     for s in 1:S
         start_index_row = 1 + m_1 + (s-1)*m_2
         end_index_row = m_1 + (s)* m_2
@@ -204,32 +305,27 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
         end_index_column = n_1 + s * n_2
         D_T = D_A[:, start_index_row: end_index_row, start_index_column:end_index_column]  # Extract correct derivatives
         push!(D_Ts, D_T)
-    return_value = (return_value..., D_Ts)
     end
 
     if has_h==true
     # Derivative with respect to second stage constraint vector h
-    D_hs = []  
     for s in 1:S
         start_index = 1 + m_1 + (s-1)*m_2
         end_index = m_1 + s * m_2
         D_h = D_b[:, start_index:end_index]
         push!(D_hs, D_h)
     end
-    return_value = (return_value..., D_hs)
     end
 
     # Derivative with respect to second stage cost vectors q
     if has_q==true
-    D_qs = [] 
     for s in 1:S
         start_index = 1 + n_1 + (s-1)*n_2
         end_index = n_1 + s * n_2
         D_q = D_c[:, start_index:end_index]
         push!(D_qs, D_q)
     end
-    return_value = (return_value..., D_qs)
     end
-end
-    return return_value
+    end
+    return D_Ws, D_Ts, D_hs, D_qs
 end
