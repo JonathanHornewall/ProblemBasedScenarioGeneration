@@ -4,7 +4,7 @@ using JuMP, Ipopt, SparseArrays
     ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=0)
 Solves a log-barrier regularized linear program in canonical form up to specified optimality tolerance
 """
-function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=0)
+function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=1e-8)
     # data 
     A   = instance.linear_program.constraint_matrix        
     b   = instance.linear_program.constraint_vector
@@ -33,7 +33,7 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     end
 
     xv = value.(x)
-    if maximum(abs.(A * xv .- b)) > 1e-8
+    if maximum(abs.(A * xv .- b)) > feasibility_margin
         error("Infeasible: max |Ax - b| = $(maximum(abs.(A * xv .- b)))")
     end
 

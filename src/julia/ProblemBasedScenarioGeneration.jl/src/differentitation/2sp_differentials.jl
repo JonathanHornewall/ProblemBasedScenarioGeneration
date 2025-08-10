@@ -36,9 +36,6 @@ function TwoStageSLP(A_1, b1, c1, Ws, Ts, hs, qs, ps = nothing)
     m_2 = size(Ws[1], 1)  # Number of second stage constraints
     @assert length(Ws) == length(Ts) == length(hs) == length(qs) == length(ps)  # Number of scenarios must be consistent across all parameters
     @assert all(size(Ws[s]) == (m_2, n_2) for s in eachindex(Ws))  # Each second stage constraint matrix must have the same size
-    println("Hello there Nico. Check this out:")
-    @show size(Ts[1])  # Show the size of the first coupling matrix
-    @show (m_2, n_1)  # Show the expected size of each coupling matrix
     @assert all(size(Ts[s]) == (m_2, n_1) for s in eachindex(Ts))  # Each coupling matrix must have the same size
     @assert all(length(hs[s]) == m_2 for s in eachindex(hs))  # Each second stage constraint vector must have the same size
     @assert all(length(qs[s]) == n_2 for s in eachindex(qs))  # Each second stage cost vector must have the same size
@@ -162,7 +159,8 @@ Computes the derivative of one scenario component of the recourse function for a
 first stage decision variable.
 """
 function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
-    return - diff_opt_b(s2_logbar_lp; solver=solver) * coupling_matrix
+    optimal_solution, optimal_dual = solver(s2_logbar_lp)
+    return - coupling_matrix' * optimal_dual
 end
 
 """
@@ -186,15 +184,19 @@ end
     project_to_affine_space(point, matrix, rhs_vector)
 Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_cost_2s_LogBarCanLP.
 """
-function project_to_affine_space(point, matrix, rhs_vector)
+function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
     y = point
     A = matrix
     b = rhs_vector
-
-    At = transpose(A)
-    correction = A * ((At * A) \ (At * (A * y - b)))
-    return y - correction
+     # If A has no rows or rank 0 → no constraints → projection is y
+    if isempty(A) || rank(A) == 0
+        return y
+    end
+    r = A*y - b
+    λ = pinv(A*A') * r   # works for any rank
+    return y - A' * λ
 end
+
 
 """
     diff_cost_2s_LogBarCanLP(s1_decision, two_slp::TwoStageSLP, regularization_parameter,
@@ -215,10 +217,10 @@ function diff_cost_2s_LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter
 
     S = length(coupling_matrices)  # number of scenarios
     
-    Dx = s1_cost_vector - regularization_parameter * sum(log, s1_decision)  # Initialize the derivative with respect to the first stage decision
+    Dx = s1_cost_vector - regularization_parameter .* log.(s1_decision)  # Initialize the derivative with respect to the first stage decision
     for s in 1:S
-        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices, s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
-        s2_probability_vector, regularization_parameter, solver)
+        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices[s], s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
+        s2_probability_vector[s], regularization_parameter, solver)
     end
     if project_derivative==true
         Dx = project_to_affine_space(Dx, s1_constraint_matrix, s1_constraint_vector)

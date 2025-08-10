@@ -7,14 +7,19 @@ Stochastic (batch-size = 1) training loop.
 * `data`  – an iterable of `(x, y)` tuples
 * `loss`  – your custom loss function `loss(ŷ, y)`
 """
-function train!(problem_instance::ResourceAllocationProblem, regularization_parameter, model, data; opt = Adam(1e-3), epochs = 1)
-    ps = params(model)                           # model parameters
-    for _ in 1:epochs
-        for (x, ξ) in data                       # batch size = 1
-            gs = gradient(ps) do
-                loss(problem_instance, regularization_parameter, model(x), ξ)
+function train!(problem_instance::ResourceAllocationProblem,
+                regularization_parameter,
+                model, data; opt = Adam(1e-3), epochs = 1,
+                display_iterations = false)
+
+    state = Flux.setup(opt, model)         # Optimisers-style state
+    for epoch_number in 1:epochs
+        display_iterations && println("Epoch: ", epoch_number)
+        for (x, ξ) in data                 # batch size = 1
+            gs = Flux.gradient(model) do m # grads w.r.t. MODEL, not params
+                loss(problem_instance, regularization_parameter, m(x), ξ)
             end
-            Flux.Optimise.update!(opt, ps, gs)   # backward + step
+            Flux.update!(state, model, gs[1]) # update with state + model-shaped grads
         end
     end
     return model

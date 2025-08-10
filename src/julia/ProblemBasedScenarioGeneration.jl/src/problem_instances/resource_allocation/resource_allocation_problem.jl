@@ -70,11 +70,11 @@ function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
 
     # What's going on here? Seems like not enough indices are being filled.
     for j in 1:J
-        W[j,j] = 1
+        W[I+j,j] = 1
         for i in 1:I
-            W[j,J + J*(i-1) +j] = μᵢⱼ[i,j]
+            W[I+j,J + J*(i-1) +j] = μᵢⱼ[i,j]
         end
-        W[j, J + I*J + I + j] = -1
+        W[I+j, J + I*J + I + j] = -1
     end 
 
     #define T

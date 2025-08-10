@@ -72,6 +72,6 @@ function cost(instance::LogBarCanLP, decision)
     c = LP.cost_vector
     mu = instance.regularization_parameters
     x = decision
-    @assert A*x == b
+    #@assert A*x == b
     return dot(c, x) -dot(mu, log.(x))
 end

@@ -63,8 +63,8 @@ end
 function derivative_primal_problem_cost(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, first_stage_decision)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
-    main_problem = LogBarCanLP(twoslp, regularization_parameter)
-    D_x = diff_cost_2s_LogBarCanLP(main_problem, regularization_parameter, first_stage_decision)
+    twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+    D_x = diff_cost_2s_LogBarCanLP(twoslp, regularization_parameter, first_stage_decision)
     return D_x
 end
 

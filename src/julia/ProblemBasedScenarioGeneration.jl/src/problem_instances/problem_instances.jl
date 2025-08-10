@@ -9,7 +9,7 @@ Getter method for retrieving the "scenario type" of the problem instance, specif
 with noise.
 """
 function return_scenario_type(problem_instance::ProblemInstanceC2SCanLP)
-error("You have not specified the scenario type for your problem instance.")
+    error("You have not specified the scenario type for your problem instance.")
 end
 
 """

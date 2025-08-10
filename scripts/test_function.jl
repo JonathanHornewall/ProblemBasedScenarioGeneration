@@ -1,17 +1,20 @@
-function testing(problem_instance, model, dataset_testing)
+function testing(problem_instance, model, dataset_testing, regularization_parameter)
     total_gap = 0.0
 
-    for (ξ, x) in dataset_testing
-        
+    for (x, ξ) in dataset_testing
         ξ_hat = model(x)      
-        W_hat, T_hat, h_hat, q_hat = scenario_realization(problem_instance, ξ_hat)      
+        evaluated_cost = loss(problem_instance, regularization_parameter, ξ_hat, ξ)
+        
+        # Determine optimal cost
+        A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
+        W, T, h, q = scenario_realization(problem_instance, ξ)
+        twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+        logbarlp = LogBarCanLP(twoslp, regularization_parameter)
+        optimal_solution, optimal_dual = LogBarCanLP_standard_solver(logbarlp)
+        opt_cost = cost(logbarlp, optimal_solution)
 
-        z_hat = surrogate_decision(x, W_hat, T_hat, h_hat, q_hat)  
 
-        cost = primal_problem_cost(problem_instance, x, z_hat)
-        opt_cost = primal_problem_cost(problem_instance, x) # we need to change that to use the name od the function that doesnt take z as input
-
-        total_gap += (cost - opt_cost)/opt_cost
+        total_gap += (evaluated_cost - opt_cost)/opt_cost
     end
     Noutofsamples = length(dataset_testing)
     average_gap = total_gap / Noutofsamples
