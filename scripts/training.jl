@@ -13,14 +13,42 @@ function train!(problem_instance::ResourceAllocationProblem,
                 display_iterations = false)
 
     state = Flux.setup(opt, model)         # Optimisers-style state
+    cross_epoch_losses::Vector{Float64} = []
+
     for epoch_number in 1:epochs
-        display_iterations && println("Epoch: ", epoch_number)
+        display_iterations && print("Epoch ", epoch_number)
+        epoch_losses::Vector{Float64} = []
+        # Flux.train!(model, data, state) do m, x, ξ
+        #     loss(problem_instance, regularization_parameter, m(x), ξ)
+        # end
+        # The previous Flux.train! call is the same as this :
         for (x, ξ) in data                 # batch size = 1
             gs = Flux.gradient(model) do m # grads w.r.t. MODEL, not params
                 loss(problem_instance, regularization_parameter, m(x), ξ)
             end
             Flux.update!(state, model, gs[1]) # update with state + model-shaped grads
+            if display_iterations
+                δ = loss(problem_instance, regularization_parameter, model(x), ξ)
+                # println("Loss is ", δ)
+                push!(epoch_losses, δ)
+            end
+        end
+
+        if display_iterations
+            avg_epoch_loss = mean(epoch_losses)
+            println(" with avg loss ", avg_epoch_loss, " (", length(epoch_losses), " iterations)")
+            push!(cross_epoch_losses, avg_epoch_loss)
         end
     end
-    return model
+
+    if display_iterations
+        plt = plot(
+            1:epochs,
+            cross_epoch_losses,
+            xlabel="Epoch",
+            ylabel="Loss",
+            title="Training Loss"
+        )
+        display(plt)  # forces rendering for VS Code
+    end
 end
