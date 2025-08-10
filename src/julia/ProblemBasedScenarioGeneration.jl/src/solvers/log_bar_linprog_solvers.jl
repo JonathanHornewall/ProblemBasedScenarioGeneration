@@ -5,7 +5,6 @@ using JuMP, Ipopt, SparseArrays
 Solves a log-barrier regularized linear program in canonical form up to specified optimality tolerance
 """
 function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=0)
-    
     # data 
     A   = instance.linear_program.constraint_matrix        
     b   = instance.linear_program.constraint_vector
@@ -27,6 +26,16 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
         sum(mu[i] * log(x[i]) for i in 1:n))
 
     optimize!(model)
+
+    ts = termination_status(model)
+    if !(ts in (MOI.OPTIMAL, MOI.LOCALLY_SOLVED))
+        error("No feasible/optimal solution: $(ts) — $(MOI.get(model, MOI.RawStatusString()))")
+    end
+
+    xv = value.(x)
+    if maximum(abs.(A * xv .- b)) > 1e-8
+        error("Infeasible: max |Ax - b| = $(maximum(abs.(A * xv .- b)))")
+    end
 
     x_opt = value.(x)                      # optimal decision vector
     #lambda_opt = dual.(con)                     # Lagrange multipliers  

@@ -26,7 +26,7 @@ end
 Constructor for TwoStageSLP
 """
 function TwoStageSLP(A_1, b1, c1, Ws, Ts, hs, qs, ps = nothing)
-    if ps  isnothing
+    if isnothing(ps)
         ps = ones(length(Ws)) ./ length(Ws)  # Default to equiprobable scenarios
     end
     @assert length(Ws) == length(Ts) == length(hs) == length(qs) == length(ps)
@@ -36,6 +36,9 @@ function TwoStageSLP(A_1, b1, c1, Ws, Ts, hs, qs, ps = nothing)
     m_2 = size(Ws[1], 1)  # Number of second stage constraints
     @assert length(Ws) == length(Ts) == length(hs) == length(qs) == length(ps)  # Number of scenarios must be consistent across all parameters
     @assert all(size(Ws[s]) == (m_2, n_2) for s in eachindex(Ws))  # Each second stage constraint matrix must have the same size
+    println("Hello there Nico. Check this out:")
+    @show size(Ts[1])  # Show the size of the first coupling matrix
+    @show (m_2, n_1)  # Show the expected size of each coupling matrix
     @assert all(size(Ts[s]) == (m_2, n_1) for s in eachindex(Ts))  # Each coupling matrix must have the same size
     @assert all(length(hs[s]) == m_2 for s in eachindex(hs))  # Each second stage constraint vector must have the same size
     @assert all(length(qs[s]) == n_2 for s in eachindex(qs))  # Each second stage cost vector must have the same size
@@ -87,7 +90,7 @@ function extensive_form_canonical(two_slp::TwoStageSLP)
         matrix_row = zeros(m_2, n_1+S*n_2)
         matrix_row[:, 1:n_1] = coupling_matrices[s]
         # Constraint matrix
-        constraint_matrix_start_col = n_1 + (s-1) * n_2
+        constraint_matrix_start_col = n_1 + (s-1) * n_2 + 1
         constraint_matrix_end_col = n_1 + s * n_2
         matrix_row[:, constraint_matrix_start_col:constraint_matrix_end_col] = s2_constraint_matrices[s]
         push!(list_of_rows, matrix_row)
@@ -105,15 +108,15 @@ function LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter::Real)
     Constructor for log barrier regularized version of a two-stage stochastic linear program in canonical form.
     """
     lp = extensive_form_canonical(two_slp)
-    n_1 = length(two_slp.c1)  # Number of decision variables
+    n_1 = length(two_slp.c1)  # Number of first stage decision variables
     n_2 = length(two_slp.qs[1])  # Number of second stage decision variables
     S = length(two_slp.Ts)  # Number of scenarios
     p = two_slp.ps  # Scenario probabilities
-    regularization_parameters = regularization_parameter * ones(n)
+    regularization_parameters = regularization_parameter * ones(n_1)
     for s in 1:S
         regularization_parameters = vcat(regularization_parameters, regularization_parameter * p[s] * ones(n_2))
     end
-    return LogBarCanLP(regularization_parameters, lp)
+    return LogBarCanLP(lp, regularization_parameters)
 end
 
 """
@@ -141,16 +144,16 @@ function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_p
 
     s1_lp = CanLP(s1_constraint_matrix, s1_constraint_vector, s1_cost_vector)
     s1_reg_lp = LogBarCanLP(s1_lp, regularization_parameter)
-    cost = cost(s1_reg_lp, s1_cost_vector)
+    final_cost = cost(s1_reg_lp, s1_cost_vector)
     for s in 1:S
         constraint_matrix = s2_constraint_matrices[s]
         constraint_vector = s2_constraint_vectors[s] - coupling_matrices[s] * s1_decision
         cost_vector = s2_cost_vectors[s] * s2_probability_vector[s]
         s2_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
         s2_reg_lp = LogBarCanLP(s2_lp, regularization_parameter * s2_probability_vector[s])
-        cost += optimal_value(s2_reg_lp, solver=solver)  # Optimal value of the second stage LP
+        final_cost += optimal_value(s2_reg_lp, solver)  # Optimal value of the second stage LP
     end
-    return cost
+    return final_cost
 end
 
 """

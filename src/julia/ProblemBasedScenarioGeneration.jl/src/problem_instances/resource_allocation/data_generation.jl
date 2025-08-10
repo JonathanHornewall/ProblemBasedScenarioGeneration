@@ -45,7 +45,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
     for n in 1:Noutofsamples
         push!(out_of_sample, (xoos[n,:], ξoos[:,n]))
     end
-    in_sample, out_of_sample = dict(in_sample), dict(out_of_sample)  # Convert to dictionaries for easier access
+    in_sample, out_of_sample = Dict(in_sample), Dict(out_of_sample)  # Convert to dictionaries for easier access
 
     return in_sample, out_of_sample
 end

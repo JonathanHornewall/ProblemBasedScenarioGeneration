@@ -1,13 +1,20 @@
 
-# We want to build the problem in canonical form from the scenario ξ
-# This code is specific to the resource allocation problem
 
+"""
+    ResourceAllocationProblemData(service_rate_parameters, first_stage_costs, second_stage_costs, yield_parameters)
+Constructs a data structure for the resource allocation problem, containing service rate parameters, first and second stage costs, and yield parameters.
+- `service_rate_parameters`: Matrix of service rates (I×J)
+- `first_stage_costs`: Vector of first stage costs (length I)
+- `second_stage_costs`: Vector of second stage costs (length J)
+- `yield_parameters`: Vector of yield parameters (length I)
+"""
 struct ResourceAllocationProblemData
     service_rate_parameters::Matrix{Float64}  # I×J matrix of service rates
     first_stage_costs::Vector{Float64}  # Cost vector for the first stage
     second_stage_costs::Vector{Float64}  # Cost vector for the second stage
     yield_parameters::Vector{Float64}  # Yield parameters for the second stage
-    function ResourceAllocationProblem(service_rate_parameters::Matrix{Float64},
+    
+    function ResourceAllocationProblemData(service_rate_parameters::Matrix{Float64},
                                 first_stage_costs::Vector{Float64},
                                 second_stage_costs::Vector{Float64},
                                 yield_parameters::Vector{Float64})
@@ -19,6 +26,10 @@ struct ResourceAllocationProblemData
     end
 end
 
+"""
+    ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
+Struct for an instance of the resource allocation problem. 
+"""
 struct ResourceAllocationProblem
     problem_data::ResourceAllocationProblemData
     s1_constraint_matrix::Matrix{Float64}  # First stage constraint matrix
@@ -27,71 +38,68 @@ struct ResourceAllocationProblem
     s2_constraint_matrix::Matrix{Float64}  # Second stage constraint matrix
     s2_coupling_matrix::Matrix{Float64}  # Second stage coupling matrix
     s2_cost_vector::Vector{Float64}  # Second stage cost vector
-    """
-        generate_lp_data(μᵢⱼ, cz, qz)
-    Generate the linear program data for the resource allocation problem in canonical form.
-    Returns the first stage data (A, b, c) and the canonical form blocks (W, T, q).
-    """
-    function generate_lp_data(instance::ResourceAllocationProblemData)
-        μᵢⱼ = instance.service_rate_parameters
-        cz = instance.first_stage_costs
-        qw = instance.second_stage_costs
-        ρᵢ = instance.yield_parameters
-
-
-        I, J = size(μᵢⱼ)
-
-        # First stage data
-        A = zeros(1, length(cz))
-        b = [0.0]
-        c = cz
-
-        #define W
-        W = zeros(I+J, J + I*J + I + J)
-
-        for i in 1:I
-            for j in 1:J
-                W[i,J + J*(i-1) +j] = 1
-            end
-            W[i, J + I*J + i] = 1
-        end 
-
-        for j in 1:J
-            W[j,j] = 1
-            for i in 1:I
-                W[j,J + J*(i-1) +j] = μᵢⱼ[i,j]
-            end
-            W[j, J + I*J + I + j] = -1
-        end 
-
-        #define T
-        T = zeros(I+J,I)
-        for i in 1:I
-            T[i,i] = -ρᵢ[i]
-        end
-
-        # define q
-        q = zeros(J + I*J + I + J)
-        q[1:J] .= qw[:]
-
-        return A, b, c, W, T, q
-    end
-
-    """
-        ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
-    Constructs a resource allocation problem instance from the given problem data.
-    """
-    function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
-        A, b, c, W, T, q = generate_lp_data(problem_data)
-        new(problem_data, A, b, c, W, T, q)
-    end
 end
 
+"""
+    ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
+Constructor for the ResourceAllocationProblem leveraging ResourceAllocationProblemData
+"""
+function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
+    μᵢⱼ = problem_data.service_rate_parameters
+    cz = problem_data.first_stage_costs
+    qw = problem_data.second_stage_costs
+    ρᵢ = problem_data.yield_parameters
 
+
+    I, J = size(μᵢⱼ)
+
+    # First stage data
+    A = zeros(1, length(cz))
+    b = [0.0]
+    c = cz
+
+    #define W
+    W = zeros(I+J, J + I*J + I + J)
+
+    for i in 1:I
+        for j in 1:J
+            W[i,J + J*(i-1) +j] = 1
+        end
+        W[i, J + I*J + i] = 1
+    end 
+
+    # What's going on here? Seems like not enough indices are being filled.
+    for j in 1:J
+        W[j,j] = 1
+        for i in 1:I
+            W[j,J + J*(i-1) +j] = μᵢⱼ[i,j]
+        end
+        W[j, J + I*J + I + j] = -1
+    end 
+
+    #define T
+    T = zeros(I+J,I)
+    for i in 1:I
+        T[i,i] = -ρᵢ[i]
+    end
+
+    # define q
+    q = zeros(J + I*J + I + J)
+    q[1:J] .= qw[:]
+
+    return ResourceAllocationProblem(problem_data, A, b, c, W, T, q)
+end
+
+"""
+    scenario_realization(instance::ResourceAllocationProblem, scenario_parameter)
+Generates scenario data for an instance of the resource allocation problem based on a "scenario parameter".
+"""
 function scenario_realization(instance::ResourceAllocationProblem, scenario_parameter)
-    W, T, q = instance.second_stage_constraint_matrix, instance.second_stage_coupling_matrix, instance.second_stage_cost_vector
+    W, T, q = instance.s2_constraint_matrix, instance.s2_coupling_matrix, instance.s2_cost_vector
+    # scenario_parameter is a vector of length I, where I is the number of clients
+    I = size(T,2)
     h = vcat(zeros(I), scenario_parameter) # avoid in space mutations that are not allowed if we want to differentiate using Zygote 
-    return W, h, T, q
+    return W, T, h, q
 end
 
 #=

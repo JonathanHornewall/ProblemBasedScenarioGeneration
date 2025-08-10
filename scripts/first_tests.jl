@@ -3,7 +3,12 @@ using ProblemBasedScenarioGeneration
 using Flux, ChainRulesCore
 using DataLoaders: DataLoader
 using SparseArrays
-using ProblemBasedScenarioGeneration: ResourceAllocationProblemData,ResourceAllocationProblem, dataGeneration, train_model!
+using ProblemBasedScenarioGeneration: LogBarCanLP, TwoStageSLP, LogBarCanLP_standard_solver, ResourceAllocationProblemData, 
+ResourceAllocationProblem, scenario_realization, dataGeneration, cost_2s_LogBarCanLP, train_model!
+import ProblemBasedScenarioGeneration: primal_problem_cost
+
+import Flux: params, gradient, Optimise, Adam   # error if any of these re-appear
+
 
 # Import data
 include("parameters.jl")
@@ -31,7 +36,7 @@ data_set_training, data_set_testing =  dataGeneration(problem_instance, 10, 10, 
 # Train the neural network model
 regularization_parameter = 1.0
 
-train!(problem_instance::ResourceAllocationProblem, regularization_parameter, model, data; opt = Adam(1e-3), epochs = 1)
+train!(problem_instance::ResourceAllocationProblem, regularization_parameter, model, data_set_training; opt = Adam(1e-3), epochs = 1)
 
 print(testing(problem_instance, model, data_set_testing))
 
