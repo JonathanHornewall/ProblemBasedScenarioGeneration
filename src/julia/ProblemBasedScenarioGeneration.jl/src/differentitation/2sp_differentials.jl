@@ -148,7 +148,7 @@ function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_p
 
     s1_lp = CanLP(s1_constraint_matrix, s1_constraint_vector, s1_cost_vector)
     s1_reg_lp = LogBarCanLP(s1_lp, regularization_parameter)
-    final_cost = cost(s1_reg_lp, s1_cost_vector)
+    final_cost = cost(s1_reg_lp, s1_decision)
     for s in 1:S
         constraint_matrix = s2_constraint_matrices[s]
         constraint_vector = s2_constraint_vectors[s] - coupling_matrices[s] * s1_decision
