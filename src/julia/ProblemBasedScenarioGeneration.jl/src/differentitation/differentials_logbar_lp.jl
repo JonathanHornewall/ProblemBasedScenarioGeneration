@@ -10,7 +10,7 @@ function diff_KKT_Y(instance::LogBarCanLP, state)
     mu = instance.regularization_parameters
 
     # D is the diagonal of log-barrier Hessian
-    D = [mu[i]/x[i]^2 for i in eachindex(x)]
+    D = Diagonal(mu ./ x .^ 2 )
     # KKT matrix: [D  A'; A  0]
     K = Symmetric([D  A'; A  zeros(eltype(D), size(A,1), size(A,1))])
     return K
@@ -48,7 +48,7 @@ function diff_KKT_b(instance::LogBarCanLP, state, dual_state)
     D_b = zeros(Float64, n+m, m)
     for j in 1:m
         D_b[1:n, j] .= 0.0
-        D_b[n+1:end, j] .= 1.0
+        D_b[n+1:end, j] .= -1.0
     end
     return D_b
 end
@@ -78,7 +78,7 @@ function diff_cache_computation(instance, optimal_state=[], optimal_dual=[], KKT
     end
     if KKT_matrix == []
         KKT_matrix = diff_KKT_Y(instance, optimal_state)
-        KKT_matrix = ldlt(KKT_matrix)  # Perform factorization
+        KKT_matrix =  bunchkaufman(KKT_matrix)  # Perform factorization
     end
     return optimal_state, optimal_dual, KKT_matrix
 end

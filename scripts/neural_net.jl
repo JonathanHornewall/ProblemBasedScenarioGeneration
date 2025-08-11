@@ -39,7 +39,7 @@ function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, sc
     
     function pullback(y_hat)
         D_h = derivative_surrogate_solution(problem_instance, scenario_parameter, regularization_parameter, solver)
-        D_h_tangent = y_hat * D_h
+        D_h_tangent = D_h' * y_hat
 
         return NoTangent(), NoTangent(), D_h_tangent, NoTangent(), NoTangent()  # returning NoTangent for the regularization parameter
     end
@@ -78,7 +78,7 @@ function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::R
     function pullback(y_hat)
         cost_derivative = derivative_primal_problem_cost(problem_instance,  scenario_parameter, regularization_parameter, first_stage_decision)
         tangent = y_hat * cost_derivative
-        return NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), tangent
+        return NoTangent(), NoTangent(), NoTangent(), NoTangent(), tangent
     end
 
     return cost, pullback

@@ -2,6 +2,7 @@ using FiniteDiff
 using ProblemBasedScenarioGeneration
 using ProblemBasedScenarioGeneration: convert_standard_to_canonical_form, CanLP, LogBarCanLP, LogBarCanLP_standard_solver, KKT
 using ProblemBasedScenarioGeneration: convert_decision_standard_to_canonical, diff_opt_A, diff_opt_b, diff_opt_c
+using ProblemBasedScenarioGeneration: diff_KKT_Y, diff_KKT_b, diff_cache_computation, diff_opt_b
 
 function main()
     # Create a problem instance
@@ -18,23 +19,25 @@ function main()
     x_test_can = convert_decision_standard_to_canonical(A, b, x_test_standard)  # Convert decision variable to canonical form
     λ_test_can = zeros(Float64, m_can)  # Initialize dual variable
 
-    test = KKT(reg_lp_instance, x_test_can, λ_test_can)  # Check KKT conditions
+    #test = KKT(reg_lp_instance, x_test_can, λ_test_can)  # Check KKT conditions
 
-    function make_KKT_test(reg_lp_instance)
-        n = length(reg_lp_instance.linear_program.cost_vector)
-        m = length(reg_lp_instance.linear_program.constraint_vector)
-        KKT_test(Y) = KKT(reg_lp_instance, Y[1:n], Y[n + 1:end])  # Y is a concatenation of the primal and dual variables
-        return KKT_test
-    end
+    #function make_KKT_test(reg_lp_instance)
+    #   n = length(reg_lp_instance.linear_program.cost_vector)
+    #   m = length(reg_lp_instance.linear_program.constraint_vector)
+    #   KKT_test(Y) = KKT(reg_lp_instance, Y[1:n], Y[n + 1:end])  # Y is a concatenation of the primal and dual variables
+    #   return KKT_test
+    #end
 
-    KKT_test = make_KKT_test(reg_lp_instance)  # Create the KKT test function
-    Y_test = [x_test_can; λ_test_can]  # Concatenate primal and dual variables for testing
+    #KKT_test = make_KKT_test(reg_lp_instance)  # Create the KKT test function
+    #Y_test = [x_test_can; λ_test_can]  # Concatenate primal and dual variables for testing
     # Test derivatives
-    @show KKT_test(Y_test)  # Show KKT test output
-    @show FiniteDiff.finite_difference_jacobian(KKT_test, Y_test)
-    #@assert diff_opt_A(reg_lp_instance) ≈ zeros(size(A)) atol = 1e-8
-    #@assert diff_opt_b(reg_lp_instance) ≈ zeros(length(b)) atol = 1e-8
-    #@assert diff_opt_c(reg_lp_instance) ≈ zeros(length(c)) atol = 1e-8
+    #@show KKT_test(Y_test)  # Show KKT test output
+    #@show FiniteDiff.finite_difference_jacobian(KKT_test, Y_test)
+
+    @show diff_KKT_Y(reg_lp_instance, x_test_can)  # Show the KKT matrix
+    @show diff_KKT_b(reg_lp_instance, x_test_can, λ_test_can)  # Show the derivative of KKT with respect to b
+    @show diff_cache_computation(reg_lp_instance)  # Show the cached computation results
+    @show diff_opt_b(reg_lp_instance)  # Show the derivative of optimal solution with respect to b
 end
 
 main()

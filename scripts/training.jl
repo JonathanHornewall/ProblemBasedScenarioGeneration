@@ -22,11 +22,18 @@ function train!(problem_instance::ResourceAllocationProblem,
         #     loss(problem_instance, regularization_parameter, m(x), ξ)
         # end
         # The previous Flux.train! call is the same as this :
-        for (x, ξ) in data                 # batch size = 1
-            gs = Flux.gradient(model) do m # grads w.r.t. MODEL, not params
+        state = Flux.setup(opt, model)
+
+        for (x, ξ) in data
+            gs = Flux.gradient(model) do m
                 loss(problem_instance, regularization_parameter, m(x), ξ)
             end
-            Flux.update!(state, model, gs[1]) # update with state + model-shaped grads
+            # Some versions may return a 1-tuple; unwrap defensively.
+            gmodel = gs isa Tuple ? gs[1] : gs
+            @show gs  
+            Flux.update!(state, model, gmodel)
+            
+            
             if display_iterations
                 δ = loss(problem_instance, regularization_parameter, model(x), ξ)
                 # println("Loss is ", δ)

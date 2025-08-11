@@ -30,7 +30,7 @@ problem_instance = ResourceAllocationProblem(problem_data)
 test_scenario = ones(30)
 regularization_parameter = 1.0
 
-test_rrule(surrogate_solution, problem_instance, test_scenario, regularization_parameter, LogBarCanLP_standard_solver)
+#test_rrule(surrogate_solution, problem_instance, test_scenario, regularization_parameter, LogBarCanLP_standard_solver)
 
 # Generate data (add comment later to explain the parameters)
 Nsamples = 10

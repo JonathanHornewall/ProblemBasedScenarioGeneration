@@ -185,7 +185,6 @@ end
 Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_cost_2s_LogBarCanLP.
 """
 function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
-function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
     y = point
     A = matrix
     b = rhs_vector
@@ -318,11 +317,12 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
 
     if has_h==true
     # Derivative with respect to second stage constraint vector h
-    for s in 1:S
-        start_index = 1 + m_1 + (s-1)*m_2
-        end_index = m_1 + s * m_2
-        D_h = D_b[:, start_index:end_index]
-        push!(D_hs, D_h)
+        for s in 1:S
+            start_index = 1 + m_1 + (s-1)*m_2
+            end_index = m_1 + s * m_2
+            D_h = D_b[:, start_index:end_index]
+            push!(D_hs, D_h)
+        end
     end
     end
 
@@ -335,6 +335,5 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
         push!(D_qs, D_q)
     end
     end
-    end
     return D_Ws, D_Ts, D_hs, D_qs
-end
+    end
