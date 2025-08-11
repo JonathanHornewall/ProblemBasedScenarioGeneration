@@ -34,10 +34,32 @@ function main()
     #@show KKT_test(Y_test)  # Show KKT test output
     #@show FiniteDiff.finite_difference_jacobian(KKT_test, Y_test)
 
-    @show diff_KKT_Y(reg_lp_instance, x_test_can)  # Show the KKT matrix
-    @show diff_KKT_b(reg_lp_instance, x_test_can, λ_test_can)  # Show the derivative of KKT with respect to b
-    @show diff_cache_computation(reg_lp_instance)  # Show the cached computation results
-    @show diff_opt_b(reg_lp_instance)  # Show the derivative of optimal solution with respect to b
+    #@show diff_KKT_Y(reg_lp_instance, x_test_can)  # Show the KKT matrix
+    #@show diff_KKT_b(reg_lp_instance, x_test_can, λ_test_can)  # Show the derivative of KKT with respect to b
+    #@show diff_cache_computation(reg_lp_instance)  # Show the cached computation results
+    #@show diff_opt_b(reg_lp_instance)  # Show the derivative of optimal solution with respect to b
+
+    function opt_with_b(b)
+        # Solve the LP with the modified constraint vector b
+        lp_instance = CanLP(reg_lp_instance.linear_program.constraint_matrix, b, reg_lp_instance.linear_program.cost_vector)
+        reg_lp_instance = LogBarCanLP(lp_instance, reg_lp_instance.regularization_parameters)
+        optimal_state, optimal_dual = LogBarCanLP_standard_solver(reg_lp_instance)
+        return optimal_state
+    end
+    b_test = [1.0, 1.0, 1.0, 1.0]  # Test constraint vector
+    stepsize = 1e-6  # Step size for finite differences
+    println("Optimal state for b = $b_test: ")
+    optimal_state = opt_with_b(b_test)  # Get the optimal state for the test
+    println("Differential of optimal solution with respect to b according to our calculations: ")
+    println(diff_opt_b(reg_lp_instance))
+    println("Differential of optimal solution with respect to b according to finite differences: ")
+    println(FiniteDiff.finite_difference_jacobian(opt_with_b, b_test, absstep=stepsize))
+    println("Maximum difference between our calculations and finite differences: ")
+    println(maximum(abs.(diff_opt_b(reg_lp_instance) - FiniteDiff.finite_difference_jacobian(opt_with_b, b_test, absstep=stepsize))))  # Check the maximum difference
+    println("Maximum values:: ")
+    println(maximum(abs.(diff_opt_b(reg_lp_instance))))  # Check the maximum absolute difference
+    println(maximum(abs.(FiniteDiff.finite_difference_jacobian(opt_with_b, b_test; absstep=stepsize))))  # Check the maximum absolute difference for finite differences
 end
+        
 
 main()

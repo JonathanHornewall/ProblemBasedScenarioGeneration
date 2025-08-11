@@ -96,6 +96,13 @@ function extensive_form_canonical(two_slp::TwoStageSLP)
     # Build extensive form constraint matrix by combining all the rows
     A_e = vcat(list_of_rows...)
 
+    # Account for possibility of lack of constraints in first-stage decision
+    if iszero(A_e[1,:])
+        A_e = A_e[2:end, :]  # Remove the first row if it is all zeros
+        b_e = b_e[2:end]  # Remove the first element of b_e if it is all zeros
+    end
+
+
     extensive_form_LP = CanLP(A_e, b_e, c_e)
     return extensive_form_LP
 end
@@ -160,7 +167,7 @@ first stage decision variable.
 """
 function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
     optimal_solution, optimal_dual = solver(s2_logbar_lp)
-    return coupling_matrix' * optimal_dual  # The dual variable is the derivative of the recourse function with respect to the first stage decision
+    return - coupling_matrix' * optimal_dual  # The dual variable is the derivative of the recourse function with respect to the first stage decision
 end
 
 """

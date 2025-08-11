@@ -4,13 +4,14 @@ Differentiate the l.h.s. of the KKT condition for optimality for a log barrier r
 with respect to the primal dual variable pair Y = (x, lambda).
 """
 function diff_KKT_Y(instance::LogBarCanLP, state)
+    A = instance.linear_program.constraint_matrix
     # Rename variables for notational convenience
     x = state
     A = instance.linear_program.constraint_matrix
     mu = instance.regularization_parameters
 
     # D is the diagonal of log-barrier Hessian
-    D = Diagonal(mu ./ x .^ 2 )
+    D = Diagonal(mu ./ (x .^ 2) )
     # KKT matrix: [D  A'; A  0]
     K = Symmetric([D  A'; A  zeros(eltype(D), size(A,1), size(A,1))])
     return K
@@ -78,7 +79,7 @@ function diff_cache_computation(instance, optimal_state=[], optimal_dual=[], KKT
     end
     if KKT_matrix == []
         KKT_matrix = diff_KKT_Y(instance, optimal_state)
-        KKT_matrix =  bunchkaufman(KKT_matrix)  # Perform factorization
+        #KKT_matrix =  bunchkaufman(KKT_matrix)  # Perform factorization
     end
     return optimal_state, optimal_dual, KKT_matrix
 end
@@ -107,7 +108,7 @@ function diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KK
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_state, optimal_dual, KKT_matrix, solver)
     n = length(instance.linear_program.cost_vector)
     D_b_KKT = diff_KKT_b(instance, optimal_state, optimal_dual)
-    D_b = - KKT_matrix \ D_b_KKT
+    D_b = - (KKT_matrix \ D_b_KKT)
     D_b = D_b[1:n, :]  # To get the derivative for the optimal solution specifically, ignoring the dual
     return D_b
 end

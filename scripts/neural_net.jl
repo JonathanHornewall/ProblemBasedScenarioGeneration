@@ -27,7 +27,7 @@ function derivative_surrogate_solution(problem_instance::ResourceAllocationProbl
     extensive_form_regularized = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter)
     der_b = diff_opt_b(extensive_form_regularized)
     I = size(problem_instance.problem_data.service_rate_parameters, 1)
-    return der_b[2 + I: end]
+    return der_b[1:I , 1 + I: end]  
 end
 
 """

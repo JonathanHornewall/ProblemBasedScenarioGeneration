@@ -10,11 +10,11 @@ function testing(problem_instance, model, dataset_testing, regularization_parame
         W, T, h, q = scenario_realization(problem_instance, ξ)
         twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
         logbarlp = LogBarCanLP(twoslp, regularization_parameter)
-        optimal_solution, optimal_dual = LogBarCanLP_standard_solver(logbarlp)
-        opt_cost = cost(logbarlp, optimal_solution)
+        opt_cost = optimal_value(logbarlp)
 
 
-        total_gap += (evaluated_cost - opt_cost)/opt_cost
+        total_gap += (evaluated_cost - opt_cost)/abs(opt_cost)
+        println("evaluated_cost", evaluated_cost, " optimal_cost", opt_cost, "gap", (evaluated_cost - opt_cost)/abs(opt_cost))
     end
     Noutofsamples = length(dataset_testing)
     average_gap = total_gap / Noutofsamples

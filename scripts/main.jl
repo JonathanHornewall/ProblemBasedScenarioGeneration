@@ -6,7 +6,8 @@ using SparseArrays
 using Statistics
 using Plots: plot
 using ProblemBasedScenarioGeneration: LogBarCanLP, TwoStageSLP, LogBarCanLP_standard_solver, ResourceAllocationProblemData, 
-ResourceAllocationProblem, scenario_realization, dataGeneration, cost, cost_2s_LogBarCanLP, diff_cost_2s_LogBarCanLP, diff_opt_b, train_model!
+ResourceAllocationProblem, scenario_realization, dataGeneration, cost, cost_2s_LogBarCanLP, optimal_value,
+diff_cost_2s_LogBarCanLP, diff_opt_b, train_model!
 import ProblemBasedScenarioGeneration: primal_problem_cost
 
 import Flux: params, gradient, Optimise, Adam   # error if any of these re-appear
@@ -43,7 +44,7 @@ L = 3
 data_set_training, data_set_testing =  dataGeneration(problem_instance, 100, 10, 5, 1, 3, 3)
 
 # Train the neural network model
-regularization_parameter = 1.0
+regularization_parameter = 0.1
 
 train!(problem_instance::ResourceAllocationProblem, regularization_parameter, model, data_set_training; opt = Adam(1e-3), epochs = 10, display_iterations = true)
 

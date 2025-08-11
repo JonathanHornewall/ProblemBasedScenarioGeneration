@@ -30,7 +30,6 @@ function train!(problem_instance::ResourceAllocationProblem,
             end
             # Some versions may return a 1-tuple; unwrap defensively.
             gmodel = gs isa Tuple ? gs[1] : gs
-            @show gs  
             Flux.update!(state, model, gmodel)
             
             
