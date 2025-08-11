@@ -18,7 +18,7 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     set_optimizer_attribute(model, "tol", solver_tolerance)   # KKT tolerance
     set_optimizer_attribute(model, "print_level",  0)      # silent output
 
-    @variable(model, x[1:n] >= feasibility_margin, start = 1.0)  # ensure strictly interior start
+    @variable(model, x[1:n] >= 0, start = 1.0)  # ensure strictly interior start
     con = @constraint(model, A * x .== b)  # Ax = b
 
     @NLobjective(model, Min,
@@ -28,7 +28,7 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     optimize!(model)
 
     ts = termination_status(model)
-    if !(ts in (MOI.OPTIMAL, MOI.LOCALLY_SOLVED))
+    if !(ts in (MOI.OPTIMAL, MOI.LOCALLY_SOLVED, MOI.ALMOST_LOCALLY_SOLVED))
         error("No feasible/optimal solution: $(ts) — $(MOI.get(model, MOI.RawStatusString()))")
     end
 
@@ -38,8 +38,8 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     end
 
     x_opt = value.(x)                      # optimal decision vector
-    #lambda_opt = dual.(con)                     # Lagrange multipliers  
-    lambda_opt = A' \ (c - [mu[i]/x_opt[i] for i in eachindex(mu)])  # Lagrange multipliers
+    lambda_opt = - dual.(con)                     # Lagrange multipliers  
+    #lambda_opt = A' \ (mu ./ x_opt .- c)
     return x_opt, lambda_opt
 end
 

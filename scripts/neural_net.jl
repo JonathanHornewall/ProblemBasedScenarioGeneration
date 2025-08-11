@@ -26,9 +26,9 @@ function derivative_surrogate_solution(problem_instance::ResourceAllocationProbl
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
     extensive_form_regularized = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter)
-    optimal_solution, optimal_dual = solver(extensive_form_regularized)
+    der_b = diff_opt_b(extensive_form_regularized)
     I = size(problem_instance.problem_data.service_rate_parameters, 1)
-    return optimal_dual[2 + I: end]
+    return der_b[2 + I: end]
 end
 
 """

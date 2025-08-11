@@ -41,5 +41,5 @@ function KKT(instance::LogBarCanLP, state, dual_state)
     if length(x) != length(μ) || length(λ) != size(A, 1)
         error("State and dual state dimensions do not match the problem instance")
     end
-    return [c - μ ./ x - A'*λ; A * x - b]
+    return [c - μ ./ x + A'*λ; A * x - b]
 end

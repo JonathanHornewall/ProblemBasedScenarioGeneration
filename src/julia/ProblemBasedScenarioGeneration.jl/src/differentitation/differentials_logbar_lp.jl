@@ -48,7 +48,7 @@ function diff_KKT_b(instance::LogBarCanLP, state, dual_state)
     D_b = zeros(Float64, n+m, m)
     for j in 1:m
         D_b[1:n, j] .= 0.0
-        D_b[n+1:end, j] .= -1.0
+        D_b[n+1:end, j] .= 1.0
     end
     return D_b
 end

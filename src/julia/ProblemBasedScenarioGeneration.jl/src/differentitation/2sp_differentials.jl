@@ -160,7 +160,7 @@ first stage decision variable.
 """
 function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
     optimal_solution, optimal_dual = solver(s2_logbar_lp)
-    return - coupling_matrix' * optimal_dual
+    return coupling_matrix' * optimal_dual  # The dual variable is the derivative of the recourse function with respect to the first stage decision
 end
 
 """
@@ -185,10 +185,11 @@ end
 Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_cost_2s_LogBarCanLP.
 """
 function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
+function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
     y = point
     A = matrix
     b = rhs_vector
-     # If A has no rows or rank 0 → no constraints → projection is y
+    # If A has no rows or rank 0 → no constraints → projection is y
     if isempty(A) || rank(A) == 0
         return y
     end
@@ -218,7 +219,10 @@ function diff_cost_2s_LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter
     S = length(coupling_matrices)  # number of scenarios
     
     Dx = s1_cost_vector - regularization_parameter .* log.(s1_decision)  # Initialize the derivative with respect to the first stage decision
+    Dx = s1_cost_vector - regularization_parameter .* log.(s1_decision)  # Initialize the derivative with respect to the first stage decision
     for s in 1:S
+        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices[s], s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
+        s2_probability_vector[s], regularization_parameter, solver)
         Dx += recourse_derivative_canLP(s1_decision, coupling_matrices[s], s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
         s2_probability_vector[s], regularization_parameter, solver)
     end
