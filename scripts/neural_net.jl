@@ -3,8 +3,7 @@ model = Chain(
     Dense(9, 15, relu),   # hidden layer 1: 9 → 64, ReLU activation
     Dense(15, 21, relu),  # hidden layer 2: 64 → 64, ReLU
     Dense(21, 30, relu)         # output layer:   64 → 30, linear activation
-)
-
+) |> f64
 
 """
     surrogate_solution(problem_instance::ProblemInstanceC2SCanLP,  Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
