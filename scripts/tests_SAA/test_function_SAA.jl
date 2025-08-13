@@ -3,7 +3,7 @@ using StatsPlots
 using CSV
 using DataFrames
 
-df = CSV.read("scripts/df1.csv", DataFrame)
+df = CSV.read("scripts/tests_SAA/df1.csv", DataFrame)
 
 filtered = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
 
