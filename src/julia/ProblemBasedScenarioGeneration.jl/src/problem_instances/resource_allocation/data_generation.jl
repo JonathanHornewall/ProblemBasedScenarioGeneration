@@ -1,4 +1,4 @@
-function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, σ, p, L, Σ)
+function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, N_xi_per_x, σ, p, L, Σ)
     function sampleParameters(J)
         #returns parameters A and B in the data generation procedure for each client
         A = 50 .+ 5 .*rand(Normal(0,1),J)
@@ -17,7 +17,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
 
 
     ξ = zeros(J,Nsamples)
-    ξoos = zeros(J,Noutofsamples)    
+    ξoos = zeros(30,N_xi_per_x,J,Noutofsamples)    
 
     for j in 1:J
         Aⱼ = A[j]
@@ -30,9 +30,14 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
         end
         
         #data out of samples
+    
         for n in 1:Noutofsamples
-            ξoos_jn = Aⱼ .+ sum(Bⱼ[l].*(xoos[n,l]).^p for l in 1:L) .+ rand(Normal(0,σ))
-            ξoos[j,n] = ξoos_jn
+            for k in 1:N_xi_per_x
+                for l in 1:30
+                    ξoos_lkjn = Aⱼ .+ sum(Bⱼ[l].*(xoos[n,l]).^p for l in 1:L) .+ rand(Normal(0,σ))
+                    ξoos[l,k,j,n] = ξoos_lkjn
+                end
+            end
         end
         
     end
@@ -43,7 +48,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
     end
     out_of_sample=[]
     for n in 1:Noutofsamples
-        push!(out_of_sample, (xoos[n,:], ξoos[:,n]))
+        push!(out_of_sample, (xoos[n,:], ξoos[:,:,:,n]))
     end
     in_sample, out_of_sample = Dict(in_sample), Dict(out_of_sample)  # Convert to dictionaries for easier access
 
