@@ -1,3 +1,15 @@
+using StatsPlots
+
+using CSV
+using DataFrames
+
+df = CSV.read("scripts/df1.csv", DataFrame)
+
+filtered = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
+
+MAD_gaps = filtered.OoS
+
+
 function primal_problem_cost_SAA(problem_instance::ResourceAllocationProblem, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     twoslp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
@@ -6,7 +18,7 @@ function primal_problem_cost_SAA(problem_instance::ResourceAllocationProblem, Ws
 end
 
 function testing_SAA(problem_instance, model, dataset_testing, regularization_parameter, N_xi_per_x, Noutofsamples)
-    list_gaps , list_opt_costs = [] , []
+    list_gaps = [] 
 
 
     for (x, ξ) in dataset_testing
@@ -32,16 +44,23 @@ function testing_SAA(problem_instance, model, dataset_testing, regularization_pa
 
 
         push!(list_gaps, evaluated_cost - opt_cost)
-        push!(list_opt_costs, opt_cost)
-        println("evaluated_cost", evaluated_cost, " optimal_cost", opt_cost, "gap", (evaluated_cost - opt_cost)/abs(opt_cost))
+        println("evaluated_cost", evaluated_cost, " optimal_cost", opt_cost, "gap", evaluated_cost - opt_cost)
     end
 
-    vopt_cost_mean = mean(list_opt_costs)
+    losses = randn(100) .+ 0.5  # example data
 
-    UCB = (100/abs(vopt_cost_mean))*(  (1/Noutofsamples)*sum( list_gaps[k] + 2.462*sqrt( (var(list_gaps)/Noutofsamples ))  for k in 1:Noutofsamples) )
+    # Boxplot with one group
+    all_data = vcat(list_gaps, MAD_gaps)
+    groups = vcat(fill("NN", length(list_gaps)), fill("M5 + AD", length(MAD_gaps)))
 
-    println("normalized estimate of the 99% UCB on the optimal_gap: ", UCB)
+    plot = boxplot(groups, all_data,
+        legend = false,
+        title = "Boxplot NN vs M5 + AD",
+        xlabel = "Method",
+        ylabel = "Value",
+    )
 
-    return UCB
+    display(plot)
+    savefig(plot, "gap_boxplot.pdf") 
 
 end
