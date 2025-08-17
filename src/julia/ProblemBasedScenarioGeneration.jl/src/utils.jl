@@ -15,6 +15,20 @@ function convert_standard_to_canonical_form(A, b, c; p = 1e-7, rescale=true)
     return A, b, c
 end
 
+"""
+    convert_standard_to_canonical_form_regular(A, b, c)
+Converts a standard linear program in the form min c^T x s.t. Ax = b, to a canonical form
+by adding slack variables and extending the cost vector, without regularization penalties.
+This is suitable for regular (non-regularized) linear programs.
+"""
+function convert_standard_to_canonical_form_regular(A, b, c)
+    A = float(A); b = float(b); c = float(c)
+    m, n = size(A)
+    A = hcat(A, -A, Matrix{eltype(A)}(I, m, m))  # add slack variables
+    c = vcat(c, -c, zeros(eltype(c), m))  # extend cost vector with zeros for slack variables
+    return A, b, c
+end
+
 function convert_decision_standard_to_canonical(constraint_matrix, constraint_vector, decision)
     A = constraint_matrix
     b = constraint_vector
@@ -41,5 +55,5 @@ function KKT(instance::LogBarCanLP, state, dual_state)
     if length(x) != length(μ) || length(λ) != size(A, 1)
         error("State and dual state dimensions do not match the problem instance")
     end
-    return [c - μ ./ x + A'*λ; A * x - b]
+    return [c - μ ./ x - A'*λ; A * x - b]
 end

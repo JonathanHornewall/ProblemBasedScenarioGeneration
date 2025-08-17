@@ -21,9 +21,13 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     @variable(model, x[1:n] >= 0, start = 1.0)  # ensure strictly interior start
     con = @constraint(model, A * x .== b)  # Ax = b
 
-    @NLobjective(model, Min,
-        sum(c[i] * x[i] for i in 1:n) -
-        sum(mu[i] * log(x[i]) for i in 1:n))
+    if iszero(mu)
+        @objective(model, Min, dot(c, x))  # if mu is zero, just a standard LP
+    else
+        @NLobjective(model, Min,
+            sum(c[i] * x[i] for i in 1:n) -
+            sum(mu[i] * log(x[i]) for i in 1:n))
+    end
 
     optimize!(model)
 
@@ -38,8 +42,8 @@ function ipot_solver(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_m
     end
 
     x_opt = value.(x)                      # optimal decision vector
-    lambda_opt = - dual.(con)                     # Lagrange multipliers  
-    #lambda_opt = A' \ (mu ./ x_opt .- c)
+    lambda_opt = dual.(con)                     # Lagrange multipliers  
+    #lambda_opt = A' \ (c .- mu ./ x_opt )
     return x_opt, lambda_opt
 end
 
@@ -47,7 +51,10 @@ end
     RegCanLP_standard_solver(instance::LogBarCanLP)
 Defines the standard choice of solver when differentiating log barrier regularized canonical form linear programs
 """
-function LogBarCanLP_standard_solver(instance::LogBarCanLP)
+function LogBarCanLP_standard_solver(instance::LogBarCanLP; canlp_solver = solve_canonical_lp)
+    if iszero(instance.regularization_parameters)
+        return canlp_solver(instance.linear_program)
+    end
     return ipot_solver(instance::LogBarCanLP)
 end
 

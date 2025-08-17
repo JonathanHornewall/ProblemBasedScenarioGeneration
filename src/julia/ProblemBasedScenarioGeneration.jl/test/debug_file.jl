@@ -3,63 +3,91 @@ using ProblemBasedScenarioGeneration
 using ProblemBasedScenarioGeneration: convert_standard_to_canonical_form, CanLP, LogBarCanLP, LogBarCanLP_standard_solver, KKT
 using ProblemBasedScenarioGeneration: convert_decision_standard_to_canonical, diff_opt_A, diff_opt_b, diff_opt_c
 using ProblemBasedScenarioGeneration: diff_KKT_Y, diff_KKT_b, diff_cache_computation, diff_opt_b
+using ProblemBasedScenarioGeneration: scenario_realization, ResourceAllocationProblem, ResourceAllocationProblemData, TwoStageSLP, cost_2s_LogBarCanLP, cost, isfeasible
+using LinearAlgebra
 
-function main()
-    # Create a problem instance
-    A = [1 0; -1 0; 0 1; 0 -1]
-    b = [1,  1,  1,  1]
-    c = [1, 1]
-    m, n = size(A)
-    A_can, b_can, c_can = convert_standard_to_canonical_form(A, b, c)  # Convert to canonical form and convert to float
-    m_can, n_can = size(A_can)
-    lp_instance = CanLP(A_can, b_can, c_can)
-    reg_lp_instance = LogBarCanLP(lp_instance, 1.0)
+# Include the necessary functions
+include("../src/problem_instances/resource_allocation/parameters.jl")
+cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)
 
-    x_test_standard = zeros(Float64, n)  # Initialize decision variable in standard form
-    x_test_can = convert_decision_standard_to_canonical(A, b, x_test_standard)  # Convert decision variable to canonical form
-    λ_test_can = zeros(Float64, m_can)  # Initialize dual variable
+problem_data = ResourceAllocationProblemData(μᵢⱼ, cz, qw, ρᵢ)
+problem_instance = ResourceAllocationProblem(problem_data)
 
-    #test = KKT(reg_lp_instance, x_test_can, λ_test_can)  # Check KKT conditions
+# Test with a simple scenario
+test_scenario = ones(30)
+scenario_parameter = float(test_scenario)
+reg_param_surr = 1.5
+reg_param_ref = 1.5
 
-    #function make_KKT_test(reg_lp_instance)
-    #   n = length(reg_lp_instance.linear_program.cost_vector)
-    #   m = length(reg_lp_instance.linear_program.constraint_vector)
-    #   KKT_test(Y) = KKT(reg_lp_instance, Y[1:n], Y[n + 1:end])  # Y is a concatenation of the primal and dual variables
-    #   return KKT_test
-    #end
+println("=== Debugging Cost Discrepancy ===")
 
-    #KKT_test = make_KKT_test(reg_lp_instance)  # Create the KKT test function
-    #Y_test = [x_test_can; λ_test_can]  # Concatenate primal and dual variables for testing
-    # Test derivatives
-    #@show KKT_test(Y_test)  # Show KKT test output
-    #@show FiniteDiff.finite_difference_jacobian(KKT_test, Y_test)
+# Get the problem parameters
+A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
+W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
 
-    #@show diff_KKT_Y(reg_lp_instance, x_test_can)  # Show the KKT matrix
-    #@show diff_KKT_b(reg_lp_instance, x_test_can, λ_test_can)  # Show the derivative of KKT with respect to b
-    #@show diff_cache_computation(reg_lp_instance)  # Show the cached computation results
-    #@show diff_opt_b(reg_lp_instance)  # Show the derivative of optimal solution with respect to b
+println("Problem dimensions:")
+println("  First stage: $(length(c)) variables, $(length(b)) constraints")
+println("  Second stage: $(length(q)) variables, $(length(h)) constraints")
+println("  Number of scenarios: 1")
 
-    function opt_with_b(b)
-        # Solve the LP with the modified constraint vector b
-        lp_instance = CanLP(reg_lp_instance.linear_program.constraint_matrix, b, reg_lp_instance.linear_program.cost_vector)
-        reg_lp_instance = LogBarCanLP(lp_instance, reg_lp_instance.regularization_parameters)
-        optimal_state, optimal_dual = LogBarCanLP_standard_solver(reg_lp_instance)
-        return optimal_state
-    end
-    b_test = [1.0, 1.0, 1.0, 1.0]  # Test constraint vector
-    stepsize = 1e-6  # Step size for finite differences
-    println("Optimal state for b = $b_test: ")
-    optimal_state = opt_with_b(b_test)  # Get the optimal state for the test
-    println("Differential of optimal solution with respect to b according to our calculations: ")
-    println(diff_opt_b(reg_lp_instance))
-    println("Differential of optimal solution with respect to b according to finite differences: ")
-    println(FiniteDiff.finite_difference_jacobian(opt_with_b, b_test, absstep=stepsize))
-    println("Maximum difference between our calculations and finite differences: ")
-    println(maximum(abs.(diff_opt_b(reg_lp_instance) - FiniteDiff.finite_difference_jacobian(opt_with_b, b_test, absstep=stepsize))))  # Check the maximum difference
-    println("Maximum values:: ")
-    println(maximum(abs.(diff_opt_b(reg_lp_instance))))  # Check the maximum absolute difference
-    println(maximum(abs.(FiniteDiff.finite_difference_jacobian(opt_with_b, b_test; absstep=stepsize))))  # Check the maximum absolute difference for finite differences
-end
-        
+# Create the two-stage problem
+twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+println("\nTwoStageSLP probabilities: ", twoslp.ps)
 
-main()
+# Method 1: Evaluate cost at fixed first-stage decision (what evaluated_cost does)
+println("\n=== Method 1: Fixed first-stage decision ===")
+# Get a surrogate decision (just use a feasible point for testing)
+surrogate_decision = ones(length(c))  # Simple feasible decision
+println("Surrogate decision: ", surrogate_decision)
+
+# Check first-stage cost
+s1_lp = CanLP(A, b, c)
+s1_reg_lp = LogBarCanLP(s1_lp, reg_param_surr)
+s1_cost = cost(s1_reg_lp, surrogate_decision)
+println("First-stage cost: ", s1_cost)
+
+# Check second-stage cost
+s2_constraint_matrix = W
+s2_constraint_vector = h - T * surrogate_decision
+s2_cost_vector = q * twoslp.ps[1]  # Scale by probability
+s2_lp = CanLP(s2_constraint_matrix, s2_constraint_vector, s2_cost_vector)
+s2_reg_lp = LogBarCanLP(s2_lp, reg_param_surr * twoslp.ps[1])
+
+# Solve second-stage optimally
+optimal_s2_decision, _ = LogBarCanLP_standard_solver(s2_reg_lp)
+s2_cost = cost(s2_reg_lp, optimal_s2_decision)
+println("Second-stage cost: ", s2_cost)
+println("Total cost (Method 1): ", s1_cost + s2_cost)
+
+# Method 2: Solve entire problem optimally (what opt_cost does)
+println("\n=== Method 2: Optimal solution ===")
+logbarlp = LogBarCanLP(twoslp, reg_param_surr)
+println("LogBarCanLP regularization parameters:")
+println("  First stage: ", logbarlp.regularization_parameters[1:length(c)])
+println("  Second stage: ", logbarlp.regularization_parameters[length(c)+1:end])
+
+# Solve optimally
+optimal_solution, _ = LogBarCanLP_standard_solver(logbarlp)
+opt_cost = cost(logbarlp, optimal_solution)
+println("Optimal cost (Method 2): ", opt_cost)
+
+# Compare the approaches
+println("\n=== Comparison ===")
+method1_cost = s1_cost + s2_cost
+method2_cost = opt_cost
+gap = method1_cost - method2_cost
+println("Method 1 cost: ", method1_cost)
+println("Method 2 cost: ", method2_cost)
+println("Gap (Method 1 - Method 2): ", gap)
+println("Is gap positive? ", gap > 0)
+
+# Check if the surrogate decision is actually feasible
+println("\n=== Feasibility Check ===")
+println("First-stage feasibility: ", isfeasible(s1_reg_lp, surrogate_decision))
+println("Second-stage feasibility: ", isfeasible(s2_reg_lp, optimal_s2_decision))
+
+# Check the actual cost using cost_2s_LogBarCanLP
+println("\n=== Using cost_2s_LogBarCanLP ===")
+cost_2s_result = cost_2s_LogBarCanLP(twoslp, surrogate_decision, reg_param_surr)
+println("cost_2s_LogBarCanLP result: ", cost_2s_result)
+println("Matches Method 1? ", isapprox(cost_2s_result, method1_cost, rtol=1e-10))

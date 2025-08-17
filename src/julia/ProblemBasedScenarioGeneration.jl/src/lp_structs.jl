@@ -60,18 +60,43 @@ function LogBarCanLP(linear_program::CanLP{R}, regularization_parameter::R) wher
     LogBarCanLP(linear_program, regularization_parameters)
 end
 
+function isfeasible(instance::CanLP, decision; feasibility_margin = 1e-8)
+    all(isapprox.(instance.constraint_matrix * decision, instance.constraint_vector; atol=feasibility_margin)) && all(decision .>= 0)
+end
+
+function isfeasible(instance::LogBarCanLP, decision; feasibility_margin = 1e-8)  
+    if iszero(instance.regularization_parameters)
+        return isfeasible(instance.linear_program, decision; feasibility_margin = feasibility_margin)
+    else
+        return all(isapprox.(instance.linear_program.constraint_matrix * decision, instance.linear_program.constraint_vector; atol=feasibility_margin)) && all(decision .> 0)
+    end
+end
 
 """
     cost(instance::LogBarCanLP, decision)
 cost function for log barrier regularized canonical form problem evaluated at a given decision.
 """
 function cost(instance::LogBarCanLP, decision)
+    if !isfeasible(instance, decision) 
+        if !all(decision .> 0)
+            println("Positivity error")
+        elseif !all(isapprox.(instance.linear_program.constraint_matrix * decision, instance.linear_program.constraint_vector; atol=feasibility_margin))
+            println("Equality constraint violation")
+        end
+        error("Decision is not feasible")
+    end
     LP = instance.linear_program
-    A = LP.constraint_matrix
-    b = LP.constraint_vector
     c = LP.cost_vector
     mu = instance.regularization_parameters
     x = decision
-    #@assert A*x == b
-    return dot(c, x) -dot(mu, log.(x))
+    if iszero(mu)
+        return dot(c, x)
+    else
+        return dot(c, x) - dot(mu, log.(x))
+    end
+end
+
+function cost(instance::CanLP, decision) 
+    !isfeasible(instance, decision) && error("Decision is not feasible")
+    return dot(instance.cost_vector, decision) 
 end

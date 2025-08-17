@@ -9,7 +9,7 @@ model = Chain(
     surrogate_solution(problem_instance::ProblemInstanceC2SCanLP,  Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
 Solves for the first stage decision given a specific scenario W, T, h, q
 """
-function surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, solver=LogBarCanLP_standard_solver)
+function surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter::Vector{Float64}, regularization_parameter, solver=LogBarCanLP_standard_solver)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
     surrogate_problem = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter) 
@@ -21,24 +21,25 @@ end
     derivative_surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, context_parameter, W, T, h, q, mu, solver=LogBarCanLP_standard_solver)
 Derivative of first stage decision for surrogate_problem with respect to scenario parameters
 """
-function derivative_surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, solver=LogBarCanLP_standard_solver)
+function derivative_surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter::Vector{Float64}, regularization_parameter, solver=LogBarCanLP_standard_solver)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
     extensive_form_regularized = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter)
-    der_b = diff_opt_b(extensive_form_regularized)
+    der_b = diff_opt_b(extensive_form_regularized; solver=solver)
     I = size(problem_instance.problem_data.service_rate_parameters, 1)
-    return der_b[1:I , 1 + I: end]  
+    return Matrix{Float64}(der_b[1:I , 1 + I: end])
 end
 
 """
 Provides the pullback for the surrogate_solution function, allowing for back-propagation through the neural network
 Note: The derivative computations can be rewritten without the D_xiY function to improve performance
 """
-function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, scenario_parameter, regularization_parameter, solver)
-    y = surrogate_solution(problem_instance, scenario_parameter, regularization_parameter)
+function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, scenario_parameter::Vector{Float64}, regularization_parameter, solver)
+    y = surrogate_solution(problem_instance, scenario_parameter, regularization_parameter, solver)
     
     function pullback(y_hat)
         D_h = derivative_surrogate_solution(problem_instance, scenario_parameter, regularization_parameter, solver)
+
         D_h_tangent = D_h' * y_hat
 
         return NoTangent(), NoTangent(), D_h_tangent, NoTangent(), NoTangent()  # returning NoTangent for the regularization parameter
@@ -86,7 +87,7 @@ end
 
 
 
-function loss(problem_instance::ResourceAllocationProblem, regularization_parameter, scenario_parameter, actual_scenario)
-    surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, regularization_parameter)
-    primal_problem_cost(problem_instance, actual_scenario, regularization_parameter, surrogate_decision)
+function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+    surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, reg_param_surr)
+    primal_problem_cost(problem_instance, actual_scenario, reg_param_prim, surrogate_decision)
 end

@@ -131,7 +131,7 @@ Differentiation functionalities for cost function
 
 
 """
-    cost_2s_LogBarCanLP(s1_decision, two_slp::TwoStageSLP, regularization_parameters, solver=LogBarCanLP_standard_solver, project_derivative=false)
+    cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameters, solver=LogBarCanLP_standard_solver, project_derivative=false)
 Gives the cost function of a two-stage stochastic linear program with respect to the first-stage decision.
 """
 function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameter,
@@ -155,7 +155,12 @@ function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_p
         cost_vector = s2_cost_vectors[s] * s2_probability_vector[s]
         s2_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
         s2_reg_lp = LogBarCanLP(s2_lp, regularization_parameter * s2_probability_vector[s])
-        final_cost += optimal_value(s2_reg_lp, solver)  # Optimal value of the second stage LP
+        
+        # Solve the second-stage problem to find optimal second-stage decision given fixed first-stage decision
+        optimal_s2_decision, _ = solver(s2_reg_lp)
+        
+        # Evaluate the cost at the optimal second-stage decision
+        final_cost += cost(s2_reg_lp, optimal_s2_decision)
     end
     return final_cost
 end
@@ -165,9 +170,9 @@ end
 Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
 first stage decision variable.
 """
-function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, solver=LogBarCanLP_standard_solver)
+function recourse_derivative_canLP(coupling_matrix, s2_logbar_lp::LogBarCanLP, s2_probability, solver=LogBarCanLP_standard_solver)
     optimal_solution, optimal_dual = solver(s2_logbar_lp)
-    return - coupling_matrix' * optimal_dual  # The dual variable is the derivative of the recourse function with respect to the first stage decision
+    return - s2_probability * coupling_matrix' * optimal_dual  # The dual variable is the derivative of the recourse function with respect to the first stage decision
 end
 
 """
@@ -181,10 +186,10 @@ function recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_m
     # Rename variables for notational convenience
     A = s2_constraint_matrix
     b = s2_constraint_vector - coupling_matrix * s1_decision
-    c = s2_cost_vector * s2_probability
-    mu = regularization_parameter * s2_probability
+    c = s2_cost_vector
+    mu = regularization_parameter
     s2_logbar_lp = LogBarCanLP(CanLP(A, b, c), mu)
-    return recourse_derivative_canLP(coupling_matrix, s2_logbar_lp, solver)
+    return recourse_derivative_canLP(coupling_matrix, s2_logbar_lp, s2_probability, solver)
 end
 
 """
@@ -224,11 +229,8 @@ function diff_cost_2s_LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter
 
     S = length(coupling_matrices)  # number of scenarios
     
-    Dx = s1_cost_vector - regularization_parameter .* log.(s1_decision)  # Initialize the derivative with respect to the first stage decision
-    Dx = s1_cost_vector - regularization_parameter .* log.(s1_decision)  # Initialize the derivative with respect to the first stage decision
+    Dx = s1_cost_vector .- regularization_parameter ./ s1_decision  # Initialize the derivative with respect to the first stage decision
     for s in 1:S
-        Dx += recourse_derivative_canLP(s1_decision, coupling_matrices[s], s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
-        s2_probability_vector[s], regularization_parameter, solver)
         Dx += recourse_derivative_canLP(s1_decision, coupling_matrices[s], s2_constraint_matrices[s], s2_constraint_vectors[s], s2_cost_vectors[s], 
         s2_probability_vector[s], regularization_parameter, solver)
     end

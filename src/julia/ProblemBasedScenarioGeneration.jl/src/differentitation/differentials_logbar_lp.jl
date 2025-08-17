@@ -46,11 +46,10 @@ with respect to the constraint vector.
 function diff_KKT_b(instance::LogBarCanLP, state, dual_state)
     n = length(instance.linear_program.cost_vector)
     m = length(instance.linear_program.constraint_vector)
-    D_b = zeros(Float64, n+m, m)
-    for j in 1:m
-        D_b[1:n, j] .= 0.0
-        D_b[n+1:end, j] .= -1.0
-    end
+
+    D_b = vcat(zeros(n, m), -I(m))
+    D_b = float(D_b)  # Ensure the type is Float64
+
     return D_b
 end
 """
@@ -104,7 +103,7 @@ end
     diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=LogBarCanLP_standard_solver)
 Derivative of optimal solution with respect to constraint vector
 """
-function diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[], solver=LogBarCanLP_standard_solver)
+function diff_opt_b(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_matrix=[]; solver=LogBarCanLP_standard_solver)
     optimal_state, optimal_dual, KKT_matrix = diff_cache_computation(instance, optimal_state, optimal_dual, KKT_matrix, solver)
     n = length(instance.linear_program.cost_vector)
     D_b_KKT = diff_KKT_b(instance, optimal_state, optimal_dual)

@@ -162,8 +162,7 @@ Computes the cost of the primal problem as a function of the context parameter, 
 """
 function primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
     twoslp = TwoStageSLP(return_first_stage_parameters(problem_instance)..., Ws, Ts, hs, qs)
-    main_problem = LogBarCanLP(twoslp, regularization_parameter)
-    cost = cost_2s_LogBarCanLP(first_stage_decision, main_problem, regularization_parameter)
+    cost = cost_2s_LogBarCanLP(twoslp, first_stage_decision, regularization_parameter)
     return cost
 end
 

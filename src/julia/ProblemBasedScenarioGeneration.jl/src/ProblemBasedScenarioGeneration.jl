@@ -10,6 +10,7 @@ using SparseArrays
 include("lp_structs.jl")
 include("differentitation/differentials_logbar_lp.jl")
 include("solvers/log_bar_linprog_solvers.jl")
+include("solvers/can_lp_solver.jl")
 include("differentitation/2sp_differentials.jl")
 
 include("problem_instances/problem_instances.jl")
@@ -32,5 +33,8 @@ export ResourceAllocationProblemData
 export construct_neural_network
 export train_model!
 export loss  # To compare with out of sample data
+
+export solve_canonical_lp
+export convert_standard_to_canonical_form_regular
 
 end # module ProblemBasedScenarioGeneration
