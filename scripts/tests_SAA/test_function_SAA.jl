@@ -15,6 +15,11 @@ function testing_SAA(problem_instance, model, dataset_testing, regularization_pa
     
     UCB_list = []
 
+    # I modified the code for data generation so that we test using the same algorithm as tito's paper:
+    # we generate 30 convariate x
+    # for each of them, ξ is of size 30*1000*30
+    # ξ[m,k,:] is the sample k for the SAA with 1000 sample for test m with covariate x
+
 
     for (x, ξ) in dataset_testing
         
@@ -41,12 +46,17 @@ function testing_SAA(problem_instance, model, dataset_testing, regularization_pa
             evaluated_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, surrogate_decision)
 
             push!(list_gaps, evaluated_cost - opt_cost)
-            push!(list_costs, evaluated_cost)
+
+            # in the algorithm of tito's paper, we divide by the evaluated cost. But in the original code provided by tito we divide by the optimal cost.
+            # to be clarified
+            
+            push!(list_costs, evaluated_cost) 
 
             println("evaluated_cost", evaluated_cost, " optimal_cost", opt_cost, "gap", evaluated_cost - opt_cost)
 
         end
-        
+
+        # compute 99% confidence uper bound for x
         cost_mean = mean(list_costs)
         UCB = (100/abs(cost_mean))*(  (1/30)*sum( list_gaps[k] + 2.462*sqrt( (var(list_gaps)/30))  for k in 1:30) )
             
@@ -73,21 +83,23 @@ end
 
 function gurobi_solver(A, b, c, Ws, Ts, hs, qs, first_stage_decision)
 
+    # this function computed the cost with a fixed or unfixed first stage decision 
+
     n = length(c)  # number of first stage decision variables
-    m = size(Ws[1], 2)
-    S = length(Ws)
+    m = size(Ws[1], 2) # number of second stage decision variables 
+    S = length(Ws) # number of scenarios
 
     # model 
     model = Model(Gurobi.Optimizer)
     set_optimizer_attribute(model, "OutputFlag", 0)
 
-    @variable(model, z[1:n] >= 0) 
-    @variable(model, u[1:S,1:m] >= 0) 
+    @variable(model, z[1:n] >= 0) #first stage decision variable
+    @variable(model, u[1:S,1:m] >= 0) #second stage decision variable
 
     @constraint(model, A*z .== b)
 
     if first_stage_decision !== nothing
-        @constraint(model, z == first_stage_decision)
+        @constraint(model, z == first_stage_decision) # fix first stage decision
     end
 
     for s in 1:S
@@ -96,7 +108,7 @@ function gurobi_solver(A, b, c, Ws, Ts, hs, qs, first_stage_decision)
 
     @objective(model, Min,
         sum(c[i] * z[i] for i in 1:n) +
-        sum(qs[s][i] * u[s,i] for s in 1:S, i in 1:m))
+        (1/S)*sum(qs[s][i] * u[s,i] for s in 1:S, i in 1:m))
 
     optimize!(model)
 
