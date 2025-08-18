@@ -96,9 +96,15 @@ Generates scenario data for an instance of the resource allocation problem based
 """
 function scenario_realization(instance::ResourceAllocationProblem, scenario_parameter)
     W, T, q = instance.s2_constraint_matrix, instance.s2_coupling_matrix, instance.s2_cost_vector
-    # scenario_parameter is a vector of length I, where I is the number of clients
-    I = size(T,2)
-    h = vcat(zeros(I), scenario_parameter) # avoid in space mutations that are not allowed if we want to differentiate using Zygote 
+    # scenario_parameter is a vector of length J (number of clients), representing demand
+    I = size(T, 2)  # Number of resources (rows in T)
+    
+    # scenario_parameter represents demand for J clients
+    # We need to create the right-hand side vector h
+    # The first I elements are zeros (resource constraints)
+    # The next J elements are the demand values
+    h = vcat(zeros(I), scenario_parameter)
+    
     return W, T, h, q
 end
 

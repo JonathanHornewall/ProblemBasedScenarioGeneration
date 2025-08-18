@@ -67,3 +67,12 @@ function solve_canonical_lp(instance::CanLP; solver_tolerance=1e-9, feasibility_
     
     return x_opt, lambda_opt
 end
+
+"""
+    optimal_value(instance::CanLP, solver=LogBarCanLP_standard_solver)
+returns the optimal value of a linear program
+"""
+function optimal_value(instance::CanLP, solver=solve_canonical_lp)
+    optimal_solution, optimal_dual = solver(instance)
+    return cost(instance, optimal_solution)
+end

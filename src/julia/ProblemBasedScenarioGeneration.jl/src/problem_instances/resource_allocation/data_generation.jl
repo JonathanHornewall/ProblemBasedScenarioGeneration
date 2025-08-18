@@ -17,7 +17,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
 
 
     ξ = zeros(J,Nsamples)
-    ξoos = zeros(30,N_xi_per_x,J,Noutofsamples)    
+    ξoos = zeros(30, N_xi_per_x, J, Noutofsamples)    
 
     for j in 1:J
         Aⱼ = A[j]

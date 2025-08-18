@@ -6,12 +6,12 @@ using CSV
 using DataFrames
 
 # retrieve results for M5 +AD 
-df = CSV.read("scripts/df1.csv", DataFrame)
+df = CSV.read("tests_SAA/df1.csv", DataFrame)
 filtered = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
 MAD_gaps = filtered.OoS
 
 
-function testing_SAA(problem_instance, model, dataset_testing, regularization_parameter, N_xi_per_x, Noutofsamples)
+function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
     
     UCB_list = []
 
@@ -37,13 +37,18 @@ function testing_SAA(problem_instance, model, dataset_testing, regularization_pa
                 push!(hs,h)
                 push!(qs,q)
             end
+            # opt_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, nothing)
 
-            opt_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, nothing)
+            two_slp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
+            can_lp = extensive_form_canonical(two_slp)
+            opt_cost = optimal_value(can_lp)
 
             ξ_hat = model(x)
-            surrogate_decision = surrogate_solution(problem_instance, ξ_hat, regularization_parameter)
+            surrogate_decision = surrogate_solution(problem_instance, ξ_hat, reg_param_surr)
 
-            evaluated_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, surrogate_decision)
+            evaluated_cost = cost_2s_LogBarCanLP(two_slp, surrogate_decision, reg_param_ref)
+
+            #evaluated_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, surrogate_decision)
 
             push!(list_gaps, evaluated_cost - opt_cost)
 
@@ -52,11 +57,11 @@ function testing_SAA(problem_instance, model, dataset_testing, regularization_pa
             
             push!(list_costs, evaluated_cost) 
 
-            println("evaluated_cost", evaluated_cost, " optimal_cost", opt_cost, "gap", evaluated_cost - opt_cost)
+            println("evaluated_cost: ", evaluated_cost, " optimal_cost: ", opt_cost, "gap: ", (evaluated_cost - opt_cost))
 
         end
 
-        # compute 99% confidence uper bound for x
+        # compute 99% confidence upper bound for x
         cost_mean = mean(list_costs)
         UCB = (100/abs(cost_mean))*(  (1/30)*sum( list_gaps[k] + 2.462*sqrt( (var(list_gaps)/30))  for k in 1:30) )
             

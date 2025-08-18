@@ -1,6 +1,6 @@
 """
 ---------------------------------------------------------------------------------------------
-Basic functionalities for two-stage stochastic linear programs
+Constructors for two-stage stochastic linear programs
 ---------------------------------------------------------------------------------------------
 """
 
@@ -123,6 +123,8 @@ function LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter::Real)
     return LogBarCanLP(lp, regularization_parameters)
 end
 
+
+
 """
 ---------------------------------------------------------------------------------------------
 Differentiation functionalities for cost function
@@ -135,7 +137,7 @@ Differentiation functionalities for cost function
 Gives the cost function of a two-stage stochastic linear program with respect to the first-stage decision.
 """
 function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameter,
-    solver=LogBarCanLP_standard_solver, project_derivative=false)
+    solver=LogBarCanLP_standard_solver)
     s1_constraint_matrix = two_slp.A1
     s1_constraint_vector = two_slp.b1
     s1_cost_vector = two_slp.c1

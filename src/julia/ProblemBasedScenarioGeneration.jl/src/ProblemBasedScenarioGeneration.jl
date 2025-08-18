@@ -9,8 +9,8 @@ using SparseArrays
 # Here we add the "include" statements in appropriate order.
 include("lp_structs.jl")
 include("differentitation/differentials_logbar_lp.jl")
-include("solvers/log_bar_linprog_solvers.jl")
 include("solvers/can_lp_solver.jl")
+include("solvers/log_bar_linprog_solvers.jl")
 include("differentitation/2sp_differentials.jl")
 
 include("problem_instances/problem_instances.jl")
