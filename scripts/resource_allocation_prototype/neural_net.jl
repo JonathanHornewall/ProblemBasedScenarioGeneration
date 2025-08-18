@@ -1,8 +1,8 @@
 model = Chain(
-    Dense(3, 9, relu),
-    Dense(9, 15, relu),   # hidden layer 1: 9 → 64, ReLU activation
-    Dense(15, 21, relu),  # hidden layer 2: 64 → 64, ReLU
-    Dense(21, 30, relu)         # output layer:   64 → 30, linear activation
+    Dense(3, 128, relu),
+    Dense(128, 128, relu),
+    Dense(128, 128, relu),
+    Dense(128, 30, relu)     # linear head
 ) |> f64
 
 """
@@ -86,8 +86,33 @@ function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::R
 end
 
 
-
+"""
+    loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+Computes the loss of the surrogate solution compared to the optimal solution. Used for training.
+"""
 function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
     surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, reg_param_surr)
     primal_problem_cost(problem_instance, actual_scenario, reg_param_prim, surrogate_decision)
+end
+
+"""
+    relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+Computes the relative loss of the surrogate solution compared to the optimal solution. Mostly used for testing.
+"""
+function relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+    evaluated_loss = loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+    optimal_loss = loss(problem_instance, reg_param_prim, reg_param_prim, actual_scenario, actual_scenario)
+    
+    #=
+    surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, reg_param_surr)
+    evaluated_loss = primal_problem_cost(problem_instance, actual_scenario, reg_param_prim, surrogate_decision)
+
+    # Compute the actual optimal cost
+    A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
+    W, T, h, q = scenario_realization(problem_instance, actual_scenario)
+    twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+    extensive_lp = extensive_form_canonical(twoslp)
+    optimal_loss = optimal_value(extensive_lp)
+    =#
+    return (evaluated_loss - optimal_loss)/abs(optimal_loss)
 end

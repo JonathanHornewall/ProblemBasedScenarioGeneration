@@ -57,7 +57,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             
             push!(list_costs, evaluated_cost) 
 
-            println("evaluated_cost: ", evaluated_cost, " optimal_cost: ", opt_cost, "gap: ", (evaluated_cost - opt_cost))
+            println("evaluated_cost: ", evaluated_cost, " optimal_cost: ", opt_cost, " gap: ", (evaluated_cost - opt_cost)/abs(opt_cost))
 
         end
 

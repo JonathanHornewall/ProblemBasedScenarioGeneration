@@ -1,12 +1,87 @@
-# Utility script to load saved experiment states
-# This allows you to continue working with trained models without retraining
+# Utility script for all data persistence functionality
+# This handles saving/loading models, data, and experiment states
 
 using ProblemBasedScenarioGeneration
 using Flux
 using LinearAlgebra
 
-# Load the training utilities
-include("training.jl")
+"""
+    save_trained_model(model, filepath)
+
+Save a trained Flux model to a file using Julia's built-in Serialization.
+"""
+function save_trained_model(model, filepath)
+    serialize(filepath, model)
+end
+
+"""
+    load_trained_model(filepath)
+
+Load a trained Flux model from a file using Julia's built-in Serialization.
+"""
+function load_trained_model(filepath)
+    return deserialize(filepath)
+end
+
+"""
+    save_training_data(training_data, testing_data, filepath)
+
+Save training and testing datasets to a file using Julia's built-in Serialization.
+"""
+function save_training_data(training_data, testing_data, filepath)
+    serialize(filepath, (training_data, testing_data))
+end
+
+"""
+    load_training_data(filepath)
+
+Load training and testing datasets from a file using Julia's built-in Serialization.
+"""
+function load_training_data(filepath)
+    training_data, testing_data = deserialize(filepath)
+    return training_data, testing_data
+end
+
+"""
+    save_experiment_state(model, training_data, testing_data, problem_instance, 
+                        reg_params, filepath)
+
+Save the complete experiment state including model, data, and parameters.
+"""
+function save_experiment_state(model, training_data, testing_data, problem_instance, 
+                            reg_params; filepath = "experiment_state.jls")
+    
+    # Extract key parameters from problem instance
+    problem_data = Dict(
+        "s1_constraint_matrix" => problem_instance.s1_constraint_matrix,
+        "s1_constraint_vector" => problem_instance.s1_constraint_vector,
+        "s1_cost_vector" => problem_instance.s1_cost_vector
+    )
+    
+    # Save everything
+    serialize(filepath, (model, training_data, testing_data, problem_data, reg_params))
+    
+    println("Complete experiment state saved to: $filepath")
+end
+
+"""
+    load_experiment_state(filepath)
+
+Load the complete experiment state from a file.
+"""
+function load_experiment_state(filepath)
+    
+    model, training_data, testing_data, problem_data, reg_params = deserialize(filepath)
+    
+    # Reconstruct problem instance
+    problem_instance = ResourceAllocationProblem(ResourceAllocationProblemData(
+        problem_data["s1_constraint_matrix"], 
+        problem_data["s1_constraint_vector"], 
+        problem_data["s1_cost_vector"]
+    ))
+    
+    return model, training_data, testing_data, problem_instance, reg_params
+end
 
 """
     load_and_continue_experiment(experiment_file = "experiment_state.jls")
@@ -29,47 +104,15 @@ function load_and_continue_experiment(experiment_file = "experiment_state.jls")
 end
 
 """
-    quick_test_loaded_model(experiment_file = "experiment_state.jls")
-
-Quick test to verify the loaded model works correctly.
-"""
-function quick_test_loaded_model(experiment_file = "experiment_state.jls")
-    model, training_data, testing_data, problem_instance, reg_params = load_and_continue_experiment(experiment_file)
-    
-    # Extract regularization parameters
-    reg_param_surr = reg_params["reg_param_surr"]
-    reg_param_ref = reg_params["reg_param_ref"]
-    
-    println("\n=== Quick Model Test ===")
-    
-    # Test on a few training samples
-    println("Testing on training data...")
-    for (i, (x, ξ)) in enumerate(training_data[1:min(3, length(training_data))])
-        ξ_hat = model(x)
-        loss_val = loss(problem_instance, reg_param_surr, reg_param_ref, ξ_hat, ξ)
-        println("  Sample $i - Loss: $loss_val")
-    end
-    
-    # Test on testing data
-    println("\nTesting on testing data...")
-    test_result = testing(problem_instance, model, testing_data, reg_param_surr, reg_param_ref)
-    println("  Test gap: $test_result")
-    
-    println("\n✓ Model test completed successfully!")
-    
-    return model, training_data, testing_data, problem_instance, reg_params
-end
-
-"""
     continue_training(experiment_file = "experiment_state.jls", 
-                     additional_epochs = 10, 
-                     learning_rate = 1e-3)
+                    additional_epochs = 10, 
+                    learning_rate = 1e-3)
 
 Continue training a loaded model for additional epochs.
 """
 function continue_training(experiment_file = "experiment_state.jls", 
-                         additional_epochs = 10, 
-                         learning_rate = 1e-3)
+                        additional_epochs = 10, 
+                        learning_rate = 1e-3)
     
     model, training_data, testing_data, problem_instance, reg_params = load_and_continue_experiment(experiment_file)
     
@@ -81,7 +124,7 @@ function continue_training(experiment_file = "experiment_state.jls",
     println("Additional epochs: $additional_epochs")
     println("Learning rate: $learning_rate")
     
-    # Continue training
+    # Continue training (this will call train! from training.jl)
     train!(problem_instance, reg_param_surr, reg_param_ref, model, training_data; 
            opt = Adam(learning_rate), epochs = additional_epochs, 
            display_iterations = true, save_model = true, 
@@ -138,16 +181,16 @@ end
 function example_usage()
     println("=== Example Usage ===")
     println("1. Load and test a saved model:")
-    println("   model, data, test_data, problem, params = quick_test_loaded_model()")
+    println("   model, data, test_data, problem, params = load_and_continue_experiment()")
     println()
     println("2. Continue training for 5 more epochs:")
-    println("   continue_training(\"experiment_state.jld2\", 5, 1e-3)")
+    println("   continue_training(\"experiment_state.jls\", 5, 1e-3)")
     println()
     println("3. Compare original vs continued training:")
     println("   compare_models()")
     println()
     println("4. Load and work with model manually:")
-    println("   model, data, test_data, problem, params = load_and_continue_experiment()")
+    println("   model, data, test_data, problem, params = load_experiment_state(\"experiment_state.jls\")")
 end
 
 # Show example usage when script is loaded

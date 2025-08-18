@@ -1,7 +1,7 @@
 using JuMP, GLPK, SparseArrays
 
 """
-    solve_canonical_lp(A, b, c; solver_tolerance=1e-9, feasibility_margin=1e-8)
+    solve_canonical_lp(A, b, c; solver_tolerance=1e-9, feasibility_margin=1e-7)
 
 Solves a linear program in canonical form:
     min c'x
@@ -12,13 +12,13 @@ Inputs:
     b: right-hand side vector (m)
     c: cost vector (n)
     solver_tolerance: optimality tolerance for the solver (default: 1e-9)
-    feasibility_margin: tolerance for constraint violation (default: 1e-8)
+    feasibility_margin: tolerance for constraint violation (default: 1e-7)
 
 Outputs:
     x_opt: optimal primal solution
     lambda_opt: optimal dual solution (Lagrange multipliers)
 """
-function solve_canonical_lp(instance::CanLP; solver_tolerance=1e-9, feasibility_margin=1e-8)
+function solve_canonical_lp(instance::CanLP; solver_tolerance=1e-9, feasibility_margin=1e-7)
     A = instance.constraint_matrix
     b = instance.constraint_vector
     c = instance.cost_vector

@@ -29,48 +29,44 @@ function main()
 problem_data = ResourceAllocationProblemData(μᵢⱼ, cz, qw, ρᵢ)
 problem_instance = ResourceAllocationProblem(problem_data)
 
-# Generate data (add comment later to explain the parameters)
-Ntraining_samples = 100
+# Generate data
+Ntraining_samples = 1000
 Ntesting_samples = 10
 sigma = 5
 p =1
 L = 3
 Σ = 3
-N_xi_per_x = 20
-
+N_xi_per_x = 50
 
 data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L, Σ)
-
 
 # Train the neural network model
 reg_param_surr = 1.0
 reg_param_prim = 0.0
 reg_param_ref = 0.0
 
-# Store regularization parameters for saving
-reg_params = Dict(
-    "reg_param_surr" => reg_param_surr,
-    "reg_param_prim" => reg_param_prim,
-    "reg_param_ref" => reg_param_ref
-)
-
+input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr, reg_param_prim, ξ_output, ξ_actual)
+input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr, reg_param_prim, ξ_output, ξ_actual)
 
 println("Starting training...")
-train!(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_ref, model, data_set_training; 
-        opt = Adam(1e-3), epochs = 20, display_iterations = true, 
+
+# Train with original loss functions
+train!(input_loss, input_relative_loss, model, data_set_training; 
+        opt = Adam(1e-3), epochs = 100, batchsize = 1, display_iterations = true, 
         save_model = true, model_save_path = "trained_model.jls")
 
 println("Training completed!")
 
-# Save the complete experiment state
-save_experiment_state(model, data_set_training, data_set_testing, problem_instance, reg_params, 
+# Save the complete experiment state for decision-focused learning results
+save_experiment_state(model, data_set_training, data_set_testing, problem_instance, 
+                    Dict("reg_param_surr" => reg_param_surr, "reg_param_prim" => reg_param_prim, "reg_param_ref" => reg_param_ref), 
                     filepath = "experiment_state.jls")
 
 # Test the trained model
 println("Testing the trained model...")
 #test_result = testing(problem_instance, model, data_set_testing, reg_param_surr, reg_param_ref)
-test_result = testing_SAA(problem_instance, model, data_set_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
-println("Test result: ", test_result)
+#test_result = testing_SAA(problem_instance, model, data_set_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
+#println("Test result: ", test_result)
 
 println("Experiment completed and saved!")
 end
