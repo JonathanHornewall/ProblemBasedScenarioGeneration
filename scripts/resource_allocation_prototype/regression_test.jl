@@ -9,8 +9,8 @@ using Statistics
 using Plots: plot
 using JLD2
 using ProblemBasedScenarioGeneration: LogBarCanLP, TwoStageSLP, LogBarCanLP_standard_solver, ResourceAllocationProblemData, 
-ResourceAllocationProblem, scenario_realization, dataGeneration, cost, cost_2s_LogBarCanLP, optimal_value,
-diff_cost_2s_LogBarCanLP, diff_opt_b, train_model!, CanLP, extensive_form_canonical
+ResourceAllocationProblem, scenario_realization, dataGeneration, cost, s1_cost, optimal_value,
+diff_s1_cost, diff_opt_b, train_model!, CanLP, extensive_form_canonical
 import ProblemBasedScenarioGeneration: primal_problem_cost
 
 import Flux: params, gradient, Optimise, Adam

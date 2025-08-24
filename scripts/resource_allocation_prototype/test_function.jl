@@ -6,7 +6,10 @@ function testing(problem_instance, model, dataset_testing, reg_param_surr, reg_p
 
     for (x, ξ) in dataset_testing
         ξ_hat = model(x)      
-        evaluated_cost = loss(problem_instance, reg_param_surr, reg_param_ref, ξ_hat, ξ)
+        # Convert to matrix format for the new loss function signature
+        ξ_hat_matrix = reshape(ξ_hat, :, 1)  # Convert to matrix with single column
+        ξ_matrix = reshape(ξ, :, 1)          # Convert to matrix with single column
+        evaluated_cost = loss(problem_instance, reg_param_surr, reg_param_ref, ξ_hat_matrix, ξ_matrix)
         
         # Determine optimal cost
         A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector

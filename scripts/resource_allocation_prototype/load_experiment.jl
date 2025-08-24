@@ -194,4 +194,4 @@ function example_usage()
 end
 
 # Show example usage when script is loaded
-example_usage()
+#example_usage()

@@ -82,6 +82,33 @@ function return_first_stage_parameters(problem_instance::ProblemInstanceC2SCanLP
     error("You have not yet specified the first stage parameters of the problem")
 end
 
+"""
+    scenario_collection_realization(instance::ProblemInstanceC2SCanLP, scenario_collection)
+Method for mapping from a scenario collection matrix, to a scenario collection realization Ws, Ts, hs, qs.
+
+scenario_collection[:,s] represents the s-th scenario in the collection.
+
+(Ws[:,:,s], Ts[:,:,s], hs[:,s], qs[:,s]) represent the scenario realization for the s-th scenario in the collection.
+
+Note: It has to be differentiable via zygote.
+
+"""
+function scenario_collection_realization(instance::ProblemInstanceC2SCanLP, scenario_collection)
+    W_list, T_list, h_list, q_list = [], [], [], []
+    for scenario in eachcol(scenario_collection)
+        W, T, h, q = scenario_realization(instance, scenario)
+        push!(W_list, W)
+        push!(T_list, T)
+        push!(h_list, h)
+        push!(q_list, q)
+    end
+    Ws = cat(W_list..., dims=3)
+    Ts = cat(T_list..., dims=3)
+    hs = cat(h_list..., dims=2)
+    qs = cat(q_list..., dims=2)
+    return Ws, Ts, hs, qs
+end
+
 
 """
 _________________________________________________________________
@@ -162,7 +189,7 @@ Computes the cost of the primal problem as a function of the context parameter, 
 """
 function primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
     twoslp = TwoStageSLP(return_first_stage_parameters(problem_instance)..., Ws, Ts, hs, qs)
-    cost = cost_2s_LogBarCanLP(twoslp, first_stage_decision, regularization_parameter)
+    cost = s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return cost
 end
 
@@ -170,7 +197,7 @@ function derivative_primal_problem_cost(problem_instance::ProblemInstanceC2SCanL
     A, b, c = return_first_stage_parameters(problem_instance)
     twoslp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
     main_problem = LogBarCanLP(twoslp, regularization_parameter)
-    D_x = diff_cost_2s_LogBarCanLP(main_problem, regularization_parameter, first_stage_decision)
+    D_x = diff_s1_cost(main_problem, first_stage_decision, regularization_parameter)
     return D_x
 end
 

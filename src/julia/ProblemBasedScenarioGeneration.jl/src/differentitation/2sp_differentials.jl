@@ -123,6 +123,10 @@ function LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter::Real)
     return LogBarCanLP(lp, regularization_parameters)
 end
 
+function CanLP(two_slp::TwoStageSLP)
+    A, b, c = extensive_form_canonical(two_slp)
+    return CanLP(A, b, c)
+end
 
 
 """
@@ -133,10 +137,10 @@ Differentiation functionalities for cost function
 
 
 """
-    cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameters, solver=LogBarCanLP_standard_solver, project_derivative=false)
+    s1_cost(two_slp::TwoStageSLP, s1_decision, regularization_parameter, solver=LogBarCanLP_standard_solver)
 Gives the cost function of a two-stage stochastic linear program with respect to the first-stage decision.
 """
-function cost_2s_LogBarCanLP(two_slp::TwoStageSLP, s1_decision, regularization_parameter,
+function s1_cost(two_slp::TwoStageSLP, s1_decision, regularization_parameter=0.0;
     solver=LogBarCanLP_standard_solver)
     s1_constraint_matrix = two_slp.A1
     s1_constraint_vector = two_slp.b1
@@ -183,7 +187,7 @@ end
 Computes the derivative of one scenario component of the recourse function for a two-stage stochastic log barrier regularized linear program, with respect to the 
 first stage decision variable.
 """
-function recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, s2_probability, regularization_parameter,
+function recourse_derivative_canLP(s1_decision, coupling_matrix, s2_constraint_matrix, s2_constraint_vector, s2_cost_vector, s2_probability, regularization_parameter=0.0,
     solver=LogBarCanLP_standard_solver)
     # Rename variables for notational convenience
     A = s2_constraint_matrix
@@ -196,7 +200,7 @@ end
 
 """
     project_to_affine_space(point, matrix, rhs_vector)
-Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_cost_2s_LogBarCanLP.
+Performs a projection on to an affine space defined by a matrix and a right-hand-side(rhs) vector. A helper function for diff_s1_cost.
 """
 function project_to_affine_space(point::AbstractVector, matrix::AbstractMatrix, rhs_vector::AbstractVector)
     y = point
@@ -213,12 +217,12 @@ end
 
 
 """
-    diff_cost_2s_LogBarCanLP(s1_decision, two_slp::TwoStageSLP, regularization_parameter,
+    diff_s1_cost(two_slp::TwoStageSLP, s1_decision, regularization_parameter,
     solver=LogBarCanLP_standard_solver, project_derivative=false)
 Returns the derivative of the cost function with respect to the first stage decision, for a two-stage linear program in canonical form with log-barrier regularization
 """
-function diff_cost_2s_LogBarCanLP(two_slp::TwoStageSLP, regularization_parameter, s1_decision,
-    solver=LogBarCanLP_standard_solver, project_derivative=true)
+function diff_s1_cost(two_slp::TwoStageSLP, s1_decision, regularization_parameter=0.0;
+    solver=LogBarCanLP_standard_solver, project_derivative=false)
     s1_constraint_matrix = two_slp.A1
     s1_constraint_vector = two_slp.b1
     s1_cost_vector = two_slp.c1
@@ -283,9 +287,10 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
     s2_cost_vectors = two_slp.qs
     s2_probability_vector = two_slp.ps
     S = length(coupling_matrices)  # Represents the number of scenarios
+    
 
     # Compute derivatives of extensive form lp
-    extensive_prob = extensive_form_canonical(two_slp)
+    extensive_prob = CanLP(two_slp)
     regularization_parameters = regularization_parameter * ones(length(extensive_prob.c))
     for s in S
         regularization_parameters = vcat(regularization_parameters, regularization_parameter * s2_probability_vector[s] * ones(length(s2_cost_vectors[s])))

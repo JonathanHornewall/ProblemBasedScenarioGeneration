@@ -56,7 +56,7 @@ function primal_problem_cost(problem_instance::ResourceAllocationProblem, scenar
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
     twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
-    cost = cost_2s_LogBarCanLP(twoslp, first_stage_decision, regularization_parameter)
+    cost = s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return cost
 end
 
@@ -64,7 +64,7 @@ function derivative_primal_problem_cost(problem_instance::ResourceAllocationProb
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
     W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
     twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
-    D_x = diff_cost_2s_LogBarCanLP(twoslp, regularization_parameter, first_stage_decision)
+    D_x = diff_s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return D_x
 end
 
@@ -86,33 +86,90 @@ function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::R
 end
 
 
+
 """
     loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-Computes the loss of the surrogate solution compared to the optimal solution. Used for training.
+Computes the loss of the surrogate solution compared to the optimal solution. Used for training the neural network
+Example usage: loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
 """
-function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-    surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, reg_param_surr)
-    primal_problem_cost(problem_instance, actual_scenario, reg_param_prim, surrogate_decision)
+function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameters, actual_scenarios)
+        surrogate_decision = surrogate_solution(problem_instance, scenario_parameters, reg_param_surr)
+        primal_problem_cost(problem_instance, actual_scenarios, reg_param_prim, surrogate_decision)
 end
 
+
+#=
 """
     relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
 Computes the relative loss of the surrogate solution compared to the optimal solution. Mostly used for testing.
 """
 function relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+    # Handle matrix inputs by extracting individual vectors
+    if scenario_parameter isa Matrix
+        nr_of_scenarios = size(scenario_parameter, 2)
+        total_evaluated_loss = 0.0
+        total_optimal_loss = 0.0
+        
+        for i in 1:nr_of_scenarios
+            # Extract individual scenario vectors from the matrix
+            scenario = scenario_parameter[:, i]
+            actual = actual_scenario[:, i]
+            
+            # Compute evaluated loss
+            evaluated_loss = loss(problem_instance, reg_param_surr, reg_param_prim, scenario, actual)
+            total_evaluated_loss += evaluated_loss
+            
+            # Compute optimal loss
+            optimal_loss = loss(problem_instance, reg_param_prim, reg_param_prim, actual, actual)
+            total_optimal_loss += optimal_loss
+        end
+        
+        avg_evaluated_loss = total_evaluated_loss / nr_of_scenarios
+        avg_optimal_loss = total_optimal_loss / nr_of_scenarios
+        
+        return (avg_evaluated_loss - avg_optimal_loss) / abs(avg_optimal_loss)
+    else
+        # Handle vector inputs (backward compatibility)
+        evaluated_loss = loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+        optimal_loss = loss(problem_instance, reg_param_prim, reg_param_prim, actual_scenario, actual_scenario)
+        
+        return (evaluated_loss - optimal_loss) / abs(optimal_loss)
+    end
+end
+=#
+#=
+"""
+    loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+Computes the loss using the main package's structure but with local functions.
+"""
+function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+    nr_of_scenarios = size(scenario_parameter, 2)
+    total_loss = 0.0
+    
+    for i in 1:nr_of_scenarios
+        # Extract individual scenario vectors from the matrix
+        scenario = scenario_parameter[:, i]
+        actual = actual_scenario[:, i]
+        
+        # Generate surrogate solution using the local function that expects vectors
+        surrogate_decision = surrogate_solution(problem_instance, scenario, reg_param_surr)
+        
+        # Evaluate primal problem cost using the local function that expects vectors
+        scenario_loss = primal_problem_cost(problem_instance, actual, reg_param_prim, surrogate_decision)
+        total_loss += scenario_loss
+    end
+    
+    return total_loss / nr_of_scenarios  # Return average loss across scenarios
+end
+
+"""
+    relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
+Computes the relative loss using the local loss function.
+"""
+function relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
     evaluated_loss = loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
     optimal_loss = loss(problem_instance, reg_param_prim, reg_param_prim, actual_scenario, actual_scenario)
     
-    #=
-    surrogate_decision = surrogate_solution(problem_instance, scenario_parameter, reg_param_surr)
-    evaluated_loss = primal_problem_cost(problem_instance, actual_scenario, reg_param_prim, surrogate_decision)
-
-    # Compute the actual optimal cost
-    A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
-    W, T, h, q = scenario_realization(problem_instance, actual_scenario)
-    twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
-    extensive_lp = extensive_form_canonical(twoslp)
-    optimal_loss = optimal_value(extensive_lp)
-    =#
-    return (evaluated_loss - optimal_loss)/abs(optimal_loss)
+    return (evaluated_loss - optimal_loss) / abs(optimal_loss)
 end
+=#

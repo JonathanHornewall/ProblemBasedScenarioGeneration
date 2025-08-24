@@ -3,7 +3,7 @@ using ProblemBasedScenarioGeneration
 using ProblemBasedScenarioGeneration: convert_standard_to_canonical_form, CanLP, LogBarCanLP, LogBarCanLP_standard_solver, KKT
 using ProblemBasedScenarioGeneration: convert_decision_standard_to_canonical, diff_opt_A, diff_opt_b, diff_opt_c
 using ProblemBasedScenarioGeneration: diff_KKT_Y, diff_KKT_b, diff_cache_computation, diff_opt_b
-using ProblemBasedScenarioGeneration: scenario_realization, ResourceAllocationProblem, ResourceAllocationProblemData, TwoStageSLP, cost_2s_LogBarCanLP, cost, isfeasible
+using ProblemBasedScenarioGeneration: scenario_realization, ResourceAllocationProblem, ResourceAllocationProblemData, TwoStageSLP, s1_cost, cost, isfeasible
 using LinearAlgebra
 
 # Include the necessary functions
@@ -86,8 +86,8 @@ println("\n=== Feasibility Check ===")
 println("First-stage feasibility: ", isfeasible(s1_reg_lp, surrogate_decision))
 println("Second-stage feasibility: ", isfeasible(s2_reg_lp, optimal_s2_decision))
 
-# Check the actual cost using cost_2s_LogBarCanLP
-println("\n=== Using cost_2s_LogBarCanLP ===")
-cost_2s_result = cost_2s_LogBarCanLP(twoslp, surrogate_decision, reg_param_surr)
-println("cost_2s_LogBarCanLP result: ", cost_2s_result)
+# Check the actual cost using s1_cost
+println("\n=== Using s1_cost ===")
+cost_2s_result = s1_cost(twoslp, surrogate_decision, reg_param_surr)
+println("s1_cost result: ", cost_2s_result)
 println("Matches Method 1? ", isapprox(cost_2s_result, method1_cost, rtol=1e-10))

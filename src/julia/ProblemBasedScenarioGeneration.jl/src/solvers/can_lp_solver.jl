@@ -69,10 +69,43 @@ function solve_canonical_lp(instance::CanLP; solver_tolerance=1e-9, feasibility_
 end
 
 """
-    optimal_value(instance::CanLP, solver=LogBarCanLP_standard_solver)
+    optimal_value(instance::CanLP, solver=solve_canonical_lp)
 returns the optimal value of a linear program
 """
 function optimal_value(instance::CanLP, solver=solve_canonical_lp)
     optimal_solution, optimal_dual = solver(instance)
     return cost(instance, optimal_solution)
 end
+
+"""
+    solve_canonical_lp(constraint_matrix, constraint_vector, cost_vector; solver_tolerance=1e-9, feasibility_margin=1e-7)
+Wrapper around solve_canonical_lp that takes constraint matrix, constraint vector, 
+and cost vector directly instead of a CanLP instance.
+"""
+function solve_canonical_lp(constraint_matrix, constraint_vector, cost_vector; solver_tolerance=1e-9, feasibility_margin=1e-7)
+    # Create a temporary CanLP instance
+    temp_instance = CanLP(constraint_matrix, constraint_vector, cost_vector)
+    
+    # Solve using the canonical LP solver
+    return solve_canonical_lp(temp_instance, solver_tolerance, feasibility_margin)
+end
+
+"""
+---------------------------------------------------------------------------------------------
+Primal variants of solver functions
+---------------------------------------------------------------------------------------------
+"""
+
+"""
+    solve_canonical_lp_primal(instance::CanLP; solver_tolerance=1e-9, feasibility_margin=1e-7)
+Primal variant of solve_canonical_lp that returns only the optimal solution (x_opt)
+"""
+solve_canonical_lp_primal(instance::CanLP; solver_tolerance=1e-9, feasibility_margin=1e-7) = 
+    solve_canonical_lp(instance, solver_tolerance, feasibility_margin)[1]
+
+"""
+    solve_canonical_lp_primal(constraint_matrix, constraint_vector, cost_vector; solver_tolerance=1e-9, feasibility_margin=1e-7)
+Primal variant of solve_canonical_lp that returns only the optimal solution (x_opt)
+"""
+solve_canonical_lp_primal(constraint_matrix, constraint_vector, cost_vector; solver_tolerance=1e-9, feasibility_margin=1e-7) = 
+    solve_canonical_lp(constraint_matrix, constraint_vector, cost_vector, solver_tolerance=solver_tolerance, feasibility_margin=feasibility_margin)[1]

@@ -66,3 +66,65 @@ function optimal_value(instance::LogBarCanLP, solver=LogBarCanLP_standard_solver
     optimal_solution, optimal_dual = solver(instance)
     return cost(instance, optimal_solution)
 end
+
+"""
+    LogBarCanLP_standard_solver(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+Wrapper around LogBarCanLP_standard_solver that takes constraint matrix, constraint vector, 
+cost vector, and regularization parameters mu directly instead of a LogBarCanLP instance.
+"""
+function LogBarCanLP_standard_solver(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+    # Create a temporary LogBarCanLP instance
+    temp_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
+    temp_instance = LogBarCanLP(temp_lp, mu)
+    
+    # Solve using the standard solver
+    return LogBarCanLP_standard_solver(temp_instance)
+end
+
+"""
+    ipot_solver(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+Wrapper around ipot_solver that takes constraint matrix, constraint vector, 
+cost vector, and regularization parameters mu directly instead of a LogBarCanLP instance.
+"""
+function ipot_solver(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+    # Create a temporary LogBarCanLP instance
+    temp_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
+    temp_instance = LogBarCanLP(temp_lp, mu)
+    
+    # Solve using the ipot solver
+    return ipot_solver(temp_instance, solver_tolerance, feasibility_margin)
+end
+
+"""
+---------------------------------------------------------------------------------------------
+Primal variants of solver functions
+---------------------------------------------------------------------------------------------
+"""
+
+"""
+    ipot_solver_primal(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=1e-8)
+Primal variant of ipot_solver that returns only the optimal solution (x_opt)
+"""
+ipot_solver_primal(instance::LogBarCanLP, solver_tolerance=1e-9, feasibility_margin=1e-8) = 
+    ipot_solver(instance, solver_tolerance, feasibility_margin)[1]
+
+"""
+    LogBarCanLP_standard_solver_primal(instance::LogBarCanLP; canlp_solver = solve_canonical_lp)
+Primal variant of LogBarCanLP_standard_solver that returns only the optimal solution (x_opt)
+"""
+LogBarCanLP_standard_solver_primal(instance::LogBarCanLP; canlp_solver = solve_canonical_lp) = 
+    LogBarCanLP_standard_solver(instance, canlp_solver=canlp_solver)[1]
+
+"""
+    LogBarCanLP_standard_solver_primal(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+Primal variant of LogBarCanLP_standard_solver that returns only the optimal solution (x_opt)
+"""
+LogBarCanLP_standard_solver_primal(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8) = 
+    LogBarCanLP_standard_solver(constraint_matrix, constraint_vector, cost_vector, mu, solver_tolerance=solver_tolerance, feasibility_margin=feasibility_margin)[1]
+
+"""
+    ipot_solver_primal(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8)
+Primal variant of ipot_solver that returns only the optimal solution (x_opt)
+"""
+ipot_solver_primal(constraint_matrix, constraint_vector, cost_vector, mu; solver_tolerance=1e-9, feasibility_margin=1e-8) = 
+    ipot_solver(constraint_matrix, constraint_vector, cost_vector, mu, solver_tolerance=solver_tolerance, feasibility_margin=feasibility_margin)[1]

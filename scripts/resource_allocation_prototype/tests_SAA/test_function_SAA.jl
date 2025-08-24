@@ -40,13 +40,13 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             # opt_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, nothing)
 
             two_slp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
-            can_lp = extensive_form_canonical(two_slp)
+            can_lp = CanLP(two_slp)
             opt_cost = optimal_value(can_lp)
 
             ξ_hat = model(x)
             surrogate_decision = surrogate_solution(problem_instance, ξ_hat, reg_param_surr)
 
-            evaluated_cost = cost_2s_LogBarCanLP(two_slp, surrogate_decision, reg_param_ref)
+            evaluated_cost = s1_cost(two_slp, surrogate_decision, reg_param_ref)
 
             #evaluated_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, surrogate_decision)
 

@@ -28,15 +28,13 @@ function train!(problem_instance,
     # Set up batch data
     xs  = collect(keys(data))
     xis = collect(values(data))
-    X  = hcat(xs...)
-    Ξ  = hcat(xis...)
-    loader = DataLoader((X, Ξ), batchsize)
+    N   = length(xs)
     # batched loss functions
     loss_mb(problem_instance, reg_param_surr, reg_param_prim, model, Xb, Ξb) = 
-    mean(loss(problem_instance, reg_param_surr, reg_param_prim, vec(model(Xb[:, i])), vec(Ξb[:, i])) for i in 1:size(Xb, 2))
+    mean(loss(problem_instance, reg_param_surr, reg_param_prim, model(Xb[:, i:i]), Ξb[:, i:i]) for i in 1:size(Xb, 2))
     # Relative loss 
     relative_loss_mb(problem_instance, reg_param_surr, reg_param_prim, model, Xb, Ξb) = 
-    mean(relative_loss(problem_instance, reg_param_surr, reg_param_prim, vec(model(Xb[:, i])), vec(Ξb[:, i])) for i in 1:size(Xb, 2))
+    mean(relative_loss(problem_instance, reg_param_surr, reg_param_prim, model(Xb[:, i:i]), Ξb[:, i:i]) for i in 1:size(Xb, 2))
     
     for epoch_number in 1:epochs
         display_iterations && print("Epoch ", epoch_number)
@@ -55,7 +53,10 @@ function train!(problem_instance,
             gmodel = gs isa Tuple ? gs[1] : gs
             Flux.update!(state, model, gmodel)
             =#
-        for (x, ξ) in loader
+        for idxs in Iterators.partition(1:N, batchsize)
+            Xb = hcat(xs[idxs]...)
+            Ξb = hcat(xis[idxs]...)
+            x, ξ = Xb, Ξb
             gs = Flux.gradient(model) do m
                 loss_mb(problem_instance, reg_param_surr, reg_param_prim, m, x, ξ)
             end
@@ -106,16 +107,14 @@ cross_epoch_losses::Vector{Float64} = []
 # Set up batch data
 xs  = collect(keys(data))
 xis = collect(values(data))
-X  = hcat(xs...)
-Ξ  = hcat(xis...)
-loader = DataLoader((X, Ξ), batchsize)
+N   = length(xs)
 # batched loss functions
 loss_mb(model, Xb, Ξb) = 
-    mean( loss( vec(model(Xb[:, i])), vec(Ξb[:, i]) ) for i in 1:size(Xb, 2) )
+    mean( loss( model(Xb[:, i:i]), Ξb[:, i:i] ) for i in 1:size(Xb, 2) )
 
 # Relative loss 
 relative_loss_mb(model, Xb, Ξb) = 
-    mean(relative_loss(vec(model(Xb[:, i])), vec(Ξb[:, i])) for i in 1:size(Xb, 2))
+    mean(relative_loss(model(Xb[:, i:i]), Ξb[:, i:i]) for i in 1:size(Xb, 2))
 
 for epoch_number in 1:epochs
 display_iterations && print("Epoch ", epoch_number)
@@ -134,7 +133,10 @@ end
 gmodel = gs isa Tuple ? gs[1] : gs
 Flux.update!(state, model, gmodel)
 =#
-for (x, ξ) in loader
+for idxs in Iterators.partition(1:N, batchsize)
+    Xb = hcat(xs[idxs]...)
+    Ξb = hcat(xis[idxs]...)
+    x, ξ = Xb, Ξb
 gs = Flux.gradient(model) do m
     loss_mb(m, x, ξ)
 end
@@ -150,10 +152,13 @@ end
 end
 
 if display_iterations
-avg_epoch_loss = mean(epoch_losses)
-println(" with avg loss ", avg_epoch_loss, " (", length(epoch_losses), " iterations)")
-push!(cross_epoch_losses, avg_epoch_loss)
+    avg_epoch_loss = mean(epoch_losses)
+    println(" with avg loss ", avg_epoch_loss, " (", length(epoch_losses), " iterations)")
+    push!(cross_epoch_losses, avg_epoch_loss)
 end
+
+# Force garbage collection between epochs to manage memory
+GC.gc()
 end
 
 # Save the trained model if requested

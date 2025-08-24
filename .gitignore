@@ -29,3 +29,4 @@ env/conda/conda_env/
 *.swp
 .vscode/
 .idea/
+.aider*

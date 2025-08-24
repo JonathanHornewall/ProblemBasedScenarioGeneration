@@ -55,6 +55,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
     return in_sample, out_of_sample
 end
 
+
 #σ = 5
 #J = 30
 #A,B = sampleParameters(30,σ,1)

@@ -8,7 +8,7 @@ test_scenario = ones(30)
 scenario_parameter = float(test_scenario)
 regularization_parameter = 1.5
 
-@testset "diff_cost_2s_LogBarCanLP matches finite differences" begin
+@testset "diff_s1_cost matches finite differences" begin
     # Build a single-scenario TwoStageSLP from the resource allocation instance
     A1 = problem_instance.s1_constraint_matrix
     b1 = problem_instance.s1_constraint_vector
@@ -20,9 +20,9 @@ regularization_parameter = 1.5
     x0 = ones(length(c1))
     μ = regularization_parameter
 
-    f(x) = ProblemBasedScenarioGeneration.cost_2s_LogBarCanLP(two_slp, x, μ)
+    f(x) = ProblemBasedScenarioGeneration.s1_cost(two_slp, x, μ)
     g_fd = FiniteDiff.finite_difference_gradient(f, x0)
-    g_ad = ProblemBasedScenarioGeneration.diff_cost_2s_LogBarCanLP(two_slp, μ, x0)
+    g_ad = ProblemBasedScenarioGeneration.diff_s1_cost(two_slp, x0, μ)
 
     @test isapprox(g_ad, g_fd; rtol=1e-4, atol=1e-4)
 end
