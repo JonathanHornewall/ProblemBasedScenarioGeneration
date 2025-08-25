@@ -17,28 +17,30 @@ regularization_parameter = 1.5
     
     # Function that returns optimal solution given scenario parameter ξ
     function opt_with_ξ(ξ)
-        W, T, h, q = ProblemBasedScenarioGeneration.scenario_realization(problem_instance, ξ)
-        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, [W], [T], [h], [q], [1.0])
+        scenario_matrix = reshape(ξ, :, 1)  # Reshape to 2D matrix for scenario_collection_realization
+        Ws, Ts, hs, qs = ProblemBasedScenarioGeneration.scenario_collection_realization(problem_instance, scenario_matrix)
+        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, Ws, Ts, hs, qs, [1.0])
         logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
         optimal_solution, optimal_dual = ProblemBasedScenarioGeneration.LogBarCanLP_standard_solver(logbar_two_slp)
         return optimal_solution
     end
-    
+
     # ξ_test should match the scenario parameter dimension (30)
-    ξ_test = float(ones(30))
+    ξ_test = ones(Float64, 30)
+    scenario_matrix_test = reshape(ξ_test, :, 1)  # Reshape to 2D matrix for scenario_collection_realization
     
     # Test derivative with respect to ξ_test
     g_fd = FiniteDiff.finite_difference_jacobian(opt_with_ξ, ξ_test)
     
     # Apply our derivative to the problem instance
-    W, T, h, q = ProblemBasedScenarioGeneration.scenario_realization(problem_instance, ξ_test)
-    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, [W], [T], [h], [q], [1.0])
+    Ws, Ts, hs, qs = ProblemBasedScenarioGeneration.scenario_collection_realization(problem_instance, scenario_matrix_test)
+    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, Ws, Ts, hs, qs, [1.0])
     logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
     
     # Get the full derivative with respect to b
     g_ad_full = ProblemBasedScenarioGeneration.diff_opt_b(logbar_two_slp)
     
-    g_ad = g_ad_full[:, size(T, 2)+1:end]
+    g_ad = g_ad_full[:, size(Ts, 2)+1:end]
     
     # Both should be Jacobians: g_fd is (n, m) and g_ad is (n, m) where n=length(c1), m=length(ξ_test)
     @test size(g_ad) == size(g_fd)
@@ -56,15 +58,16 @@ end
 
     # determine scenario size J from T (T has I+J rows and I cols)
     J = size(T, 1) - size(T, 2)
-    ξ_test = float(ones(J))
+    ξ_test = ones(Float64, J)
+    scenario_matrix_test = reshape(ξ_test, :, 1)  # Reshape to 2D matrix for scenario_collection_realization
 
-    # Build a fixed h for the test
-    W, T, h, q = ProblemBasedScenarioGeneration.scenario_realization(problem_instance, ξ_test)
+    # Build a fixed scenario data for the test
+    Ws, Ts, hs, qs = ProblemBasedScenarioGeneration.scenario_collection_realization(problem_instance, scenario_matrix_test)
 
     # Function that returns optimal solution given a (vectorized) A
     function opt_with_A(vecA)
         A = reshape(vecA, size(A1))
-        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A, b1, c1, [W], [T], [h], [q], [1.0])
+        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A, b1, c1, Ws, Ts, hs, qs, [1.0])
         logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
         try
             optimal_solution, optimal_dual = ProblemBasedScenarioGeneration.LogBarCanLP_standard_solver(logbar_two_slp)
@@ -84,11 +87,9 @@ end
     g_fd = FiniteDiff.finite_difference_jacobian(opt_with_A, vec(A1), Val(:forward), Float64; relstep=1e-10)
 
     # Analytic derivative from the implementation
-    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, [W], [T], [h], [q], [1.0])
+    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, Ws, Ts, hs, qs, [1.0])
     logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
     g_ad_full = ProblemBasedScenarioGeneration.diff_opt_A(logbar_two_slp)
-
-
 
     # g_ad_full has shape (n_total, m_total, n_total) for the entire extensive form
     # We only want the derivative w.r.t. the first-stage constraint matrix A1
@@ -123,14 +124,15 @@ end
 
     # determine scenario size J from T (T has I+J rows and I cols)
     J = size(T, 1) - size(T, 2)
-    ξ_test = float(ones(J))
+    ξ_test = ones(Float64, J)
+    scenario_matrix_test = reshape(ξ_test, :, 1)  # Reshape to 2D matrix for scenario_collection_realization
 
-    # Build a fixed h for the test
-    W, T, h, q = ProblemBasedScenarioGeneration.scenario_realization(problem_instance, ξ_test)
+    # Build a fixed scenario data for the test
+    Ws, Ts, hs, qs = ProblemBasedScenarioGeneration.scenario_collection_realization(problem_instance, scenario_matrix_test)
 
     # Function that returns optimal solution given c
     function opt_with_c(cvec)
-        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, cvec, [W], [T], [h], [q], [1.0])
+        two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, cvec, Ws, Ts, hs, qs, [1.0])
         logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
         try
             optimal_solution, optimal_dual = ProblemBasedScenarioGeneration.LogBarCanLP_standard_solver(logbar_two_slp)
@@ -146,7 +148,7 @@ end
     g_fd = FiniteDiff.finite_difference_jacobian(opt_with_c, c1, Val(:forward), Float64; relstep=1e-8)
 
     # Analytic derivative from the implementation
-    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, [W], [T], [h], [q], [1.0])
+    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, Ws, Ts, hs, qs, [1.0])
     logbar_two_slp = ProblemBasedScenarioGeneration.LogBarCanLP(two_slp, regularization_parameter)
     g_ad_full = ProblemBasedScenarioGeneration.diff_opt_c(logbar_two_slp)
     

@@ -9,10 +9,10 @@ model = Chain(
     surrogate_solution(problem_instance::ProblemInstanceC2SCanLP,  Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
 Solves for the first stage decision given a specific scenario W, T, h, q
 """
-function surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter::Vector{Float64}, regularization_parameter, solver=LogBarCanLP_standard_solver)
+function surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, solver=LogBarCanLP_standard_solver)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
-    W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
-    surrogate_problem = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter) 
+    W, T, h, q = scenario_collection_realization(problem_instance, scenario_parameter)
+    surrogate_problem = LogBarCanLP(TwoStageSLP(A, b, c, W, T, h, q), regularization_parameter) 
     optimal_decision, optimal_dual = solver(surrogate_problem)
     return optimal_decision[1:length(c)]
 end
@@ -23,8 +23,8 @@ Derivative of first stage decision for surrogate_problem with respect to scenari
 """
 function derivative_surrogate_solution(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, solver=LogBarCanLP_standard_solver)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
-    W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
-    extensive_form_regularized = LogBarCanLP(TwoStageSLP(A, b, c, [W], [T], [h], [q]), regularization_parameter)
+    W, T, h, q = scenario_collection_realization(problem_instance, scenario_parameter)
+    extensive_form_regularized = LogBarCanLP(TwoStageSLP(A, b, c, W, T, h, q), regularization_parameter)
     der_b = diff_opt_b(extensive_form_regularized; solver=solver)
     I = size(problem_instance.problem_data.service_rate_parameters, 1)
     return Matrix{Float64}(der_b[1:I , 1 + I: end])
@@ -54,16 +54,16 @@ Computes the cost of the primal problem as a function of the context parameter, 
 """
 function primal_problem_cost(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, first_stage_decision)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
-    W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
-    twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+    W, T, h, q = scenario_collection_realization(problem_instance, scenario_parameter)
+    twoslp = TwoStageSLP(A, b, c, W, T, h, q)
     cost = s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return cost
 end
 
 function derivative_primal_problem_cost(problem_instance::ResourceAllocationProblem, scenario_parameter, regularization_parameter, first_stage_decision)
     A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
-    W, T, h, q = scenario_realization(problem_instance, scenario_parameter)
-    twoslp = TwoStageSLP(A, b, c, [W], [T], [h], [q])
+    W, T, h, q = scenario_collection_realization(problem_instance, scenario_parameter)
+    twoslp = TwoStageSLP(A, b, c, W, T, h, q)
     D_x = diff_s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return D_x
 end

@@ -30,7 +30,7 @@ end
     ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
 Struct for an instance of the resource allocation problem. 
 """
-struct ResourceAllocationProblem
+struct ResourceAllocationProblem <: ProblemInstanceC2SCanLP
     problem_data::ResourceAllocationProblemData
     s1_constraint_matrix::Matrix{Float64}  # First stage constraint matrix
     s1_constraint_vector::Vector{Float64}  # First stage constraint vector
@@ -106,4 +106,26 @@ function scenario_realization(instance::ResourceAllocationProblem, scenario_para
     h = vcat(zeros(I), scenario_parameter)
     
     return W, T, h, q
+end
+
+"""
+    return_first_stage_parameters(instance::ResourceAllocationProblem)
+Getter method for retrieving the first stage parameters of the problem instance
+"""
+function return_first_stage_parameters(instance::ResourceAllocationProblem)
+    return instance.s1_constraint_matrix, instance.s1_constraint_vector, instance.s1_cost_vector
+end
+
+"""
+    construct_neural_network(instance::ResourceAllocationProblem)
+Specifies a neural network architecture for the resource allocation problem.
+"""
+function construct_neural_network(instance::ResourceAllocationProblem)
+    a = 129
+    return Chain(
+        Dense(3, 128, relu),
+        Dense(128, 128, relu),
+        Dense(128, 128, relu),
+        Dense(128, 30, relu)     # linear head
+    ) |> f64
 end

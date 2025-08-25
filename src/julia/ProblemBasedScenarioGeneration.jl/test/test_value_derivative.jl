@@ -13,8 +13,12 @@ regularization_parameter = 1.5
     A1 = problem_instance.s1_constraint_matrix
     b1 = problem_instance.s1_constraint_vector
     c1 = problem_instance.s1_cost_vector
-    W, T, h, q = ProblemBasedScenarioGeneration.scenario_realization(problem_instance, scenario_parameter)
-    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, [W], [T], [h], [q], [1.0])
+    
+    # Use scenario_collection_realization to get properly formatted arrays
+    scenario_matrix = reshape(scenario_parameter, :, 1)
+    Ws, Ts, hs, qs = ProblemBasedScenarioGeneration.scenario_collection_realization(problem_instance, scenario_matrix)
+    
+    two_slp = ProblemBasedScenarioGeneration.TwoStageSLP(A1, b1, c1, Ws, Ts, hs, qs, [1.0])
 
     # Pick a strictly positive feasible first-stage decision (A1 is rank-0 so any x>0 is feasible)
     x0 = ones(length(c1))

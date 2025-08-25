@@ -6,17 +6,19 @@ using JuMP, Ipopt  # Optimization tools
 using Flux, ChainRulesCore
 using DataLoaders: DataLoader
 using SparseArrays
+using Statistics
 # Here we add the "include" statements in appropriate order.
 
-#include("lp_structs.jl")
+# include("lp_structs.jl")
 include("differentitation/differentials_logbar_lp.jl")
 include("solvers/can_lp_solver.jl")
 include("solvers/log_bar_linprog_solvers.jl")
 include("differentitation/2sp_differentials.jl")
 
 include("problem_instances/problem_instances.jl")
-include("neural_net_constructor.jl")
-include("learning.jl")
+include("neural_net/loss.jl")
+include("neural_net/training.jl")
+#include("neural_net/load_parameters.jl")
 
 include("utils.jl")
 
@@ -37,5 +39,13 @@ export loss  # To compare with out of sample data
 
 export solve_canonical_lp
 export convert_standard_to_canonical_form_regular
+
+# Export types and functions needed for neural network differentiation
+export TwoStageSLP, LogBarCanLP, CanLP
+export LogBarCanLP_standard_solver, LogBarCanLP_standard_solver_primal
+export s1_cost, diff_s1_cost
+export diff_cache_computation, diff_opt
+export scenario_collection_realization
+export training!
 
 end # module ProblemBasedScenarioGeneration

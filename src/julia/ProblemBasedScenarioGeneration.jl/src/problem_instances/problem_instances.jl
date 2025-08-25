@@ -4,74 +4,12 @@ Abstract type representing data related to a specific
 abstract type ProblemInstanceC2SCanLP end
 
 """
-    return_scenario_type(problem_instance::ProblemInstanceC2SCanLP)
-Getter method for retrieving the "scenario type" of the problem instance, specifying which problem parameters 
-with noise.
-"""
-function return_scenario_type(problem_instance::ProblemInstanceC2SCanLP)
-    error("You have not specified the scenario type for your problem instance.")
-end
-
-"""
-    Scenario{R}(W=nothing, T=nothing, h=nothing, q=nothing)
-"""
-struct Scenario{R<:Real}
-    W::Matrix{R}
-    T::Matrix{R}
-    h::Vector{R}
-    q::Vector{R}
-end
-
-function Scenario(; W=nothing, T=nothing, h=nothing, q=nothing)
-    # Choose R from the first non-nothing input
-    arrays = [W, T, h, q]
-    R = eltype(first(filter(!isnothing, arrays), Float64[]))  # fallback Float64 if none given
-
-    Wm = isnothing(W) ? Matrix{R}(undef, 0, 0) : W
-    Tm = isnothing(T) ? Matrix{R}(undef, 0, 0) : T
-    hv = isnothing(h) ? Vector{R}() : h
-    qv = isnothing(q) ? Vector{R}() : q
-
-    Scenario{R}(Wm, Tm, hv, qv)
-end
-
-#=
-struct ScenarioList{R<:Real}
-    scenario_list::Vector{Scenario}
-    probabilities::Vector{Float64}
-end
-
-function ScenarioList(; scenarios::Vector{Scenario}, probabilities::Vector{Float64})
-    if length(scenarios) != length(probabilities)
-        error("Number of scenarios must match number of probabilities")
-    end
-    new{eltype(scenarios[1].W)}(scenarios, probabilities)
-end
-=#
-
-function return_standard_scenario(problem_instance::ProblemInstanceC2SCanLP)
-    error("You have not yet specified a standard scenario for your problem instance")
-end
-
-function return_standard_scenarios(instance::ProblemInstanceC2SCanLP, number_of_scenarios::Int)
-    vectorize: x -> isempty(x) ? Vector{eltype(x)}() : fill(x, number_of_scenarios)
-
-    W, T, h, q = return_standard_scenario(instance)
-    return map(vectorize, (W, T, h, q))
-end
-
-
-"""
     scenario_realization(problem_instance::ProblemInstanceC2SCanLP, xi)
 Method for mapping from a scenario parameter xi, to a scenario realization W, T, h, q specifying the structure of a second stage 
 problem. Note that in many cases, xi = W, T, h q
 """
 function scenario_realization(problem_instance::ProblemInstanceC2SCanLP, scenario_parameter)
     return scenario_parameter
-end
-
-function return_scenario_parameter_dimension(problem_instance::ProblemInstanceC2SCanLP)
-    error("You have not yet specified the scenario parameter dimension for your problem instance")
 end
 
 """
@@ -94,22 +32,39 @@ Note: It has to be differentiable via zygote.
 
 """
 function scenario_collection_realization(instance::ProblemInstanceC2SCanLP, scenario_collection)
-    W_list, T_list, h_list, q_list = [], [], [], []
-    for scenario in eachcol(scenario_collection)
-        W, T, h, q = scenario_realization(instance, scenario)
-        push!(W_list, W)
-        push!(T_list, T)
-        push!(h_list, h)
-        push!(q_list, q)
-    end
+    # Use functional approach instead of push! to avoid mutation
+    scenario_results = [scenario_realization(instance, scenario) for scenario in eachcol(scenario_collection)]
+    W_list = [result[1] for result in scenario_results]
+    T_list = [result[2] for result in scenario_results]
+    h_list = [result[3] for result in scenario_results]
+    q_list = [result[4] for result in scenario_results]
+    
     Ws = cat(W_list..., dims=3)
     Ts = cat(T_list..., dims=3)
-    hs = cat(h_list..., dims=2)
-    qs = cat(q_list..., dims=2)
+    
+    # Create 2D matrices: h vectors become columns in (m_2, S) matrix, q vectors become columns in (n_2, S) matrix
+    hs = hcat(h_list...)
+    qs = hcat(q_list...)
+    
     return Ws, Ts, hs, qs
 end
 
 
+"""
+    construct_neural_network(problem_instance::ProblemInstanceC2SCanLP)
+Specifies a neural network architecture for the given problem instance. 
+
+This function should be implemented for each concrete subtype of `ProblemInstanceC2SCanLP` to return a Flux.jl model 
+appropriate for the problem's input and output dimensions.
+    The input dimension must be equal to the dimension of the context parameter.
+    The output dimension must be equal to the dimension of the scenario parameters.
+"""
+
+function construct_neural_network(problem_instance::ProblemInstanceC2SCanLP)
+    error("You have not yet specified a neural network for your problem instance")
+end
+
+#=
 """
 _________________________________________________________________
 Loss-function related functionalities for problem instances
@@ -122,7 +77,6 @@ Solves for the first stage decision given a specific scenario W, T, h, q
 """
 function surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
     A, b, c = return_first_stage_parameters(problem_instance)
-    Ws, Ts, hs, qs = scenarios
     surrogate_problem = LogBarCanLP(TwoStageSLP(A, b, c, Ws, Ts, hs, qs), regularization_parameter) 
     optimal_decision, optimal_dual = solver(surrogate_problem)
     return optimal_decision[1:length(c)]
@@ -217,38 +171,4 @@ function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::P
 
     return cost, pullback
 end
-
-"""
----------------------------------------------------------------------------------
-Struct representing a problem instance with manually specified problem data.
----------------------------------------------------------------------------------
-"""
-
-struct manual_C2SCanLP{R<:Real} <: ProblemInstanceC2SCanLP
-    A::Matrix{R}  # constraint matrix
-    b::Vector{R}  # constraint vector
-    c::Vector{R}  # cost vector
-    W::Matrix{R}  # second stage constraint matrix
-    T::Matrix{R}  # coupling matrix
-    h::Vector{R}  # second stage decision vector
-    q::Vector{R}  # second stage decision vector
-    standard_scenario::Scenario{R}  # standard scenario
-    scenario_type::ScenarioType  # scenario type
-    scenario_parameter_dimension::Int  # dimension of scenario parameters
-end
-
-function return_first_stage_parameters(instance::manual_C2SCanLP)
-    return instance.A, instance.b, instance.c
-end
-
-function return_scenario_type(instance::manual_C2SCanLP)
-    return instance.scenario_type
-end
-
-function return_standard_scenario(instance::manual_C2SCanLP)
-    return instance.standard_scenario
-end
-
-function return_scenario_parameter_dimension(instance::manual_C2SCanLP)
-    return instance.scenario_parameter_dimension
-end
+=#
