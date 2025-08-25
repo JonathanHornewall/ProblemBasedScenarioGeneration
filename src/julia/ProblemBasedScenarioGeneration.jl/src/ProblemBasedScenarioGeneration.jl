@@ -51,6 +51,6 @@ export TwoStageSLP, LogBarCanLP, CanLP
 export LogBarCanLP_standard_solver, LogBarCanLP_standard_solver_primal
 export s1_cost, diff_s1_cost
 export diff_cache_computation, diff_opt
-export scenario_collection_realization
+export scenario_collection_realization, surrogate_solution
 
 end # module ProblemBasedScenarioGeneration

@@ -37,14 +37,26 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
                 push!(hs,h)
                 push!(qs,q)
             end
+            
+            # Convert vectors to proper 3D/2D arrays for TwoStageSLP
+            # Ws should be (m_2, n_2, S), Ts should be (m_2, n_1, S)
+            # hs should be (m_2, S), qs should be (n_2, S)
+            Ws_array = cat(Ws..., dims=3)
+            Ts_array = cat(Ts..., dims=3)
+            hs_array = hcat(hs...)
+            qs_array = hcat(qs...)
+            
             # opt_cost = gurobi_solver(A, b, c, Ws, Ts, hs, qs, nothing)
 
-            two_slp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
+            two_slp = TwoStageSLP(A, b, c, Ws_array, Ts_array, hs_array, qs_array)
             can_lp = CanLP(two_slp)
             opt_cost = optimal_value(can_lp)
 
             ξ_hat = model(x)
-            surrogate_decision = surrogate_solution(problem_instance, ξ_hat, reg_param_surr)
+            # Reshape the neural network output from a vector to a matrix with one column
+            # Each column represents one scenario, so for single scenario we need 30×1 matrix
+            ξ_hat_matrix = reshape(ξ_hat, :, 1)
+            surrogate_decision = surrogate_solution(problem_instance, reg_param_surr, ξ_hat_matrix)
 
             evaluated_cost = s1_cost(two_slp, surrogate_decision, reg_param_ref)
 
