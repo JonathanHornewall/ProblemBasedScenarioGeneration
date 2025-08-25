@@ -44,7 +44,7 @@ function run_benchmark()
     println("  - Reference: $reg_param_ref")
     
     # Set testing parameters
-    N_xi_per_x = 1  # Same as in main.jl
+    N_xi_per_x = 100  # Same as in main.jl
     
     println("\n=== Running SAA Testing ===")
     println("Testing dataset size: $(length(testing_data))")

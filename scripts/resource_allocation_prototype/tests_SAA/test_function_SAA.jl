@@ -56,7 +56,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             # Reshape the neural network output from a vector to a matrix with one column
             # Each column represents one scenario, so for single scenario we need 30×1 matrix
             ξ_hat_matrix = reshape(ξ_hat, :, 1)
-            surrogate_decision = surrogate_solution(problem_instance, reg_param_surr, ξ_hat_matrix)
+            surrogate_decision = surrogate_solution(problem_instance, ξ_hat_matrix, reg_param_surr)
 
             evaluated_cost = s1_cost(two_slp, surrogate_decision, reg_param_ref)
 

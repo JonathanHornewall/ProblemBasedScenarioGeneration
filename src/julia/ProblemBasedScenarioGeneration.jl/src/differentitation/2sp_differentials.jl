@@ -162,8 +162,8 @@ function s1_cost(two_slp::TwoStageSLP, s1_decision, regularization_parameter=0.0
     final_cost = cost(s1_reg_lp, s1_decision)
     for s in 1:S
         constraint_matrix = s2_constraint_matrices[:, :, s]
-        constraint_vector = s2_constraint_vectors[:, 1, s] - coupling_matrices[:, :, s] * s1_decision
-        cost_vector = s2_cost_vectors[:, 1, s] * s2_probability_vector[s]
+        constraint_vector = s2_constraint_vectors[:, s] - coupling_matrices[:, :, s] * s1_decision
+        cost_vector = s2_cost_vectors[:, s] * s2_probability_vector[s]
         s2_lp = CanLP(constraint_matrix, constraint_vector, cost_vector)
         s2_reg_lp = LogBarCanLP(s2_lp, regularization_parameter * s2_probability_vector[s])
         
