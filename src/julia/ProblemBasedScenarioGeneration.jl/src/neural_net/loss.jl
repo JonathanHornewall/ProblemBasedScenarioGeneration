@@ -1,3 +1,12 @@
+function surrogate_solution(problem_instance, reg_param_surr, scenario_parameters)
+    Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate = scenario_collection_realization(problem_instance, scenario_parameters)
+    A, b, c = return_first_stage_parameters(problem_instance)
+    sur_two_slp = TwoStageSLP(A, b, c, Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
+    surr_opt = LogBarCanLP(sur_two_slp, reg_param_surr)
+    surr_opt_solution = LogBarCanLP_standard_solver_primal(surr_opt)
+    return surr_opt_solution[1:length(c)]
+end
+
 """
     loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameters, actual_scenario)
 
@@ -20,10 +29,12 @@ It then evaluates the cost of this solution on the actual scenario, using `reg_p
 
 function loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameters, actual_scenario)
     # Compute the surrogate solution
+    
     Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate = scenario_collection_realization(problem_instance, scenario_parameters)
     A, b, c = return_first_stage_parameters(problem_instance)
     sur_two_slp = TwoStageSLP(A, b, c, Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
     A_ext, b_ext, c_ext = extensive_form_canonical(sur_two_slp)
+
     # Create regularization parameter vector for extensive form
     n_1 = length(c)
     n_2 = size(Ws_surrogate, 2)
@@ -31,6 +42,8 @@ function loss(problem_instance, reg_param_surr, reg_param_prim, scenario_paramet
     ps = ones(S) / S  # Default equiprobable scenarios
     mu_ext = vcat(reg_param_surr * ones(n_1), vcat([reg_param_surr * ps[s] * ones(n_2) for s in 1:S]...))
     surrogate_solution = LogBarCanLP_standard_solver_primal(A_ext, b_ext, c_ext, mu_ext)[1:length(c)]
+    
+    #surrogate_solution = surrogate_solution(problem_instance, reg_param_surr, scenario_parameters)
     # Compute the performance 
     Ws_actual, Ts_actual, hs_actual, qs_actual = scenario_collection_realization(problem_instance, actual_scenario)
     prim_two_slp = TwoStageSLP(A, b, c, Ws_actual, Ts_actual, hs_actual, qs_actual)

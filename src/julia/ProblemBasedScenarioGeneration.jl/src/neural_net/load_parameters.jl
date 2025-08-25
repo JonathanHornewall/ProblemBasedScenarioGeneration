@@ -1,6 +1,6 @@
 """
 ---------------------------------------------------------------------------------------------
-Load and save parameters for the neural network.
+Scripts for loading and saving parameters for the neural network.
 ---------------------------------------------------------------------------------------------
 """
 
@@ -10,7 +10,7 @@ Load and save parameters for the neural network.
 Save a trained Flux model to a file using Julia's built-in Serialization.
 """
 function save_trained_model(model, filepath)
-    serialize(filepath, model)
+    Serialization.serialize(filepath, model)
 end
 
 """
@@ -19,7 +19,7 @@ end
 Load a trained Flux model from a file using Julia's built-in Serialization.
 """
 function load_trained_model(filepath)
-    return deserialize(filepath)
+    return Serialization.deserialize(filepath)
 end
 
 """
@@ -28,7 +28,7 @@ end
 Save training and testing datasets to a file using Julia's built-in Serialization.
 """
 function save_training_data(training_data, testing_data, filepath)
-    serialize(filepath, (training_data, testing_data))
+    Serialization.serialize(filepath, (training_data, testing_data))
 end
 
 """
@@ -37,7 +37,7 @@ end
 Load training and testing datasets from a file using Julia's built-in Serialization.
 """
 function load_training_data(filepath)
-    training_data, testing_data = deserialize(filepath)
+    training_data, testing_data = Serialization.deserialize(filepath)
     return training_data, testing_data
 end
 
@@ -58,7 +58,7 @@ function save_experiment_state(model, training_data, testing_data, problem_insta
     )
     
     # Save everything
-    serialize(filepath, (model, training_data, testing_data, problem_data, reg_params))
+    Serialization.serialize(filepath, (model, training_data, testing_data, problem_data, reg_params))
     
     println("Complete experiment state saved to: $filepath")
 end
@@ -70,7 +70,7 @@ Load the complete experiment state from a file.
 """
 function load_experiment_state(filepath)
     
-    model, training_data, testing_data, problem_data, reg_params = deserialize(filepath)
+    model, training_data, testing_data, problem_data, reg_params = Serialization.deserialize(filepath)
     
     # Reconstruct problem instance
     problem_instance = ResourceAllocationProblem(ResourceAllocationProblemData(
@@ -125,13 +125,13 @@ function continue_training(experiment_file = "experiment_state.jls",
     
     # Continue training (this will call train! from training.jl)
     train!(problem_instance, reg_param_surr, reg_param_ref, model, training_data; 
-           opt = Adam(learning_rate), epochs = additional_epochs, 
-           display_iterations = true, save_model = true, 
-           model_save_path = "continued_training_model.jld2")
+        opt = Adam(learning_rate), epochs = additional_epochs, 
+        display_iterations = true, save_model = true, 
+        model_save_path = "continued_training_model.jld2")
     
     # Save the updated experiment state
     save_experiment_state(model, training_data, testing_data, problem_instance, reg_params, 
-                         filepath = "continued_experiment_state.jld2")
+                        filepath = "continued_experiment_state.jld2")
     
     println("\n✓ Continued training completed and saved!")
     
@@ -140,12 +140,12 @@ end
 
 """
     compare_models(original_file = "experiment_state.jls", 
-                   continued_file = "continued_experiment_state.jls")
+                continued_file = "continued_experiment_state.jls")
 
 Compare the performance of original and continued training models.
 """
 function compare_models(original_file = "experiment_state.jls", 
-                       continued_file = "continued_experiment_state.jls")
+                    continued_file = "continued_experiment_state.jls")
     
     println("=== Model Comparison ===")
     

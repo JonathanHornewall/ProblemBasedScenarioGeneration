@@ -1,8 +1,9 @@
 
+
 """
     train!(model, data, loss; opt = Descent(1e-3), epochs = 1)
 
-General training function for a neural network.
+Stochastic (batch-size = 1) training loop.
 
 * `model` – any callable Flux model
 * `data  – an iterable of `(x, y)` tuples
@@ -10,7 +11,8 @@ General training function for a neural network.
 """
 
 function train!(loss, relative_loss, model, data; opt = Adam(1e-3), epochs = 1, batchsize = 1,
-    display_iterations = false)
+    display_iterations = false, save_model = false, 
+    model_save_path = "trained_model.jld2")
 
     state = Flux.setup(opt, model)         # Optimisers-style state
     cross_epoch_losses::Vector{Float64} = []
@@ -44,22 +46,22 @@ function train!(loss, relative_loss, model, data; opt = Adam(1e-3), epochs = 1, 
         gmodel = gs isa Tuple ? gs[1] : gs
         Flux.update!(state, model, gmodel)
         =#
-            for idxs in Iterators.partition(1:N, batchsize)
-                Xb = hcat(xs[idxs]...)
-                Ξb = hcat(xis[idxs]...)
-                x, ξ = Xb, Ξb
-                gs = Flux.gradient(model) do m
-                    loss_mb(m, x, ξ)
-                    end
-                gmodel = gs isa Tuple ? gs[1] : gs
-                Flux.update!(state, model, gmodel)
-
-                if display_iterations
-                    δ = relative_loss_mb(model, x, ξ)
-                    # println("Loss is ", δ)
-                    push!(epoch_losses, δ)
-                end
+        for idxs in Iterators.partition(1:N, batchsize)
+            Xb = hcat(xs[idxs]...)
+            Ξb = hcat(xis[idxs]...)
+            x, ξ = Xb, Ξb
+            gs = Flux.gradient(model) do m
+                loss_mb(m, x, ξ)
             end
+            gmodel = gs isa Tuple ? gs[1] : gs
+            Flux.update!(state, model, gmodel)
+
+            if display_iterations
+                δ = relative_loss_mb(model, x, ξ)
+                # println("Loss is ", δ)
+                push!(epoch_losses, δ)
+            end
+        end
 
         if display_iterations
             avg_epoch_loss = mean(epoch_losses)
@@ -67,17 +69,23 @@ function train!(loss, relative_loss, model, data; opt = Adam(1e-3), epochs = 1, 
             push!(cross_epoch_losses, avg_epoch_loss)
         end
 
-    # Force garbage collection between epochs to manage memory
+        # Force garbage collection between epochs to manage memory
         GC.gc()
+    end
+
+    # Save the trained model if requested
+    if save_model
+        save_trained_model(model, model_save_path)
+        println("Model saved to: $model_save_path")
     end
 
     if display_iterations
         plt = plot(
-        1:epochs,
-        cross_epoch_losses,
-        xlabel="Epoch",
-        ylabel="Loss",
-        title="Training Loss"
+            1:epochs,
+            cross_epoch_losses,
+            xlabel="Epoch",
+            ylabel="Loss",
+            title="Training Loss"
         )
         display(plt)  # forces rendering for VS Code
     end
