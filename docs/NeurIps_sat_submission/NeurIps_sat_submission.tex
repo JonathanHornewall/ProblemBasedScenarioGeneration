@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass{article}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -8,19 +8,7 @@
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{url}
-
-% Try to load the NeurIPS 2025 style; fall back to article layout
-\makeatletter
-\IfFileExists{neurips_2025.sty}{%
-  % Do not require natbib for now
-  \usepackage[nonatbib]{neurips_2025}
-}{%
-  % Fallback margins and fonts for local editing
-  \usepackage[margin=1in]{geometry}
-  \usepackage{lmodern}
-  \typeout{NeurIPS 2025 style file not found. Using article fallback layout.}
-}
-\makeatother
+\usepackage[nonatbib]{neurips_2025}
 
 \title{Decision Focused Scenario Generation with Log-Barriers for Contextual Two-Stage Stochastic Linear Programs}
 \author{Anonymous Authors}
@@ -41,6 +29,9 @@ Preliminary results show competitiveness with sample-average baselines at substa
 representative toy problem. 
 Although our focus is on a log-barrier formulation of linear programs, our template extends to other differentiable reformulations that yield smooth solution maps (e.g., convex programs, SDPs).
 \end{abstract}
+
+% Keywords are often requested by NeurIPS; keep as plain text
+\noindent\textbf{Keywords:} contextual stochastic programming; decision-focused learning; differentiable optimization; log-barrier methods; scenario generation.
 
 % ————————————————————————————————————————————————————————————
 
@@ -114,8 +105,21 @@ Although our focus is on a log-barrier formulation of linear programs, our templ
 
 % ————————————————————————————————————————————————————————————
 
-% References placeholder (choose your preferred style in the final draft)
-% \bibliographystyle{plain}
+% Optional/required meta sections for NeurIPS (camera-ready specifics vary by year)
+
+\section*{Reproducibility Statement}
+% Briefly describe code/data availability, compute resources, and steps to reproduce.
+% Mention random seeds, hyperparameters, number of runs, and any deviations.
+
+\section*{Ethics Statement (Optional)}
+% If applicable, discuss potential ethical considerations and impacts.
+
+\section*{Acknowledgments}
+% Remove this section for anonymous review. Add funding and thanks in camera-ready.
+
+% References placeholder (keep plain-text references visible for now)
+% When switching to proper citations, enable natbib and use BibTeX.
+% \bibliographystyle{plainnat}
 % \bibliography{references}
 
 \end{document}
