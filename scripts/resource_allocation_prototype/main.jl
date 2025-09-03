@@ -19,9 +19,9 @@ import ProblemBasedScenarioGeneration: loss, relative_loss, surrogate_solution
 include("parameters.jl")
 cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)
 
-#include("neural_net.jl")
-#include("training.jl")
-#include("test_function.jl")
+#include("../outdated/neural_net.jl")
+#include("../outdated/training.jl")
+#include("../outdated/test_function.jl")
 include("tests_SAA/test_function_SAA.jl")
 
 function main()
@@ -29,7 +29,7 @@ function main()
         problem_instance = ResourceAllocationProblem(problem_data)
 
         # Generate data
-        Ntraining_samples = 1000
+        Ntraining_samples = 1
         Ntesting_samples = 10
         sigma = 5
         p =1
@@ -39,7 +39,7 @@ function main()
 
         data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L, Σ)
 
-        model = construct_neural_network(problem_instance)
+        model = construct_neural_network(problem_instance; nr_of_scenarios = 2)
         # Train the neural network model
         reg_param_surr = 1.0
         reg_param_prim = 0.0

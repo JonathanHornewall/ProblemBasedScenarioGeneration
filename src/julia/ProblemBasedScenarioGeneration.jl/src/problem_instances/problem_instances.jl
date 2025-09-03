@@ -32,6 +32,8 @@ Note: It has to be differentiable via zygote.
 
 """
 function scenario_collection_realization(instance::ProblemInstanceC2SCanLP, scenario_collection)
+    @show size(scenario_collection)
+    @show size(scenario_collection)
     # Use functional approach instead of push! to avoid mutation
     scenario_results = [scenario_realization(instance, scenario) for scenario in eachcol(scenario_collection)]
     W_list = [result[1] for result in scenario_results]

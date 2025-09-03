@@ -1,0 +1,121 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{url}
+
+% Try to load the NeurIPS 2025 style; fall back to article layout
+\makeatletter
+\IfFileExists{neurips_2025.sty}{%
+  % Do not require natbib for now
+  \usepackage[nonatbib]{neurips_2025}
+}{%
+  % Fallback margins and fonts for local editing
+  \usepackage[margin=1in]{geometry}
+  \usepackage{lmodern}
+  \typeout{NeurIPS 2025 style file not found. Using article fallback layout.}
+}
+\makeatother
+
+\title{Decision Focused Scenario Generation with Log-Barriers for Contextual Two-Stage Stochastic Linear Programs}
+\author{Anonymous Authors}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present a novel method for contextual two-stage stochastic linear programs leveraging decision-focused learning for scenario generation. 
+We assume that we have a database of historical, observed context–scenario pairs, but no further knowledge about the appearance of the underlying distribution. 
+A neural generator maps each context to a small set of representative scenarios, from which a first-stage decision is computed by solving a \textbf{log-barrier–regularized} two-stage program (“barrier model”). 
+Training minimizes the downstream cost of this decision on the observed context–scenario pairs. 
+Back-propagation is enabled by leveraging implicit differentiation of the optimality conditions for the surrogate problem, and the KKT conditions of the non-regularized original problem.
+Compared with conventional methods, the framework has the benefit of end-to-end training with respect to the ultimate decision quality, as opposed to pure predictive accuracy.
+Additionally, the approach enables fast inference compared with baseline methods, requiring only one smooth solve required per context input.
+Preliminary results show competitiveness with sample-average baselines at substantially lower test-time solve cost for
+representative toy problem. 
+Although our focus is on a log-barrier formulation of linear programs, our template extends to other differentiable reformulations that yield smooth solution maps (e.g., convex programs, SDPs).
+\end{abstract}
+
+% ————————————————————————————————————————————————————————————
+
+\section{Introduction}
+% Motivation: contextual two-stage stochastic programs, importance of decision-focused learning.
+% Limitations of existing approaches (sample-average approximation, distribution modeling, heuristic scenario selection).
+% Contribution: barrier-regularized formulation enabling smooth end-to-end training.
+% Summary of results and scope (preliminary, proof-of-concept).
+
+% ————————————————————————————————————————————————————————————
+
+\section{Related Work}
+\subsection*{Contextual Stochastic Programming}
+\begin{itemize}
+  \item Sadana, U., Chenreddy, A., Delage, E., Forel, A., Frejinger, E., \& Vidal, T. (2024). A Survey of Contextual Optimization Methods for Decision Making under Uncertainty. European Journal of Operational Research, 320(2):271-289. \url{https://doi.org/10.1016/j.ejor.2024.04.018}
+  \item Ban, A. \& Rudin, C. (2019). The Big Data Newsvendor: Practical Insights from Machine Learning. Operations Research 67(1):90–108. \url{https://doi.org/10.1287/opre.2018.1752}
+  \item Homem-de-Mello, T., Valencia, J., Lagos, F., \& Lagos, G. (2024). Forecasting Outside the Box: Application-Driven Optimal Pointwise Forecasts for Stochastic Optimization. arXiv:2411.03520. \url{https://arxiv.org/abs/2411.03520}
+  \item Islip, D. R., Kwon, R. H., Bae, S., \& Kim, W. C. (2025). Contextual Scenario Generation for Two-Stage Stochastic Programming. arXiv:2502.05349. \url{https://arxiv.org/abs/2502.05349}
+\end{itemize}
+
+\subsection*{Decision-Focused Learning}
+\begin{itemize}
+  \item Elmachtoub, A. N. \& Grigas, P. (2022). Smart “Predict, then Optimize”. Management Science 68(1):9–26. \url{https://doi.org/10.1287/mnsc.2020.3922}
+  \item Wilder, B., Dilkina, B., \& Tambe, M. (2019). Melding the Data-Decisions Pipeline: Decision-Focused Learning for Combinatorial Optimization. AAAI 2019. \url{https://ojs.aaai.org/index.php/AAAI/article/view/4212}
+  \item Mandi, J., Mahmutoğulları, A. İ., Berden, S., \& Guns, T. (2025). Minimizing Surrogate Losses for Decision-Focused Learning using Differentiable Optimization. arXiv:2508.11365. \url{https://arxiv.org/abs/2508.11365}
+\end{itemize}
+
+\subsection*{Differentiable Surrogate Optimization Methods}
+\begin{itemize}
+  \item Amos, B. \& Kolter, J. Z. (2017). OptNet: Differentiable Optimization as a Layer in Neural Networks. ICML 2017. \url{https://proceedings.mlr.press/v70/amos17a.html}
+  \item Agrawal, A., Amos, B., Barratt, S., Boyd, S., Diamond, S., \& Kolter, J. Z. (2019). Differentiable Convex Optimization Layers. NeurIPS 2019. \url{https://proceedings.neurips.cc/paper_files/paper/2019/hash/9ce3c52fc54362e22053399d3181c638-Abstract.html}
+  \item Elmachtoub \& Grigas (2022) [SPO+ surrogate loss] (already above).
+  \item Mandi et al. (2025) [DYS-Net \& surrogate losses] (already above).
+\end{itemize}
+
+\subsection*{Neural Networks for Two-Stage Problems}
+\begin{itemize}
+  \item Chou, X. \& Messina, E. (2023). Problem-Driven Scenario Generation for Stochastic Programming Problems: A Survey. Algorithms 16(10):479. \url{https://doi.org/10.3390/a16100479}
+  \item Wu, Y., Song, W., Cao, Z., \& Zhang, J. (2022). Learning Scenario Representation for Solving Two-Stage Stochastic Integer Programs. ICLR 2022. \url{https://openreview.net/forum?id=gU6t1UFqHnx}
+  \item Dumouchelle, J., Patel, R., Khalil, E. B., \& Bodur, M. (2022). Neur2SP: Neural Two-Stage Stochastic Programming. arXiv:2205.12006. \url{https://arxiv.org/abs/2205.12006}
+  \item Larsen, E., Frejinger, E., Gendron, B., \& Lodi, A. (2022). Fast Continuous and Integer L-shaped Heuristics through Supervised Learning. arXiv:2205.00897. \url{https://arxiv.org/abs/2205.00897}
+  \item Nair, V., Dvijotham, D., Dunning, I., \& Vinyals, O. (2018). Learning Fast Optimizers for Contextual Stochastic Integer Programs. UAI 2018. \url{https://proceedings.mlr.press/v80/nair18a.html}
+\end{itemize}
+
+
+\section{Method}
+% Problem setup: contextual two-stage stochastic LP; notation.
+% Barrier model: log-barrier regularization of constraints; formulation.
+% Neural generator: mapping context to representative scenarios.
+% Training objective: downstream cost on context–scenario pairs.
+% Gradients: implicit differentiation through barrier model (high-level description only).
+
+\subsection{Extensions (Optional)}
+% Possibility of multiple scenarios or smooth alternative reformulations.
+
+% ————————————————————————————————————————————————————————————
+
+\section{Experiments (Preliminary)}
+% Setup: toy contextual two-stage LP(s) for illustration.
+% Baselines: sample-average approximation, heuristic scenario selection.
+% Metrics: decision cost on held-out data, solve time.
+% Results: tables/plots (small-scale, illustrative).
+% Discussion: performance trends, limitations, open questions.
+
+% ————————————————————————————————————————————————————————————
+
+\section{Conclusion and Future Work}
+% Summary of contributions.
+% Emphasize generality to convex programs/SDPs.
+% Directions: larger experiments, alternative smooth reformulations, theoretical analysis.
+
+% ————————————————————————————————————————————————————————————
+
+% References placeholder (choose your preferred style in the final draft)
+% \bibliographystyle{plain}
+% \bibliography{references}
+
+\end{document}
