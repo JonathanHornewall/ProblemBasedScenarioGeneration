@@ -14,7 +14,7 @@ import Flux: params, gradient, Optimise, Adam#,
 import ProblemBasedScenarioGeneration: loss, relative_loss   # error if any of these re-appear
 
 
-include("/home/delannoypavysol/ProblemBasedScenarioGeneration/ProblemBasedScenarioGeneration/scripts/unreliable_newsvendor_prototype/optimality_test.jl")
+include("optimality_test.jl")
 
 
 function main()
