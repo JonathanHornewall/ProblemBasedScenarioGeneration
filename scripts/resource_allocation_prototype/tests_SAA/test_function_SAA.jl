@@ -67,7 +67,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             # in the algorithm of tito's paper, we divide by the evaluated cost. But in the original code provided by tito we divide by the optimal cost.
             # to be clarified
             
-            push!(list_costs, evaluated_cost) 
+            push!(list_costs, opt_cost) #corrected following discussion with Tito 
 
             println("evaluated_cost: ", evaluated_cost, " optimal_cost: ", opt_cost, " gap: ", (evaluated_cost - opt_cost)/abs(opt_cost))
 
