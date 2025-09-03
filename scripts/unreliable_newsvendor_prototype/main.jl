@@ -16,14 +16,13 @@ import ProblemBasedScenarioGeneration: loss, relative_loss   # error if any of t
 
 include("optimality_test.jl")
 
-
 function main()
 
 problem_data = UnreliableNewsvendorProblemData(p,c,π,η)
 problem_instance = UnreliableNewsvendorProblem(problem_data)
 
 # Generate data
-Ntraining_samples = 10000
+Ntraining_samples = 1000
 Ntesting_samples = 1
 N_xi_per_x = 1000
 
@@ -31,11 +30,11 @@ data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntrainin
 
 model = construct_neural_network(problem_instance)
 # Train the neural network model
-reg_param_surr = 1.0 # to compute the first stage solution
-reg_param_prim = 1.0 # to compute the cost of the first stage solution
+reg_param_surr = 0.5 # to compute the first stage solution
+reg_param_prim = 0.0 # to compute the cost of the first stage solution
 reg_param_ref = 0.0 # I do not what it is used for 
 batchsize = 1
-epochs = 15
+epochs = 50
 step_size = 1e-4
 save_model = true
 
@@ -61,25 +60,10 @@ println(model([1.0])[1], " should be equal to ", z_star*model([1.0])[2])
 z = surrogate_solution(problem_instance, reg_param_surr, model([1.0]))[1]
 println("z equals ", z, " while z* equals ", z_star)
 
-return model
+test_result = testing_SAA(problem_instance, model, data_set_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
+
+return problem_instance, model, data_set_testing
 
 end
-model = main()
 
-
-problem_data = UnreliableNewsvendorProblemData(p,c,π,η)
-problem_instance = UnreliableNewsvendorProblem(problem_data)
-
-# Generate data
-Ntraining_samples = 10000
-Ntesting_samples = 1
-N_xi_per_x = 1000
-
-data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x)
-
-model = construct_neural_network(problem_instance)
-# Train the neural network model
-reg_param_surr = 1.0 # to compute the first stage solution
-reg_param_prim = 1.0 # to compute the cost of the first stage solution
-reg_param_ref = 0.0 # I do not what it is used for 
-testing_SAA(problem_instance, model, data_set_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
+problem_instance, model, data_set_testing = main()
