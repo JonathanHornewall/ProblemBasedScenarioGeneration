@@ -6,9 +6,28 @@ using CSV
 using DataFrames
 
 # retrieve results for M5 +AD 
-df = CSV.read("tests_SAA/df1.csv", DataFrame)
-filtered = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
-MAD_gaps = filtered.OoS
+df = CSV.read("/home/delannoypavysol/ProblemBasedScenarioGeneration/ProblemBasedScenarioGeneration/scripts/resource_allocation_prototype/tests_SAA/df2.csv", DataFrame)
+
+filtered_MAD = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
+MAD_gaps = filtered_MAD.OoS
+
+filtered_LS = filter(row -> row.T == 100 && row.method == "LS", df)
+LS_gaps = filtered_LS.OoS
+
+filtered_ER_SAA = filter(row -> row.T == 100 && row.method == "ER-SAA", df)
+ER_SAA_gaps = filtered_ER_SAA.OoS
+
+filtered_AD = filter(row -> row.T == 100 && row.method == "AD", df)
+AD_gaps = filtered_AD.OoS
+
+filtered_SAA = filter(row -> row.T == 100 && row.method == "SAA", df)
+SAA_gaps = filtered_SAA.OoS
+
+filtered_KNN = filter(row -> row.T == 100 && row.method == "KNN", df)
+KNN_gaps = filtered_KNN.OoS
+
+filtered_CART = filter(row -> row.T == 100 && row.method == "CART", df)
+CART_gaps = filtered_CART.OoS
 
 
 function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
@@ -56,7 +75,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             # Reshape the neural network output from a vector to a matrix with one column
             # Each column represents one scenario, so for single scenario we need 30×1 matrix
             ξ_hat_matrix = reshape(ξ_hat, :, 1)
-            surrogate_decision = surrogate_solution(problem_instance, ξ_hat_matrix, reg_param_surr)
+            surrogate_decision = surrogate_solution(problem_instance, reg_param_surr, ξ_hat)
 
             evaluated_cost = s1_cost(two_slp, surrogate_decision, reg_param_ref)
 
@@ -67,7 +86,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             # in the algorithm of tito's paper, we divide by the evaluated cost. But in the original code provided by tito we divide by the optimal cost.
             # to be clarified
             
-            push!(list_costs, opt_cost) #corrected following discussion with Tito 
+            push!(list_costs, opt_cost) 
 
             println("evaluated_cost: ", evaluated_cost, " optimal_cost: ", opt_cost, " gap: ", (evaluated_cost - opt_cost)/abs(opt_cost))
 
@@ -83,8 +102,8 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
 
 
     # Boxplot with one group
-    all_data = vcat(UCB_list, MAD_gaps)
-    groups = vcat(fill("NN", length(UCB_list)), fill("M5 + AD", length(MAD_gaps)))
+    all_data = vcat(UCB_list, MAD_gaps, ER_SAA_gaps, AD_gaps, SAA_gaps, KNN_gaps, CART_gaps, LS_gaps)
+    groups = vcat(fill("NN", length(UCB_list)), fill("M5 + AD", length(MAD_gaps)), fill("ER + SAA", length(ER_SAA_gaps)), fill("AD", length(AD_gaps)), fill("SAA", length(SAA_gaps)), fill("KNN", length(KNN_gaps)), fill("CART", length(CART_gaps)), fill("LS", length(LS_gaps)))
 
     plot = boxplot(groups, all_data,
         legend = false,
@@ -92,6 +111,9 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
         xlabel = "",
         ylabel = "Gap",
     )
+
+    mean_list = mean(UCB_list)
+    println("mean UCB: ", mean_list)
 
     display(plot)
     savefig(plot, "gap_boxplot.pdf") 
@@ -138,3 +160,4 @@ function gurobi_solver(A, b, c, Ws, Ts, hs, qs, first_stage_decision)
 
     return cost
 end
+
