@@ -1,4 +1,3 @@
-#= 
 model = Chain(
     Dense(3, 128, relu),
     Dense(128, 128, relu),
@@ -136,41 +135,5 @@ function relative_loss(problem_instance::ResourceAllocationProblem, reg_param_su
         
         return (evaluated_loss - optimal_loss) / abs(optimal_loss)
     end
-end
-=#
-#=
-"""
-    loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-Computes the loss using the main package's structure but with local functions.
-"""
-function loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-    nr_of_scenarios = size(scenario_parameter, 2)
-    total_loss = 0.0
-    
-    for i in 1:nr_of_scenarios
-        # Extract individual scenario vectors from the matrix
-        scenario = scenario_parameter[:, i]
-        actual = actual_scenario[:, i]
-        
-        # Generate surrogate solution using the local function that expects vectors
-        surrogate_decision = surrogate_solution(problem_instance, scenario, reg_param_surr)
-        
-        # Evaluate primal problem cost using the local function that expects vectors
-        scenario_loss = primal_problem_cost(problem_instance, actual, reg_param_prim, surrogate_decision)
-        total_loss += scenario_loss
-    end
-    
-    return total_loss / nr_of_scenarios  # Return average loss across scenarios
-end
-
-"""
-    relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-Computes the relative loss using the local loss function.
-"""
-function relative_loss(problem_instance::ResourceAllocationProblem, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-    evaluated_loss = loss(problem_instance, reg_param_surr, reg_param_prim, scenario_parameter, actual_scenario)
-    optimal_loss = loss(problem_instance, reg_param_prim, reg_param_prim, actual_scenario, actual_scenario)
-    
-    return (evaluated_loss - optimal_loss) / abs(optimal_loss)
 end
 =#
