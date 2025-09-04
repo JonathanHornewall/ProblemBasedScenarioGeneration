@@ -8,26 +8,9 @@ using DataFrames
 # retrieve results for M5 +AD 
 df = CSV.read("/home/delannoypavysol/ProblemBasedScenarioGeneration/ProblemBasedScenarioGeneration/scripts/resource_allocation_prototype/tests_SAA/df2.csv", DataFrame)
 
-filtered_MAD = filter(row -> row.T == 100 && row.method == "M5 + AD", df)
-MAD_gaps = filtered_MAD.OoS
-
-filtered_LS = filter(row -> row.T == 100 && row.method == "LS", df)
-LS_gaps = filtered_LS.OoS
-
-filtered_ER_SAA = filter(row -> row.T == 100 && row.method == "ER-SAA", df)
-ER_SAA_gaps = filtered_ER_SAA.OoS
-
-filtered_AD = filter(row -> row.T == 100 && row.method == "AD", df)
-AD_gaps = filtered_AD.OoS
-
-filtered_SAA = filter(row -> row.T == 100 && row.method == "SAA", df)
-SAA_gaps = filtered_SAA.OoS
-
-filtered_KNN = filter(row -> row.T == 100 && row.method == "KNN", df)
-KNN_gaps = filtered_KNN.OoS
-
-filtered_CART = filter(row -> row.T == 100 && row.method == "CART", df)
-CART_gaps = filtered_CART.OoS
+datasetsize = 10000
+filtered_df = filter(row -> row.T == datasetsize, df)
+filtered_df = select!(filtered_df, Not(:T))
 
 
 function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
@@ -101,22 +84,17 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
     end
 
 
-    # Boxplot with one group
-    all_data = vcat(UCB_list, MAD_gaps, ER_SAA_gaps, AD_gaps, SAA_gaps, KNN_gaps, CART_gaps, LS_gaps)
-    groups = vcat(fill("NN", length(UCB_list)), fill("M5 + AD", length(MAD_gaps)), fill("ER + SAA", length(ER_SAA_gaps)), fill("AD", length(AD_gaps)), fill("SAA", length(SAA_gaps)), fill("KNN", length(KNN_gaps)), fill("CART", length(CART_gaps)), fill("LS", length(LS_gaps)))
+    # Créer un nouveau DataFrame avec les nouvelles lignes
+    new_rows = DataFrame(method = fill("NN", length(UCB_list)), OoS = UCB_list)
 
-    plot = boxplot(groups, all_data,
-        legend = false,
-        title = "",
-        xlabel = "",
-        ylabel = "Gap",
-    )
+    # Ajouter les nouvelles lignes au DataFrame existant
+    append!(filtered_df, new_rows)
+
+    @df filtered_df boxplot(:method, :OoS, legend=true)
 
     mean_list = mean(UCB_list)
     println("mean UCB: ", mean_list)
-
-    display(plot)
-    savefig(plot, "gap_boxplot.pdf") 
+    savefig("gap_boxplot.pdf") 
 
 end
 
