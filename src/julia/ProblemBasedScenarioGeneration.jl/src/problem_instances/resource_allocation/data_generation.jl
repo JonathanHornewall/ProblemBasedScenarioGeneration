@@ -1,4 +1,33 @@
-function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, N_xi_per_x, σ, p, L, Σ)
+function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, N_xi_per_x, σ, p, L)
+
+    function generateRandomCorrMat(dim)
+
+        betaparam = 2.0
+    
+        partCorr = zeros(Float64,dim,dim)
+        corrMat =  Matrix{Float64}(I, dim, dim) #eye(dim)
+    
+        for k = 1:dim-1
+            for i = k+1:dim
+                partCorr[k,i] = ((rand(Distributions.Beta(betaparam,betaparam),1))[1] - 0.5)*2.0
+                p = partCorr[k,i]
+                for j = (k-1):-1:1
+                    p = p*sqrt((1-partCorr[j,i]^2)*(1-partCorr[j,k]^2)) + partCorr[j,i]*partCorr[j,k]
+                end
+                corrMat[k,i] = p
+                corrMat[i,k] = p
+            end
+        end
+    
+        permut = Random.randperm(dim)
+        corrMat = corrMat[permut, permut]
+    
+        return corrMat
+    end 
+
+    corrMat = generateRandomCorrMat(3)
+
+
     function sampleParameters(J)
         #returns parameters A and B in the data generation procedure for each client
         A = 50 .+ 5 .*rand(Normal(0,1),J)
@@ -9,11 +38,12 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
         return A,B
     end
     J = size(instance.problem_data.service_rate_parameters, 2)  # Number of clients
+
     A, B = sampleParameters(J)  # Sample parameters A and B
     
     μ = zeros(3)
-    x = transpose(abs.(rand(MvNormal(μ,Σ),Nsamples)))
-    xoos = transpose(abs.(rand(MvNormal(μ,Σ),Noutofsamples)))
+    x = transpose(abs.(rand(MvNormal(μ,corrMat),Nsamples)))
+    xoos = transpose(abs.(rand(MvNormal(μ,corrMat),Noutofsamples)))
 
 
     ξ = zeros(J,Nsamples)
@@ -52,7 +82,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
     end
     in_sample, out_of_sample = Dict(in_sample), Dict(out_of_sample)  # Convert to dictionaries for easier access
 
-    return in_sample, out_of_sample
+    return in_sample, out_of_sample, A, B
 end
 
 
