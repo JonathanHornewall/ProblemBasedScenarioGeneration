@@ -8,26 +8,57 @@
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{url}
-\usepackage[nonatbib]{neurips_2025}
+% Show authors: use preprint or final to disable anonymity
+\usepackage[preprint]{neurips_2025}
+% Handle Unicode chars from Zotero (e.g., BLACK STAR U+2605)
+\usepackage{newunicodechar}
+\newunicodechar{★}{*}
 
-\title{Decision Focused Scenario Generation with Log-Barriers for Contextual Two-Stage Stochastic Linear Programs}
-\author{Anonymous Authors}
+\title{Decision Focused Scenario Generation via Log-Barrier Surrogate for Contextual Two-Stage Stochastic Linear Programming}
+\author{
+Jonathan Hornewall \\
+École des Ponts ParisTech \\
+\texttt{jonathan.hornewall@enpc.fr} \\
+\And
+Vincent Leclere \\
+CERMICS, École des Ponts ParisTech \\
+\texttt{vincent.leclere@enpc.fr} \\
+\And
+Solène Delannoy-Pavy \\
+École des Ponts ParisTech \\
+\texttt{solene.delannoy-pavy@enpc.fr} \\
+\And
+Tito Homem-de-Mello \\
+Universidad Adolfo Ibáñez \\
+\texttt{tito.hmello@uai.cl} \\
+}
 \date{\today}
 
 \begin{document}
+% Using BibTeX/natbib (per neurips_2025.sty). Remove biblatex commands.
 \maketitle
 
 \begin{abstract}
-We present a novel method for contextual two-stage stochastic linear programs leveraging decision-focused learning for scenario generation. 
-We assume that we have a database of historical, observed context–scenario pairs $(x,\xi)$, but no further knowledge about the appearance of the underlying distribution. 
-A neural generator maps each context $x$ to a small set of representative scenarios $\xi$, from which a first-stage decision $z$ is computed by solving a \textbf{log-barrier–regularized} two-stage program (“barrier model”). 
-Training minimizes the downstream cost $G(z,\xi)$ of this decision on the observed context–scenario pairs $(x,\xi)$. 
-Back-propagation is enabled by leveraging implicit differentiation of the optimality conditions for the surrogate problem, and the KKT conditions of the non-regularized original problem.
-Our approach fills a gap in the literature by enabling multi-scenario generation, without requiring distributional learning, the use of neural surrogates to estimate value functions or differentiating through solvers.
-For back-propagation during training, we obtain exact gradients via closed-form expressions obtained by leveraging Danskin's theorem to the unregularized cost, and applying the implicit function theorem to the KKT conditions of the barrier model.
-The derivatives are obtained by solving a linear system, computationally equivalent to performing one Newton step.
-Preliminary results show competitiveness with baseline methods.
-Although our focus is on a log-barrier formulation of linear programs, our template extends to other differentiable reformulations that yield smooth solution maps (e.g., convex programs, SDPs).
+We present a novel method for solving contextual two-stage stochastic linear programs, by leveraging decision-focused learning for scenario generation. 
+Over a database of historical, observed context–scenario pairs $(x,\xi)$,  a neural net is trained to learn a context-to-scenario-collection map $x  \mapsto \xi_{1:S}$. 
+
+%The scenario generation is evaluated in a decision focused way, where first-stage decisions
+%are obtained by solving a log barrier regularization of the problem induced by the scenarios, after
+%which the decision is inserted into the true, unregularized problem. 
+
+%For an input $x$ and an output $\xi_{1:S}(x)$, the loss is computed in a decision focused manner. 
+%We first solve a log-barrier surrogate of the two-stag problem induced by the generated collection,
+%and then evaluating the performance of the decision on the true two-stage problem defined by the context $x$ (estimated empirically via the dataset).
+%The smoothness of the log-barrier surrogate enabls back-propagation, and thereby full end-to-end learning.
+
+For each generated collection of scenarios, a first-stage decision $z(\xi_{1:S})$ is computed by solving a log-barrier regularized version of the deterministic two-stage problem induced by the scenarios.
+The neural net is trained in a decision focused manner, to generate $\xi_{1:s}(x)$ to optimize the performance their induced first-stage decision $z(\xi_{1:S})$, on the true, unregularized problem.
+
+%Our approach builds upon existing literature by enabling multi-scenario generation, without requiring distributional learning or the use of neural surrogates to estimate value functions.
+
+
+%Although our focus is on a log-barrier regularized linear programs, our template extends to other differentiable reformulations that yield smooth solution maps (e.g., convex programs, SDPs).
+
 \end{abstract}
 
 % Keywords are often requested by NeurIPS; keep as plain text
@@ -35,46 +66,69 @@ Although our focus is on a log-barrier formulation of linear programs, our templ
 
 % ————————————————————————————————————————————————————————————
 
+
+%\subsection*{Contextual Stochastic Programming}
+%\begin{itemize}
+%  \item Sadana, U., Chenreddy, A., Delage, E., Forel, A., Frejinger, E., \& Vidal, T. (2024). A Survey of Contextual Optimization Methods for Decision Making under Uncertainty. European Journal of Operational Research, 320(2):271-289. \url{https://doi.org/10.1016/j.ejor.2024.04.018}
+%  \item Ban, A. \& Rudin, C. (2019). The Big Data Newsvendor: Practical Insights from Machine Learning. Operations Research 67(1):90–108. \url{https://doi.org/10.1287/opre.2018.1752}
+%  \item Homem-de-Mello, T., Valencia, J., Lagos, F., \& Lagos, G. (2024). Forecasting Outside the Box: Application-Driven Optimal Pointwise Forecasts for Stochastic Optimization. arXiv:2411.03520. \url{https://arxiv.org/abs/2411.03520}
+%  \item Islip, D. R., Kwon, R. H., Bae, S., \& Kim, W. C. (2025). Contextual Scenario Generation for Two-Stage Stochastic Programming. arXiv:2502.05349. \url{https://arxiv.org/abs/2502.05349}
+%\end{itemize}
+
+%\subsection*{Decision-Focused Learning}
+%\begin{itemize}
+%  \item Elmachtoub, A. N. \& Grigas, P. (2022). Smart “Predict, then Optimize”. Management Science 68(1):9–26. \url{https://doi.org/10.1287/mnsc.2020.3922}
+%  \item Wilder, B., Dilkina, B., \& Tambe, M. (2019). Melding the Data-Decisions Pipeline: Decision-Focused Learning for Combinatorial Optimization. AAAI 2019. \url{https://ojs.aaai.org/index.php/AAAI/article/view/4212}
+%  \item Mandi, J., Mahmutoğulları, A. İ., Berden, S., \& Guns, T. (2025). Minimizing Surrogate Losses for Decision-Focused Learning using Differentiable Optimization. arXiv:2508.11365. \url{https://arxiv.org/abs/2508.11365}
+%\end{itemize}
+
+%\subsection*{Differentiable Surrogate Optimization Methods}
+%\begin{itemize}
+%  \item Amos, B. \& Kolter, J. Z. (2017). OptNet: Differentiable Optimization as a Layer in Neural Networks. ICML 2017. \url{https://proceedings.mlr.press/v70/amos17a.html}
+%  \item Agrawal, A., Amos, B., Barratt, S., Boyd, S., Diamond, S., \& Kolter, J. Z. (2019). Differentiable Convex Optimization Layers. NeurIPS 2019. \url{https://proceedings.neurips.cc/paper_files/paper/2019/hash/9ce3c52fc54362e22053399d3181c638-Abstract.html}
+%  \item Elmachtoub \& Grigas (2022) [SPO+ surrogate loss] (already above).
+%  \item Mandi et al. (2025) [DYS-Net \& surrogate losses] (already above).
+%\end{itemize}
+
+%\subsection*{Neural Networks for Two-Stage Problems}
+%\begin{itemize}
+%  \item Chou, X. \& Messina, E. (2023). Problem-Driven Scenario Generation for Stochastic Programming Problems: A Survey. Algorithms 16(10):479. \url{https://doi.org/10.3390/a16100479}
+%  \item Wu, Y., Song, W., Cao, Z., \& Zhang, J. (2022). Learning Scenario Representation for Solving Two-Stage Stochastic Integer Programs. ICLR 2022. \url{https://openreview.net/forum?id=gU6t1UFqHnx}
+%  \item Dumouchelle, J., Patel, R., Khalil, E. B., \& Bodur, M. (2022). Neur2SP: Neural Two-Stage Stochastic Programming. arXiv:2205.12006. \url{https://arxiv.org/abs/2205.12006}
+%  \item Larsen, E., Frejinger, E., Gendron, B., \& Lodi, A. (2022). Fast Continuous and Integer L-shaped Heuristics through Supervised Learning. arXiv:2205.00897. \url{https://arxiv.org/abs/2205.00897}
+%  \item Nair, V., Dvijotham, D., Dunning, I., \& Vinyals, O. (2018). Learning Fast Optimizers for Contextual Stochastic Integer Programs. UAI 2018. \url{https://proceedings.mlr.press/v80/nair18a.html}
+%\end{itemize}
+
 \section{Introduction}
-% Motivation: contextual two-stage stochastic programs, importance of decision-focused learning.
-% Limitations of existing approaches (sample-average approximation, distribution modeling, heuristic scenario selection).
-% Contribution: barrier-regularized formulation enabling smooth end-to-end training.
-% Summary of results and scope (preliminary, proof-of-concept).
+Contextual stochastic programming is a problem class that reside in the intersection of classical stochastic programming and machine learning.
+In contextual stochastic programming, the uncertainty $\xi$ depends on context features $x$ which are observed prior to making any decision.
+One typically has access to a database of historically observed scenario pairs $(x_i, \xi_i)_{i=1}^N$, but unlike in classical stochastic programming, there is no à priori knowledge regarding exact distribution of the conditioned of the noise. 
+As a problem class, it lives in the intersection of stochastic programming and machine learning. 
+It has recently received increased attention due to its real world applicability (\cite{banBigDataNewsvendor2019}, \cite{dengPredictiveStochasticProgramming2022}, \cite{kannanTechnicalNoteDataDriven2025})
 
-% ————————————————————————————————————————————————————————————
+The most commonly used approach follows is predict-then-optimize  (\cite{caoStatisticalInferenceContextual}, \cite{sadanaSurveyContextualOptimization2024}, \cite{tianSolvingContextualStochastic2024})
+in which one separately first learns the conditional law $\mathcal{L}(\xi\mid x)$, and then solves the induced program. 
+While conceptually clean, it comes with the challenge of learning high-dimensional conditional distributions, which can be data-hungry and brittle outside well-specified models.
 
-\section{Related Work}
-\subsection*{Contextual Stochastic Programming}
-\begin{itemize}
-  \item Sadana, U., Chenreddy, A., Delage, E., Forel, A., Frejinger, E., \& Vidal, T. (2024). A Survey of Contextual Optimization Methods for Decision Making under Uncertainty. European Journal of Operational Research, 320(2):271-289. \url{https://doi.org/10.1016/j.ejor.2024.04.018}
-  \item Ban, A. \& Rudin, C. (2019). The Big Data Newsvendor: Practical Insights from Machine Learning. Operations Research 67(1):90–108. \url{https://doi.org/10.1287/opre.2018.1752}
-  \item Homem-de-Mello, T., Valencia, J., Lagos, F., \& Lagos, G. (2024). Forecasting Outside the Box: Application-Driven Optimal Pointwise Forecasts for Stochastic Optimization. arXiv:2411.03520. \url{https://arxiv.org/abs/2411.03520}
-  \item Islip, D. R., Kwon, R. H., Bae, S., \& Kim, W. C. (2025). Contextual Scenario Generation for Two-Stage Stochastic Programming. arXiv:2502.05349. \url{https://arxiv.org/abs/2502.05349}
-\end{itemize}
+\textbf{Decision-focused learning} offers an appealing alternative, in which the predictive model is trained to generate a distribution or a set of scenarios which directly minimize the downstream decision cost for their associated decision, rather than aiming for statistical closeness-of-fit. 
+Some recent papers have explored this avenue. 
+(\cite{dontiTaskbasedEndtoendModel2019a}) uses decision-focused learning on quadratic programs to directly learn the appearance of the conditional distribution, relying on methods for differentiating through quadratic solvers to enable backpropagation. 
+(\cite{islipContextualScenarioGeneration2025}) present a pipeline for learning a deterministic map from contexts to a finite collection of scenarios. 
+Their approach has the benefit of being applicable to any two-stage stochastic problem, including highly non-smooth ones such as integer programs. 
+On the other hand, it relies on neural surrogates to estimate recourse functions, which introduce an additional layer of learning. 
+Finally, (\cite{homem-de-melloForecastingOutsideBox2024}) focuses on learning a single-scenario map, and theoretically demonstrates that there are classes of problems for which a single scenario suffices to obtain an optimal decision.
 
-\subsection*{Decision-Focused Learning}
-\begin{itemize}
-  \item Elmachtoub, A. N. \& Grigas, P. (2022). Smart “Predict, then Optimize”. Management Science 68(1):9–26. \url{https://doi.org/10.1287/mnsc.2020.3922}
-  \item Wilder, B., Dilkina, B., \& Tambe, M. (2019). Melding the Data-Decisions Pipeline: Decision-Focused Learning for Combinatorial Optimization. AAAI 2019. \url{https://ojs.aaai.org/index.php/AAAI/article/view/4212}
-  \item Mandi, J., Mahmutoğulları, A. İ., Berden, S., \& Guns, T. (2025). Minimizing Surrogate Losses for Decision-Focused Learning using Differentiable Optimization. arXiv:2508.11365. \url{https://arxiv.org/abs/2508.11365}
-\end{itemize}
+\textbf{Our contribution} offers a novel approach for decision-focused scenario generation. 
+We train a neural net to generate finite collections of scenarios of pre-determined size from context inputs, using a decision focused end-to-end learning pipeline
+inspired by interior point methods and recent work in the domain of differentiable programming (\cite{amosOptNetDifferentiableOptimization2017}, \cite{mengDifferentiableOptimizationGeneralized2021}, \cite{tanLearningLinearPrograms2020}) 
+More specifically, we generate first-stage decisions from each scenario-collection output by solving a log-barrier regularized version of the deterministic two-stage problem associated with the scenarios 
+and then train to minimize the loss defined by the performance of this decision on the original, unregularized problem.
 
-\subsection*{Differentiable Surrogate Optimization Methods}
-\begin{itemize}
-  \item Amos, B. \& Kolter, J. Z. (2017). OptNet: Differentiable Optimization as a Layer in Neural Networks. ICML 2017. \url{https://proceedings.mlr.press/v70/amos17a.html}
-  \item Agrawal, A., Amos, B., Barratt, S., Boyd, S., Diamond, S., \& Kolter, J. Z. (2019). Differentiable Convex Optimization Layers. NeurIPS 2019. \url{https://proceedings.neurips.cc/paper_files/paper/2019/hash/9ce3c52fc54362e22053399d3181c638-Abstract.html}
-  \item Elmachtoub \& Grigas (2022) [SPO+ surrogate loss] (already above).
-  \item Mandi et al. (2025) [DYS-Net \& surrogate losses] (already above).
-\end{itemize}
+%Our approach offers the benefit that all derivatives required for the backpropagation have closed form expressions, and can be evaluated cheaply enough that the solution of the surrogate problem becomes the main bottleneck for training. 
+The derivatives required for backpropagation are all obtained in close form by leveraging implicit differentiation of the optimality conditions for the smooth surrogate.
+To the best of the authors' knowledge, ours is currently the only method in the literature which allows for generating multiple scenarios, without requiring neural surrogate approximations of value functions, differentiating through solvers, 
+or performing computationally expensive distribution learning.
 
-\subsection*{Neural Networks for Two-Stage Problems}
-\begin{itemize}
-  \item Chou, X. \& Messina, E. (2023). Problem-Driven Scenario Generation for Stochastic Programming Problems: A Survey. Algorithms 16(10):479. \url{https://doi.org/10.3390/a16100479}
-  \item Wu, Y., Song, W., Cao, Z., \& Zhang, J. (2022). Learning Scenario Representation for Solving Two-Stage Stochastic Integer Programs. ICLR 2022. \url{https://openreview.net/forum?id=gU6t1UFqHnx}
-  \item Dumouchelle, J., Patel, R., Khalil, E. B., \& Bodur, M. (2022). Neur2SP: Neural Two-Stage Stochastic Programming. arXiv:2205.12006. \url{https://arxiv.org/abs/2205.12006}
-  \item Larsen, E., Frejinger, E., Gendron, B., \& Lodi, A. (2022). Fast Continuous and Integer L-shaped Heuristics through Supervised Learning. arXiv:2205.00897. \url{https://arxiv.org/abs/2205.00897}
-  \item Nair, V., Dvijotham, D., Dunning, I., \& Vinyals, O. (2018). Learning Fast Optimizers for Contextual Stochastic Integer Programs. UAI 2018. \url{https://proceedings.mlr.press/v80/nair18a.html}
-\end{itemize}
 
 
 \section{Method}
@@ -90,34 +144,35 @@ We study a contextual two-stage stochastic program of the form
 \begin{equation}
 \min_{z \in Z}\; c^\top z + Q(z,x), 
 \qquad   
-Z = \{z \in \mathbb{R}^n : Az=b,\; z \geq 0\},
+Z = \{z \in \mathbb{R}^{n_1} : Az=b,\; z \geq 0\},
 \end{equation}
+where $A \in \mathbb{R}^{m_1\times n_1}$, $b \in \mathbb{R}^{m_1}$, $c \in \mathbb{R}^{n_1}$ and the context $x$ indexes a distribution over scenarios $\xi \in \mathbb{R}^k$.
 with recourse function
 \begin{equation}
-Q(z,x) \;=\; \mathbb{E}_{\xi\mid x}\!\left[\,\min_{u\ge 0} \; q(\xi)^\top u \quad \text{s.t.}\quad W(\xi)u = h(\xi) - T(\xi)z \,\right].
+Q(z,x) \;=\; \mathbb{E}_{\xi\mid x}\!\left[\,\min_{u\ge 0} \; q(\xi)^\top u \quad \text{s.t.}\quad W(\xi)u = h(\xi) - T(\xi)z \,\right]
 \end{equation}
-where the uncertainty $\xi$ is conditioned on the context variable $x$.
-We assume that the second-stage problem is feasible for all $z \in Z$ and almost all $\xi$.
+Here $u \in \mathbb{R}^{n_2}$, $W(\xi) \in \mathbb{R}^{m_2\times n_2}$, $T(\xi) \in \mathbb{R}^{m_2\times n_1}$, $h(\xi) \in \mathbb{R}^{m_2}$, and $q(\xi) \in \mathbb{R}^{n_2}$. 
+Note that the uncertainty $\xi$ is conditioned on the context variable $x$.
+We assume that the second-stage problem is feasible for all $z \in Z$ and all $\xi \in \mathbb{R}^k$.
 We also make the standard assumption that $A$ is full row-rank, and that the same holds for $W(\xi)$ and $T(\xi)$ almost surely.
 
 \subsection{Learning a mapping from contexts to scenarios}
 Our aim is to learn a mapping that outputs a fixed-size collection of representative scenarios for each context variable $x$:
 \begin{equation}
-\phi_w: \; x \mapsto \{\hat\xi_s(x)\}_{s=1}^S,
+\phi_w: \; x \mapsto \{\xi^*_s(x)\}_{s=1}^S
 \end{equation} 
 For a given $\phi_w(x)$, its associated first-stage decision is obtained by solving a scenario-based, log-barrier regularized 
 surrogate problem.
-For training, we define
+We define
 \begin{equation}
-\hat z(x) = \arg\min_{z \in Z} \; c^\top z - \mu \sum_i log(z_i) +  \tfrac{1}{S}\sum_{s=1}^S Q_\mu(z,\hat\xi_s(x)),
+ z^*(x) = \arg\min_{z \in Z} \; c^\top z - \mu \sum_i log(z_i) +  \tfrac{1}{S}\sum_{s=1}^S Q_\mu(z,\hat\xi_s(x)),
 \end{equation}
 where $Q_\mu$ is the log-barrier regularized recourse function. 
-The barrier parameter $\mu>0$ ensures smoothness of the solution map $x \mapsto \hat z(x)$, enabling end-to-end training.
 
 Given training data consisting of a collection of scenario-observation pairs $\{(x_i,\xi_i)\}_{i=1}^N$, we define the training loss to be minimized as the 
-average cost of the decisions $\hat z(x_i)$ on the observed scenarios $\xi_i$:
+average cost of the decisions $ z^*(x_i)$ on the observed scenarios $\xi_i$:
 \begin{equation}
-R_\mu(w) = \frac{1}{N}\sum_{i=1}^N G(\hat z(x_i), \xi_i), 
+R_\mu(w) = \frac{1}{N}\sum_{i=1}^N G(z^*(x_i), \xi_i), 
 \qquad  where \quad 
 G(z,\xi) = c^\top z + Q(z,\xi).
 \end{equation}
@@ -125,25 +180,27 @@ G(z,\xi) = c^\top z + Q(z,\xi).
 The gradient of $R_\mu$ with respect to the network parameters $w$ combines two components:
 \begin{equation}
 \nabla_w R_\mu(w) \;=\; \frac{1}{N}\sum_{i=1}^N
-\tfrac{\partial \hat z(x_i)}{\partial w} \tfrac{G(\hat z(x_i), \xi_i)}{\partial z}
+\tfrac{\partial z^*(x_i)}{\partial w} \tfrac{G(\hat z(x_i), \xi_i)}{\partial z}
 \end{equation}
 
 Using the fact that $\hat z(x)$ depends on $w$ only through the scenarios $\hat \xi_s(x)$, via the second stage data $(W_i, T_i, h_i, q_i)$, we can apply the chain rule to obtain
 \begin{equation}
 \nabla_w R_\mu(w) \;=\; \frac{1}{N}\sum_{i=1}^N \sum_{s=1}^S \tfrac{\partial \xi_s}{\partial w} \left(
-\tfrac{\partial W_s}{\partial \xi} \tfrac{\partial \hat z}{W_s} + 
-\tfrac{\partial T_s}{\partial \xi} \tfrac{\partial \hat z}{T_s} +
-\tfrac{\partial h_s}{\partial \xi} \tfrac{\partial \hat z}{h_s} +
-\tfrac{\partial q_s}{\partial \xi} \tfrac{\partial \hat z}{q_s} \right)
-\tfrac{\partial G(z_i, \xi_i)}{\partial z}.
+\tfrac{\partial W_s}{\partial \xi} \tfrac{\partial z^*}{W_s} + 
+\tfrac{\partial T_s}{\partial \xi} \tfrac{\partial z^*}{T_s} +
+\tfrac{\partial h_s}{\partial \xi} \tfrac{\partial z^*}{h_s} +
+\tfrac{\partial q_s}{\partial \xi} \tfrac{\partial z^*}{q_s} \right)
+\tfrac{\partial G(z^*_i, \xi_i)}{\partial z}.
 \end{equation}
 
 \subsection{Deriving closed form expression for derivatives}
 
-We assume that the derivatives $\partial \xi_s/\partial w$ and $\partial (W_s,T_s,h_s,q_s)/\partial \xi$ are available in closed form or via automatic differentiation.
+We make the assumption that the derivatives $\partial \xi^*_s/\partial w$ and $\partial (W_s,T_s,h_s,q_s)/\partial \xi$ are available in closed form or via automatic differentiation.
+Hence, we only need to derive expressions for $\tfrac{\partial z^*}{\partial (W_s,T_s,h_s,q_s)}$ and $\tfrac{\partial G(z_i, \xi_i)}{\partial z}$.
 
-To obtain an expression for $\tfrac{\partial G(z_i, \xi_i)}{\partial z}$, we first note that 
-evaluating $Q(z, \xi)$ is equivalent to solving the second stage linear program:
+
+To obtain an expression for $\tfrac{\partial G(z^*_i, \xi_i)}{\partial z}$, we first note that 
+evaluating the recourse function $Q(z, \xi)$ is equivalent to solving the second stage linear program:
 
 
 
@@ -159,14 +216,15 @@ The second-stage program is convex, so by Danskin’s theorem subgradients of th
 
 We hence obtain the desired gradient as
 \begin{equation}
-\frac{\partial G(z_i,\xi_i)}{\partial z} = c - T(\xi_i)^\top \lambda^\star(\xi_i).
+\frac{\partial G(z^*_i,\xi_i)}{\partial z} = c - T(\xi_i)^\top \lambda^\star(\xi_i).
 \end{equation}
 
-To compute $\tfrac{\partial \hat z}{\partial (W_s,T_s,h_s,q_s)}$, we will leverage the implicit function theorem applied to the KKT conditions of the barrier-regularized surrogate problem.
+To compute $\tfrac{\partial z^*}{\partial (W_s,T_s,h_s,q_s)}$, we will leverage the implicit function theorem applied to the KKT conditions of the barrier-regularized surrogate problem.
 
 The surrogate problem associated with scenario collection $\{\xi_k\}_{k=1}^S$ and regularization parameter $\mu$, can is a log-barrier regularized linear program in canonical form.
 
 \begin{equation}
+    \label{eq:logbar_CanLP}
 \min_{\hat z > 0} \; \hat c^\top \hat z \, - \, \sum_{i} \hat \mu_i \, \log \hat z_i \quad \text{s.t.} \quad \hat A \, \hat z \,=\, \hat b.
 \end{equation}
 
@@ -186,11 +244,11 @@ W_S & 0 & \cdots & T_S
 \end{align}
 \end{subequations}
 
-The KKT condition for optimality for optimality with respect to a decision $\hat z$ is that there should exist a dual variable $\lambda \in \mathbb{R}$ such that the pair $Y =  (\hat z,\lambda)$ satisfies
+The KKT condition for optimality for optimality for problem \ref{eq:logbar_CanLP} with respect to a decision $\hat z$ is that there should exist a dual variable $\lambda \in \mathbb{R}$ such that the pair $Y =  (\hat z,\lambda)$ satisfies
 \begin{equation}
 F(Y;\hat A,\hat b,\hat c) \,=\, \begin{bmatrix} \hat c + \hat A^\top \lambda - \mathrm{Diag}(\mu)\,\hat z^{-1} \\ \hat A \hat z - \hat b \end{bmatrix} = 0,\qquad \hat z^{-1} := (1/\hat z_1,\dots,1/\hat z_n)^\top.
 \end{equation}
-Its Jacobian is the symmetric KKT matrix
+The Jacobian of the optimality condition $F$ is given as the following symmetric matrix
 \begin{equation}
 \nabla_Y F(Y) \,=\, \begin{bmatrix} \mathrm{Diag}(\mu)\,\mathrm{Diag}(\hat z^{-2}) & \hat A^\top \\ \hat A & 0 \end{bmatrix},
 \end{equation}
@@ -207,26 +265,32 @@ with
 
 Combining \eqref{eq:surrogate-data-c}--\eqref{eq:surrogate-data-A}, \eqref{eq:Implicit_F} and \eqref{eq:Der_F}, we obtain the desired derivatives $\tfrac{\partial z}{\partial (W_s,T_s,h_s,q_s)}$ by extracting the relevant components of $\mathrm{d}Y$.
 
-\paragraph{Computational cost of gradient evaluation.}
-We note that in total, the full derivative calculation requires 
-\begin{enumerate}
-    \item solving a second-stage problems for a single scenario $\xi_i$ to obtain $\lambda^\star(\xi_i)$
-    \item performing a KKT matrix inversion which is computationally equivalent to a single Newton step of an interior-point method,
-    \item solving the barrier-regularized surrogate problem with $S$ scenarios to obtain $\hat z(x_i)$.
-\end{enumerate}
-It is clear that solving the problem in point 3. will dominate the computational cost.
+%\paragraph{Computational cost of gradient evaluation.}
+%We note that in total, the full derivative calculation requires 
+%%\begin{enumerate}
+ %   \item solving a second-stage problems for a single scenario $\xi_i$ to obtain $\lambda^\star(\xi_i)$
+ %   \item performing a KKT matrix inversion which is computationally equivalent to a single Newton step of an interior-point method,
+ %   \item solving the barrier-regularized surrogate problem with $S$ scenarios to obtain $\hat z(x_i)$.
+%\end{enumerate}
+%It is clear that solving the problem in point 3. will dominate the computational cost.
 % ————————————————————————————————————————————————————————————
 
-\section{Experiments (Preliminary)}
+\section{Experiments }
 % Setup: toy contextual two-stage LP(s) for illustration.
 % Baselines: sample-average approximation, heuristic scenario selection.
 % Metrics: decision cost on held-out data, solve time.
 % Results: tables/plots (small-scale, illustrative).
 % Discussion: performance trends, limitations, open questions.
 
+\subsection{Results}
+
+\subsection{Notes on reproducibility}
+% Briefly describe code/data availability, compute resources, and steps to reproduce.
+% Mention random seeds, hyperparameters, number of runs, and any deviations.
+
 % ————————————————————————————————————————————————————————————
 
-\section{Conclusion and Future Work}
+\section{Conclusions and Future Perspectives}
 % Summary of contributions.
 % Emphasize generality to convex programs/SDPs.
 % Directions: larger experiments, alternative smooth reformulations, theoretical analysis.
@@ -235,19 +299,16 @@ It is clear that solving the problem in point 3. will dominate the computational
 
 % Optional/required meta sections for NeurIPS (camera-ready specifics vary by year)
 
-\section*{Reproducibility Statement}
-% Briefly describe code/data availability, compute resources, and steps to reproduce.
-% Mention random seeds, hyperparameters, number of runs, and any deviations.
+\paragraph{Current limitations}The work presented in this report is still in the very early stages. 
+On the experimental side, we neither analyze runtime benefits or test large/real-world instances. 
+On the conceptual side, the method currently only targets convex two-stage problems; 
+settings with integer or nonconvex recourse would require differentiable relaxations which may not be easy to find. 
+On the computational side, training entails solving a log-barrier deterministic equivalent at each gradient step; practical scaling 
+may hence depend warm starts/factorization reuse or decomposition. 
 
-\section*{Ethics Statement (Optional)}
-% If applicable, discuss potential ethical considerations and impacts.
-
-\section*{Acknowledgments}
-% Remove this section for anonymous review. Add funding and thanks in camera-ready.
-
-% References placeholder (keep plain-text references visible for now)
-% When switching to proper citations, enable natbib and use BibTeX.
-% \bibliographystyle{plainnat}
-% \bibliography{references}
+% Bibliography
+\nocite{*} % include all entries from the .bib files; remove if undesired
+\bibliographystyle{plainnat}
+\bibliography{refs/zotero,refs/manual}
 
 \end{document}
