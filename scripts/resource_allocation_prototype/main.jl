@@ -30,7 +30,7 @@ function main()
         problem_instance = ResourceAllocationProblem(problem_data)
 
         # Generate data
-        Ntraining_samples = 10000
+        Ntraining_samples = 1000
         Ntesting_samples = 100
         sigma = 5
         p =1
@@ -38,9 +38,9 @@ function main()
         Σ = 3
         N_xi_per_x = 100
 
-        data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L, Σ)
+        data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L)
 
-        model = construct_neural_network(problem_instance; nr_of_scenarios = 1)
+        model = construct_neural_network(problem_instance; nr_of_scenarios = 3)
         # Train the neural network model
         reg_param_surr = 1.0
         reg_param_prim = 0.0

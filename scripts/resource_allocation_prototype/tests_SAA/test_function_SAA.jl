@@ -6,7 +6,7 @@ using CSV
 using DataFrames
 
 # retrieve results for M5 +AD 
-df = CSV.read("/home/delannoypavysol/ProblemBasedScenarioGeneration/ProblemBasedScenarioGeneration/scripts/resource_allocation_prototype/tests_SAA/df2.csv", DataFrame)
+df = CSV.read(joinpath(@__DIR__, "df2.csv"), DataFrame)
 
 datasetsize = 10000
 filtered_df = filter(row -> row.T == datasetsize, df)
@@ -138,4 +138,3 @@ function gurobi_solver(A, b, c, Ws, Ts, hs, qs, first_stage_decision)
 
     return cost
 end
-

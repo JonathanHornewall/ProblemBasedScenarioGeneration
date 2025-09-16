@@ -63,7 +63,7 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
             ξ_hat = model(x)
             # Reshape the neural network output from a vector to a matrix with one column
             ξ_hat_matrix = reshape(ξ_hat, :, 1)
-            surrogate_decision = surrogate_solution(problem_instance, ξ_hat_matrix, reg_param_surr)
+            surrogate_decision = surrogate_solution(problem_instance, reg_param_surr, ξ_hat_matrix)
 
             evaluated_cost = s1_cost(two_slp, surrogate_decision, reg_param_ref)
 

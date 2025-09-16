@@ -72,10 +72,10 @@ _________________________________________________________________
 """
 
 """
-    surrogate_solution(problem_instance::ProblemInstanceC2SCanLP,  Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
-Solves for the first stage decision given a specific scenario W, T, h, q
+    surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, solver=LogBarCanLP_standard_solver)
+Solves for the first stage decision given a specific scenario collection (W, T, h, q).
 """
-function surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, solver=LogBarCanLP_standard_solver)
+function surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, solver=LogBarCanLP_standard_solver)
     A, b, c = return_first_stage_parameters(problem_instance)
     surrogate_problem = LogBarCanLP(TwoStageSLP(A, b, c, Ws, Ts, hs, qs), regularization_parameter) 
     optimal_decision, optimal_dual = solver(surrogate_problem)
@@ -83,10 +83,10 @@ function surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, h
 end
 
 """
-    derivative_surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, context_parameter, W, T, h, q, mu, solver=LogBarCanLP_standard_solver)
-Derivative of first stage decision for surrogate_problem with respect to scenario parameters
+    derivative_surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, ps, solver=LogBarCanLP_standard_solver)
+Derivative of the first-stage decision for the surrogate problem with respect to the scenario collection parameters.
 """
-function derivative_surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, ps=nothing, solver=LogBarCanLP_standard_solver)
+function derivative_surrogate_solution(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, ps=nothing, solver=LogBarCanLP_standard_solver)
     A, b, c = return_first_stage_parameters(problem_instance)
     surrogate_2slp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs, ps)
     scenario_type = return_scenario_type(problem_instance)
@@ -97,11 +97,11 @@ end
 Provides the pullback for the surrogate_solution function, allowing for back-propagation through the neural network
 Note: The derivative computations can be rewritten without the D_xiY function to improve performance
 """
-function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, Ws, Ts, hs, qs, regularization_parameter, ps, solver)
-    y = surrogate_solution(problem_instance, Ws, Ts, hs, qs, regularization_parameter)
+function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, regularization_parameter, Ws, Ts, hs, qs, ps, solver)
+    y = surrogate_solution(problem_instance, regularization_parameter, Ws, Ts, hs, qs)
     
     function pullback(y_hat)
-        D_Ws, D_Ts, D_hs, D_qs = derivative_surrogate_solution(problem_instance, Ws, Ts, hs, qs, regularization_parameter, ps, solver)
+        D_Ws, D_Ts, D_hs, D_qs = derivative_surrogate_solution(problem_instance, regularization_parameter, Ws, Ts, hs, qs, ps, solver)
 
 
         scenario_type = return_scenario_type(problem_instance)
@@ -131,23 +131,23 @@ function ChainRulesCore.rrule(::typeof(surrogate_solution), problem_instance, Ws
         D_qs_tangent = [y_hat * D_q for D_q in D_qs]
         end
 
-        return NoTangent(), NoTangent(), D_Ws_tangent, D_Ts_tangent, D_hs_tangent, D_qs_tangent, NoTangent(), NoTangent(), NoTangent()  # returning NoTangent for the regularization parameter
+        return NoTangent(), NoTangent(), NoTangent(), D_Ws_tangent, D_Ts_tangent, D_hs_tangent, D_qs_tangent, NoTangent(), NoTangent()  # returning NoTangent for the regularization parameter
     end
     
     return y, pullback
 end
 
 """
-    primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, context_parameter, regularization_parameter, first_stage_decision)
-Computes the cost of the primal problem as a function of the context parameter, first-stage decision and regularization_parameter
+    primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
+Computes the cost of the primal problem as a function of the scenario collection, first-stage decision, and regularization parameter.
 """
-function primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
+function primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
     twoslp = TwoStageSLP(return_first_stage_parameters(problem_instance)..., Ws, Ts, hs, qs)
     cost = s1_cost(twoslp, first_stage_decision, regularization_parameter)
     return cost
 end
 
-function derivative_primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
+function derivative_primal_problem_cost(problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
     A, b, c = return_first_stage_parameters(problem_instance)
     twoslp = TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
     main_problem = LogBarCanLP(twoslp, regularization_parameter)
@@ -158,13 +158,12 @@ end
 """
 Provides the pullback for the primal_problem_cost function, allowing for back-propagation through the neural network
 """
-function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::ProblemInstanceC2SCanLP, Ws, Ts, hs, qs, 
-                            regularization_parameter, first_stage_decision)
+function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::ProblemInstanceC2SCanLP, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
 
-    cost = primal_problem_cost(problem_instance, Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
+    cost = primal_problem_cost(problem_instance, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
     
     function pullback(y_hat)
-        cost_derivative = derivative_primal_problem_cost(problem_instance,  Ws, Ts, hs, qs, regularization_parameter, first_stage_decision)
+        cost_derivative = derivative_primal_problem_cost(problem_instance, regularization_parameter, Ws, Ts, hs, qs, first_stage_decision)
         tangent = y_hat * cost_derivative
         return NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent(), tangent
     end

@@ -121,12 +121,13 @@ end
 Specifies a neural network architecture for the resource allocation problem.
 """
 function construct_neural_network(instance::ResourceAllocationProblem; nr_of_scenarios = 1)
-    output_dim = 30 * nr_of_scenarios
+    scenario_dim = size(instance.problem_data.service_rate_parameters, 2)
+    output_dim = scenario_dim * nr_of_scenarios
     return Chain(
         Dense(3, 128, relu),
         Dense(128, 128, relu),
         Dense(128, 128, relu),
         Dense(128, output_dim, relu),     # linear head
-        x -> reshape(x, 30, nr_of_scenarios)  # reshape output to 30 x nr_of_scenarios matrix
+        x -> reshape(x, scenario_dim, nr_of_scenarios)  # reshape output to (#scenarios vars) × scenarios matrix
     ) |> f64
 end

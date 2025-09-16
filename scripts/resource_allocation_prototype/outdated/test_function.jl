@@ -44,7 +44,7 @@ function testing(problem_instance, model, dataset_testing, reg_param_surr, reg_p
             println("  Second stage: $(logbarlp.regularization_parameters[length(c)+1:end])")
             
             # Break down the cost calculation
-            surrogate_decision = surrogate_solution(problem_instance, ξ_hat, reg_param_surr)
+            surrogate_decision = surrogate_solution(problem_instance, reg_param_surr, ξ_hat)
             println("\nSurrogate decision: $(surrogate_decision[1:5])...")
             
             # Manual calculation to compare
