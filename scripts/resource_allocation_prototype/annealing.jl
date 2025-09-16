@@ -14,7 +14,7 @@ diff_s1_cost, diff_opt_b, train!, CanLP, extensive_form_canonical, loss, relativ
 import Flux: params, gradient, Optimise, Adam
 import ProblemBasedScenarioGeneration: loss, relative_loss, surrogate_solution
 
-include("/home/delannoypavysol/ProblemBasedScenarioGeneration/ProblemBasedScenarioGeneration/scripts/resource_allocation_prototype/outdated/neural_net.jl")
+include("outdated/neural_net.jl")
 
 
 # Import data
