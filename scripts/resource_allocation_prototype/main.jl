@@ -17,12 +17,12 @@ import ProblemBasedScenarioGeneration: loss, relative_loss, surrogate_solution
 
 # Import data
 include("parameters.jl")
-include("outdated/neural_net.jl")
+include("custom_code/neural_net.jl")
 cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)
 
-#include("../outdated/neural_net.jl")
-#include("../outdated/training.jl")
-#include("../outdated/test_function.jl")
+#include("../custom_code/neural_net.jl")
+#include("../custom_code/training.jl")
+#include("../custom_code/test_function.jl")
 include("tests_SAA/test_function_SAA.jl")
 
 function main()
@@ -50,6 +50,9 @@ function main()
         step_size = 1e-3
         save_model_training = true
 
+        state_dir = joinpath("experiment_states", "main")
+        mkpath(state_dir)
+
         # Defining closure for loss function to run generic neural network training with custom functions
         #input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr, reg_param_prim, reshape(ξ_output, :, 1), reshape(ξ_actual, :, 1))
         #input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr, reg_param_prim, reshape(ξ_output, :, 1), reshape(ξ_actual, :, 1))
@@ -61,9 +64,10 @@ function main()
         println("Starting training...")
 
         # Train with original loss functions
+        model_save_path = joinpath(state_dir, "trained_model.jls")
         train!(input_loss, input_relative_loss, model, data_set_training; 
                 opt = Adam(step_size), epochs = epochs, batchsize = batchsize, display_iterations = true, 
-                save_model = save_model_training, model_save_path = "trained_model.jls")
+                save_model = save_model_training, model_save_path = model_save_path)
 
         println("Training completed!")
 
@@ -72,7 +76,7 @@ function main()
 
         save_experiment_state(model, data_set_training, data_set_testing, problem_instance, 
                         Dict("reg_param_surr" => reg_param_surr, "reg_param_prim" => reg_param_prim, "reg_param_ref" => reg_param_ref), 
-                        filepath = "experiment_state.jls")
+                        filepath = joinpath(state_dir, "experiment_state.jls"))
                         
 
         # Test the trained model
