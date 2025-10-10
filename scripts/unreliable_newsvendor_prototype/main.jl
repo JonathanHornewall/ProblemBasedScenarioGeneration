@@ -27,6 +27,7 @@ Ntesting_samples = 1
 N_xi_per_x = 1000
 
 data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x)
+collections_per_sample = size(first(values(data_set_testing)), 1)
 
 model = construct_neural_network(problem_instance)
 # Train the neural network model
