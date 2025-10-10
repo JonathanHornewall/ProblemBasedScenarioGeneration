@@ -1,0 +1,17 @@
+L=3
+N_xi_per_x=100
+Ntesting=30
+Ntraining=100
+annealing_params=[1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
+annealing_step_sizes=[0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001]
+batchsize=1
+default_epochs=10
+noise_scale=0.05
+p=2
+scenario_count=1
+sigma=5.0
+step_size=0.001
+test_data_seed=144
+train_data_seed=144
+training_seed=144
+trial=2

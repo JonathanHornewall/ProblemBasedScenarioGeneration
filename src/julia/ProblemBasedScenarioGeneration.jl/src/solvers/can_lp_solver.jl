@@ -72,9 +72,9 @@ end
     optimal_value(instance::CanLP, solver=solve_canonical_lp)
 returns the optimal value of a linear program
 """
-function optimal_value(instance::CanLP, solver=solve_canonical_lp)
+function optimal_value(instance::CanLP, solver=solve_canonical_lp; feasibility_margin::Real = 1e-8)
     optimal_solution, optimal_dual = solver(instance)
-    return cost(instance, optimal_solution)
+    return cost(instance, optimal_solution; feasibility_margin = feasibility_margin)
 end
 
 """

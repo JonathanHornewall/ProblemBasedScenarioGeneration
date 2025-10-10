@@ -1,0 +1,173 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage{natbib}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\newcommand{\cmark}{\checkmark}
+\newcommand{\xmark}{\times}
+\newcommand{\na}{---}
+
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=*}
+
+\title{Decision-Focused Learning for Contextual Two-Stage Stochastic Programming:\\A Grouped Comparison of Scenario/Uncertainty Modeling Approaches}
+\author{}
+\date{September 2025}
+
+\begin{document}
+
+\maketitle
+
+\noindent\textbf{Legend:} $\cmark$ = yes, $\xmark$ = no, $\na$ = not applicable / unclear.
+
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+
+\begin{longtable}{L{5.8cm}C{2.2cm}C{2.2cm}C{2.2cm}C{2.6cm}}
+\caption{Comparison of decision-focused learning papers for contextual two-stage stochastic programming, grouped by uncertainty representation.}\label{tab:papers}\\
+\toprule
+Paper & Decision-focused? & Contextual SP? & Single scenario? & LP/MILP-specialized? \\
+\midrule
+\endfirsthead
+\multicolumn{5}{l}{\small\emph{Table~\thetable\ (continued).}}\\
+\toprule
+Paper & Decision-focused? & Contextual SP? & Single scenario? & LP/MILP-specialized? \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{5}{l}{\textbf{Pointwise (single-scenario / decision rules)}}\\
+\citet{ban2019bigdata} & $\cmark$ & $\cmark$ & $\cmark$ & Generic \\
+\citet{diasgarcia2024application} & $\cmark$ & $\cmark$ & $\cmark$ & LP (FRFC 2SLP) \\
+\citet{homemdemello2024forecasting} & $\cmark$ & $\cmark$ & $\cmark$ & LP (FRFC 2SLP) \\
+\citet{estes2023twostage} & $\cmark$ & $\cmark$ & $\cmark$ & LP (2SLP) \\
+\citet{kallus2023sof} & $\cmark$ (forests) & $\cmark$ & $\cmark$ (per-leaf) & Generic \\
+\citet{stratigakos2022prescriptive} & $\cmark$ & $\cmark$ & $\cmark$ & Generic\\
+& (prescriptive trees) & & & \\
+\citet{ribeiro2024tasktrees} & $\cmark$ & $\cmark$ & $\cmark$ & LP (2SLP)\\
+& (prescriptive trees) & & & \\
+\citet{elmachtoub2021spo} & $\cmark$ (SPO loss) & $\cmark$ & $\cmark$ (point) & LP \\
+\citet{elmachtoub2022spoplus} & $\cmark$ (SPO$^+$) & $\cmark$ & $\cmark$ & LP \\
+\citet{persak2024dff} & $\cmark$ & $\cmark$ (multistage) & $\cmark$ (stage-wise forecasts) & Convex multistage \\
+\citet{wilder2019melding} & $\cmark$ & $\cmark$ & $\cmark$ & MILP (combinatorial) \\
+\citet{mandi2020interior} & $\cmark$ & $\cmark$ & $\cmark$ & LP (OptLayer) \\
+\citet{mulamba2021contrastive} & $\cmark$ (surrogate) & $\cmark$ & $\cmark$ & Generic (contrastive loss) \\
+\citet{mandi2022ranking} & $\cmark$ (rank loss) & $\cmark$ & $\cmark$ & Generic (combinatorial) \\
+\citet{beichter2024retraining} & $\cmark$ & $\cmark$ & $\cmark$ (iterative retrain) & Energy (mixed-integer) \\
+\citet{beichter2025foundation} & $\cmark$ & $\cmark$ & $\cmark$ (fine-tuned forecasts) & Energy (dispatch LP) \\
+\citet{mandi2024dflsurvey} & $\cmark$ (survey) & $\na$ & $\na$ & Generic (survey) \\
+\citet{kotary2025smoothing} & $\cmark$ (surrogates) & $\na$ & $\cmark$ & Generic (smoothing) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Distribution-learning (conditional distributions / residuals / weights)}}\\
+\citet{bertsimas2020predictive} & $\xmark$ (prescriptive dist.) & $\cmark$ & $\xmark$ & Generic \\
+\citet{donti2017task} & $\cmark$ & $\cmark$ & $\xmark$ (learns distribution) & Generic (convex) \\
+\citet{grigas2021integrated} & $\cmark$ & $\cmark$ & $\xmark$ (scenario weights) & Generic \\
+\citet{deng2022predictive} & $\cmark$ (predictive SP) & $\cmark$ & $\xmark$ & Generic \\
+\citet{kannan2021hetero} & $\cmark$ (residuals) & $\cmark$ & $\xmark$ & Generic \\
+\citet{zhu2024residualcdro} & $\cmark$ (residuals cDRO) & $\cmark$ & $\xmark$ & Generic \\
+\citet{munoz2022bilevel} & $\cmark$ (bilevel) & $\cmark$ & $\xmark$ & Generic \\
+\citet{iglesias2025prescribeselect} & $\cmark$ (meta-policy) & $\cmark$ & $\xmark$ & Generic (policy selection) \\
+\citet{stratigakos2025pooling} & $\cmark$ & $\cmark$ & $\xmark$ & Convex (forecast pooling) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Multi-scenario generation}}\\
+\citet{hornewall2025dfl} & $\cmark$ & $\cmark$ & $\xmark$ (multi-scenario) & LP (2SLP) \\
+\citet{islip2025contextual} & $\cmark$ & $\cmark$ & $\xmark$ (multi-scenario) & Generic (LP/MILP) \\
+\citet{wu2022cvae} & $\cmark$ (semi-supervised) & $\cmark$ & $\xmark$ (multi-scenario) & MILP (SIP) \\
+\citet{cheng2025gendfl} & $\cmark$ & $\cmark$ & $\xmark$ (tail-focused) & Generic (robust) \\
+\citet{chenreddy2022cro} & $\cmark$ (robust set) & $\cmark$ & $\xmark$ & Generic (robust) \\
+\citet{bertsimas2023multistage} & $\cmark$ & $\cmark$ & $\xmark$ (multi-stage) & LP (multistage) \\
+\citet{qi2023practical} & $\cmark$ (policy) & $\cmark$ & $\xmark$ (multi-period) & Generic (inventory) \\
+\citet{patel2024cpo} & $\xmark$ (conformal) & $\cmark$ & $\xmark$ & Generic (robust) \\
+\end{longtable}
+
+
+
+\section*{Impact and visibility of related work (as of Sept.\ 2025)}
+\paragraph{Tier A --- Highly cited ($\approx 500+$).}
+\begin{itemize}
+  \item \citet{elmachtoub2021spo} --- venue pages report $\sim$1000 citations; canonical DFL surrogate for linear objectives.
+  \item \citet{bertsimas2020predictive} --- $\sim$1000 citations; cornerstone for contextual/prescriptive analytics.
+  \item \citet{ban2019bigdata} --- $\sim$670 citations (well above the 500+ threshold).
+  \item \citet{donti2017task} --- venue trackers show $\sim$500 citations; widely regarded as an early DFL-in-SP reference.
+\end{itemize}
+
+\paragraph{Tier B --- Established building blocks ($\approx 100$--$500$).}
+\begin{itemize}
+  \item \citet{kallus2023sof} --- $\sim$90 citations; near the 100 mark and growing.
+\end{itemize}
+
+\paragraph{Tier C --- Solid mid-field ($\approx 20$--$100$).}
+\begin{itemize}
+  \item \citet{munoz2022bilevel} --- $\sim$60 citations; widely used in energy/operations case studies.
+  \item \citet{stratigakos2022prescriptive} --- $\sim$70+ citations; visible in the power systems community.
+  \item \citet{deng2022predictive} --- $\sim$27 citations; conceptual anchor for predictive SP framing.
+  \item \citet{kannan2021hetero} --- $\sim$20+ citations; contextual residuals line.
+\end{itemize}
+
+\paragraph{Tier D --- Recent/emerging (new OR publications or preprints; citations not yet indicative).}
+\begin{itemize}
+  \item \citet{estes2023twostage} --- $\sim$10+ citations; journal version is 2023.
+  \item \citet{zhu2024residualcdro} --- arXiv shows single-digit citations ($\sim$3).
+  \item \citet{diasgarcia2024application} --- very recent; impact will lag indexing.
+  \item \citet{islip2025contextual} --- new; impact to depend on scale/ablations and code release.
+  \item \citet{wu2022cvae} --- known in DFL-for-MILPs via talks/code; formal counts not consolidated.
+  \item \citet{persak2024dff} --- first multistage DFL with state-path gradients; brand-new, counts not yet meaningful.
+  \item \citet{iglesias2025prescribeselect} --- proposes adaptive meta-policy selection across contextual methods; very recent.
+\end{itemize}
+
+\paragraph{Notes on methodology.} We rely on publisher venue pages (INFORMS/ACM/NeurIPS) and IDEAS/RePEc when available to dampen index-to-index variance. Google Scholar typically reports higher counts due to broader coverage; venue pages provide a conservative baseline. Because citation accrual is dynamic, these tiers should be read as order-of-magnitude signals, not exact rankings.
+
+\paragraph{Takeaway.} The most recognized anchors remain \citet{elmachtoub2021spo,bertsimas2020predictive,ban2019bigdata,donti2017task}. Everything else should be positioned against these Tier~A references, with Tier~B/C works supplying relevant contextual and decision-focused comparators (e.g., \citet{kallus2023sof,munoz2022bilevel,deng2022predictive}). Newer DFL-for-scenarios (\citet{islip2025contextual,wu2022cvae}) and multistage DFL (\citet{persak2024dff}) are emerging—credible, but their formal impact will be established by large-scale, reproducible evaluations over the next cycles.
+
+\section*{Non-ML, Problem-Driven Scenario Generation}
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{p{8.6cm}cccc}
+\toprule
+\textbf{Paper (non-ML, problem-driven)} & \textbf{Decision-focused?} & \textbf{Contextual SP?} & \textbf{Single scenario?} & \textbf{LP/MILP-specialized?} \\
+\midrule
+\multicolumn{5}{l}{\textbf{(A) Optimization-based scenario reduction \& clustering (decision-aware SRC)}}\\
+\citet{henrion2022problem} [SRC] & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{bertsimas2023optred} [SRC] & $\cmark$ & $\xmark$ & $\xmark$ & $\xmark$ \\
+\citet{keutchayan2023clustering} [SRC] & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{zhang2023optimized} [SRC] & $\cmark$ & $\xmark$ & $\xmark$ & $\xmark$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{(B) Tail-risk targeting (CVaR/quantile-focused generators)}}\\
+\citet{fairbrother2019problemdriven} [FFO] & $\cmark$ & $\xmark$ & $\xmark$ & $\xmark$ \\
+\citet{arpon2018cvar} & $\cmark$ & $\xmark$ & $\xmark$ & $\xmark$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{(C) Solution-oriented selection (decision/value gap minimization)}}\\
+\citet{prochazka2020loss} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{narum2020atfm} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{narum2024unified} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\midrule
+\multicolumn{5}{l}{\textbf{(D) Heuristic/structure-driven (recourse clustering, sensitivity, objective-preserving)}}\\
+\citet{feng2013fsrc} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{zhao2014layout} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{guo2019correlatedvrp} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{sun2018tep} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{hewitt2022opcost} & $\cmark$ & $\xmark$ & $\xmark$ & $\cmark$ \\
+\citet{rios2015limiteddata} & $\cmark$ & $\xmark$ & $\xmark$ & $\xmark$ \\
+\bottomrule
+\end{tabular}
+\caption{Non-ML, problem-driven scenario generation/reduction methods (two-stage and multistage; linear/nonlinear). ``Decision-focused?'' is $\cmark$ when the generator/selector uses decision metrics, and ``Contextual SP?'' flags side-information or adaptive modeling.}
+\end{table}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}

@@ -30,7 +30,7 @@ function main()
         problem_instance = ResourceAllocationProblem(problem_data)
 
         # Generate data
-        Ntraining_samples = 1000
+        Ntraining_samples = 100
         Ntesting_samples = 100
         sigma = 5
         p =1

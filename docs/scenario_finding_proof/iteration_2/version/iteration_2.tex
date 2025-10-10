@@ -1,0 +1,343 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{enumitem}
+
+\newtheorem{assumption}{Assumption}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Global PL Property and Linear Convergence for Single-Scenario Learning\\
+in RHS-Only \emph{Barrierized} Two-Stage LP Surrogates}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Set-up}
+We consider a decision variable $z\in\mathbb R^n$ and a downstream objective $G:\mathbb R^n\to\mathbb R$. 
+A right-hand-side (RHS) scenario $\xi\in\mathbb R^p$ parametrizes
+\begin{equation*}
+b(\xi)=b_0+B\xi\in\mathbb R^m,
+\end{equation*}
+where $B\in\mathbb R^{m\times p}$ is fixed.
+Given $\mu>0$ and a Tikhonov parameter $\gamma>0$, define the \emph{log-barrier surrogate}
+\begin{equation}
+\label{eq:F}
+F_\mu(z;\xi)=c^\top z+\frac{\gamma}{2}\|z\|^2-\mu\sum_{i=1}^m \log s_i,
+\qquad s(\xi,z):=b(\xi)-Az\in\mathbb R^m_{++}.
+\end{equation}
+For each $\xi$, strict convexity and coercivity (from $\gamma>0$) yield a unique minimizer
+\begin{equation*}
+z^*_\mu(\xi)=\arg\min_{z\in\mathbb R^n} F_\mu(z;\xi).
+\end{equation*}
+We study the \emph{scenario-learning objective}
+\begin{equation*}
+J_\mu(\xi):=G\big(z^*_\mu(\xi)\big),\qquad \min_{\xi\in\mathcal X} J_\mu(\xi),
+\end{equation*}
+over a nonempty compact convex set $\mathcal X\subset\mathbb R^p$.
+
+\paragraph{Notation.}
+Let $s(\xi):=b(\xi)-A z^*_\mu(\xi)$, $D(\xi):=\mathrm{Diag}\big(s(\xi)^{-2}\big)$, and
+\begin{equation}
+\label{eq:Kmu}
+K_\mu(\xi):=\nabla^2_{zz}F_\mu\big(z^*_\mu(\xi);\xi\big)=\gamma I+\mu A^\top D(\xi)A\succ0.
+\end{equation}
+
+\section{Assumptions}
+\begin{assumption}[Downstream curvature]
+\label{ass:Gsc}
+$G$ is $C^2$, $m_G$-strongly convex and $L_G$-smooth:
+$m_G I\preceq \nabla^2_{zz}G(z)\preceq L_G I$.
+\end{assumption}
+
+\begin{assumption}[Uniform interiorness on $\mathcal X$]
+\label{ass:int}
+There exist constants $0<s_-\le s_+<\infty$ such that for all $\xi\in\mathcal X$ we have $s_-\mathbf 1\le s(\xi)\le s_+\mathbf 1$.
+\emph{Justification:} For fixed $\mu>0,\gamma>0$, $\xi\mapsto z^*_\mu(\xi)$ is continuous by Berge's theorem; hence each $s_i(\xi)$ is continuous and strictly positive on compact $\mathcal X$, so the stated bounds hold.
+\end{assumption}
+
+\begin{assumption}[Identifiability (richness of RHS parametrization)]
+\label{ass:ident}
+There exists $\sigma_0>0$ such that for all $\xi\in\mathcal X$, $\sigma_{\min}\!\Big(\frac{\partial z^*_\mu}{\partial \xi}\Big)\ge \sigma_0$.
+This implicitly requires $p\ge n$.
+\end{assumption}
+
+\begin{assumption}[Optimal scenario for the target optimum]
+\label{ass:optimal}
+Let $z^\star:=\arg\min_z G(z)$ (unique by Assumption~\ref{ass:Gsc}). There exists $\xi^\dagger\in\mathcal X$ such that
+\begin{equation}
+\label{eq:optimal}
+c+\gamma z^\star-\mu A^\top\big(b_0+B\xi^\dagger-A z^\star\big)^{-1}=0,\qquad b_0+B\xi^\dagger-A z^\star>0,
+\end{equation}
+i.e., $z^*_\mu(\xi^\dagger)=z^\star$ satisfies the surrogate KKT system.
+\emph{Remark:} If $B$ has full column rank and $\mathcal X$ contains a small affine neighborhood, \eqref{eq:optimal} is solvable for $\mu$ fixed; cf.\ discussion in \cite{FOTB,DFS}. 
+\end{assumption}
+
+\section{Implicit derivatives and adjoint gradient}
+\begin{proposition}[Sensitivity and adjoint gradient]
+\label{prop:implicit}
+At any $\xi\in\mathcal X$:
+\begin{enumerate}[leftmargin=2em,label=(\roman*)]
+\item \textbf{Sensitivity:}
+\begin{align*}
+\frac{\partial z^*_\mu}{\partial \xi}
+&= -\,K_\mu(\xi)^{-1}\,\nabla^2_{z\xi}F_\mu\big(z^*_\mu(\xi);\xi\big) \\
+&= -\,\mu\,K_\mu(\xi)^{-1}A^\top D(\xi)B.
+\end{align*}
+\item \textbf{Adjoint gradient for $J_\mu$:}
+Let $g(z):=\nabla_z G(z)$ and solve $K_\mu(\xi)^\top v = g(z^*_\mu(\xi))$. Then
+\begin{align*}
+\nabla_\xi J_\mu(\xi)
+&= -\big(\nabla^2_{z\xi} F_\mu\big(z^*_\mu(\xi);\xi\big)\big)^\top v \\
+&= -\,\mu\,B^\top D(\xi)A\,v.
+\end{align*}
+\end{enumerate}
+\end{proposition}
+\begin{proof}
+Differentiate the stationarity $\nabla_z F_\mu(z^*_\mu(\xi);\xi)=0$ and use the implicit function theorem. The expressions follow from $\nabla^2_{z\xi}F_\mu=\mu A^\top D(\xi) B$ and \eqref{eq:Kmu}.
+\end{proof}
+
+\section{Core lemma: PL inequality and no spurious stationary points}
+\begin{lemma}[Global PL and no spurious stationary points]
+\label{lem:PL}
+Under Assumptions~\ref{ass:Gsc}, \ref{ass:int}, and \ref{ass:ident}:
+\begin{enumerate}[leftmargin=2em,label=(\alph*)]
+\item $\nabla_\xi J_\mu(\xi)=0$ iff $\nabla_z G(z^*_\mu(\xi))=0$; hence any stationary point of $J_\mu$ induces $z^*_\mu(\xi)=z^\star$.
+\item (PL inequality) For all $\xi\in\mathcal X$,
+\begin{equation*}
+J_\mu(\xi)-G(z^\star)\le \frac{1}{2 m_G \sigma_0^2}\,\|\nabla_\xi J_\mu(\xi)\|^2.
+\end{equation*}
+\item If $\nabla_\xi J_\mu$ is $L_\xi$-Lipschitz on $\mathcal X$, then projected gradient descent
+\begin{equation*}
+\xi^{t+1}=\Pi_{\mathcal X}\big(\xi^t-\eta\,\nabla_\xi J_\mu(\xi^t)\big)
+\end{equation*}
+with any $\eta\in(0,1/L_\xi]$ satisfies
+\begin{equation*}
+J_\mu(\xi^{t})-G(z^\star) \le (1-\eta\,m_G\sigma_0^2)^t\,\big(J_\mu(\xi^{0})-G(z^\star)\big).
+\end{equation*}
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+By Proposition~\ref{prop:implicit}, $\nabla_\xi J_\mu=(\partial z^*_\mu/\partial \xi)^\top \nabla_z G(z^*_\mu)$. The uniform bound $\sigma_{\min}(\partial z^*_\mu/\partial \xi)\ge \sigma_0$ yields 
+$\|\nabla_\xi J_\mu\|\ge \sigma_0\|\nabla_z G(z^*_\mu)\|$ and the equivalence of zeros.
+Assumption~\ref{ass:Gsc} gives $\frac{1}{2L_G}\|\nabla_z G(z)\|^2 \le G(z)-G(z^\star) \le \frac{1}{2m_G}\|\nabla_z G(z)\|^2$. Substituting $z=z^*_\mu(\xi)$ and $\|\nabla_z G\|\le \sigma_0^{-1}\|\nabla_\xi J_\mu\|$ gives the PL inequality. Standard PL analysis implies the linear rate.
+\end{proof}
+
+\section{Main theorem}
+\begin{theorem}[Global convergence to an optimal scenario]
+\label{thm:global}
+Suppose $A\in\mathbb R^{m\times n}$ has full column rank and $B\in\mathbb R^{m\times p}$ is such that Assumptions~\ref{ass:int} and \ref{ass:ident} hold on a nonempty compact convex set $\mathcal X$. Assume~\ref{ass:Gsc}, \ref{ass:optimal}, and $\gamma>0,\mu>0$. Then:
+\begin{enumerate}[leftmargin=2em,label=(\alph*)]
+\item $J_\mu$ satisfies the PL inequality in Lemma~\ref{lem:PL}(b) with constant $m_G\sigma_0^2$.
+\item Any projected gradient descent sequence on $\xi$ with step size $\eta\in(0,1/L_\xi]$ converges linearly to a (possibly non-unique) stationary point $\hat\xi\in\mathcal X$ with $z^*_\mu(\hat\xi)=z^\star$ and $J_\mu(\hat\xi)=G(z^\star)$.
+\end{enumerate}
+Moreover, under the explicit lower bound
+\begin{equation*}
+\sigma_0 \ \ge\ \frac{1}{\,\tfrac{1}{s_-^2}\|A\|^2+\gamma/\mu\,}\cdot \frac{1}{s_+^2}\,\sigma_{\min}(A^\top)\,\sigma_{\min}(B),
+\end{equation*}
+(derived from Proposition~\ref{prop:implicit} and Assumption~\ref{ass:int}), the rate constant is $1-\eta m_G\sigma_0^2$.
+\end{theorem}
+\begin{proof}
+Part (a) follows from Lemma~\ref{lem:PL}. For (b), Assumption~\ref{ass:optimal} ensures $J_\mu$ attains $G(z^\star)$ on $\mathcal X$; PL then yields linear convergence to the global stationary set, which, by Lemma~\ref{lem:PL}(a), maps to $z^\star$.
+The explicit $\sigma_0$ bound follows from
+\begin{equation*}
+\frac{\partial z^*_\mu}{\partial \xi}
+= -\,\mu\,K_\mu(\xi)^{-1}A^\top D(\xi)B,
+\end{equation*}
+with $\mu\,\sigma_{\min}(K_\mu^{-1})\ge (\frac{1}{s_-^2}\|A\|^2+\gamma/\mu)^{-1}$ and $\sigma_{\min}(A^\top D(\xi)B)\ge \frac{1}{s_+^2}\sigma_{\min}(A^\top)\sigma_{\min}(B)$.
+\end{proof}
+
+\begin{remark}[On the role of FRFC one-scenario optimality]
+Assumption~\ref{ass:optimal} abstracts the existence of a scenario $\xi^\dagger$ that reproduces $z^\star$ under the barrier surrogate.
+\end{remark}
+
+\begin{remark}[On removing the Tikhonov regularizer]
+\label{rem:no_tikhonov}
+The quadratic term $\tfrac{\gamma}{2}\|z\|^2$ was introduced only to guarantee that, 
+for every scenario $\xi$, the inner problem
+\begin{equation*}
+F_\mu(z;\xi)=c^\top z-\mu\!\sum_{i=1}^m \log\big(b(\xi)-A z\big)_i
+\end{equation*}
+is coercive and therefore admits a unique minimizer.  
+This additional regularization becomes unnecessary if the following structural condition holds:
+
+\medskip
+\noindent\textbf{Assumption (No recession directions).}
+Let $\mathcal R:=\{\,d\in\mathbb{R}^n:\;A d\le 0\,\}$ be the recession cone of the feasible set.
+If
+\begin{equation*}
+c^\top d \;>\; 0 \qquad \text{for all } d\in \mathcal R\setminus\{0\},
+\end{equation*}
+then along every feasible ray $z+t d$ with $t\to\infty$ the objective
+$F_\mu(z+t d;\xi)\to +\infty$.
+Hence, for each $\xi$, the barrier problem with $\gamma=0$ is still coercive and possesses a unique minimizer.
+
+\medskip
+\noindent
+Assumption (B) is automatically satisfied whenever the feasible polytope 
+$\{\,z:\;A z<b(\xi)\,\}$ is compact for each $\xi$, 
+but it can also hold for unbounded sets provided the cost vector $c$
+points strictly inside the dual of the recession cone (e.g.\ $c>0$ on the nonnegative orthant).  
+Under this condition all subsequent arguments---implicit differentiation,
+the adjoint-gradient formula, the Polyak–Łojasiewicz inequality, and the global-convergence
+result for gradient descent and stochastic gradient descent---remain valid
+with $\gamma=0$.
+\end{remark}
+
+\section{A Counterexample: Nonconvexity of $J(\xi)=G(z_\mu^*(\xi))$}
+Consider the one-dimensional case with $z,\xi\in\mathbb{R}$, a single inequality $z<\xi$, and the barrierized inner problem
+\begin{equation*}
+F_\mu(z;\xi)=c\,z+\frac{\gamma}{2}z^2-\mu\log(\xi-z),\qquad \mu>0,\ \gamma>0.
+\end{equation*}
+For concreteness fix
+\begin{equation*}
+\gamma=1,\qquad \mu=1,\qquad c=-3,\qquad G(z)=\tfrac12(z-1)^2,
+\end{equation*}
+and define the outer objective $J(\xi):=G\big(z_\mu^*(\xi)\big)$, where $z_\mu^*(\xi)$ is the unique minimizer of $F_\mu(\cdot;\xi)$ (strict convexity in $z$ holds).
+
+\paragraph{Closed form for $z_\mu^*(\xi)$.}
+The first-order condition reads
+\begin{align*}
+\partial_z F_\mu &= c+\gamma z + \frac{\mu}{\xi-z}=0 \\
+&\Longleftrightarrow z^2 + (c-\xi)z - (c\,\xi+\mu)=0.
+\end{align*}
+With the chosen parameters this quadratic has two real roots; exactly one satisfies the feasibility $z<\xi$. That feasible root is
+\begin{equation*}
+z_\mu^*(\xi)=\frac{\xi - c - \sqrt{(\xi - c)^2 + 4(c\,\xi+\mu)}}{2},
+\end{equation*}
+and the other root exceeds $\xi$ (hence is infeasible).
+
+\paragraph{Midpoint convexity test fails.}
+Let
+\begin{equation*}
+\xi_1=1.525,\qquad \xi_3=5.0,\qquad \xi_m=\tfrac12(\xi_1+\xi_3)=3.2625.
+\end{equation*}
+Evaluating $J(\xi)=\tfrac12\big(z_\mu^*(\xi)-1\big)^2$ gives
+\begin{equation*}
+J(\xi_1)\approx 1.99196\times 10^{-4},\qquad
+J(\xi_m)\approx 0.6301979,\qquad
+J(\xi_3)\approx 1.2573593.
+\end{equation*}
+Convexity would require $J(\xi_m)\le \tfrac12\big(J(\xi_1)+J(\xi_3)\big)\approx 0.6287793$, which is \emph{violated}:
+\begin{equation*}
+0.6301979\;>\;0.6287793.
+\end{equation*}
+Therefore $J$ is not convex (even though it is smooth for $\mu>0$).
+
+\paragraph{Takeaway.}
+This explicit example shows that, even with a log-barrier (i.e., $\mu>0$ ensuring smoothness and strict interiorness), the outer objective $J(\xi)=G(z_\mu^*(\xi))$ need not be convex in $\xi$. Our guarantees should therefore rely on Polyak--Łojasiewicz (PL) conditions and identifiability rather than convexity.
+
+\section{Identifiability: Quantitative Lower Bound on $\sigma_{\min}(J(\xi))$}
+\label{sec:identifiability_lower_bound}
+
+We analyze the Jacobian of the scenario-to-solution map
+\begin{equation}
+\label{eq:J_def}
+J(\xi):=\frac{\partial z_\mu^*(\xi)}{\partial \xi}\in\mathbb R^{n\times p},
+\end{equation}
+where $z_\mu^*(\xi)$ solves the barrierized inner problem \eqref{eq:F} and $s(\xi):=b(\xi)-A z_\mu^*(\xi)\in\mathbb R_{++}^m$. We allow a general differentiable right-hand-side map $b:\mathbb R^p\to\mathbb R^m$ with Jacobian $J_b(\xi):=\nabla_\xi b(\xi)$ (in the affine case $b(\xi)=b_0+B\xi$, one has $J_b(\xi)\equiv B$). Recalling \eqref{eq:Kmu},
+\begin{equation*}
+K_\mu(\xi)=\nabla_{zz}^2F_\mu\big(z_\mu^*(\xi);\xi\big)=\gamma I+\mu A^\top D(\xi)A,\qquad D(\xi):=\mathrm{Diag}\big(s(\xi)^{-2}\big).
+\end{equation*}
+The implicit-function/adjoint calculus therefore yields the exact representation
+\begin{equation}
+\label{eq:J_formula}
+J(\xi)=-\mu\,K_\mu(\xi)^{-1}A^\top D(\xi)\,J_b(\xi).
+\end{equation}
+
+\paragraph{Standing assumptions.}
+Throughout the section we assume the following (either on all of $\mathcal X$ or on a sublevel set of interest):
+\begin{enumerate}[leftmargin=2em,label=\textbf{(A\arabic*)}]
+\item \emph{Full-column-rank geometry.} $\mathrm{rank}(A)=n$, so $A^\top D A\succ0$ for every positive diagonal $D$.
+\item \emph{Uniform interiorness.} There exist constants $0<s_-\le s_+<\infty$ such that $s_-\mathbf 1\le s(\xi)\le s_+\mathbf 1$ and therefore $\frac{1}{s_+^2}I\preceq D(\xi)\preceq \frac{1}{s_-^2}I$.
+\item \emph{Rich scenario parametrization.} There is a constant $\beta>0$ with $\sigma_{\min}\big(J_b(\xi)\big)\ge\beta$ for all $\xi$ of interest (in the affine case this reads $\sigma_{\min}(B)\ge\beta$, which forces $p\ge n$).
+\end{enumerate}
+
+\begin{lemma}[Quantitative identifiability]
+\label{lem:smin_lower_bound}
+Under \textbf{(A1)}–\textbf{(A3)}, the Jacobian $J(\xi)$ has full row rank $n$ and satisfies the uniform bound
+\begin{equation}
+\label{eq:smin_bound}
+\sigma_{\min}\big(J(\xi)\big)\ge 
+\underbrace{\frac{\mu}{\gamma+\mu\|A\|_2^2/s_-^{2}}}_{\sigma_{\min}(K_\mu(\xi)^{-1})}
+\cdot 
+\underbrace{\frac{\sigma_{\min}(A)}{s_+^{2}}}_{\sigma_{\min}(A^\top D(\xi))}
+\cdot 
+\underbrace{\beta}_{\sigma_{\min}(J_b(\xi))},
+\qquad \forall\xi.
+\end{equation}
+In particular,
+\begin{equation*}
+\inf_\xi \sigma_{\min}\big(J(\xi)\big)\ge c_0\quad\text{with}\quad c_0:=\frac{\mu}{\gamma+\mu\|A\|_2^2/s_-^{2}}\cdot\frac{\sigma_{\min}(A)}{s_+^{2}}\cdot\beta.
+\end{equation*}
+\end{lemma}
+
+\begin{proof}
+Starting from \eqref{eq:J_formula}, the product structure and the submultiplicativity property $\sigma_{\min}(MN)\ge\sigma_{\min}(M)\sigma_{\min}(N)$ (valid for any conformable matrices $M,N$) provide
+\begin{equation*}
+\sigma_{\min}\big(J(\xi)\big)\ge \mu\,\sigma_{\min}\big(K_\mu(\xi)^{-1}\big)\sigma_{\min}\big(A^\top D(\xi)\big)\sigma_{\min}\big(J_b(\xi)\big).
+\end{equation*}
+We bound the three factors separately.
+
+\emph{(i) The $K_\mu^{-1}$ factor.} Because $K_\mu(\xi)$ is positive definite, $\sigma_{\min}\big(K_\mu(\xi)^{-1}\big)=1/\sigma_{\max}\big(K_\mu(\xi)\big)$. Assumption \textbf{(A2)} gives $D(\xi)\preceq \frac{1}{s_-^2}I$, hence
+\begin{align*}
+K_\mu(\xi)&\preceq \gamma I+\frac{\mu}{s_-^2}A^\top A,\\
+\implies \sigma_{\max}\big(K_\mu(\xi)\big)&\le \gamma+\frac{\mu}{s_-^2}\|A\|_2^2,
+\end{align*}
+which yields $\sigma_{\min}\big(K_\mu(\xi)^{-1}\big)\ge \big(\gamma+\mu\|A\|_2^2/s_-^2\big)^{-1}$.
+
+\emph{(ii) The $A^\top D$ factor.} Writing $A^\top D(\xi)=(D(\xi)^{1/2}A)^\top D(\xi)^{1/2}$ and again using submultiplicativity,
+\begin{equation*}
+\sigma_{\min}\big(A^\top D(\xi)\big)\ge \sigma_{\min}\big(D(\xi)^{1/2}A\big)\,\sigma_{\min}\big(D(\xi)^{1/2}\big).
+\end{equation*}
+Assumptions \textbf{(A1)}–\textbf{(A2)} imply $\sigma_{\min}\big(D(\xi)^{1/2}\big)\ge 1/s_+$ and $\sigma_{\min}\big(D(\xi)^{1/2}A\big)\ge (1/s_+)\sigma_{\min}(A)$, leading to $\sigma_{\min}\big(A^\top D(\xi)\big)\ge \sigma_{\min}(A)/s_+^2$.
+
+\emph{(iii) The $J_b$ factor.} Assumption \textbf{(A3)} supplies $\sigma_{\min}\big(J_b(\xi)\big)\ge\beta$ uniformly.
+
+Combining (i)–(iii) proves the lower bound \eqref{eq:smin_bound}. Since $p\ge n$ is implicit in \textbf{(A3)} (otherwise $\sigma_{\min}\big(J_b(\xi)\big)$ would vanish), $J(\xi)$ has full row rank $n$ for every $\xi$.
+\end{proof}
+
+\paragraph{Interpretation and limiting regimes.}
+The estimate \eqref{eq:smin_bound} highlights four independent drivers of identifiability:
+\begin{enumerate}[leftmargin=2em]
+\item \emph{Inner geometry} via $A$: $\sigma_{\min}(A)$ measures how effectively slack perturbations induce changes in $z$, while $\|A\|_2$ (together with $s_-$) governs the conditioning of $K_\mu$.
+\item \emph{Interiorness} via $s_-,s_+$: keeping slacks within $[s_-,s_+]$ avoids barrier blow-up and maintains uniform curvature.
+\item \emph{Scenario richness} via $\beta$: the lower bound $\beta=\inf_\xi \sigma_{\min}(J_b(\xi))$ guarantees that varying $\xi$ excites enough directions in $b(\xi)$.
+\item \emph{Barrier weight} via $\mu,\gamma$: the prefactor $\mu/(\gamma+\mu\|A\|_2^2/s_-^2)$ rises from $0$ when $\mu\downarrow0$ to the plateau $s_-^2/\|A\|_2^2$ as $\mu\uparrow\infty$.
+\end{enumerate}
+In the special case $\gamma=0$ (cf. Remark~\ref{rem:no_tikhonov}), the dependence on $\mu$ cancels and
+\begin{equation*}
+\sigma_{\min}\big(J(\xi)\big)\ge \frac{s_-^{2}}{\|A\|_2^{2}}\cdot\frac{\sigma_{\min}(A)}{s_+^{2}}\cdot\beta.
+\end{equation*}
+
+\paragraph{Linear-$b$ corollary.}
+If $b(\xi)=b_0+B\xi$ with $B\in\mathbb R^{m\times p}$, then $J_b(\xi)\equiv B$ and \eqref{eq:smin_bound} simplifies to
+\begin{equation*}
+\sigma_{\min}\big(J(\xi)\big)\ge \frac{\mu}{\gamma+\mu\|A\|_2^2/s_-^{2}}\cdot\frac{\sigma_{\min}(A)}{s_+^{2}}\cdot\sigma_{\min}(B),
+\end{equation*}
+so choosing $p\ge n$ together with a well-conditioned $B$ and maintaining a healthy slack band directly enforces identifiability.
+
+
+
+\section*{References}
+\begin{thebibliography}{9}
+
+\bibitem[FOTB]{FOTB}
+T.~Homem-de-Mello, J.~Valencia, F.~Lagos, and G.~Lagos.
+\newblock Forecasting Outside the Box: Application-Driven Optimal Pointwise
+Forecasts for Stochastic Optimization.
+\newblock Working paper, 2023.
+
+\bibitem[DFS]{DFS}
+J.~Hornewall, S.~Delannoy-Pavy, T.~Homem-de-Mello, and V.~Leclère.
+\newblock Decision Focused Scenario Generation for Contextual Two-Stage
+Stochastic Linear Programming.
+\newblock In preparation, 2025.
+
+\end{thebibliography}
+
+\end{document}

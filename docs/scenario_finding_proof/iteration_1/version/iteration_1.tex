@@ -1,0 +1,272 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm, mathtools, bm}
+\usepackage{enumitem}
+
+\newtheorem{assumption}{Assumption}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Global Convergence of Single-Scenario Learning for RHS-Only Barrierized Two-Stage LPs}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Set-up}
+
+We consider a two-stage model with first-stage decision $z\in\mathbb{R}^n$. Let $G:\mathbb{R}^n\to\mathbb{R}$ denote the (regularized) downstream two-stage value function (expected cost), assumed $C^2$ and strictly convex (see Assumption~\ref{ass:Gsc}). We \emph{learn a single scenario} $\xi\in\mathbb{R}^p$ that parametrizes the first-stage constraints via a right-hand side (RHS) map
+\[
+b(\xi) \;=\; b_0 + B\xi \in \mathbb{R}^m ,
+\]
+with a fixed matrix $B\in\mathbb{R}^{m\times p}$.
+Given $\mu>0$ (log-barrier weight) and an optional Tikhonov parameter $\gamma\ge 0$, define the one-scenario \emph{log-barrier surrogate}
+\begin{equation}
+\label{eq:F}
+F_\mu(z;\xi) \;=\; c^\top z \;+\; \tfrac{\gamma}{2}\|z\|^2 \;-\; \mu \sum_{i=1}^m \log s_i,
+\qquad
+s(\xi,z) := b(\xi) - Az \in \mathbb{R}^m_{++}.
+\end{equation}
+For each $\xi$, the inner problem $\min_z F_\mu(z;\xi)$ is strictly convex in $z$, with unique solution
+\[
+z^*_\mu(\xi) \;=\; \arg\min_{z} F_\mu(z;\xi).
+\]
+Our \emph{scenario-learning objective} is the downstream composition
+\[
+J_\mu(\xi) \;:=\; G\big(z^*_\mu(\xi)\big), \qquad \min_{\xi\in \mathcal{X}} J_\mu(\xi),
+\]
+over a closed convex set $\mathcal{X}\subset\mathbb{R}^p$ (e.g., simple bounds), using projected gradient descent on~$J_\mu$.
+
+\paragraph{Notation.}
+Let $s(\xi) := b(\xi) - A z^*_\mu(\xi)$ be the optimal slacks and $D(\xi):=\mathrm{Diag}\big(s(\xi)^{-2}\big)$. Write
+\begin{equation}
+\label{eq:K}
+K_\mu(\xi) \;:=\; \nabla^2_{zz} F_\mu\big(z^*_\mu(\xi);\xi\big) \;=\; \gamma I \;+\; \mu A^\top D(\xi) A \;\succ\; 0 .
+\end{equation}
+
+\section{Assumptions}
+
+\begin{assumption}[Downstream curvature]
+\label{ass:Gsc}
+$G$ is $C^2$, $m_G$-strongly convex and $L_G$-smooth:
+\(
+m_G I \preceq \nabla^2_{zz} G(z) \preceq L_G I
+\) for all $z$.
+\end{assumption}
+
+\begin{assumption}[Interiorness band on $\mathcal{X}$]
+\label{ass:interior}
+There exist constants $0<s_- \le s_+ < \infty$ such that for all $\xi\in\mathcal{X}$,
+\(
+s_- \,\bm{1} \;\le\; s(\xi) \;\le\; s_+ \,\bm{1}.
+\)
+Equivalently,
+\(
+\frac{1}{s_+^2} I \;\preceq\; D(\xi) \;\preceq\; \frac{1}{s_-^2} I
+\)
+uniformly on $\mathcal{X}$.
+\end{assumption}
+
+\begin{assumption}[Existence of an optimal scenario]
+\label{ass:exist}
+Let $z^\star:=\arg\min_z G(z)$ (unique by Assumption~\ref{ass:Gsc}). There exists $\xi^\dagger\in\mathcal{X}$ such that
+\(
+z^*_\mu(\xi^\dagger)=z^\star .
+\)
+(For FRFC two-stage LPs, single-scenario optimality holds for the unregularized model; in practice one selects $\mathcal{X}$ and $\mu$ so that such a witness exists.)
+\end{assumption}
+
+\begin{assumption}[Identifiability (richness of RHS parameterization)]
+\label{ass:ident}
+There exists $\sigma_0>0$ such that
+\(
+\sigma_{\min}\!\Big(\frac{\partial z^*_\mu(\xi)}{\partial \xi}\Big) \,\ge\, \sigma_0
+\)
+for all $\xi\in\mathcal{X}$.
+\end{assumption}
+
+\begin{remark}[When does Assumption~\ref{ass:ident} hold?]
+By implicit differentiation of the inner KKT stationarity (see Prop.~\ref{prop:implicit} below),
+\[
+\frac{\partial z^*_\mu}{\partial \xi}
+\;=\;
+\mu\,K_\mu(\xi)^{-1} A^\top D(\xi) B.
+\]
+Hence Assumption~\ref{ass:ident} holds if $B$ is rich enough (e.g., $B=I_m$) and $A$ has full column rank: using Assumption~\ref{ass:interior} and~\eqref{eq:K},
+\[
+\sigma_{\min}\!\Big(\tfrac{\partial z^*_\mu}{\partial \xi}\Big)
+\;\ge\;
+\underbrace{\tfrac{\mu}{\gamma+\mu\,\lambda_{\max}(A^\top D A)}}_{\ge\ \frac{1}{\,\frac{1}{s_-^2}\|A\|^2+\gamma/\mu\,}}
+\cdot
+\underbrace{\sigma_{\min}(A^\top D B)}_{\ge\ \frac{1}{s_+^2}\,\sigma_{\min}(A^\top)\,\sigma_{\min}(B)} .
+\]
+For $\mu$ large enough and $B$ with full column rank (e.g., $B=I_m$), this furnishes a uniform $\sigma_0>0$ on~$\mathcal{X}$.
+\end{remark}
+
+\section{Implicit derivatives and adjoint gradient}
+
+\begin{proposition}[Implicit sensitivity and adjoint gradient]
+\label{prop:implicit}
+At any $\xi\in\mathcal{X}$: \vspace{-0.25em}
+\begin{enumerate}[leftmargin=2em,label=(\roman*)]
+\item (Implicit derivative)
+\(
+\displaystyle
+\frac{\partial z^*_\mu}{\partial \xi}
+=
+\mu\,K_\mu(\xi)^{-1} A^\top D(\xi) B .
+\)
+\item (Adjoint gradient for $J_\mu$)
+Let $g(z):=\nabla_z G(z)$ and solve the adjoint system
+\(
+K_\mu(\xi)^\top v = g\!\big(z^*_\mu(\xi)\big).
+\)
+Then
+\(
+\nabla_\xi J_\mu(\xi)
+=
+-\,\big(\nabla^2_{z\xi} F_\mu(z^*_\mu(\xi);\xi)\big)^\top v
+=
+\mu\,B^\top D(\xi) A v .
+\)
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+Differentiate the inner stationarity $\nabla_z F_\mu(z^*_\mu(\xi);\xi)=0$:
+\[
+\gamma \,\tfrac{\partial z^*_\mu}{\partial \xi}
+\;+\;
+\mu A^\top \nabla_\xi\!\big(s^{-1}\big)
+\;=\; 0,
+\qquad
+\nabla_\xi\!\big(s^{-1}\big) = -D(\xi)\big(B - A\tfrac{\partial z^*_\mu}{\partial \xi}\big),
+\]
+which gives $(\gamma I + \mu A^\top D A)\,\tfrac{\partial z^*_\mu}{\partial \xi}=\mu A^\top D B$, i.e., (i). Chain rule yields $\nabla_\xi J_\mu=(\partial z^*_\mu/\partial \xi)^\top g(z^*_\mu)$, and substituting (i) with the adjoint relation $K_\mu^\top v=g$ gives~(ii).
+\end{proof}
+
+\section{Core lemma: PL inequality and no spurious stationary points}
+
+\begin{lemma}[Global PL \& no spurious stationary points for $J_\mu$]
+\label{lem:PL}
+Suppose Assumptions~\ref{ass:Gsc}, \ref{ass:interior}, and \ref{ass:ident} hold on a closed convex set $\mathcal{X}$. Then:
+\begin{enumerate}[leftmargin=2em,label=(\alph*)]
+\item (No spurious stationary points)
+$\nabla_\xi J_\mu(\xi)=0$ iff $\nabla_z G(z^*_\mu(\xi))=0$; hence any stationary point of $J_\mu$ induces $z^*_\mu(\xi)=z^\star$.
+\item (Global PL inequality)
+For all $\xi\in\mathcal{X}$,
+\begin{equation}
+\label{eq:PL}
+J_\mu(\xi)-J_\mu^\star \;\le\; \frac{1}{2 m_G \sigma_0^2}\,\big\|\nabla_\xi J_\mu(\xi)\big\|^2,
+\qquad
+J_\mu^\star:=G(z^\star).
+\end{equation}
+\item (Linear convergence of projected GD)
+If $\nabla_\xi J_\mu$ is $L_\xi$-Lipschitz on $\mathcal{X}$, then projected gradient descent
+\(
+\xi^{t+1}=\Pi_{\mathcal{X}}\big(\xi^t-\eta\,\nabla_\xi J_\mu(\xi^t)\big),
+\)
+with any $\eta\in(0,1/L_\xi]$ satisfies
+\[
+J_\mu(\xi^{t})-J_\mu^\star \;\le\; (1-\eta\,m_G\sigma_0^2)^t\,\big(J_\mu(\xi^{0})-J_\mu^\star\big).
+\]
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+By Prop.~\ref{prop:implicit}, $\nabla_\xi J_\mu=(\partial z^*_\mu/\partial \xi)^\top \nabla_z G(z^*_\mu)$. Assumption~\ref{ass:ident} implies
+$\|\nabla_\xi J_\mu\| \ge \sigma_0 \|\nabla_z G(z^*_\mu)\|$ and
+$\nabla_\xi J_\mu=0$ iff $\nabla_z G(z^*_\mu)=0$, proving (a).
+Assumption~\ref{ass:Gsc} gives the standard bounds
+\(
+\frac{1}{2L_G}\|\nabla_z G(z)\|^2 \le G(z)-G(z^\star) \le \frac{1}{2m_G}\|\nabla_z G(z)\|^2 .
+\)
+Plugging $z=z^*_\mu(\xi)$ and $\|\nabla_z G\|\le \sigma_0^{-1}\|\nabla_\xi J_\mu\|$ yields~\eqref{eq:PL}, establishing (b).
+Finally, PL + $L_\xi$-smoothness implies the stated linear rate for (projected) gradient descent; see, e.g., standard analyses of PL functions.
+\end{proof}
+
+\section{Main theorem: verifying the lemma's conditions for large $\mu$ and rich $B$}
+
+\begin{theorem}[Global convergence for large $\mu$ and rich RHS parameterization]
+\label{thm:global}
+Let $A\in\mathbb{R}^{m\times n}$ have full column rank and let $B\in\mathbb{R}^{m\times p}$ have full column rank (e.g., $B=I_m$ so each RHS component is directly controllable).
+Assume~\ref{ass:Gsc} and~\ref{ass:exist}.
+Fix a nonempty compact convex set $\mathcal{X}$ such that the inner problem is strictly feasible for all $\xi\in\mathcal{X}$.
+Then there exists $\bar\mu<\infty$ such that for any $\mu\ge \bar\mu$:
+\begin{enumerate}[leftmargin=2em,label=(\alph*)]
+\item (Interiorness holds) Assumption~\ref{ass:interior} is satisfied on $\mathcal{X}$ with some $0<s_-\le s_+<\infty$.
+\item (Identifiability holds uniformly) Assumption~\ref{ass:ident} holds on $\mathcal{X}$ with
+\begin{equation}
+\label{eq:sigma0-explicit}
+\sigma_0
+\;\ge\;
+\frac{1}{\,\tfrac{1}{s_-^2}\|A\|^2+\gamma/\mu\,}\cdot \frac{1}{s_+^2}\,\sigma_{\min}(A^\top)\,\sigma_{\min}(B).
+\end{equation}
+\end{enumerate}
+Consequently, $J_\mu$ satisfies the PL inequality~\eqref{eq:PL} on $\mathcal{X}$ with constant $m_G\sigma_0^2$, and projected gradient descent with any step $\eta\in(0,1/L_\xi]$ converges globally and linearly to a scenario $\hat\xi\in\mathcal{X}$ such that $z^*_\mu(\hat\xi)=z^\star$.
+\end{theorem}
+
+\begin{proof}
+(a) Since $\mathcal{X}$ is compact and the map $\xi\mapsto (z^*_\mu(\xi),s(\xi))$ is continuous, strict feasibility implies $s(\xi)>0$ on $\mathcal{X}$; by compactness there exist $0<s_-\le s_+<\infty$ so that Assumption~\ref{ass:interior} holds. In practice, increasing $\mu$ pushes the optimizer away from the boundary, enlarging $s_-$.
+
+(b) Using Prop.~\ref{prop:implicit} and Assumption~\ref{ass:interior},
+\[
+\frac{\partial z^*_\mu}{\partial \xi}
+=
+\mu\,K_\mu(\xi)^{-1} A^\top D(\xi) B,
+\quad
+K_\mu(\xi)=\gamma I + \mu A^\top D(\xi) A .
+\]
+The smallest singular value admits the product lower bound
+\[
+\sigma_{\min}\!\Big(\tfrac{\partial z^*_\mu}{\partial \xi}\Big)
+\;\ge\;
+\mu \,\sigma_{\min}\!\big(K_\mu(\xi)^{-1}\big)\;
+\sigma_{\min}\!\big(A^\top D(\xi)\big)\;
+\sigma_{\min}(B).
+\]
+By $D(\xi)\preceq \tfrac{1}{s_-^2}I$ we have
+$\lambda_{\max}\!\big(K_\mu(\xi)\big) \le \gamma + \tfrac{\mu}{s_-^2}\|A\|^2$,
+hence
+\(
+\mu \,\sigma_{\min}\!\big(K_\mu(\xi)^{-1}\big) \ge
+\Big(\tfrac{1}{s_-^2}\|A\|^2+\gamma/\mu\Big)^{-1}.
+\)
+By $D(\xi)\succeq \tfrac{1}{s_+^2} I$,
+\(
+\sigma_{\min}\!\big(A^\top D(\xi)\big)\ge \tfrac{1}{s_+^2}\sigma_{\min}(A^\top).
+\)
+Combining these inequalities yields~\eqref{eq:sigma0-explicit}.
+Choosing $\bar\mu$ large enough makes the factor $\gamma/\mu$ negligible, so $\sigma_0$ is uniformly bounded away from~$0$ on $\mathcal{X}$.
+Finally, Assumption~\ref{ass:exist} guarantees the existence of a global minimizer $\xi^\dagger\in\mathcal{X}$ with $z^*_\mu(\xi^\dagger)=z^\star$.
+Applying Lemma~\ref{lem:PL} completes the proof.
+\end{proof}
+
+\begin{remark}[Rate and constants]
+Under~\eqref{eq:sigma0-explicit}, the PL constant is
+\(
+\mu_{\mathrm{PL}} = m_G \sigma_0^2
+\)
+and any stepsize $\eta\in(0,1/L_\xi]$ yields
+\(
+J_\mu(\xi^{t})-J_\mu^\star \le (1-\eta \mu_{\mathrm{PL}})^t\big(J_\mu(\xi^{0})-J_\mu^\star\big).
+\)
+$L_\xi$ depends on $(A,B,\mu,\gamma,s_\pm)$ and the smoothness of~$G$; it is finite by Assumption~\ref{ass:interior} and continuity of $z^*_\mu(\cdot)$.
+\end{remark}
+
+\begin{remark}[Richness via $B=I_m$]
+Taking $B=I_m$ (each RHS component is directly controllable) and $A$ full column rank simplifies~\eqref{eq:sigma0-explicit} to
+\[
+\sigma_0 \;\ge\; \frac{1}{\,\tfrac{1}{s_-^2}\|A\|^2+\gamma/\mu\,}\cdot \frac{1}{s_+^2}\,\sigma_{\min}(A^\top),
+\]
+which is strictly positive for all sufficiently large~$\mu$.
+\end{remark}
+
+\section*{Acknowledgments}
+This note isolates a simple lemma (PL + no spurious stationary points) and a verification theorem tailored to RHS-only two-stage LPs with log-barrier surrogates. It aligns with classical ``optimal scenario'' existence in fixed-recourse models and with standard implicit-KKT sensitivity formulas.
+
+\end{document}
