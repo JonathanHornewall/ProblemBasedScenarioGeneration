@@ -64,7 +64,6 @@ function construct_neural_network(problem_instance::ProblemInstanceC2SCanLP)
     error("You have not yet specified a neural network for your problem instance")
 end
 
-#=
 """
 _________________________________________________________________
 Loss-function related functionalities for problem instances
@@ -170,4 +169,3 @@ function ChainRulesCore.rrule(::typeof(primal_problem_cost), problem_instance::P
 
     return cost, pullback
 end
-=#

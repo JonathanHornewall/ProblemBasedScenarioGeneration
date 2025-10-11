@@ -268,7 +268,7 @@ Example
 julia> Flags(:T, :H)
 Flags{true, false, true, false}()
 """
-struct ScenarioType{W<:Bool, T<:Bool, H<:Bool,Q<:Bool} end   # each parameter is boolean
+struct ScenarioType{W, T, H, Q} end   # each parameter is boolean-valued
 
 """
 Constructor for ScenarioType    
@@ -294,19 +294,22 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
     S = size(coupling_matrices, 3)  # Represents the number of scenarios
     
 
-    # Compute derivatives of extensive form lp
-    extensive_prob = CanLP(two_slp)
-    regularization_parameters = regularization_parameter * ones(length(extensive_prob.c))
-    for s in 1:S
-        regularization_parameters = vcat(regularization_parameters, regularization_parameter * s2_probability_vector[s] * ones(size(s2_cost_vectors, 1)))
-    end
-    extensive_prob_regularized = LogBarCanLP(extensive_prob, regularization_parameters)
-    D_A, D_b, D_c = diff_opt(extensive_prob_regularized)
-
     n_1 = length(s1_cost_vector)  # dimension of first stage decision
     m_1  = length(s1_constraint_vector)  # number of first stage constraints
     n_2 = size(s2_cost_vectors, 1)  # dimension of second stage decision
     m_2 = size(s2_constraint_vectors, 1)  # number of second stage constraints
+
+    # Compute derivatives of extensive form lp
+    extensive_prob = CanLP(two_slp)
+    reg_first_stage = fill(regularization_parameter, n_1)
+    reg_second_stage = vcat([regularization_parameter * s2_probability_vector[s] .* ones(n_2) for s in 1:S]...)
+    regularization_parameters = vcat(reg_first_stage, reg_second_stage)
+    extensive_prob_regularized = LogBarCanLP(extensive_prob, regularization_parameters)
+    D_A, D_b, D_c = diff_opt(extensive_prob_regularized)
+    total_rows = size(extensive_prob.constraint_matrix, 1)
+    total_cols = size(extensive_prob.constraint_matrix, 2)
+    row_offset = total_rows - S * m_2
+    col_offset = total_cols - S * n_2
 
     has_W, has_T, has_h, has_q = typeof(scenariotype).parameters
 
@@ -315,44 +318,44 @@ function D_xiY(two_slp::TwoStageSLP, regularization_parameter, scenariotype=Scen
     # Derivative with respect to second stage constraint matrices W
     if has_W
         for s in 1:S
-            start_index_row = 1 + m_1 + (s-1)*m_2
-            end_index_row = m_1 + s*m_2
+            start_index_row = 1 + row_offset + (s-1)*m_2
+            end_index_row = row_offset + s*m_2
             start_index_column = 1
-            end_index_column = n_1
+            end_index_column = col_offset
             D_W = D_A[:, start_index_row:end_index_row, start_index_column:end_index_column]  # Extract D_W from full extensive form derivative
-            push!(D_Ws, D_W)
+            push!(D_Ws, D_W[1:n_1, :, :])
         end
     end
 
     # Derivative with respect to coupling matrices T
     if has_T
         for s in 1:S
-            start_index_row = 1 + m_1 + (s-1)*m_2
-            end_index_row = m_1 + s*m_2
-            start_index_column = 1 + n_1 + (s-1) * n_2
-            end_index_column = n_1 + s * n_2
+            start_index_row = 1 + row_offset + (s-1)*m_2
+            end_index_row = row_offset + s*m_2
+            start_index_column = 1 + col_offset + (s-1) * n_2
+            end_index_column = col_offset + s * n_2
             D_T = D_A[:, start_index_row:end_index_row, start_index_column:end_index_column]  # Extract correct derivatives
-            push!(D_Ts, D_T)
+            push!(D_Ts, D_T[1:n_1, :, :])
         end
     end
 
     # Derivative with respect to second stage constraint vector h
     if has_h
         for s in 1:S
-            start_index = 1 + m_1 + (s-1)*m_2
-            end_index = m_1 + s * m_2
+            start_index = 1 + row_offset + (s-1)*m_2
+            end_index = row_offset + s * m_2
             D_h = D_b[:, start_index:end_index]
-            push!(D_hs, D_h)
+            push!(D_hs, D_h[1:n_1, :])
         end
     end
 
     # Derivative with respect to second stage cost vectors q
     if has_q
         for s in 1:S
-            start_index = 1 + n_1 + (s-1)*n_2
-            end_index = n_1 + s * n_2
+            start_index = 1 + col_offset + (s-1)*n_2
+            end_index = col_offset + s * n_2
             D_q = D_c[:, start_index:end_index]
-            push!(D_qs, D_q)
+            push!(D_qs, D_q[1:n_1, :])
         end
     end
     

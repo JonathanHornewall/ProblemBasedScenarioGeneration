@@ -255,7 +255,7 @@ function diff_opt(instance::LogBarCanLP, optimal_state=[], optimal_dual=[], KKT_
         D_A = diff_opt_A(instance, optimal_state, optimal_dual, KKT_matrix, solver)
     end
     if "b" in params
-        D_b = diff_opt_b(instance, optimal_state, optimal_dual, KKT_matrix, solver)
+        D_b = diff_opt_b(instance, optimal_state, optimal_dual, KKT_matrix; solver=solver)
     end
     if "c" in params
         D_c = diff_opt_c(instance, optimal_state, optimal_dual, KKT_matrix, solver)
