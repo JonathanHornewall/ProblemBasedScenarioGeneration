@@ -1,4 +1,4 @@
-function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, N_xi_per_x, σ, p, L)
+function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsamples, N_xi_per_x, σ, p, L, collections_per_sample::Int = 30)
 
     function generateRandomCorrMat(dim)
 
@@ -47,7 +47,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
 
 
     ξ = zeros(J,Nsamples)
-    ξoos = zeros(30, N_xi_per_x, J, Noutofsamples)    
+    ξoos = zeros(collections_per_sample, N_xi_per_x, J, Noutofsamples)
 
     for j in 1:J
         Aⱼ = A[j]
@@ -63,7 +63,7 @@ function dataGeneration(instance::ResourceAllocationProblem, Nsamples, Noutofsam
     
         for n in 1:Noutofsamples
             for k in 1:N_xi_per_x
-                for l in 1:30
+                for l in 1:collections_per_sample
                     ξoos_lkjn = Aⱼ .+ sum(Bⱼ[l].*(xoos[n,l]).^p for l in 1:L) .+ rand(Normal(0,σ))
                     ξoos[l,k,j,n] = ξoos_lkjn
                 end

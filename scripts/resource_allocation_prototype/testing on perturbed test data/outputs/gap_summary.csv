@@ -1,0 +1,17 @@
+model,scenario_count,trial,dataset,perturbation,mean_gap,mean_relative_gap
+single,1,1,training,clean,775.9635282796985,1.0188703927595386
+single,1,1,training,perturbed,769.1059604624253,0.9875456521296272
+single,1,1,testing,clean,287.0465279493385,0.22766573649155553
+single,1,1,testing,perturbed,51.08369092201315,0.040401141063829665
+saa,1,1,training,clean,0.0,0.0
+saa,1,1,training,perturbed,-1.1368683772161603e-13,-1.4597590978081283e-16
+saa,1,1,testing,clean,-2.2737367544323206e-13,-1.8033729809723218e-16
+saa,1,1,testing,perturbed,0.0,0.0
+triple,3,3,training,clean,204.83524629368526,0.31165945391639555
+triple,3,3,training,perturbed,201.1140027756834,0.30362356212236724
+triple,3,3,testing,clean,7.621057686155837,0.008922393667849488
+triple,3,3,testing,perturbed,11.104825125454681,0.013029482897801365
+saa,3,3,training,clean,0.0,0.0
+saa,3,3,training,perturbed,0.0,0.0
+saa,3,3,testing,clean,0.0,0.0
+saa,3,3,testing,perturbed,-6.821210263296962e-13,-8.003443680009854e-16

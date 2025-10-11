@@ -37,12 +37,14 @@ function main()
         L = 3
         Σ = 3
         N_xi_per_x = 100
+        collections_per_sample = 1
 
-        data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L)
+        data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L, collections_per_sample)
+        collections_per_sample = size(first(values(data_set_testing)), 1)
 
         model = construct_neural_network(problem_instance; nr_of_scenarios = 3)
         # Train the neural network model
-        reg_param_surr = 1.0
+        reg_param_surr = 0.001
         reg_param_prim = 0.0
         reg_param_ref = 0.0
         batchsize = 1

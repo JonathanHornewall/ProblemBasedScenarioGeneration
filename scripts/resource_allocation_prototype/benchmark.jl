@@ -49,6 +49,8 @@ function run_benchmark()
     println("\n=== Running SAA Testing ===")
     println("Testing dataset size: $(length(testing_data))")
     println("N_xi_per_x: $N_xi_per_x")
+    collections_per_sample = size(first(values(testing_data)), 1)
+    println("Collections per sample: $collections_per_sample")
     
     # Run the SAA testing
     test_result = testing_SAA(problem_instance, model, testing_data, reg_param_surr, reg_param_ref, N_xi_per_x)

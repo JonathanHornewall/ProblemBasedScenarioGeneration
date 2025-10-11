@@ -32,6 +32,7 @@ const DEFAULT_SIGMA = 5.0
 const DEFAULT_P = 2
 const DEFAULT_L = 3
 const DEFAULT_N_XI_PER_X = 100
+const DEFAULT_COLLECTIONS_PER_SAMPLE = 30
 const DEFAULT_BATCHSIZE = 1
 const DEFAULT_STEP_SIZE = 1e-3
 const DEFAULT_EPOCHS = 10
@@ -60,19 +61,21 @@ function sanitize_float(x::Real)
 end
 
 function training_dataset_cache_path(seed::Int, trial_index::Int;
-        Ntrain::Int, Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int)
+        Ntrain::Int, Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int,
+        collections_per_sample::Int)
     ensure_cache_directories()
     return joinpath(TRAIN_DATA_CACHE_DIR, @sprintf(
-        "train_seed_%d_trial_%02d_Ntrain_%d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d.jls",
-        seed, trial_index, Ntrain, Ntest, N_xi_per_x, sanitize_float(σ), p, L))
+        "train_seed_%d_trial_%02d_Ntrain_%d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d_collections_%d.jls",
+        seed, trial_index, Ntrain, Ntest, N_xi_per_x, sanitize_float(σ), p, L, collections_per_sample))
 end
 
 function testing_dataset_cache_path(seed::Int, trial_index::Int;
-        Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int)
+        Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int,
+        collections_per_sample::Int)
     ensure_cache_directories()
     return joinpath(TEST_DATA_CACHE_DIR, @sprintf(
-        "test_seed_%d_trial_%02d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d.jls",
-        seed, trial_index, Ntest, N_xi_per_x, sanitize_float(σ), p, L))
+        "test_seed_%d_trial_%02d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d_collections_%d.jls",
+        seed, trial_index, Ntest, N_xi_per_x, sanitize_float(σ), p, L, collections_per_sample))
 end
 
 function legacy_dataset_cache_path(seed::Int, trial_index::Int;
@@ -82,11 +85,12 @@ function legacy_dataset_cache_path(seed::Int, trial_index::Int;
         seed, trial_index, Ntrain, Ntest, N_xi_per_x, sanitize_float(σ), p, L))
 end
 
-function saa_cache_path(seed::Int, trial_index::Int; Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int)
+function saa_cache_path(seed::Int, trial_index::Int; Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int,
+        collections_per_sample::Int)
     ensure_cache_directories()
     return joinpath(SAA_CACHE_DIR, @sprintf(
-        "saa_test_seed_%d_trial_%02d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d.jls",
-        seed, trial_index, Ntest, N_xi_per_x, sanitize_float(σ), p, L))
+        "saa_test_seed_%d_trial_%02d_Ntest_%d_Nxi_%d_sigma_%s_p_%d_L_%d_collections_%d.jls",
+        seed, trial_index, Ntest, N_xi_per_x, sanitize_float(σ), p, L, collections_per_sample))
 end
 
 function find_legacy_saa_cache(seed::Int, trial_index::Int; Ntest::Int, N_xi_per_x::Int, σ::Float64, p::Int, L::Int)
@@ -162,10 +166,11 @@ end
 
 function load_or_generate_training_dataset(problem_instance, seed::Int, trial_index::Int;
         Ntrain::Int = DEFAULT_NTRAIN, Ntest::Int = DEFAULT_NTEST, N_xi_per_x::Int = DEFAULT_N_XI_PER_X,
-        σ::Float64 = DEFAULT_SIGMA, p::Int = DEFAULT_P, L::Int = DEFAULT_L)
+        σ::Float64 = DEFAULT_SIGMA, p::Int = DEFAULT_P, L::Int = DEFAULT_L,
+        collections_per_sample::Int = DEFAULT_COLLECTIONS_PER_SAMPLE)
 
     cache_file = training_dataset_cache_path(seed, trial_index; Ntrain = Ntrain, Ntest = Ntest,
-        N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+        N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L, collections_per_sample = collections_per_sample)
 
     if isfile(cache_file)
         println("Loading cached training dataset from $(cache_file)")
@@ -181,7 +186,7 @@ function load_or_generate_training_dataset(problem_instance, seed::Int, trial_in
         training_data = dictionary_like(legacy_training)
         Serialization.serialize(cache_file, training_data)
         candidate_test_cache = testing_dataset_cache_path(seed, trial_index; Ntest = Ntest,
-            N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+            N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L, collections_per_sample = collections_per_sample)
         if !isfile(candidate_test_cache)
             Serialization.serialize(candidate_test_cache, dictionary_like(legacy_testing))
             println("Saved converted testing dataset cache to $(candidate_test_cache)")
@@ -191,7 +196,8 @@ function load_or_generate_training_dataset(problem_instance, seed::Int, trial_in
 
     println("Generating training dataset for trial $(trial_index) with seed $(seed)")
     Random.seed!(seed)
-    training_data_raw, _ = dataGeneration(problem_instance, Ntrain, Ntest, N_xi_per_x, σ, p, L)
+    training_data_raw, _ = dataGeneration(problem_instance, Ntrain, Ntest, N_xi_per_x, σ, p, L,
+        collections_per_sample)
     training_data = dictionary_like(training_data_raw)
 
     Serialization.serialize(cache_file, training_data)
@@ -201,10 +207,11 @@ end
 
 function load_or_generate_testing_dataset(problem_instance, seed::Int, trial_index::Int;
         Ntrain::Int = DEFAULT_NTRAIN, Ntest::Int = DEFAULT_NTEST, N_xi_per_x::Int = DEFAULT_N_XI_PER_X,
-        σ::Float64 = DEFAULT_SIGMA, p::Int = DEFAULT_P, L::Int = DEFAULT_L)
+        σ::Float64 = DEFAULT_SIGMA, p::Int = DEFAULT_P, L::Int = DEFAULT_L,
+        collections_per_sample::Int = DEFAULT_COLLECTIONS_PER_SAMPLE)
 
     cache_file = testing_dataset_cache_path(seed, trial_index; Ntest = Ntest,
-        N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+        N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L, collections_per_sample = collections_per_sample)
 
     if isfile(cache_file)
         println("Loading cached testing dataset from $(cache_file)")
@@ -220,7 +227,7 @@ function load_or_generate_testing_dataset(problem_instance, seed::Int, trial_ind
         testing_data = dictionary_like(legacy_testing)
         Serialization.serialize(cache_file, testing_data)
         candidate_train_cache = training_dataset_cache_path(seed, trial_index; Ntrain = Ntrain, Ntest = Ntest,
-            N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+            N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L, collections_per_sample = collections_per_sample)
         if !isfile(candidate_train_cache)
             Serialization.serialize(candidate_train_cache, dictionary_like(legacy_training))
             println("Saved converted training dataset cache to $(candidate_train_cache)")
@@ -230,7 +237,8 @@ function load_or_generate_testing_dataset(problem_instance, seed::Int, trial_ind
 
     println("Generating testing dataset for trial $(trial_index) with seed $(seed)")
     Random.seed!(seed)
-    _, testing_data_raw = dataGeneration(problem_instance, Ntrain, Ntest, N_xi_per_x, σ, p, L)
+    _, testing_data_raw = dataGeneration(problem_instance, Ntrain, Ntest, N_xi_per_x, σ, p, L,
+        collections_per_sample)
     testing_data = dictionary_like(testing_data_raw)
 
     Serialization.serialize(cache_file, testing_data)
@@ -820,6 +828,7 @@ function run_single_trial(problem_instance, scenario_count::Int, trial_index::In
         "sigma" => σ,
         "p" => p,
         "L" => L,
+        "collections_per_sample" => collections_per_sample,
         "step_size" => step_size,
         "annealing_step_sizes" => collect(step_schedule),
         "batchsize" => batchsize,
@@ -843,7 +852,8 @@ function run_experiment(; scenario_counts = DEFAULT_SCENARIO_COUNTS, replicates:
         step_size::Float64 = DEFAULT_STEP_SIZE, batchsize::Int = DEFAULT_BATCHSIZE, default_epochs::Int = DEFAULT_EPOCHS,
         output_root::String = default_output_root(), base_seed::Int = DEFAULT_BASE_SEED,
         train_seed_base::Int = DEFAULT_BASE_SEED, test_seed_base::Int = DEFAULT_BASE_SEED,
-        training_seed_base::Int = DEFAULT_BASE_SEED, resume::Bool = false)
+        training_seed_base::Int = DEFAULT_BASE_SEED, collections_per_sample::Int = DEFAULT_COLLECTIONS_PER_SAMPLE,
+        resume::Bool = false)
 
     problem_instance = create_problem_instance()
     ensure_directory(output_root)
@@ -874,11 +884,14 @@ function run_experiment(; scenario_counts = DEFAULT_SCENARIO_COUNTS, replicates:
         end
 
         training_data = load_or_generate_training_dataset(problem_instance, train_data_seed, trial_index;
-            Ntrain = Ntrain, Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+            Ntrain = Ntrain, Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L,
+            collections_per_sample = collections_per_sample)
         testing_data = load_or_generate_testing_dataset(problem_instance, test_data_seed, trial_index;
-            Ntrain = Ntrain, Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+            Ntrain = Ntrain, Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L,
+            collections_per_sample = collections_per_sample)
 
-        saa_cache = saa_cache_path(test_data_seed, trial_index; Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L)
+        saa_cache = saa_cache_path(test_data_seed, trial_index; Ntest = Ntest, N_xi_per_x = N_xi_per_x, σ = σ, p = p, L = L,
+            collections_per_sample = collections_per_sample)
         cache_metadata = Dict(
             "train_data_seed" => train_data_seed,
             "test_data_seed" => test_data_seed,
@@ -888,7 +901,8 @@ function run_experiment(; scenario_counts = DEFAULT_SCENARIO_COUNTS, replicates:
             "N_xi_per_x" => N_xi_per_x,
             "sigma" => σ,
             "p" => p,
-            "L" => L
+            "L" => L,
+            "collections_per_sample" => collections_per_sample
         )
 
         preprocessed_testing = preprocess_testing_data(problem_instance, testing_data, N_xi_per_x;
@@ -938,6 +952,7 @@ function main()
     train_seed_base = parse_int_option(options, "train_seed", base_seed)
     test_seed_base = parse_int_option(options, "test_seed", base_seed)
     training_seed_base = parse_int_option(options, "training_seed", base_seed)
+    collections_per_sample = parse_int_option(options, "collections", DEFAULT_COLLECTIONS_PER_SAMPLE)
     resume = parse_bool_option(options, "resume", false)
     output_dir = get(options, "output", default_output_root())
 
@@ -946,7 +961,8 @@ function main()
         noise_scale = noise_scale, step_size = step_size, batchsize = batchsize,
         default_epochs = default_epochs, output_root = output_dir, base_seed = base_seed,
         train_seed_base = train_seed_base, test_seed_base = test_seed_base,
-        training_seed_base = training_seed_base, resume = resume)
+        training_seed_base = training_seed_base, collections_per_sample = collections_per_sample,
+        resume = resume)
 
     println("Aggregated results saved to ", joinpath(output_dir, "aggregated_results.csv"))
     println("Summary statistics by variant:")

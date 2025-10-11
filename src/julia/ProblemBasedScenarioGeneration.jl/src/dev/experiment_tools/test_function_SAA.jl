@@ -38,12 +38,13 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
 
     # dataset_testing provides pairs (x, ξ) where ξ has shape 30×N_xi_per_x×30
     for (x, ξ) in dataset_testing
+        collections_per_sample = size(ξ, 1)
         # Determine optimal cost
         A, b, c = problem_instance.s1_constraint_matrix, problem_instance.s1_constraint_vector, problem_instance.s1_cost_vector
 
         list_gaps, list_costs = [], []
 
-        for m in 1:30
+        for m in 1:collections_per_sample
             Ws, Ts, hs, qs = [], [], [], []
             for k in 1:N_xi_per_x
                 W, T, h, q = scenario_realization(problem_instance, ξ[m, k, :])
@@ -75,7 +76,8 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
 
         # compute 99% confidence upper bound for x
         cost_mean = mean(list_costs)
-        UCB = (100 / abs(cost_mean)) * ((1 / 30) * sum(list_gaps[k] + 2.462 * sqrt((var(list_gaps) / 30)) for k in 1:30))
+        gap_variance = collections_per_sample > 1 ? var(list_gaps) : 0.0
+        UCB = (100 / abs(cost_mean)) * ((1 / collections_per_sample) * sum(list_gaps[k] + 2.462 * sqrt((gap_variance / collections_per_sample)) for k in 1:collections_per_sample))
         push!(UCB_list, UCB)
     end
 
