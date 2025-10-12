@@ -69,36 +69,6 @@ function _contract_matrix_list!(dest, matrices, vec)
     return dest
 end
 
-function _derivative_surrogate_solution_h(problem_instance::PBSG.ResourceAllocationProblem,
-                                          reg_param_surr,
-                                          Ws, Ts, hs, qs)
-    A, b, c = PBSG.return_first_stage_parameters(problem_instance)
-    surrogate_slp = PBSG.TwoStageSLP(A, b, c, Ws, Ts, hs, qs)
-    logbar_problem = PBSG.LogBarCanLP(surrogate_slp, reg_param_surr)
-    der_b = PBSG.diff_opt_b(logbar_problem)
-
-    n₁ = length(c)
-    I = size(problem_instance.problem_data.service_rate_parameters, 1)
-    J = size(problem_instance.problem_data.service_rate_parameters, 2)
-    m₂ = size(hs, 1)
-    S = size(hs, 2)
-
-    m_total = size(der_b, 2)
-    m₁ = m_total - S * m₂
-
-    result = Vector{Matrix{eltype(der_b)}}(undef, S)
-    demand_start = I + 1
-    demand_stop = I + J
-    for s in 1:S
-        offset = m₁ + (s - 1) * m₂
-        demand_cols = (offset + demand_start):(offset + demand_stop)
-        M = zeros(eltype(der_b), n₁, m₂)
-        @views M[:, demand_start:demand_stop] .= der_b[1:n₁, demand_cols]
-        result[s] = M
-    end
-    return result
-end
-
 function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_param_surr,
                               reg_param_prim, scenario_collection, actual_scenario_collection)
     Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate =
@@ -120,13 +90,15 @@ function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_p
         surr_cotangent = ȳ .* diff_cost
 
         # Derivative of the surrogate decision with respect to scenario parameters
-        if problem_instance isa PBSG.ResourceAllocationProblem
-            D_Ws = Vector{Array{eltype(Ws_surrogate), 3}}()
-            D_Ts = Vector{Array{eltype(Ts_surrogate), 3}}()
-            D_qs = Vector{Matrix{eltype(qs_surrogate)}}()
-            D_hs = _derivative_surrogate_solution_h(problem_instance, reg_param_surr,
-                                                    Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
-        else
+        scenario_type = PBSG.return_scenario_type(problem_instance)
+        has_W, has_T, has_h, has_q = typeof(scenario_type).parameters
+
+        D_Ws = Array{eltype(Ws_surrogate), 3}[]
+        D_Ts = Array{eltype(Ts_surrogate), 3}[]
+        D_hs = Matrix{eltype(hs_surrogate)}[]
+        D_qs = Matrix{eltype(qs_surrogate)}[]
+
+        if has_W || has_T || has_h || has_q
             D_Ws, D_Ts, D_hs, D_qs = PBSG.derivative_surrogate_solution(
                 problem_instance, reg_param_surr, Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
         end
@@ -151,33 +123,26 @@ function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_p
             _contract_matrix_list!(Δqs, D_qs, surr_cotangent)
         end
 
-        scenario_grad =
-            if problem_instance isa PBSG.ResourceAllocationProblem &&
-               ΔWs === nothing && ΔTs === nothing && Δqs === nothing && Δhs !== nothing
-                I = size(problem_instance.problem_data.service_rate_parameters, 1)
-                copy(@view Δhs[(I + 1):end, :])
-            else
-                function surrogate_backprop(sc)
-                    Ws, Ts, hs, qs = PBSG.scenario_collection_realization(problem_instance, sc)
-                    total = zero(eltype(sc))
-                    if ΔWs !== nothing
-                        total += sum(Ws .* ΔWs)
-                    end
-                    if ΔTs !== nothing
-                        total += sum(Ts .* ΔTs)
-                    end
-                    if Δhs !== nothing
-                        total += sum(hs .* Δhs)
-                    end
-                    if Δqs !== nothing
-                        total += sum(qs .* Δqs)
-                    end
-                    return total
-                end
-
-                scenario_grad_raw = Zygote.gradient(surrogate_backprop, scenario_collection)[1]
-                scenario_grad_raw === nothing ? ZeroTangent() : scenario_grad_raw
+        function surrogate_backprop(sc)
+            Ws, Ts, hs, qs = PBSG.scenario_collection_realization(problem_instance, sc)
+            total = zero(eltype(sc))
+            if ΔWs !== nothing
+                total += sum(Ws .* ΔWs)
             end
+            if ΔTs !== nothing
+                total += sum(Ts .* ΔTs)
+            end
+            if Δhs !== nothing
+                total += sum(hs .* Δhs)
+            end
+            if Δqs !== nothing
+                total += sum(qs .* Δqs)
+            end
+            return total
+        end
+
+        scenario_grad_raw = Zygote.gradient(surrogate_backprop, scenario_collection)[1]
+        scenario_grad = scenario_grad_raw === nothing ? ZeroTangent() : scenario_grad_raw
 
         actual_grad = ZeroTangent()
 
