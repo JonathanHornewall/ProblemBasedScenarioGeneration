@@ -9,6 +9,7 @@ using ..ProblemBasedScenarioGeneration
 const PBSG = ProblemBasedScenarioGeneration
 
 export refactored_loss
+export der_refactored_loss
 
 """
     surrogate_solution_copy(problem_instance, reg_param_surr, scenario_collection)
@@ -30,6 +31,18 @@ function surrogate_solution_copy(problem_instance, reg_param_surr, scenario_coll
     mu_e = surr_prob.regularization_parameters
     solution = PBSG.LogBarCanLP_standard_solver_primal(A_e, b_e, c_e, mu_e)
     return solution[1:length(c)]
+end
+
+function der_refactored_loss(problem_instance, reg_param_surr, reg_param_prim,
+                             scenario_collection, actual_scenario_collection)
+    _, pullback = ChainRulesCore.rrule(refactored_loss,
+                                       problem_instance,
+                                       reg_param_surr,
+                                       reg_param_prim,
+                                       scenario_collection,
+                                       actual_scenario_collection)
+    _, _, _, _, grad, _ = pullback(1.0)
+    return grad
 end
 
 """

@@ -34,6 +34,10 @@ export Scenario
 
 export ResourceAllocationProblem
 export ResourceAllocationProblemData
+export ShipmentPlanningProblem
+export ShipmentPlanningProblemData
+export BikeSharingReallocationProblem
+export BikeSharingReallocationProblemData
 
 export construct_neural_network
 export train!
