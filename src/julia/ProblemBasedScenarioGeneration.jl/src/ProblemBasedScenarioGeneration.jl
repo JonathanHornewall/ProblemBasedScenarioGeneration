@@ -27,6 +27,7 @@ include("utils.jl")
 # Inclusions for specific problem instances
 include("problem_instances/resource_allocation/resource_allocation_problem.jl")
 include("problem_instances/resource_allocation/data_generation.jl")
+include("problem_instances/wallace_example_two/wallace_example_two_problem.jl")
 
 export ProblemInstanceC2SCanLP
 export manual_C2SCanLP
@@ -38,6 +39,8 @@ export ShipmentPlanningProblem
 export ShipmentPlanningProblemData
 export BikeSharingReallocationProblem
 export BikeSharingReallocationProblemData
+export WallaceExampleTwoProblem
+export WallaceExampleTwoProblemData
 
 export construct_neural_network
 export train!

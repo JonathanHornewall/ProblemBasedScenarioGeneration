@@ -352,12 +352,97 @@ function evaluate_saa_baseline(problem_instance::ResourceAllocationProblem, data
     EvaluationMetrics(mean(gaps), mean(rel_gaps), mean(abs_gaps), mean(opt_costs), mean(model_costs), gaps, rel_gaps)
 end
 
+function evaluate_cross_dataset_performance(problem_instance::ResourceAllocationProblem, model, data::DatasetPack;
+        reg_param_surr::Float64, reg_param_ref::Float64, sample_limit::Int)
+    total = min(sample_limit, length(data.contexts_clean))
+
+    detail_rows = DataFrame(
+        context_index = Int[],
+        gap_clean = Float64[],
+        gap_perturbed = Float64[],
+        gap_delta = Float64[],
+        relative_gap_clean = Float64[],
+        relative_gap_perturbed = Float64[],
+        relative_gap_delta = Float64[],
+        cost_clean = Float64[],
+        cost_perturbed = Float64[],
+        saa_cost_perturbed = Float64[],
+        gap_vs_saa = Float64[]
+    )
+
+    for idx in 1:total
+        x_clean = data.contexts_clean[idx]
+        xi_clean = data.samples_clean[idx]
+        xi_perturbed = data.samples_perturbed[idx]
+
+        x_mat = reshape(x_clean, :, 1)
+        prediction = model(x_mat)
+        surrogate_decision = compute_surrogate_decision(problem_instance, reg_param_surr, prediction)
+
+        clean_two_slp, clean_opt = build_two_stage(problem_instance, xi_clean)
+        clean_cost = s1_cost(clean_two_slp, surrogate_decision, reg_param_ref)
+        clean_gap = clean_cost - clean_opt
+        clean_rel_gap = clean_gap / max(abs(clean_opt), eps())
+
+        pert_two_slp, pert_opt = build_two_stage(problem_instance, xi_perturbed)
+        pert_cost = s1_cost(pert_two_slp, surrogate_decision, reg_param_ref)
+        pert_gap = pert_cost - pert_opt
+        pert_rel_gap = pert_gap / max(abs(pert_opt), eps())
+
+        saa_decision = compute_surrogate_decision(problem_instance, 0.0, xi_perturbed)
+        saa_cost = s1_cost(pert_two_slp, saa_decision, 0.0)
+        gap_vs_saa = pert_cost - saa_cost
+
+        push!(detail_rows, (
+            context_index = idx,
+            gap_clean = clean_gap,
+            gap_perturbed = pert_gap,
+            gap_delta = pert_gap - clean_gap,
+            relative_gap_clean = clean_rel_gap,
+            relative_gap_perturbed = pert_rel_gap,
+            relative_gap_delta = pert_rel_gap - clean_rel_gap,
+            cost_clean = clean_cost,
+            cost_perturbed = pert_cost,
+            saa_cost_perturbed = saa_cost,
+            gap_vs_saa = gap_vs_saa
+        ))
+    end
+
+    if nrow(detail_rows) == 0
+        summary = DataFrame(
+            mean_gap_clean = [NaN],
+            mean_gap_perturbed = [NaN],
+            mean_gap_delta = [NaN],
+            mean_relative_gap_clean = [NaN],
+            mean_relative_gap_perturbed = [NaN],
+            mean_relative_gap_delta = [NaN],
+            mean_gap_vs_saa = [NaN]
+        )
+    else
+        summary = DataFrame(
+            mean_gap_clean = [mean(detail_rows.gap_clean)],
+            mean_gap_perturbed = [mean(detail_rows.gap_perturbed)],
+            mean_gap_delta = [mean(detail_rows.gap_delta)],
+            mean_relative_gap_clean = [mean(detail_rows.relative_gap_clean)],
+            mean_relative_gap_perturbed = [mean(detail_rows.relative_gap_perturbed)],
+            mean_relative_gap_delta = [mean(detail_rows.relative_gap_delta)],
+            mean_gap_vs_saa = [mean(detail_rows.gap_vs_saa)]
+        )
+    end
+
+    (; summary, details = detail_rows)
+end
+
 function evaluate_scenario(problem_instance::ResourceAllocationProblem, info::TrialInfo;
         sample_limit::Int, scenario_samples::Int, perturb_seed::Int)
     println(@sprintf("Evaluating scenario count %d (trial %02d)", info.scenario_count, info.trial_index))
-    _ = construct_neural_network(problem_instance; nr_of_scenarios = info.scenario_count)
-    if !isdefined(ProblemBasedScenarioGeneration, Symbol("#62#63")) && isdefined(ProblemBasedScenarioGeneration, Symbol("#65#66"))
-        ProblemBasedScenarioGeneration.eval(:(const var"#62#63" = var"#65#66"))
+    dummy_model = construct_neural_network(problem_instance; nr_of_scenarios = info.scenario_count)
+    reshape_layer = dummy_model.layers[end]
+    reshape_symbol = typeof(reshape_layer).name.name
+    for missing_sym in (Symbol("#62#63"), Symbol("#65#66"))
+        if !isdefined(ProblemBasedScenarioGeneration, missing_sym) && isdefined(ProblemBasedScenarioGeneration, reshape_symbol)
+            ProblemBasedScenarioGeneration.eval(:(const $(missing_sym) = $(reshape_symbol)))
+        end
     end
     model = load_trained_model(info.model_path)
 
@@ -368,8 +453,9 @@ function evaluate_scenario(problem_instance::ResourceAllocationProblem, info::Tr
     perturb_rng_train = MersenneTwister(perturb_seed + 2000 * info.scenario_count)
     perturb_rng_test = MersenneTwister(perturb_seed + 3000 * info.scenario_count)
 
-    train_data = regenerate_training_data(problem_instance, info, scenario_samples, info.noise_scale, perturb_rng_train, noise_rng_train)
-    test_data = regenerate_testing_data(problem_instance, info, scenario_samples, info.noise_scale, perturb_rng_test)
+    perturb_scale = 10.0 * info.noise_scale
+    train_data = regenerate_training_data(problem_instance, info, scenario_samples, perturb_scale, perturb_rng_train, noise_rng_train)
+    test_data = regenerate_testing_data(problem_instance, info, scenario_samples, perturb_scale, perturb_rng_test)
 
     println("  Evaluating model on training data (clean)")
     train_clean_metrics = evaluate_model_on_dataset(problem_instance, model, train_data;
@@ -435,7 +521,31 @@ function evaluate_scenario(problem_instance::ResourceAllocationProblem, info::Tr
         saa_test_pert.mean_gap - saa_test_clean.mean_gap,
         saa_test_pert.mean_relative_gap - saa_test_clean.mean_relative_gap))
 
-    (; summary = rows, deltas = diff_rows)
+    println("  Evaluating cross-deployment robustness (clean decisions on perturbed contexts)")
+    cross_metrics = evaluate_cross_dataset_performance(problem_instance, model, test_data;
+        reg_param_surr = reg_param_surr, reg_param_ref = reg_param_ref, sample_limit = sample_limit)
+
+    cross_summary = cross_metrics.summary
+    cross_summary[!, :model] = fill(model_label, nrow(cross_summary))
+    cross_summary[!, :scenario_count] = fill(info.scenario_count, nrow(cross_summary))
+    cross_summary[!, :trial] = fill(info.trial_index, nrow(cross_summary))
+    cross_summary[!, :dataset] = fill("testing", nrow(cross_summary))
+    cross_summary = select(cross_summary, :model, :scenario_count, :trial, :dataset,
+        :mean_gap_clean, :mean_gap_perturbed, :mean_gap_delta,
+        :mean_relative_gap_clean, :mean_relative_gap_perturbed, :mean_relative_gap_delta,
+        :mean_gap_vs_saa)
+
+    cross_details = cross_metrics.details
+    cross_details[!, :model] = fill(model_label, nrow(cross_details))
+    cross_details[!, :scenario_count] = fill(info.scenario_count, nrow(cross_details))
+    cross_details[!, :trial] = fill(info.trial_index, nrow(cross_details))
+    cross_details[!, :dataset] = fill("testing", nrow(cross_details))
+    cross_details = select(cross_details, :model, :scenario_count, :trial, :dataset, :context_index,
+        :gap_clean, :gap_perturbed, :gap_delta,
+        :relative_gap_clean, :relative_gap_perturbed, :relative_gap_delta,
+        :cost_clean, :cost_perturbed, :saa_cost_perturbed, :gap_vs_saa)
+
+    (; summary = rows, deltas = diff_rows, cross_summary, cross_details)
 end
 
 function main()
@@ -454,6 +564,19 @@ function main()
     all_deltas = DataFrame(model = String[], scenario_count = Int[], trial = Int[],
         dataset = String[], gap_delta = Float64[], relative_gap_delta = Float64[])
 
+    all_cross_summary = DataFrame(model = String[], scenario_count = Int[], trial = Int[],
+        dataset = String[], mean_gap_clean = Float64[], mean_gap_perturbed = Float64[],
+        mean_gap_delta = Float64[], mean_relative_gap_clean = Float64[],
+        mean_relative_gap_perturbed = Float64[], mean_relative_gap_delta = Float64[],
+        mean_gap_vs_saa = Float64[])
+
+    all_cross_details = DataFrame(model = String[], scenario_count = Int[], trial = Int[],
+        dataset = String[], context_index = Int[],
+        gap_clean = Float64[], gap_perturbed = Float64[], gap_delta = Float64[],
+        relative_gap_clean = Float64[], relative_gap_perturbed = Float64[],
+        relative_gap_delta = Float64[], cost_clean = Float64[], cost_perturbed = Float64[],
+        saa_cost_perturbed = Float64[], gap_vs_saa = Float64[])
+
     for sc in scenario_counts
         info = select_best_trial(sc)
         results = evaluate_scenario(problem_instance, info;
@@ -461,6 +584,8 @@ function main()
             perturb_seed = perturb_seed)
         all_summary = vcat(all_summary, results.summary; cols = :union)
         all_deltas = vcat(all_deltas, results.deltas; cols = :union)
+        all_cross_summary = vcat(all_cross_summary, results.cross_summary; cols = :union)
+        all_cross_details = vcat(all_cross_details, results.cross_details; cols = :union)
     end
 
     println("\n=== Summary of Optimality Gaps ===")
@@ -477,10 +602,21 @@ function main()
             row.gap_delta, row.relative_gap_delta))
     end
 
+    if nrow(all_cross_summary) > 0
+        println("\n=== Cross-Deployment Robustness (Clean decision evaluated on perturbed contexts) ===")
+        for row in eachrow(all_cross_summary)
+            println(@sprintf("Scenario %d (trial %02d) | %s | %s: clean gap = %.4f, pert gap = %.4f, Δgap = %.4f, gap vs SAA = %.4f",
+                row.scenario_count, row.trial, row.model, row.dataset,
+                row.mean_gap_clean, row.mean_gap_perturbed, row.mean_gap_delta, row.mean_gap_vs_saa))
+        end
+    end
+
     output_dir = joinpath(@__DIR__, "outputs")
     mkpath(output_dir)
     CSV.write(joinpath(output_dir, "gap_summary.csv"), all_summary)
     CSV.write(joinpath(output_dir, "gap_deltas.csv"), all_deltas)
+    CSV.write(joinpath(output_dir, "cross_deployment_summary.csv"), all_cross_summary)
+    CSV.write(joinpath(output_dir, "cross_deployment_details.csv"), all_cross_details)
     println("\nSaved results to $(output_dir)")
 end
 
