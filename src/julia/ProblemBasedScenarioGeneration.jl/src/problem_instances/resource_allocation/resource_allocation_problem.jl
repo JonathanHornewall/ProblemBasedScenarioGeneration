@@ -109,6 +109,15 @@ function scenario_realization(instance::ResourceAllocationProblem, scenario_para
 end
 
 """
+    return_scenario_type(::ResourceAllocationProblem)
+Indicates which components of the scenario realization depend on the scenario parameters.
+For the resource allocation problem, only the right-hand side `h` varies with the scenario.
+"""
+function return_scenario_type(::ResourceAllocationProblem)
+    return ScenarioType(:H)
+end
+
+"""
     return_first_stage_parameters(instance::ResourceAllocationProblem)
 Getter method for retrieving the first stage parameters of the problem instance
 """
