@@ -13,14 +13,14 @@ include("NN.jl")
 include(joinpath(@__DIR__, "..", "custom_code", "neural_net.jl"))
 
 #----- Parametres
-NScenarios = [3,100,1000,10000]
+NScenarios = [100,1000,10000]
 J = 30
 I_prods = 20
 ω = 1
 L = 3
 σ = 5
 p = 2
-rep = 30
+rep = 30 #to replicate the experiment in tito's paper, do not change
 N_insample = 10000
 N_outofsample = 1000*30 # 30 iterations with the same x to compute a bound for the boxplot, and 
 #each requires 1000 samples
@@ -32,7 +32,7 @@ df_final= DataFrame()
 df_inSample = DataFrame()
 thetas_dict = Dict()
 
-#Generate data for experiment
+#Generate training data for experiment
 Y,X =  dataGeneration_in(N_insample,ϕ,ζ,σ,J,p,L,Σ)
 
 for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training set 
@@ -44,18 +44,25 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
     train_yₜ = Y[:,1:T] #cut data so that we get the right number of scenarios
     train_xₜ =  X[1:T,:]
 
+    #-------------- train neural network
     model = NNmodel(T,train_xₜ,train_yₜ,μᵢⱼ, cz, qw, ρᵢ) # train Neural network once
 
-    #for each scenario
+    #for each covariate / iteration of the algorithm to compute gap
     for nRep in 1:rep #30 iterations in algorithm for computing gap
-        # so we need to retrain the model each time 
+        
         println("Iteration: "*string(nRep))
 
+        # generate data for testing
         Yₒₒₛ,X_new =  dataGeneration_out(N_outofsample,ϕ,ζ,σ,J,p,L,Σ)
 
+        #--------------------------- 
+        #Compute predictions
+
+        #---- Neural network
         println("*** Neural network")
         z_nn = model(vec(X_new))
         
+        #---- Least squares
         println("*** Least squares")
         θₗₛ = LS(train_yₜ,train_xₜ,J,L)
         

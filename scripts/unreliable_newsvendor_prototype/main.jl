@@ -37,7 +37,7 @@ reg_param_surr = 0.5 # to compute the first stage solution
 reg_param_prim = 0.1 # to compute the cost of the first stage solution
 reg_param_ref = 0.0 # I do not what it is used for 
 batchsize = 1
-epochs = 5
+epochs = 10
 step_size = 1e-4
 save_model = true
 
@@ -51,9 +51,9 @@ input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr, reg_pa
 println("Starting training...")
 
 param_list = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
-#param_list = [1.0, 0.8]
+#param_list = [0.01]
 epoch_list = fill(epochs, length(param_list) + 1) # configurable epochs per stage
-epoch_list[1] = 5
+epoch_list[11] = 20
 @assert length(epoch_list) == length(param_list) + 1 "epoch_list must be one longer than param_list"
 
 function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs)
