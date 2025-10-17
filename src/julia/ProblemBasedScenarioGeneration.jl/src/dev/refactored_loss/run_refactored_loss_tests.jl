@@ -11,6 +11,8 @@ using LinearAlgebra
 using Statistics
 using BenchmarkTools
 using Zygote
+using Flux
+using Profile
 
 using ProblemBasedScenarioGeneration
 include(joinpath(@__DIR__, "RefactoredLoss.jl"))
@@ -20,9 +22,13 @@ module CustomResourceAllocationLoss
 using ..ProblemBasedScenarioGeneration
 using ..ProblemBasedScenarioGeneration: diff_opt_b, scenario_collection_realization, LogBarCanLP, TwoStageSLP, s1_cost, diff_s1_cost, LogBarCanLP_standard_solver, ProblemInstanceC2SCanLP, ResourceAllocationProblem
 using ChainRulesCore
-include(joinpath(@__DIR__, "..", "..", "..", "..", "..", "..", "scripts", "resource_allocation_prototype", "custom_code", "neural_net.jl"))
+const _prototype_dir = normpath(joinpath(@__DIR__, "..", "..", "..", "..", "..", "..",
+    "scripts", "resource_allocation_prototype"))
+include(joinpath(_prototype_dir, "custom_code", "neural_net.jl"))
 end
 using .CustomResourceAllocationLoss
+
+const _prototype_dir = CustomResourceAllocationLoss._prototype_dir
 
 const PBSG = ProblemBasedScenarioGeneration
 
@@ -85,12 +91,131 @@ fd_custom = finite_difference(sc -> CustomResourceAllocationLoss.loss(problem, r
 ad_custom = sum(custom_grad .* direction)
 println("Custom finite difference check: ", abs(fd_custom - ad_custom))
 
-old_time = @belapsed Zygote.gradient(sc -> PBSG.loss($problem, $reg_param_surr, $reg_param_prim, sc, $actual_scenario_collection), $scenario_collection)
-new_time = @belapsed Zygote.gradient(sc -> refactored_loss($problem, $reg_param_surr, $reg_param_prim, sc, $actual_scenario_collection), $scenario_collection)
-custom_time = @belapsed Zygote.gradient(sc -> CustomResourceAllocationLoss.loss($problem, $reg_param_surr, $reg_param_prim, sc, $actual_scenario_collection), $scenario_collection)
+old_time = @elapsed Zygote.gradient(sc -> PBSG.loss(problem, reg_param_surr, reg_param_prim, sc, actual_scenario_collection), scenario_collection)
+new_time = @elapsed Zygote.gradient(sc -> refactored_loss(problem, reg_param_surr, reg_param_prim, sc, actual_scenario_collection), scenario_collection)
+custom_time = @elapsed Zygote.gradient(sc -> CustomResourceAllocationLoss.loss(problem, reg_param_surr, reg_param_prim, sc, actual_scenario_collection), scenario_collection)
 
 println("Old gradient time: ", old_time)
 println("New gradient time: ", new_time)
 println("Speedup factor: ", old_time / new_time)
 println("Custom gradient time: ", custom_time)
 println("Custom/New speedup factor: ", custom_time / new_time)
+
+function gradient_timing(problem, scenario_collection, actual_scenario_collection;
+                         repeats=3, reg_param_surr=1.0, reg_param_prim=1.0)
+    t0 = time()
+    for _ in 1:repeats
+        Zygote.gradient(sc -> refactored_loss(problem, reg_param_surr, reg_param_prim, sc, actual_scenario_collection),
+                        scenario_collection)
+    end
+    ref_time = (time() - t0) / repeats
+
+    t0 = time()
+    for _ in 1:repeats
+        Zygote.gradient(sc -> CustomResourceAllocationLoss.loss(problem, reg_param_surr, reg_param_prim, sc, actual_scenario_collection),
+                        scenario_collection)
+    end
+    custom_time = (time() - t0) / repeats
+
+    return ref_time, custom_time
+end
+
+function benchmark_speed(; samples=4, repeats=3, scenarios=1)
+    ref_times = Float64[]
+    custom_times = Float64[]
+
+    for seed in 1:samples
+        Random.seed!(seed + 123)
+        problem = build_sample_problem()
+        J = size(problem.problem_data.service_rate_parameters, 2)
+        scenario_collection = 1 .+ rand(J, scenarios)
+        actual_scenario_collection = 1 .+ rand(J, scenarios)
+        ref_t, custom_t = gradient_timing(problem, scenario_collection, actual_scenario_collection;
+                                          repeats=repeats)
+        push!(ref_times, ref_t)
+        push!(custom_times, custom_t)
+    end
+
+    println("\nSpeed benchmark over $(samples) samples (each averaged over $(repeats) repeats):")
+    println("Refactored median time: ", median(ref_times))
+    println("Custom median time:     ", median(custom_times))
+    ratios = ref_times ./ custom_times
+    println("Median ref/custom ratio: ", median(ratios))
+    println("Mean ref/custom ratio:   ", mean(ratios))
+end
+
+benchmark_speed()
+
+function mini_training_time(loss_function; epochs::Int=5, samples::Int=20, repeats::Int=3)
+    total = 0.0
+    for _ in 1:repeats
+        Random.seed!(42)
+        problem = build_sample_problem()
+        model = ProblemBasedScenarioGeneration.construct_neural_network(problem; nr_of_scenarios=1)
+        opt = Flux.Optimisers.Adam(1e-3)
+        opt_state = Flux.Optimisers.setup(opt, model)
+        dataset = [(rand(size(problem.problem_data.service_rate_parameters, 1)),
+                    1 .+ rand(size(problem.problem_data.service_rate_parameters, 2), 1))
+                   for _ in 1:samples]
+        reg_param_surr = 0.1
+        reg_param_prim = 0.0
+        t0 = time()
+        for _ in 1:epochs
+            for (x, actual) in dataset
+                grad = Flux.gradient(model) do m
+                    ξ_output = m(x)
+                    ξ_output = reshape(ξ_output, :, size(actual, 2))
+                    loss_function(problem, reg_param_surr, reg_param_prim, ξ_output, actual)
+                end
+                opt_state, model = Flux.Optimisers.update(opt_state, model, grad[1])
+            end
+        end
+        total += time() - t0
+    end
+    total / repeats
+end
+
+ref_train = mini_training_time(refactored_loss)
+custom_train = mini_training_time((problem, r_s, r_p, predicted, actual) ->
+    CustomResourceAllocationLoss.loss(problem, r_s, r_p, predicted, actual))
+
+println("\nMini training runtime (averaged over repeats):")
+println("Refactored loss time: ", ref_train)
+println("Custom loss time:     ", custom_train)
+println("Ref/Custom ratio:     ", ref_train / custom_train)
+
+function profile_mini_training(loss_function; epochs::Int=1, samples::Int=5)
+    Profile.clear()
+    Random.seed!(11)
+    problem = build_sample_problem()
+    model = ProblemBasedScenarioGeneration.construct_neural_network(problem; nr_of_scenarios=1)
+    opt = Flux.Optimisers.Adam(1e-3)
+    opt_state = Flux.Optimisers.setup(opt, model)
+    dataset = [(rand(size(problem.problem_data.service_rate_parameters, 1)),
+                1 .+ rand(size(problem.problem_data.service_rate_parameters, 2), 1))
+               for _ in 1:samples]
+    reg_param_surr = 0.1
+    reg_param_prim = 0.0
+
+    Profile.@profile begin
+        for _ in 1:epochs
+            for (x, actual) in dataset
+                grad = Flux.gradient(model) do m
+                    ξ_output = m(x)
+                    ξ_output = reshape(ξ_output, :, size(actual, 2))
+                    loss_function(problem, reg_param_surr, reg_param_prim, ξ_output, actual)
+                end
+                opt_state, model = Flux.Optimisers.update(opt_state, model, grad[1])
+            end
+        end
+    end
+
+    Profile.print(; maxdepth=12, sortedby=:count)
+end
+
+println("\nProfile (refactored loss, mini training):")
+profile_mini_training(refactored_loss)
+
+println("\nProfile (custom loss, mini training):")
+profile_mini_training((problem, r_s, r_p, predicted, actual) ->
+    CustomResourceAllocationLoss.loss(problem, r_s, r_p, predicted, actual))

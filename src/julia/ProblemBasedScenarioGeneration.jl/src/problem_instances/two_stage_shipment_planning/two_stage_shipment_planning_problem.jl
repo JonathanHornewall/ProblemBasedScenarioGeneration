@@ -16,8 +16,8 @@ struct ShipmentPlanningProblemData
     context_dimension::Int
 
     function ShipmentPlanningProblemData(first_stage_costs::Vector{Float64},
-                                         recourse_penalties::Vector{Float64};
-                                         context_dimension::Int = 3)
+                                        recourse_penalties::Vector{Float64};
+                                        context_dimension::Int = 3)
         length(first_stage_costs) == length(recourse_penalties) ||
             error("First stage and recourse costs must have the same length")
         context_dimension > 0 || error("The contextual feature dimension must be positive")

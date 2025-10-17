@@ -66,6 +66,10 @@ end
 # Custom reverse rule
 # ------------------------------------------------------------------------------
 
+# Cache of linear basis realizations keyed by object id and scenario size
+const _linear_basis_cache = IdDict{Tuple{UInt, Tuple{Int,Int}}, Any}()
+const _derivative_cache = IdDict{Tuple{UInt, Tuple{Int,Int,Int,Int}, Float64}, Tuple}()
+
 # Helper to contract gradient with a vector of third-order tensors
 function _contract_tensor_list!(dest, tensors, vec)
     for (i, T) in enumerate(tensors)
@@ -80,6 +84,102 @@ function _contract_matrix_list!(dest, matrices, vec)
         dest[:, i] .= transpose(M) * vec
     end
     return dest
+end
+
+_is_allzero(arr) = all(iszero, arr)
+
+function _store_basis(arr)
+    _is_allzero(arr) ? nothing : copy(arr)
+end
+
+function _get_surrogate_derivatives(problem_instance, reg_param_surr,
+                                    Ws_surrogate, Ts_surrogate,
+                                    hs_surrogate, qs_surrogate)
+    key = (objectid(problem_instance),
+           (size(Ws_surrogate, 1), size(Ws_surrogate, 2),
+            size(Ts_surrogate, 1), size(Ts_surrogate, 2)),
+           float(reg_param_surr))
+    get!(_derivative_cache, key) do
+        PBSG.derivative_surrogate_solution(
+            problem_instance, reg_param_surr, Ws_surrogate, Ts_surrogate,
+            hs_surrogate, qs_surrogate)
+    end
+end
+
+function _get_linear_basis(problem_instance, scenario_collection)
+    key = (objectid(problem_instance), size(scenario_collection))
+    get!(_linear_basis_cache, key) do
+        n, S = size(scenario_collection)
+        total = n * S
+        scenario_basis = similar(scenario_collection)
+        fill!(scenario_basis, zero(eltype(scenario_basis)))
+
+        Ws_cells = Vector{Any}(undef, total)
+        Ts_cells = Vector{Any}(undef, total)
+        hs_cells = Vector{Any}(undef, total)
+        qs_cells = Vector{Any}(undef, total)
+
+        idx = 1
+        one_el = one(eltype(scenario_basis))
+        zero_el = zero(eltype(scenario_basis))
+        for s in 1:S
+            for i in 1:n
+                scenario_basis[i, s] = one_el
+                WsB, TsB, hsB, qsB = PBSG.scenario_collection_realization(problem_instance, scenario_basis)
+                Ws_cells[idx] = _store_basis(WsB)
+                Ts_cells[idx] = _store_basis(TsB)
+                hs_cells[idx] = _store_basis(hsB)
+                qs_cells[idx] = _store_basis(qsB)
+                scenario_basis[i, s] = zero_el
+                idx += 1
+            end
+        end
+        (; Ws = Ws_cells, Ts = Ts_cells, hs = hs_cells, qs = qs_cells)
+    end
+end
+
+function _linear_scenario_gradient(problem_instance,
+                                   ΔWs, ΔTs, Δhs, Δqs,
+                                   scenario_collection,
+                                   basis_cache)
+    n, S = size(scenario_collection)
+    grad = similar(scenario_collection)
+
+    idx = 1
+    for s in 1:S
+        for i in 1:n
+            total = zero(eltype(grad))
+
+            if ΔWs !== nothing
+                basis_ws = basis_cache.Ws[idx]
+                if basis_ws !== nothing
+                    total += sum(ΔWs .* basis_ws)
+                end
+            end
+            if ΔTs !== nothing
+                basis_ts = basis_cache.Ts[idx]
+                if basis_ts !== nothing
+                    total += sum(ΔTs .* basis_ts)
+                end
+            end
+            if Δhs !== nothing
+                basis_hs = basis_cache.hs[idx]
+                if basis_hs !== nothing
+                    total += sum(Δhs .* basis_hs)
+                end
+            end
+            if Δqs !== nothing
+                basis_qs = basis_cache.qs[idx]
+                if basis_qs !== nothing
+                    total += sum(Δqs .* basis_qs)
+                end
+            end
+
+            grad[i, s] = total
+            idx += 1
+        end
+    end
+    return grad
 end
 
 function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_param_surr,
@@ -112,8 +212,9 @@ function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_p
         D_qs = Matrix{eltype(qs_surrogate)}[]
 
         if has_W || has_T || has_h || has_q
-            D_Ws, D_Ts, D_hs, D_qs = PBSG.derivative_surrogate_solution(
-                problem_instance, reg_param_surr, Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
+            D_Ws, D_Ts, D_hs, D_qs = _get_surrogate_derivatives(
+                problem_instance, reg_param_surr,
+                Ws_surrogate, Ts_surrogate, hs_surrogate, qs_surrogate)
         end
 
         ΔWs = isempty(D_Ws) ? nothing : fill!(similar(Ws_surrogate), zero(eltype(Ws_surrogate)))
@@ -136,6 +237,8 @@ function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_p
             _contract_matrix_list!(Δqs, D_qs, surr_cotangent)
         end
 
+        basis_cache = _get_linear_basis(problem_instance, scenario_collection)
+
         function surrogate_backprop(sc)
             Ws, Ts, hs, qs = PBSG.scenario_collection_realization(problem_instance, sc)
             total = zero(eltype(sc))
@@ -154,8 +257,10 @@ function ChainRulesCore.rrule(::typeof(refactored_loss), problem_instance, reg_p
             return total
         end
 
-        scenario_grad_raw = Zygote.gradient(surrogate_backprop, scenario_collection)[1]
-        scenario_grad = scenario_grad_raw === nothing ? ZeroTangent() : scenario_grad_raw
+        scenario_grad = _linear_scenario_gradient(problem_instance,
+                                                  ΔWs, ΔTs, Δhs, Δqs,
+                                                  scenario_collection,
+                                                  basis_cache)
 
         actual_grad = ZeroTangent()
 
