@@ -81,6 +81,6 @@ softplus(x) = log(1 + exp(x))
 
 function construct_neural_network(instance::UnreliableNewsvendorProblem)
     return Chain(
-        Dense(1, 2, sigmoid)     # to output values between 0 and 1
+        Dense(1, 2)     # to output values between 0 and 1
     ) |> f64
 end

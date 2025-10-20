@@ -33,8 +33,7 @@ data_set_training, data_set_testing =  dataGeneration(problem_instance, Ntrainin
 
 model = construct_neural_network(problem_instance)
 # Train the neural network model
-reg_param_surr = 0.5 # to compute the first stage solution
-reg_param_prim = 0.1 # to compute the cost of the first stage solution
+
 reg_param_ref = 0.0 # I do not what it is used for 
 batchsize = 1
 epochs = 10
@@ -56,7 +55,7 @@ epoch_list = fill(epochs, length(param_list) + 1) # configurable epochs per stag
 epoch_list[11] = 20
 @assert length(epoch_list) == length(param_list) + 1 "epoch_list must be one longer than param_list"
 
-function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs)
+function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs, filepath)
         input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
         input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
 
@@ -66,20 +65,26 @@ function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_ep
 
         save_experiment_state(model, data_set_training, data_set_testing, problem_instance,
                 Dict("reg_param_surr" => reg_param_surr_stage, "reg_param_prim" => reg_param_prim_stage, "reg_param_ref" => reg_param_ref),
-                filepath = "experiment_state_newsvendor.jls")
+                filepath = filepath)
 end
 
 for (idx, reg_param_surr) in enumerate(param_list)
         stage_epochs = epoch_list[idx]
-        reg_param_prim_stage = reg_param_surr
+        if idx == length(param_list)
+                reg_param_prim_stage = 0.0
+        else
+                reg_param_prim_stage = reg_param_surr
+        end
         println("Starting annealing stage $(idx) with reg_param_surr = $(reg_param_surr), reg_param_prim = $(reg_param_prim_stage), epochs = $(stage_epochs)")
-        run_training_stage(reg_param_surr, reg_param_prim_stage, stage_epochs)
+        filepath = "experiment_state_newsvendor_annealing_$(idx).jls"
+        run_training_stage(reg_param_surr, reg_param_prim_stage, stage_epochs,filepath)
 end
 
 println("Training completed!")
 
 println(model([1.0])[1], " should be equal to ", z_star*model([1.0])[2])
 
+reg_param_surr = last(param_list)
 z = surrogate_solution(problem_instance, reg_param_surr, model([1.0]))[1]
 println("z equals ", z, " while z* equals ", z_star)
 
