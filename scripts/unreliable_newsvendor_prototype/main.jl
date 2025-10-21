@@ -74,7 +74,7 @@ end
 for (idx, reg_param_surr) in enumerate(param_list)
         stage_epochs = epoch_list[idx]
         if idx == length(param_list)
-                reg_param_prim_stage = 0.01
+                reg_param_prim_stage = 0.0
         else
                 reg_param_prim_stage = reg_param_surr
         end

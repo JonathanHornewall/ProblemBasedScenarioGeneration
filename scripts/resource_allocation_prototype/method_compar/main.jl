@@ -24,7 +24,7 @@ p = 2 # degree of the data generation procedure
 # ============================================================
 # Parameters - do not change
 # ============================================================
-NScenarios = [100,1000,10000]
+NScenarios = [1000,10000]
 J = 30
 I_prods = 20
 ω = 1
@@ -49,7 +49,7 @@ thetas_dict = Dict()
 
 #Generate training data for experiment
 Y,X =  dataGeneration_in(N_insample,ϕ,ζ,σ,J,p,L,Σ)
-
+@save "data_insample.jld2" Y X
 
 
 
@@ -95,43 +95,44 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
         println("**************************************")
         println("Computing first stage decisions")
 
-        #---- Neural network
+        #Neural network
         println("*** Neural network")
         z_NN = model(vec(X_new))
         
-        #---- Least squares
+        #Least squares
         println("*** Least squares")
         
         ŷₗₛ = pointPred(X_new,θₗₛ,J)
         z_LS = kannanOpt(J,I_prods,ŷₗₛ ,cz,qw,ρᵢ,μᵢⱼ)
         
         #εin := (yi − fn(xi)),
-        println("***ER")
+        println("*** ER")
     
 
-        #---- ER - SAA - OLS
+        #ER - SAA - OLS
         println("*** SAA-ER")
         z_ERSAA = SAA_kannan(T,J,I_prods,ŷₗₛ .+ls_ε ,cz,qw,ρᵢ,μᵢⱼ)
         
 
-        #------------ CART
+        #CART
         println("*** CART")
         X2 = train_xₜ
         y2 = transpose(train_yₜ)
-        X_train, X_test, y_train, y_test = py"train_test_split"(X2, y2, test_size=0.2,random_state=42)
+        #compute the structure of the tree and the prediction
+        X_train, X_test, y_train, y_test = py"train_test_split"(X2, y2, test_size=0.2,random_state=42) #it could be good to slit the function into two, training and testing, so that we train only once
         tree = py"getRegressor"(X_train,y_train,X_test, y_test)
         getLeav = py"getLeav"(tree,X_new,X_train,y_train)
 
         #Transform in right format for AD
         println("*** M5+AD")
-        T_hojas = length(getLeav[1][:,:,1])
-        X_hoja = reshape(getLeav[1][:,:,:],(length(getLeav[1][:,:,1]),L))
-        Y_hoja = transpose(reshape(getLeav[2][:,:,:],(length(getLeav[2][:,:,1]),J)) )
+        T_leafs = length(getLeav[1][:,:,1])
+        X_leaf = reshape(getLeav[1][:,:,:],(length(getLeav[1][:,:,1]),L))
+        Y_leaf = transpose(reshape(getLeav[2][:,:,:],(length(getLeav[2][:,:,1]),J)) )
 
         #AD from samples
-        cart_res = Optim.optimize(θ->heuristicAD_par(θ,T_hojas ,Y_hoja,X_hoja,J,I_prods,cz,qw,ρᵢ,μᵢⱼ),θₗₛ  , NelderMead(), Optim.Options(f_tol=0.0001))
-        cart_θₙₘ = Optim.minimizer(cart_res)
-        cart_ŷ = pointPred(X_new,cart_θₙₘ,J)
+        cart_res = Optim.optimize(θ->heuristicAD_par(θ,T_leafs ,Y_leaf,X_leaf,J,I_prods,cz,qw,ρᵢ,μᵢⱼ),θₗₛ  , NelderMead(), Optim.Options(f_tol=0.0001))
+        θ_cart = Optim.minimizer(cart_res)
+        cart_ŷ = pointPred(X_new,θ_cart,J)
         z_M5AD = kannanOpt(J,I_prods,cart_ŷ ,cz,qw,ρᵢ,μᵢⱼ)
         
         #cart normal
@@ -147,11 +148,13 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
 
         Z_AD = kannanOpt(J,I_prods,ŷₙₘ ,cz,qw,ρᵢ,μᵢⱼ)
 
-        #knn
+        #KNN (SAA with scenarios associated to k nearest covariates in the training set)
         k = minimum((Int(round(5*(T^0.4))),T-1)) 
-        yₖₙₙ = generateDemandKNN(train_xₜ,train_yₜ,k,X_new)
-        z_KNN = SAA_kannan(k,J,I_prods,yₖₙₙ ,cz,qw,ρᵢ,μᵢⱼ)
+        yₖₙₙ = generateDemandKNN(train_xₜ,train_yₜ,k,X_new) # find scenarios associated to k nearest neighbords
+        # of X_new in the training set 
+        z_KNN = SAA_kannan(k,J,I_prods,yₖₙₙ ,cz,qw,ρᵢ,μᵢⱼ) # computed first stage decision
         
+        # SAA (with full set of scenarios in training set)
         z_SAA = SAA_kannan(T,J,I_prods,train_yₜ ,cz,qw,ρᵢ,μᵢⱼ)
 
         # ============================================================

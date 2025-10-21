@@ -9,7 +9,7 @@ phi = (p + π - c)/ (p + π + η)
 
 if 0 <= phi <= 1/3
     z_star = 3*phi*b
-elseif 1/3 <= phi<= 1
+elseif 1/3 < phi<= 1
     z_star = b*sqrt(2/(3*(1-phi)))
 else
     println("wrong parameters")

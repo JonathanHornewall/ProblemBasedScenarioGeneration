@@ -30,7 +30,7 @@ function NNmodel(Nsamples,x,ξ,μᵢⱼ, cz, qw, ρᵢ)
 
     param_list = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
     #param_list = [0.01]
-    epoch_list = fill(epochs, length(param_list) + 1) # configurable epochs per stage
+    epoch_list = fill(epochs, length(param_list)) # configurable epochs per stage
     epoch_list[11] = 20
     @assert length(epoch_list) == length(param_list) + 1 "epoch_list must be one longer than param_list"
 
