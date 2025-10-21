@@ -12,6 +12,8 @@ include("NN.jl")
 
 include(joinpath(@__DIR__, "..", "custom_code", "neural_net.jl"))
 
+using JLD2
+
 
 # ============================================================
 # Parameters - can be changed

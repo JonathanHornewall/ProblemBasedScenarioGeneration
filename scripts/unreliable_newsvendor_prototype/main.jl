@@ -55,7 +55,10 @@ epoch_list = fill(epochs, length(param_list) + 1) # configurable epochs per stag
 epoch_list[11] = 20
 @assert length(epoch_list) == length(param_list) + 1 "epoch_list must be one longer than param_list"
 
-function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs, filepath)
+# we keep only the model from the last annealing stage because of overwriting
+filepath = "experiment_state_newsvendor_annealing.jls"
+
+function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs)
         input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
         input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
 
@@ -71,13 +74,12 @@ end
 for (idx, reg_param_surr) in enumerate(param_list)
         stage_epochs = epoch_list[idx]
         if idx == length(param_list)
-                reg_param_prim_stage = 0.0
+                reg_param_prim_stage = 0.01
         else
                 reg_param_prim_stage = reg_param_surr
         end
         println("Starting annealing stage $(idx) with reg_param_surr = $(reg_param_surr), reg_param_prim = $(reg_param_prim_stage), epochs = $(stage_epochs)")
-        filepath = "experiment_state_newsvendor_annealing_$(idx).jls"
-        run_training_stage(reg_param_surr, reg_param_prim_stage, stage_epochs,filepath)
+        run_training_stage(reg_param_surr, reg_param_prim_stage, stage_epochs)
 end
 
 println("Training completed!")

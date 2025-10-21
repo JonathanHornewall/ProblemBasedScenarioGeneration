@@ -25,7 +25,8 @@ function NNmodel(Nsamples,x,ξ,μᵢⱼ, cz, qw, ρᵢ)
     state_dir = joinpath("experiment_states", "main")
     mkpath(state_dir)
 
-    model_save_path = joinpath(state_dir, "trained_model.jls")
+    # we keep only the model from the last annealing stage because of overwriting
+    model_save_path = joinpath(state_dir, "trained_model_$(Nsamples).jls")
 
     param_list = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
     #param_list = [0.01]
