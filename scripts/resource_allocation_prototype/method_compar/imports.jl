@@ -1,5 +1,7 @@
-using JuMP,
-    Gurobi, 
+using 
+    #Gurobi
+    GLPK,
+    JuMP,
     Distributions, 
     JLD2, 
     DataFrames,
@@ -17,5 +19,5 @@ using JuMP,
     Flux,
     ChainRulesCore
 
-const GRB_ENV = Gurobi.Env()
+#const GRB_ENV = Gurobi.Env()
 

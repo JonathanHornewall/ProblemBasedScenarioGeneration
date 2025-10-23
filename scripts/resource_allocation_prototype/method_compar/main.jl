@@ -24,7 +24,7 @@ p = 2 # degree of the data generation procedure
 # ============================================================
 # Parameters - do not change
 # ============================================================
-NScenarios = [1000,10000]
+NScenarios = [100,1000,10000]
 J = 30
 I_prods = 20
 ω = 1
@@ -32,7 +32,7 @@ L = 3
 σ = 5
 rep = 30 #to replicate the experiment in tito's paper, do not change
 N_insample = 10000
-N_outofsample = 1000*30 # 30 iterations with the same x to compute a bound for the boxplot, and 
+N_outofsample = 100*30 # 30 iterations with the same x to compute a bound for the boxplot, and 
 #each requires 1000 samples
 
 # ============================================================
@@ -146,7 +146,7 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
         nm_ε = residuos(nm_fₙ,train_yₜ)
         ŷₙₘ  = pointPred(X_new,θₙₘ,J)
 
-        Z_AD = kannanOpt(J,I_prods,ŷₙₘ ,cz,qw,ρᵢ,μᵢⱼ)
+        z_AD = kannanOpt(J,I_prods,ŷₙₘ ,cz,qw,ρᵢ,μᵢⱼ)
 
         #KNN (SAA with scenarios associated to k nearest covariates in the training set)
         k = minimum((Int(round(5*(T^0.4))),T-1)) 
@@ -163,6 +163,9 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
 
         println("**************************************")
         println("Computing gaps")
+
+        TD_NN = algorithm(z_NN,Yₒₒₛ,J,I_prods,cz,qw,ρᵢ,μᵢⱼ)
+        @show TD_NN
         
         TD_LS = algorithm(z_LS,Yₒₒₛ,J,I_prods,cz,qw,ρᵢ,μᵢⱼ)
         @show TD_LS
@@ -184,9 +187,6 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
         
         TD_SAA = algorithm(z_SAA,Yₒₒₛ,J,I_prods,cz,qw,ρᵢ,μᵢⱼ)
         @show TD_SAA
-
-        TD_NN = algorithm(z_NN,Yₒₒₛ,J,I_prods,cz,qw,ρᵢ,μᵢⱼ)
-        @show TD_NN
 
         # store gaps in DF
 

@@ -1,7 +1,12 @@
 
 function fullInfoSAA(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
-    model_saa2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model_saa2, "OutputFlag", 0)
+    #model_saa2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    #set_optimizer_attribute(model_saa2, "OutputFlag", 0)
+
+    model_saa2 = Model(GLPK.Optimizer)
+
+    # GLPK also supports controlling output/verbosity
+    set_optimizer_attribute(model_saa2, "msg_lev", 0)  
 
     @variables(model_saa2,
     begin
