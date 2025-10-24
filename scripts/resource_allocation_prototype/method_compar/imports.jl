@@ -1,6 +1,6 @@
 using 
-    Gurobi,
-    #GLPK,
+    #Gurobi,
+    GLPK,
     JuMP,
     Distributions, 
     JLD2, 
