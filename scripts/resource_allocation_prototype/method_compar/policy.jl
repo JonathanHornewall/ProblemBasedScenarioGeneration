@@ -1,9 +1,9 @@
 function kannanOpt(J,I,Y_scenario,cz,qw,ρ,μᵢⱼ)
-    modelK1 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(modelK1, "OutputFlag", 0)
+    #modelK1 = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    #set_optimizer_attribute(modelK1, "OutputFlag", 0)
 
-    #modelK1 = Model(GLPK.Optimizer)
-    #set_optimizer_attribute(modelK1, "msg_lev", 0)  
+    modelK1 = Model(GLPK.Optimizer)
+    set_optimizer_attribute(modelK1, "msg_lev", 0)  
 
     @variables(modelK1,
     begin
@@ -29,10 +29,10 @@ function kannanOpt(J,I,Y_scenario,cz,qw,ρ,μᵢⱼ)
 end
 
 function SAA_kannan(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
-    model_saa = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    #model_saa = Model(GLPK.Optimizer)
-    set_optimizer_attribute(model_saa, "OutputFlag", 0)
-    #set_optimizer_attribute(model_saa, "msg_lev", 0)  
+    #model_saa = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    model_saa = Model(GLPK.Optimizer)
+    #set_optimizer_attribute(model_saa, "OutputFlag", 0)
+    set_optimizer_attribute(model_saa, "msg_lev", 0)  
 
     @variables(model_saa,
     begin
