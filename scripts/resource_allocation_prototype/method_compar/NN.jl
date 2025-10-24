@@ -18,7 +18,7 @@ function NNmodel(Nsamples,x,ξ,μᵢⱼ, cz, qw, ρᵢ)
     # Train the neural network model
     reg_param_ref = 0.0
     batchsize = 1
-    epochs = 50
+    epochs = 2
     step_size = 1e-3
     save_model_training = true
 
@@ -29,7 +29,7 @@ function NNmodel(Nsamples,x,ξ,μᵢⱼ, cz, qw, ρᵢ)
     model_save_path = joinpath(state_dir, "trained_model_$(Nsamples).jls")
 
     #param_list = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
-    param_list = [0.1, 0.01]
+    param_list = [0.01]
     #param_list = [0.01]
     epoch_list = fill(epochs, length(param_list)) # configurable epochs per stage
     #epoch_list[11] = 20

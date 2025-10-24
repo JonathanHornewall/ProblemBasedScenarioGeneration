@@ -12,7 +12,14 @@ include("NN.jl")
 
 include(joinpath(@__DIR__, "..", "custom_code", "neural_net.jl"))
 
+using Serialization
+
 using JLD2
+
+include("parameters.jl")   
+cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)    
+problem_data = ResourceAllocationProblemData(μᵢⱼ, cz, qw, ρᵢ)         
+problem_instance = ResourceAllocationProblem(problem_data) 
 
 
 # ============================================================
@@ -24,14 +31,14 @@ p = 2 # degree of the data generation procedure
 # ============================================================
 # Parameters - do not change
 # ============================================================
-NScenarios = [100,1000,10000]
+NScenarios = [100]
 J = 30
 I_prods = 20
 ω = 1
 L = 3
 σ = 5
 rep = 30 #to replicate the experiment in tito's paper, do not change
-N_insample = 10000
+N_insample = 100
 N_outofsample = 100*30 # 30 iterations with the same x to compute a bound for the boxplot, and 
 #each requires 1000 samples
 
@@ -47,14 +54,8 @@ df_final= DataFrame()
 df_inSample = DataFrame()
 thetas_dict = Dict()
 
-#Generate training data for experiment
-Y,X =  dataGeneration_in(N_insample,ϕ,ζ,σ,J,p,L,Σ)
-@save "data_insample.jld2" Y X
-
-include("parameters.jl")   
-cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)    
-problem_data = ResourceAllocationProblemData(μᵢⱼ, cz, qw, ρᵢ)         
-problem_instance = ResourceAllocationProblem(problem_data) 
+#load training and testing data
+dict_train, dict_test = deserialize("dataset_seed_145_trial_03_Ntrain_100_Ntest_30_Nxi_100_sigma_5_00_p_2_L_3.jls")
 
 
 # ============================================================
@@ -67,18 +68,18 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
 
     #get training data
     T = NScenarios[t_idx]  
-    train_yₜ = Y[:,1:T] #cut data so that we get the right number of scenarios
-    train_xₜ =  X[1:T,:]
-
-    println(size(train_yₜ))
-    println(size(train_xₜ))
-
+    train_yₜ = hcat(values(dict_train)...)
+    keys_vec = collect(keys(dict_train)) 
+    train_xₜ = zeros(100,3)
+    for scen in 1:100
+        train_xₜ[scen,:] = keys_vec[scen]
+    end
     
     # ============================================================
     # Training models
     # ============================================================
-    println("train neural network")
-    model = NNmodel(T,train_xₜ,train_yₜ,μᵢⱼ, cz, qw, ρᵢ) # train Neural network onc
+    model = deserialize("stage_12_model.jls")# use pretrained model
+
     println("train least squares")
     θₗₛ = LS(train_yₜ,train_xₜ,J,L)
     ls_fₙ = forecast_cesgado(θₗₛ,train_xₜ,L,J,T) # to compute prediction
@@ -90,8 +91,23 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
         
         println("Iteration: "*string(nRep))
 
-        # generate data for testing
-        Yₒₒₛ,X_new =  dataGeneration_out(N_outofsample,ϕ,ζ,σ,J,p,L,Σ)
+        # load data for testing
+        keys_list = collect(keys(dict_test))
+        key = keys_list[nRep]
+
+        X_new  = zeros(1,3)
+        for i in 1:3
+            X_new[i] = key[i]
+        end
+
+        vec_list = dict_test[key]
+        Yₒₒₛ = zeros(30,3000)
+        for scen in 1:100
+            for j in 1:J
+                Yₒₒₛ[j,(scen-1)*30+1:(scen-1)*30+30] = vec_list[:,scen,j]
+            end
+        end
+        
 
 
         # ============================================================

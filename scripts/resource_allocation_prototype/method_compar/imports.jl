@@ -1,6 +1,6 @@
 using 
-    #Gurobi
-    GLPK,
+    Gurobi,
+    #GLPK,
     JuMP,
     Distributions, 
     JLD2, 
@@ -19,5 +19,5 @@ using
     Flux,
     ChainRulesCore
 
-#const GRB_ENV = Gurobi.Env()
+const GRB_ENV = Gurobi.Env()
 

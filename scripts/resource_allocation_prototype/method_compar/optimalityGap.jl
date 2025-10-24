@@ -1,12 +1,12 @@
 
 function fullInfoSAA(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
-    #model_saa2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    #set_optimizer_attribute(model_saa2, "OutputFlag", 0)
+    model_saa2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    set_optimizer_attribute(model_saa2, "OutputFlag", 0)
 
-    model_saa2 = Model(GLPK.Optimizer)
+   # model_saa2 = Model(GLPK.Optimizer)
 
     # GLPK also supports controlling output/verbosity
-    set_optimizer_attribute(model_saa2, "msg_lev", 0)  
+    #set_optimizer_attribute(model_saa2, "msg_lev", 0)  
 
     @variables(model_saa2,
     begin
@@ -67,18 +67,18 @@ function algorithm(ẑₙ,OoS,J,I,cz,qw,ρ,μᵢⱼ)
     list_v = Float64[]
     for k in 1:30
         print(".")
-        ending = k*1000        
-        start = ending - 999
+        ending = k*100    
+        start = ending - 99
         #@show start
         #@show ending
 
         data_Dᵏ = OoS[:,start:ending]
 
         #v̄ᵏ
-        v̄ᵏ =  fullInfoSAA(1000,J,I,data_Dᵏ,cz,qw,ρ,μᵢⱼ)
+        v̄ᵏ =  fullInfoSAA(100,J,I,data_Dᵏ,cz,qw,ρ,μᵢⱼ)
 
         #v̂ᵏ
-        v̂ᵏ = solution_cost(ẑₙ,1000,J,I,data_Dᵏ,cz,qw,ρ,μᵢⱼ)
+        v̂ᵏ = solution_cost(ẑₙ,100,J,I,data_Dᵏ,cz,qw,ρ,μᵢⱼ)
 
         #Ĝᵏ = v̂ᵏ - v̄ᵏ
         Ĝᵏ = v̂ᵏ - v̄ᵏ
