@@ -24,7 +24,7 @@ p = 2 # degree of the data generation procedure
 # ============================================================
 # Parameters - do not change
 # ============================================================
-NScenarios = [100,1000,10000]
+NScenarios = [1000,10000]
 J = 30
 I_prods = 20
 ω = 1
