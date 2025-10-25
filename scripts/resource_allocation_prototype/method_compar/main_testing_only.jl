@@ -68,12 +68,17 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
 
     #get training data
     T = NScenarios[t_idx]  
+
+    # ============================================================
+    # Convert data format
+    # ============================================================
     train_yₜ = hcat(values(dict_train)...)
     keys_vec = collect(keys(dict_train)) 
     train_xₜ = zeros(100,3)
     for scen in 1:100
         train_xₜ[scen,:] = keys_vec[scen]
     end
+    keys_list = collect(keys(dict_test))
     
     # ============================================================
     # Training models
@@ -92,7 +97,10 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
         println("Iteration: "*string(nRep))
 
         # load data for testing
-        keys_list = collect(keys(dict_test))
+
+        # ============================================================
+        # Convert data format
+        # ============================================================
         key = keys_list[nRep]
 
         X_new  = zeros(1,3)
