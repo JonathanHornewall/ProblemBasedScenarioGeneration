@@ -18,7 +18,7 @@ function NNmodel(Nsamples,x,ξ,μᵢⱼ, cz, qw, ρᵢ)
     # Train the neural network model
     reg_param_ref = 0.0
     batchsize = 1
-    epochs = 20
+    epochs = 5
     step_size = 1e-3
     save_model_training = true
 
