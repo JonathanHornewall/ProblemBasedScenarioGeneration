@@ -14,25 +14,25 @@ Generally, the code should try to re-use functionality as much as possible (e.g.
 
 ## Step 1: Generate Testing Data
 - Tasks:
-  - Sample 100 covariates with parameter `p = 2` using the same data-generation routine as Tito’s experiments.
-  - For each of 30 designated testing covariates, draw 30 independent batches of 1,000 demand scenarios (shape: `30 × 30 × 1000 × J`).
+  - Sample 30 covariates with parameter `p = 2` using the same data-generation routine as Tito’s experiments.
+  - For each of 30 designated testing covariates, draw C independent batches of S demand scenarios (default C = 1, S = 100). Store with shape: `30 × C × S × J`.
 - Artifacts (all written under `artifacts/testing/`):
   - `test_covariates.csv`: 30 rows with the covariate vectors used for evaluation.
-  - `test_scenarios.jls`: serialized array storing the 30 × 30 × 1000 scenarios aligned with `test_covariates.csv`.
+  - `test_scenarios.jls`: serialized array storing the `30 × C × S × J` scenarios aligned with `test_covariates.csv`.
   - `full_context_pool.csv`: 100 rows capturing the complete covariate pool prior to splitting (so we can reproduce splits deterministically).
 
 ## Step 2: Compute SAA Baselines
 - Tasks:
-  - For each testing covariate, solve 30 independent SAA problems, each using one of the 1,000-scenario batches.
-  - Average the 30 optimal costs to obtain the reference optimum per covariate.
+  - For each testing covariate, solve C independent SAA problems, each using one of that covariate’s S-scenario batches.
+  - Average the C optimal costs to obtain the reference optimum per covariate (with default C = 1 this equals the single run).
 - Artifacts (under `artifacts/testing/`):
-  - `saa_runs.csv`: 900 rows with columns `{covariate_id, run_id (1–30), objective_value, covariate_vector...}`.
+  - `saa_runs.csv`: `30 × C` rows with columns `{covariate_id, run_id (1–C), objective_value, covariate_vector...}`.
   - `saa_optima.csv`: 30 rows with columns `{covariate_id, optimal_cost, covariate_vector...}` (the averaged optimums).
   - Optional: `saa_solver_metadata.json` describing solver settings (seed, tolerance) for reproducibility.
 
 ## Step 3: Generate Training Data
 - Tasks:
-  - From the remaining 70 covariates (after reserving 30 for testing), build 100 context–scenario pairs using the same distributional parameters.
+  - Sample 100 training covariates. For each covariate, sample a scenario to build 100 context–scenario pairs. Use the same distributional parameters as for the testing data.
   - Ensure the random seeds and parameters are logged so the dataset can be regenerated.
 - Artifacts (under `artifacts/training/`):
   - `training_pairs.jls`: serialized collection of 100 tuples `(x, ξ)` with ξ containing the scenario matrix per covariate.
@@ -82,11 +82,11 @@ Generally, the code should try to re-use functionality as much as possible (e.g.
   - size of the training data (default 100)
   - scenarios per context in the training data (default 1)
   - nr covariates in testing data (default 30)
-  - nr of scenario collections per covariate in testing data (default 30)
-  - size of scenario collection per covariate in testing data (default 1000)
+  - nr of scenario collections per covariate in testing data (default 1)
+  - size of scenario collection per covariate in testing data (default 100)
   - the data generation parameters of the training data and the testing data (default p =2)
   - Annealing schedule for neural net training (default 1.0, 0.1, 0.01)
-  - Epoch schedule (default 100 for the first one, then 30 for the following 3). It should only be used to infer the desired appearance of the final plot, and as a reference for the implementation of the benchmark methods (which should be re-used and not changed.)
+  - Epoch schedule (default 100 for the first one, then 30 for the following 3). Used for training the neural net.
 
   - Step size schedule (default 10⁻3 for the first one, 10⁻4 for the following 3)
   - Batch size schedule (default 10 for first one, then 25 for the following 3)
@@ -102,3 +102,5 @@ Test 1:
 Perform a small smoke run, with minimal values for training and testing data. The goal is just to ensure that the script runs to completion.
 
 Test 2: Perform a test with the different flags to ensure that they behave correctly.
+
+Iterate until the tests pass.
