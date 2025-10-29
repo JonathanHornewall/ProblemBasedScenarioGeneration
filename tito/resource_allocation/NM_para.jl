@@ -2,7 +2,7 @@
 
 function kannanPlanPolicy(J,I,ŷₜ ,cz,qw,ρ,μᵢⱼ)
     modelK1 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(modelK1, "OutputFlag", 0)
+    set_solver_silent!(modelK1)
 
     @variables(modelK1,
     begin
@@ -29,7 +29,7 @@ end
 
 function kannanCostAssessment(zᵢ,J,I,yₜ ,cz,qw,ρ,μᵢⱼ,δ)
     modelK2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(modelK2, "OutputFlag", 0)
+    set_solver_silent!(modelK2)
 
     @variables(modelK2,
     begin
@@ -148,7 +148,7 @@ function planPolicy(ŷⱼₜ,CostMatrix)
     #CostMatrix = CostMatrix[:,1:dy]
     
     model = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model, "OutputFlag", 0)
+    set_solver_silent!(model)
 
     @variables(model,
     begin
@@ -182,7 +182,7 @@ function costAssessment(zₜ,yₜ,Cᵢⱼ,δ)
     CostMatrix = Cᵢⱼ
     
     model = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model, "OutputFlag", 0)
+    set_solver_silent!(model)
 
     @variables(model,
     begin

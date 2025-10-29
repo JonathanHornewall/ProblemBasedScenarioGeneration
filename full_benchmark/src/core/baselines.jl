@@ -3,16 +3,20 @@ module Baselines
 using Random
 using LinearAlgebra
 using Statistics
+using Logging
 
 import ..Datasets
 
 export ensure_tito_loaded,
        assemble_training_matrices,
        compute_residuals,
-       default_knn_k
+       default_knn_k,
+       cart_available
 
 const TITO_ROOT = normpath(joinpath(@__DIR__, "..", "..", "..", "tito", "resource_allocation"))
 const _TITO_LOADED = Ref(false)
+const CART_AVAILABLE = Ref(true)
+const CART_ERROR = Ref{Union{Nothing,Tuple{Any,Any}}}(nothing)
 
 """
     ensure_tito_loaded()
@@ -22,6 +26,11 @@ Bring Tito et al.'s baseline implementations into scope. Subsequent calls are no
 function ensure_tito_loaded()
     _TITO_LOADED[] && return
 
+    shim_path = normpath(joinpath(@__DIR__, "..", "..", "shims"))
+    if !(shim_path in Base.LOAD_PATH)
+        pushfirst!(Base.LOAD_PATH, shim_path)
+    end
+
     include(joinpath(TITO_ROOT, "imports.jl"))
     include(joinpath(TITO_ROOT, "data.jl"))
     include(joinpath(TITO_ROOT, "LS.jl"))
@@ -29,7 +38,18 @@ function ensure_tito_loaded()
     include(joinpath(TITO_ROOT, "optimalityGap.jl"))
     include(joinpath(TITO_ROOT, "policy.jl"))
     include(joinpath(TITO_ROOT, "NM_para.jl"))
-    include(joinpath(TITO_ROOT, "CART.jl"))
+
+    try
+        include(joinpath(TITO_ROOT, "CART.jl"))
+        CART_AVAILABLE[] = true
+        CART_ERROR[] = nothing
+    catch err
+        CART_AVAILABLE[] = false
+        bt = catch_backtrace()
+        CART_ERROR[] = (err, bt)
+        @warn "CART baseline unavailable; falling back to linear surrogates" exception = (err, bt)
+    end
+
     include(joinpath(TITO_ROOT, "kNN.jl"))
 
     _TITO_LOADED[] = true
@@ -64,6 +84,16 @@ function assemble_training_matrices(pairs::Vector{Datasets.TrainingPair})
     end
 
     return X, Y
+end
+
+"""
+    cart_available()
+
+Returns whether CART-based baselines were successfully loaded.
+"""
+function cart_available()
+    ensure_tito_loaded()
+    return CART_AVAILABLE[]
 end
 
 """

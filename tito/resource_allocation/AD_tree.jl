@@ -40,7 +40,7 @@ end
 function AD_tree_model(N,Tₗ,Tᵦ ,Rᵢⱼ,α,Nₘᵢₙ,P,ϵⱼ,ϵₘₐₓ,xᵢ)
     
     model_tree = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model_tree, "OutputFlag", 0)
+    set_solver_silent!(model_tree)
 
     @variables(model_tree,
     begin

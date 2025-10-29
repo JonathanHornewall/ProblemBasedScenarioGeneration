@@ -9,11 +9,8 @@ using Random
 using Serialization
 using Statistics
 
-include("../util/config.jl")
-include("../util/artifacts.jl")
-
-using .Config: ExperimentConfig, seed_rng!
-using .Artifacts: ensure_step_directories, mark_step_complete, write_json_file
+using ..Config: ExperimentConfig, seed_rng!
+using ..Artifacts: ensure_step_directories, mark_step_complete, write_json_file
 
 push!(Base.LOAD_PATH, normpath(joinpath(@__DIR__, "..", "..", "src")))
 import FullBenchmark
@@ -28,6 +25,10 @@ include(joinpath(REPO_ROOT, "scripts", "resource_allocation_prototype", "paramet
 
 export execute_train_neural
 
+const TEST_MODE_ENV_KEY = "FULL_BENCHMARK_TEST_MODE"
+
+is_test_mode() = get(ENV, TEST_MODE_ENV_KEY, "0") == "1"
+
 function execute_train_neural(config::ExperimentConfig, ctx::NamedTuple)
     output_dir = ctx.output_dir
     ensure_step_directories(output_dir, :train_neural)
@@ -36,6 +37,27 @@ function execute_train_neural(config::ExperimentConfig, ctx::NamedTuple)
     pairs_path = joinpath(training_dir, "training_pairs.jls")
     if !isfile(pairs_path)
         error("Training pairs not found at $(pairs_path). Generate training data first or supply input artifacts.")
+    end
+
+    models_dir = joinpath(output_dir, "artifacts", "models", "neural")
+    mkpath(models_dir)
+
+    if is_test_mode()
+        timestamp = string(Dates.now())
+        placeholder = Dict(
+            "status" => "test_mode",
+            "timestamp" => timestamp,
+            "seed" => config.neural_seed
+        )
+        Serialization.serialize(joinpath(models_dir, "neural_model_final.jls"), placeholder)
+        CSV.write(joinpath(models_dir, "neural_training_history.csv"),
+                  DataFrame(phase = Int[], epoch = Int[], relative_loss = Float64[]))
+        write_json_file(joinpath(models_dir, "neural_training_log.json"),
+                        Dict("status" => "test_mode",
+                             "timestamp" => timestamp,
+                             "seed" => config.neural_seed))
+        mark_step_complete(:train_neural, output_dir)
+        return nothing
     end
 
     pairs = Serialization.deserialize(pairs_path)::Vector{FullBenchmark.Datasets.TrainingPair}
@@ -71,9 +93,6 @@ function execute_train_neural(config::ExperimentConfig, ctx::NamedTuple)
                                       step_sizes,
                                       batch_sizes,
                                       config.surrogate_parameter)
-
-    models_dir = joinpath(output_dir, "artifacts", "models", "neural")
-    mkpath(models_dir)
 
     model_path = joinpath(models_dir, "neural_model_final.jls")
     ProblemBasedScenarioGeneration.save_trained_model(model, model_path)

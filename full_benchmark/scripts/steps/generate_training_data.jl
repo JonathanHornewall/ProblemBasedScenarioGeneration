@@ -7,11 +7,8 @@ using DataFrames: Not
 using Serialization
 using Dates
 
-include("../util/config.jl")
-include("../util/artifacts.jl")
-
-using .Config: ExperimentConfig, seed_rng!
-using .Artifacts: ensure_step_directories, mark_step_complete, write_json_file
+using ..Config: ExperimentConfig, seed_rng!
+using ..Artifacts: ensure_step_directories, mark_step_complete, write_json_file
 
 push!(Base.LOAD_PATH, normpath(joinpath(@__DIR__, "..", "..", "src")))
 import FullBenchmark

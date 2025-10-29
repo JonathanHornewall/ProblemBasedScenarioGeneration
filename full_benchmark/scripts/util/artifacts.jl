@@ -81,8 +81,9 @@ end
 function mark_step_complete(step::Symbol, dir::AbstractString)
     marker = joinpath(dir, "artifacts", string(step) * ".done")
     mkpath(dirname(marker))
+    timestamp = Dates.format(Dates.now(), Dates.DateFormat("yyyy-mm-ddTHH:MM:SS"))
     open(marker, "w") do io
-        println(io, "completed_at = \"$(Dates.format(Dates.now(), Dates.RFC3339))\"")
+        println(io, "completed_at = \"$(timestamp)\"")
     end
 end
 

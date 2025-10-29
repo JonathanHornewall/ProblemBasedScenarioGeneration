@@ -1,6 +1,6 @@
 function kannanOpt(J,I,Y_scenario,cz,qw,ρ,μᵢⱼ)
     modelK1 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(modelK1, "OutputFlag", 0)
+    set_solver_silent!(modelK1)
 
     @variables(modelK1,
     begin
@@ -27,7 +27,7 @@ end
 
 function SAA_kannan(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
     model_saa = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model_saa, "OutputFlag", 0)
+    set_solver_silent!(model_saa)
 
     @variables(model_saa,
     begin

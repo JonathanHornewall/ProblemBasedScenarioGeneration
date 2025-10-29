@@ -7,13 +7,14 @@ using Statistics
 using LinearAlgebra
 using Dates
 
-include("../util/config.jl")
-include("../util/artifacts.jl")
-
-using .Config: ExperimentConfig
-using .Artifacts: ensure_step_directories, mark_step_complete
+using ..Config: ExperimentConfig
+using ..Artifacts: ensure_step_directories, mark_step_complete
 
 const REPO_ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
+const SHIM_PATH = normpath(joinpath(REPO_ROOT, "full_benchmark", "shims"))
+if !(SHIM_PATH in Base.LOAD_PATH)
+    pushfirst!(Base.LOAD_PATH, SHIM_PATH)
+end
 
 include(joinpath(REPO_ROOT, "tito", "resource_allocation", "imports.jl"))
 include(joinpath(REPO_ROOT, "tito", "resource_allocation", "policy.jl"))
@@ -43,13 +44,12 @@ function execute_compute_saa_baselines(config::ExperimentConfig, ctx::NamedTuple
     I = size(μᵢⱼ, 1)
 
     runs = DataFrame()
-    optima = DataFrame()
-
     cz_vec = vec(cz[1:I])
     qw_vec = vec(qw[1:J])
     ρ_vec = vec(ρᵢ[1:I])
 
     run_rows = Vector{NamedTuple}(undef, n_covariates * collections_per_cov)
+    optima_rows = NamedTuple[]
 
     idx = 1
     for cov_idx in 1:n_covariates
@@ -78,21 +78,23 @@ function execute_compute_saa_baselines(config::ExperimentConfig, ctx::NamedTuple
         end
 
         avg_cost = mean(collection_costs)
-        push!(optima, hcat(DataFrame(covariate_id = cov_id,
-                                      optimal_cost = avg_cost,
-                                      run_count = length(collection_costs)),
-                            covariate_row(cov_vector)))
+        push!(optima_rows, (; covariate_id = cov_id,
+                               optimal_cost = avg_cost,
+                               run_count = length(collection_costs),
+                               covariate_row(cov_vector)...))
     end
 
-    runs = DataFrame()
+    runs_rows = NamedTuple[]
     for row in run_rows
         cov_vector = row.covariate
-        df_row = hcat(DataFrame(covariate_id = row.covariate_id,
-                                 run_id = row.run_id,
-                                 objective_value = row.objective_value),
-                       covariate_row(cov_vector))
-        append!(runs, df_row)
+        push!(runs_rows, (; covariate_id = row.covariate_id,
+                             run_id = row.run_id,
+                             objective_value = row.objective_value,
+                             covariate_row(cov_vector)...))
     end
+
+    runs = DataFrame(runs_rows)
+    optima = DataFrame(optima_rows)
 
     runs_path = joinpath(testing_dir, "saa_runs.csv")
     optima_path = joinpath(testing_dir, "saa_optima.csv")
@@ -104,8 +106,7 @@ function execute_compute_saa_baselines(config::ExperimentConfig, ctx::NamedTuple
 end
 
 function covariate_row(vec::AbstractVector)
-    pairs = Dict(Symbol("x" * string(i)) => vec[i] for i in eachindex(vec))
-    return DataFrame(pairs)
+    return (; (Symbol("x" * string(i)) => vec[i] for i in eachindex(vec))...)
 end
 
 end # module

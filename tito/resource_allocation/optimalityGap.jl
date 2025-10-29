@@ -1,7 +1,7 @@
 
 function fullInfoSAA(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
     model_saa2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model_saa2, "OutputFlag", 0)
+    set_solver_silent!(model_saa2)
 
     @variables(model_saa2,
     begin
@@ -29,7 +29,7 @@ end
 
 function solution_cost(zᵢ,K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
     model_saa3 = Model(() -> Gurobi.Optimizer(GRB_ENV))
-    set_optimizer_attribute(model_saa3, "OutputFlag", 0)
+    set_solver_silent!(model_saa3)
 
     @variables(model_saa3,
     begin
