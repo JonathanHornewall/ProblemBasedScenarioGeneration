@@ -30,3 +30,14 @@ env/conda/conda_env/
 .vscode/
 .idea/
 .aider*
+
+# Large neural net artifacts produced by experiments
+scripts/resource_allocation_prototype/testing_multiple_scenarios/results/**/clean/*.jls
+scripts/resource_allocation_prototype/testing_multiple_scenarios/results/**/perturbed/*.jls
+*.jls
+*.jld
+*.jld2
+scripts/resource_allocation_prototype/testing_multiple_scenarios/cached_values/
+scripts/resource_allocation_prototype/testing_multiple_scenarios/smoke_*/
+
+staging/*
