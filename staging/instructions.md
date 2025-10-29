@@ -2,7 +2,15 @@
 
 ## Overview
 - Goal: benchmark the decision-focused neural-net scenario generator against the baseline methods from Tito’s paper and recreate the paper’s plot with our method included.
-- Reference: reuse the tested implementations in `tito/resource_allocation` for all baseline methods. The legacy `method_compar` code is for visual/layout reference only—it must not be executed or duplicated.
+
+All the code should be placed inside of the full_benchmark directory.
+
+## References
+- Reference: The problem we are benchmarking on is the resource allocation problem in scripts/resource_allocation_prototype.
+- The decision focused neural net is the one implemented in scripts/resource_allocation_prototype/annealing.jl The training should follow its outline as closely as possible.
+- Reuse the methods in `tito/resource_allocation` for all baseline methods. The legacy `method_compar` code is for visual/layout reference only—it must not be executed or duplicated. The baseline methods should resuse the code from Tito without changing it, unless absolutely necessary.
+
+Generally, the code should try to re-use functionality as much as possible (e.g. reuse tito method implementation), and when that is not possible, it should copy existing design (e.g. use the DataGenerator function, but rewritten to take additional arguments).
 
 ## Step 1: Generate Testing Data
 - Tasks:
@@ -70,18 +78,27 @@
     - `--full_testing`: regenerate testing data and recompute SAA baselines (reusing existing training data and models from the input directory).
   - If multiple flags are passed, resolve them by the most comprehensive action (e.g., `--full_training` supersedes `--method_training`).
 
-## Implementation Plan
-| File | Purpose | Key Functions/Entrypoints |
-| --- | --- | --- |
-| `scripts/run_experiment.jl` | CLI entry point; parses flags, resolves artifact reuse logic, and sequences the step modules. | `run_experiment(args)`, `resolve_step_plan(config, artifacts_state)` |
-| `scripts/steps/generate_testing_data.jl` | Implements Step 1 data generation and persistence. | `generate_testing_data(config)`, `save_testing_artifacts(data, output_dir)` |
-| `scripts/steps/compute_saa_baselines.jl` | Implements Step 2 SAA solves and logging. | `compute_saa_baselines(test_data, config)`, `write_saa_artifacts(results, output_dir)` |
-| `scripts/steps/generate_training_data.jl` | Implements Step 3 training dataset creation. | `generate_training_data(config)`, `save_training_artifacts(data, output_dir)` |
-| `scripts/steps/train_baselines.jl` | Implements Step 4 for all non-neural methods. | `train_baseline_methods(training_data, config)`, `serialize_baseline_models(models, output_dir)` |
-| `scripts/steps/train_neural.jl` | Implements Step 5 neural-net training workflow. | `train_neural_method(training_data, config)`, `save_neural_artifacts(model, history, output_dir)` |
-| `scripts/steps/run_benchmark.jl` | Implements Step 6 evaluation and plotting. | `benchmark_methods(test_data, models, saa_optima, config)`, `save_benchmark_outputs(results, output_dir)` |
-| `scripts/util/artifacts.jl` | Shared helpers for checking/copying artifacts. | `detect_artifacts(output_dir)`, `copy_artifacts(src, dest, manifest)` |
-| `scripts/util/config.jl` | Centralizes configuration defaults and RNG seeding. | `load_config(args)`, `seed_rng(config)` |
+  In addition, the script should take arguments specifying:
+  - size of the training data (default 100)
+  - scenarios per context in the training data (default 1)
+  - nr covariates in testing data (default 30)
+  - nr of scenario collections per covariate in testing data (default 30)
+  - size of scenario collection per covariate in testing data (default 1000)
+  - the data generation parameters of the training data and the testing data (default p =2)
+  - Annealing schedule for neural net training (default 1.0, 0.1, 0.01)
+  - Epoch schedule (default 100 for the first one, then 30 for the following 3). It should only be used to infer the desired appearance of the final plot, and as a reference for the implementation of the benchmark methods (which should be re-used and not changed.)
 
-- Each step module should expose a single `execute_<step>` function that `run_experiment.jl` can call after determining whether recomputation is required.
-- Shared data structures (e.g., typed structs for covariates, scenarios, and model bundles) should live under `src/` so both scripts and tests can import them cleanly.
+  - Step size schedule (default 10⁻3 for the first one, 10⁻4 for the following 3)
+  - Batch size schedule (default 10 for first one, then 25 for the following 3)
+  - surrogate parameter (default same as the last parameter in the annealing schedule)
+
+  These all specify how the decision focused neural net should be trained. See annealing.jl for reference.
+## Implementation Plan
+# Here you should specify the implementation plan
+
+# Testing and validation
+
+Test 1:
+Perform a small smoke run, with minimal values for training and testing data. The goal is just to ensure that the script runs to completion.
+
+Test 2: Perform a test with the different flags to ensure that they behave correctly.
