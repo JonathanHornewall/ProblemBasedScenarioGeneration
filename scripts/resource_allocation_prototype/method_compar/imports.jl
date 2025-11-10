@@ -1,5 +1,5 @@
 using 
-    #Gurobi,
+    Gurobi,
     GLPK,
     JuMP,
     Distributions, 
@@ -19,5 +19,5 @@ using
     Flux,
     ChainRulesCore
 
-#const GRB_ENV = Gurobi.Env()
+const GRB_ENV = Gurobi.Env()
 
