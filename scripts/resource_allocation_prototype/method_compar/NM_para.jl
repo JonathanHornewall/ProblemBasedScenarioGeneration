@@ -104,7 +104,8 @@ function heuristicAD_par(θ,T,data_yⱼₜ,data_xₜ,J,I,cz,qw,ρ,μᵢⱼ)
         
         #@show costₜ
         
-        push!(cost_θ[Threads.threadid()], costₜ)
+        #push!(cost_θ[Threads.threadid()], costₜ)
+        push!(cost_θ[min(Threads.threadid(), Threads.nthreads())], costₜ)
 
         #append!(cost_θ,costₜ)
         
