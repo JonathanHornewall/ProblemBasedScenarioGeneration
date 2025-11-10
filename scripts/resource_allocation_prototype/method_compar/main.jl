@@ -19,12 +19,12 @@ using JLD2
 # Parameters - can be changed
 # ============================================================
 
-p = 2 # degree of the data generation procedure
+p = 0.5 # degree of the data generation procedure
 
 # ============================================================
 # Parameters - do not change
 # ============================================================
-NScenarios = [10000]
+NScenarios = [100,1000,10000]
 J = 30
 I_prods = 20
 ω = 1
