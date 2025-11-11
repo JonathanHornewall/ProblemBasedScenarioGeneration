@@ -32,7 +32,7 @@ end
 
 
 function kannanCostAssessment(zᵢ,J,I,yₜ ,cz,qw,ρ,μᵢⱼ,δ)
-    modelK2 = = Model(Gurobi.Optimizer)
+    modelK2 = Model(Gurobi.Optimizer)
     set_optimizer_attribute(modelK2, "OutputFlag", 0)
 
     #modelK2 = Model(GLPK.Optimizer)
