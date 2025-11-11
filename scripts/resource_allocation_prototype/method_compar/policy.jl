@@ -1,6 +1,7 @@
 function kannanOpt(J,I,Y_scenario,cz,qw,ρ,μᵢⱼ)
     modelK1 = Model(Gurobi.Optimizer)
     set_optimizer_attribute(modelK1, "OutputFlag", 0)
+    set_optimizer_attribute(modelK1, "LogToConsole", 0)
 
     #modelK1 = Model(GLPK.Optimizer)
     #set_optimizer_attribute(modelK1, "msg_lev", 0)  
@@ -32,6 +33,7 @@ function SAA_kannan(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
     model_saa = Model(Gurobi.Optimizer)
     #model_saa = Model(GLPK.Optimizer)
     set_optimizer_attribute(model_saa, "OutputFlag", 0)
+    set_optimizer_attribute(model_saa, "LogToConsole", 0)
     #set_optimizer_attribute(model_saa, "msg_lev", 0)  
 
     @variables(model_saa,
