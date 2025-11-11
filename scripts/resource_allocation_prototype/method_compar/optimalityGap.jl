@@ -1,6 +1,6 @@
 
 function fullInfoSAA(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
-    model_saa2 = = Model(Gurobi.Optimizer)
+    model_saa2 = Model(Gurobi.Optimizer)
     set_optimizer_attribute(model_saa2, "OutputFlag", 0)
 
     #model_saa2 = Model(GLPK.Optimizer)
