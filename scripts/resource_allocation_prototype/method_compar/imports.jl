@@ -19,5 +19,3 @@ using
     Flux,
     ChainRulesCore
 
-const GRB_ENV = Gurobi.Env()
-
