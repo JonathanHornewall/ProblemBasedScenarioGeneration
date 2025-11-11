@@ -2,6 +2,7 @@
 function fullInfoSAA(K,J,I,yⱼₖ,cz,qw,ρ,μᵢⱼ)
     model_saa2 = Model(Gurobi.Optimizer)
     set_optimizer_attribute(model_saa2, "OutputFlag", 0)
+    set_optimizer_attribute(model_saa2, "LogToConsole", 0)
 
     #model_saa2 = Model(GLPK.Optimizer)
     #set_optimizer_attribute(model_saa2, "msg_lev", 0)  
