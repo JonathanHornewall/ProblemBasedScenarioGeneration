@@ -1,7 +1,8 @@
 
 
 function kannanPlanPolicy(J,I,ŷₜ ,cz,qw,ρ,μᵢⱼ)
-    modelK1 = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    
+    modelK1 = Model(Gurobi.Optimizer)  
     set_optimizer_attribute(modelK1, "OutputFlag", 0)
 
     #modelK1 = Model(GLPK.Optimizer)
@@ -31,7 +32,7 @@ end
 
 
 function kannanCostAssessment(zᵢ,J,I,yₜ ,cz,qw,ρ,μᵢⱼ,δ)
-    modelK2 = Model(() -> Gurobi.Optimizer(GRB_ENV))
+    modelK2 = = Model(Gurobi.Optimizer)
     set_optimizer_attribute(modelK2, "OutputFlag", 0)
 
     #modelK2 = Model(GLPK.Optimizer)
