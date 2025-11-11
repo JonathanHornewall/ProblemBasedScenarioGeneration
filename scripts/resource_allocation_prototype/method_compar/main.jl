@@ -215,3 +215,5 @@ for t_idx in eachindex(NScenarios) #iterate over number of scenarios in training
     end
 end
 
+#before running set the number of threads to 1 with export JULIA_NUM_THREADS=1
+
