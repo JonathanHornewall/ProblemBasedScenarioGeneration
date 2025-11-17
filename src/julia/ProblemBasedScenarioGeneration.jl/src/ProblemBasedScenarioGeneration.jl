@@ -27,6 +27,9 @@ include("utils.jl")
 # Inclusions for specific problem instances
 include("problem_instances/resource_allocation/resource_allocation_problem.jl")
 include("problem_instances/resource_allocation/data_generation.jl")
+include("problem_instances/shipment_planning/shipment_planning_problem.jl")
+include("problem_instances/shipment_planning/data_generation.jl")
+include("problem_instances/shipment_planning/parameters.jl")
 
 include("problem_instances/unreliable_newsvendor/unreliable_newsvendor_problem.jl")
 include("problem_instances/unreliable_newsvendor/data_generation.jl")
@@ -37,6 +40,9 @@ export Scenario
 
 export ResourceAllocationProblem
 export ResourceAllocationProblemData
+export ShipmentPlanningProblem
+export ShipmentPlanningProblemData
+export shipment_planning_problem_data
 
 export UnreliableNewsvendorProblem
 export UnreliableNewsvendorProblemData
