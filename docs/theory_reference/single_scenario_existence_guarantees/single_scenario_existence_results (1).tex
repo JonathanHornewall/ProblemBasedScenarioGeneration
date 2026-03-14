@@ -1,0 +1,1128 @@
+\documentclass[11pt]{article}
+
+% -------------------- Packages --------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+% -------------------- Theorem environments --------------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% -------------------- Notation macros (placeholders) --------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\ri}{\mathrm{ri}}
+\newcommand{\cl}{\mathrm{cl}}
+\newcommand{\conv}{\mathrm{conv}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\Row}{\operatorname{Row}}
+\newcommand{\col}{\operatorname{col}}
+\newcommand{\diag}{\operatorname{diag}}
+
+% -------------------- Title --------------------
+\title{Decision-Optimal Single-Scenario Forecasts\\for Two-Stage Stochastic Linear Programs}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+% ============================================================
+\section{Setting, notation, and standing assumptions}\label{sec:setting}
+
+\subsection{Two-stage stochastic linear program}\label{subsec:2stage}
+
+Let $(\Omega,\mathcal F,\mathbb P)$ be a probability space and let $\xi$ denote the random second-stage
+data.  We work with a two-stage stochastic linear program in (primal) standard form.
+The first-stage decision is $z\in\R^{n_1}$ and the second-stage (recourse) decision is $y\in\R^{n_2}$.
+The first-stage feasible set is
+\begin{equation}\label{eq:Z-def}
+  Z := \{\, z\in\R^{n_1}_+ : Az=b \,\},
+\end{equation}
+where $A\in\R^{m_1\times n_1}$ and $b\in\R^{m_1}$ are deterministic.
+
+A realization $\xi=(q,h,W,T)$ consists of vectors/matrices
+\[
+q\in\R^{n_2},\qquad h\in\R^{m_2},\qquad W\in\R^{m_2\times n_2},\qquad T\in\R^{m_2\times n_1},
+\]
+and induces the second-stage linear program
+\begin{equation}\label{eq:recourse-LP}
+  Q(z,\xi)\;:=\;\min_{y\in\R^{n_2}_+}\ \{\, q^\top y : Wy = h - Tz \,\}.
+\end{equation}
+The two-stage stochastic program is then
+\begin{equation}\label{eq:2stage-SP}
+  \min_{z\in Z}\ \Big\{\, c^\top z + \E\big[\, Q(z,\xi)\,\big] \,\Big\},
+\end{equation}
+where $c\in\R^{n_1}$ is deterministic.  We emphasize that, depending on the application, $\xi$ may contain
+any subset of the components $(q,h,W,T)$; the remaining components can be deterministic.
+
+\paragraph{Standard-form convention.}
+Writing $Z$ and the recourse constraints in equality$+$nonnegativity form is purely notational: any two-stage
+stochastic linear program with polyhedral constraints can be rewritten in this form by introducing slack
+variables and splitting free variables into positive and negative parts.  Our assumptions below should be
+understood as assumptions on this standard-form representation.
+
+\subsection{Finite support and deterministic equivalent (extensive form)}\label{subsec:extensive}
+
+When $\xi$ has finite support $\{\xi_1,\dots,\xi_N\}$ with probabilities $p_i:=\mathbb P(\xi=\xi_i)>0$,
+\[
+\xi_i=(q_i,h_i,W_i,T_i), \qquad i\in[N]:=\{1,\dots,N\}, \qquad \sum_{i=1}^N p_i=1,
+\]
+the expectation in \eqref{eq:2stage-SP} becomes a finite sum and \eqref{eq:2stage-SP} is equivalent to the
+deterministic extensive-form linear program
+\begin{equation}\label{eq:extensive-form}
+\begin{aligned}
+  \min_{z,\,y_1,\dots,y_N}\quad & c^\top z + \sum_{i=1}^N p_i\, q_i^\top y_i \\
+  \text{s.t.}\quad & Az=b,\quad z\ge 0,\\
+  & W_i y_i = h_i - T_i z,\quad y_i\ge 0,\qquad i\in[N].
+\end{aligned}
+\end{equation}
+It will be convenient to write \eqref{eq:extensive-form} in the compact form
+\begin{equation}\label{eq:extensive-compact}
+  \min_{x\ge 0}\ \bar c^\top x \quad\text{s.t.}\quad \bar A x = \bar b,
+\end{equation}
+where $x:=(z,y_1,\dots,y_N)$, $\bar c:=(c,p_1q_1,\dots,p_N q_N)$, $\bar b:=(b,h_1,\dots,h_N)$, and
+\begin{equation}\label{eq:Abar}
+  \bar A :=
+  \begin{bmatrix}
+    A & 0 & 0 & \cdots & 0 \\
+    T_1 & W_1 & 0 & \cdots & 0 \\
+    T_2 & 0 & W_2 & \cdots & 0 \\
+    \vdots & \vdots & \vdots & \ddots & \vdots \\
+    T_N & 0 & 0 & \cdots & W_N
+  \end{bmatrix}.
+\end{equation}
+
+\subsection{Single-scenario problems and canonical solution maps}\label{subsec:solution-maps}
+
+Fix a \emph{single} scenario $\xi=(q,h,W,T)$ (not necessarily one of the $\xi_i$ in the support).
+The corresponding single-scenario linear program is
+\begin{equation}\label{eq:single-scenario-LP}
+\begin{aligned}
+  \min_{z,y}\quad & c^\top z + q^\top y \\
+  \text{s.t.}\quad & Az=b,\quad z\ge 0,\\
+  & Wy = h - Tz,\quad y\ge 0.
+\end{aligned}
+\end{equation}
+For $\mu>0$, we also consider the log-barrier regularization of \eqref{eq:single-scenario-LP}:
+\begin{equation}\label{eq:single-scenario-barrier}
+\begin{aligned}
+  \min_{z,y}\quad & c^\top z + q^\top y\;-\;\mu\sum_{j=1}^{n_1}\log(z_j)\;-\;\mu\sum_{k=1}^{n_2}\log(y_k)\\
+  \text{s.t.}\quad & Az=b,\\
+  & Wy = h - Tz,\\
+  & z>0,\ y>0.
+\end{aligned}
+\end{equation}
+
+We also introduce the (multi-scenario) first-stage value functions associated with \eqref{eq:2stage-SP}.
+For a given $z\in Z$, define
+\begin{equation}\label{eq:G-def}
+  G(z)\;:=\;c^\top z + \sum_{i=1}^N p_i\,Q(z,\xi_i),
+\end{equation}
+and for $\mu>0$ define the barrier-regularized recourse functions
+\begin{equation}\label{eq:Qmu-def}
+  Q_\mu(z,\xi_i)\;:=\;\min_{y>0}\ \Big\{\, q_i^\top y - \mu\sum_{k=1}^{n_2}\log(y_k)\ :\ W_i y = h_i - T_i z \,\Big\},
+\end{equation}
+together with the barrier-regularized first-stage value function
+\begin{equation}\label{eq:Gmu-def}
+  G_\mu(z)\;:=\;c^\top z - \mu\sum_{j=1}^{n_1}\log(z_j) + \sum_{i=1}^N p_i\,Q_\mu(z,\xi_i),
+\end{equation}
+defined on $Z\cap\{z>0\}$ whenever the second-stage terms are well-posed.
+
+\begin{definition}[Canonical single-scenario decision map]\label{def:canonical-map}
+Fix a scenario $\xi=(q,h,W,T)$ and consider the single-scenario feasible set
+\[
+  \mathcal P(\xi)\;:=\;\big\{(z,y)\in\R^{n_1}\times\R^{n_2}:\ Az=b,\ Wy=h-Tz,\ z\ge 0,\ y\ge 0\big\}.
+\]
+
+\smallskip
+\noindent\textbf{Barrier map.}
+For $\mu>0$, let $(z_\mu^*(\xi),y_\mu^*(\xi))$ be the (unique) minimizer of the strictly convex barrier problem
+\eqref{eq:single-scenario-barrier}.  We call $z_\mu^*(\xi)\in\R^{n_1}$ the \emph{canonical barrier decision}
+induced by $\xi$.
+
+\smallskip
+\noindent\textbf{Unsmooth canonical map.}
+Let
+\[
+  \mathcal S(\xi)\;:=\;\argmin\big\{\, c^\top z + q^\top y : (z,y)\in\mathcal P(\xi)\,\big\}
+\]
+be the (possibly set-valued) optimal solution set of \eqref{eq:single-scenario-LP}.  Define the index set of
+coordinates that are not identically zero on $\mathcal S(\xi)$ by
+\[
+  \mathcal J(\xi)\;:=\;\Big\{\ell:\ \exists (z,y)\in\mathcal S(\xi)\ \text{with}\ (z,y)_\ell>0\Big\}.
+\]
+The \emph{analytic center of the optimal face} is the unique point $(z^*(\xi),y^*(\xi))$ solving
+\begin{equation}\label{eq:analytic-center-opt-face}
+  \max_{(z,y)\in\mathcal S(\xi)}\ \sum_{\ell\in\mathcal J(\xi)} \log\big((z,y)_\ell\big),
+\end{equation}
+where the maximization is taken over the relative interior of $\mathcal S(\xi)$ in its affine hull.  We call
+$z^*(\xi)$ the \emph{canonical (unsmoothed) decision} induced by $\xi$.
+\end{definition}
+
+\subsection{Decision-optimal single-scenario forecasts}\label{subsec:dosf}
+
+We now formalize what it means for a \emph{single} scenario to be ``decision-optimal'' for the stochastic
+problem: it should reproduce the \emph{canonical} optimal first-stage decision.
+
+Let $z_\mu^\star$ denote the (unique) first-stage component of the optimal solution of the barrier-smoothed
+extensive form (defined later in Section~\ref{sec:barrier}, but already unambiguous under our
+assumptions).  Let $z^\star$ denote the first-stage component of the analytic center of the optimal face of the
+unsmoothed extensive form \eqref{eq:extensive-form}.
+
+\begin{definition}[Decision-optimal single-scenario forecast]\label{def:dosf}
+A scenario $\hat\xi$ (not necessarily in the support $\{\xi_1,\dots,\xi_N\}$) is called
+\begin{enumerate}[leftmargin=2.2em]
+\item \emph{decision-optimal for the barrier problem at parameter $\mu>0$} if
+\[
+  z_\mu^*(\hat\xi)\;=\;z_\mu^\star.
+\]
+\item \emph{decision-optimal for the unsmoothed problem} if
+\[
+  z^*(\hat\xi)\;=\;z^\star.
+\]
+\end{enumerate}
+\end{definition}
+
+The use of the canonical maps $z_\mu^*(\cdot)$ and $z^*(\cdot)$ is essential: a single scenario can make the
+stochastic optimum \emph{one} of many optimal first-stage decisions without actually encoding any meaningful
+decision information.
+
+\subsection{A cautionary example: vacuous ``optimal'' scenarios}\label{subsec:vacuous}
+
+\begin{example}[A forecast may be decision-irrelevant]\label{ex:vacuous}
+Consider a two-stage problem with a one-dimensional first-stage decision $z\in[0,1]$ written in standard
+form via $z+s=1$ with $(z,s)\ge 0$.  There is a single second-stage variable $y\ge 0$ constrained by $y=z$
+(i.e., $y-z=0$).  The second-stage cost is random: $\xi=q\in\R_+$ and $Q(z,q)=\min\{qy: y=z,\ y\ge 0\}=qz$.
+There is no first-stage cost ($c=0$), hence the stochastic objective is $\E[q]\,z$, and the unique optimal
+first-stage decision is $z^\star=0$.
+
+Now consider the single-scenario problem with the \emph{forecast} $\hat q=0$.  Then the single-scenario
+objective is identically zero for every feasible $z\in[0,1]$, i.e., every first-stage decision is optimal.
+In particular, the forecast $\hat q=0$ \emph{contains} the true optimum $z^\star=0$ in its optimal solution set,
+but it is nonetheless decision-irrelevant: it cannot distinguish $z^\star$ from any other feasible decision.
+Under our canonical selection rule, $z^*(\hat q)$ is the analytic center of $[0,1]$, namely $z^*(\hat q)=1/2$,
+which is \emph{not} equal to $z^\star$.
+
+This illustrates why we insist on Definition~\ref{def:dosf}: decision-optimality requires reproducing the
+canonical optimal decision, not merely including it among many optima.
+\end{example}
+
+\subsection{Standing assumptions}\label{subsec:assumptions}
+
+We state the standing assumptions that will be used throughout the remainder of the paper.
+
+\begin{assumption}[Finite support]\label{ass:finite-support}
+The random element $\xi$ has finite support $\{\xi_1,\dots,\xi_N\}$ with probabilities $p_i>0$ for all $i\in[N]$.
+\end{assumption}
+
+\begin{assumption}[No redundant constraints (full row rank)]\label{ass:full-row-rank}
+The extensive-form equality constraint matrix $\bar A$ defined in \eqref{eq:Abar} has full row rank.
+Equivalently, the extensive form \eqref{eq:extensive-form} has no redundant equality constraints.
+\end{assumption}
+
+\begin{assumption}[Bounded and relatively complete recourse]\label{ass:recourse}
+For every first-stage decision $z\in Z$ and every scenario $i\in[N]$, the recourse problem
+\[
+  Q(z,\xi_i)=\min\{\, q_i^\top y : W_i y = h_i - T_i z,\ y\ge 0 \,\}
+\]
+is feasible and has a finite optimal value (in particular, it is not unbounded below).
+\end{assumption}
+
+\begin{assumption}[Existence of a solution]\label{ass:existence}
+The extensive-form problem \eqref{eq:extensive-form} has at least one optimal solution (i.e., its optimal
+value is finite and attained).
+\end{assumption}
+
+\begin{assumption}[Strict feasibility / nonempty relative interior]\label{ass:ri-nonempty}
+The feasible region of the extensive form has nonempty relative interior:
+there exist $(\tilde z,\tilde y_1,\dots,\tilde y_N)$ satisfying
+\[
+  A\tilde z=b,\qquad W_i\tilde y_i = h_i - T_i\tilde z\ \ (i\in[N]),\qquad \tilde z>0,\ \tilde y_i>0\ \ (i\in[N]).
+\]
+\end{assumption}
+
+\begin{assumption}[Recession cone / barrier well-posedness]\label{ass:recession}
+Let $\mathcal R:=\{d\in\R^{n_1+Nn_2}_+ : \bar A d=0\}$ be the recession cone of the extensive-form feasible set.
+Then
+\[
+  \bar c^\top d \;>\;0 \qquad \text{for all nonzero } d\in\mathcal R,
+\]
+where $\bar c=(c,p_1q_1,\dots,p_Nq_N)$ as in \eqref{eq:extensive-compact}.
+\end{assumption}
+
+\begin{remark}[On restrictiveness and SAA]\label{rem:saa}
+Assumption~\ref{ass:finite-support} is primarily a notational convenience: it allows us to work directly with
+the extensive form \eqref{eq:extensive-form}.  For general (non-finite) distributions, one can replace the
+expectation in \eqref{eq:2stage-SP} with a sample-average approximation (SAA) and apply the results of this
+paper to the resulting finitely-supported empirical problem.  In that setting, our existence statements yield
+decision-optimal (for the SAA) single-scenario forecasts; out-of-sample guarantees can then be obtained by
+combining SAA consistency with standard stability arguments (e.g., $\varepsilon$-optimality under sufficiently
+large samples).
+\end{remark}
+
+\begin{remark}[On full row rank and interior feasibility]\label{rem:rank-ri}
+Assumption~\ref{ass:full-row-rank} can always be enforced by deleting redundant equalities from the
+standard-form representation; it is used to avoid degeneracy in the barrier KKT system and to guarantee
+uniqueness properties for the barrier solutions.
+
+Assumption~\ref{ass:ri-nonempty} is equivalent to the existence of a \emph{single} strictly feasible first-stage
+decision $\tilde z\in\ri(Z)$ such that, for every scenario $i$, the second-stage feasible region
+$\{y\ge 0: W_i y = h_i - T_i\tilde z\}$ has nonempty relative interior (i.e., admits a strictly positive $y$).
+\end{remark}
+
+\begin{remark}[On standardity of barrier assumptions]\label{rem:barrier-standard}
+Assumptions~\ref{ass:ri-nonempty}--\ref{ass:recession} are precisely the well-posedness conditions needed to
+treat the barrier-regularized problems as bona fide convex optimization problems: feasibility of the strict
+interior and exclusion of recession directions along which the barrier objective can diverge to $-\infty$.
+While these assumptions may appear specific, they are standard in interior-point theory and can typically be
+ensured by mild reformulations (e.g., adding slack variables, eliminating redundant equalities, and working in
+a standard-form representation).
+\end{remark}
+
+% ============================================================
+% Section 2: Log-barrier smoothing
+% ============================================================
+
+\section{Log-barrier smoothing}\label{sec:barrier}
+
+This section records the log-barrier facts used later to construct \emph{decision-optimal single-scenario
+forecasts}. We work throughout under the standing assumptions stated in Section~\ref{sec:setting}.
+
+\subsection{Barrier-smoothed recourse and its dual}\label{subsec:barrier:recourse}
+
+Fix a scenario $\xi=(q,W,T,h)$ and a barrier parameter $\mu>0$. Recall the (unsmoothed) second-stage
+recourse value for a first-stage decision $z$ (see \eqref{eq:recourse-LP}):
+\[
+Q(z,\xi)\;:=\;\min_{y\in\mathbb{R}^{n_2}_+}\Bigl\{q^\top y:\;Wy=h-Tz\Bigr\},
+\]
+with the convention $Q(z,\xi)=+\infty$ if the equality system has no feasible $y\ge 0$.
+
+\begin{definition}[Log-barrier smoothed recourse]\label{def:Qmu}
+For $\mu>0$ we define the log-barrier smoothed recourse
+\begin{equation}\label{eq:recourse-barrier}
+Q_\mu(z,\xi)\;:=\;\min_{y\in\mathbb{R}^{n_2}_{++}}\Bigl\{q^\top y-\mu\sum_{k=1}^{n_2}\log(y_k):\;Wy=h-Tz\Bigr\},
+\end{equation}
+again taking $Q_\mu(z,\xi)=+\infty$ if the equality system has no strictly positive solution.
+For a vector $v\in\mathbb{R}^{n_2}_{++}$ we use $v^{-1}$ to denote the componentwise reciprocal.
+\end{definition}
+
+\begin{proposition}[Dual of the barrier recourse]\label{prop:barrier-dual}
+Fix $\xi=(q,W,T,h)$ and $\mu>0$, and write $r(z):=h-Tz$. Assume \eqref{eq:recourse-barrier} is feasible
+for the given $z$ (so $Q_\mu(z,\xi)<+\infty$). Then strong duality holds and
+\begin{equation}\label{eq:barrier-dual-recourse}
+Q_\mu(z,\xi)
+=\mu n_2\bigl(1-\log\mu\bigr)
++\max_{\lambda\in\mathbb{R}^m:\;W^\top\lambda<q}
+\Bigl\{r(z)^\top\lambda+\mu\sum_{k=1}^{n_2}\log\bigl(q-W^\top\lambda\bigr)_k\Bigr\}.
+\end{equation}
+Moreover, the primal minimizer in \eqref{eq:recourse-barrier} is unique; we denote it by
+$y_\mu^\star(z;\xi)$. Define the (possibly set-valued) dual maximizer set
+\[
+\Lambda_\mu(z;\xi)
+:= \argmax_{\lambda\in\mathbb{R}^m:\,W^\top\lambda<q}
+\left\{ r(z)^\top\lambda + \mu\sum_{k=1}^{n_2}\log\bigl((q-W^\top\lambda)_k\bigr)\right\}.
+\]
+Then $\Lambda_\mu(z;\xi)\neq\emptyset$ and is convex. If $W$ has full row rank, then the maximizer
+in \eqref{eq:barrier-dual-recourse} is unique and we write
+$\Lambda_\mu(z;\xi)=\{\lambda_\mu^\star(z;\xi)\}$.
+\end{proposition}
+
+\begin{proof}
+Consider the Lagrangian for \eqref{eq:recourse-barrier} with multiplier $\lambda\in\mathbb{R}^m$ for
+the equality $Wy=r(z)$:
+\[
+\mathcal{L}(y,\lambda)
+= q^\top y-\mu\sum_{k=1}^{n_2}\log(y_k)+\lambda^\top\bigl(r(z)-Wy\bigr)
+= r(z)^\top\lambda + \sum_{k=1}^{n_2}\Bigl((q-W^\top\lambda)_k\,y_k-\mu\log y_k\Bigr).
+\]
+For fixed $\lambda$, the infimum over $y\in\mathbb{R}^{n_2}_{++}$ is finite if and only if
+$q-W^\top\lambda\in\mathbb{R}^{n_2}_{++}$; in that case the minimizer is componentwise
+\[
+y_k=\frac{\mu}{(q-W^\top\lambda)_k},\qquad k=1,\dots,n_2.
+\]
+Substituting this minimizer yields
+\[
+\begin{aligned}
+\inf_{y>0}\mathcal{L}(y,\lambda)
+&= r(z)^\top\lambda + \sum_{k=1}^{n_2}\Bigl(\mu-\mu\log\mu+\mu\log\bigl(q-W^\top\lambda\bigr)_k\Bigr)\\
+&= r(z)^\top\lambda+\mu n_2(1-\log\mu)
++\mu\sum_{k=1}^{n_2}\log\bigl(q-W^\top\lambda\bigr)_k.
+\end{aligned}
+\]
+Maximizing over $\lambda$ with $W^\top\lambda<q$ gives \eqref{eq:barrier-dual-recourse}.
+Feasibility of \eqref{eq:recourse-barrier} implies the usual constraint qualification for equality constraints
+on an open domain, so strong duality holds and the maximum is attained.
+
+Finally, the primal objective in \eqref{eq:recourse-barrier} is strictly convex on $\mathbb{R}^{n_2}_{++}$,
+hence the primal minimizer $y_\mu^\star(z;\xi)$ is unique. The dual objective in \eqref{eq:barrier-dual-recourse}
+is the sum of an affine function and a strictly concave function of $W^\top\lambda$; if $W$ has full row rank,
+the map $\lambda\mapsto W^\top\lambda$ is injective, hence the dual objective is strictly concave in $\lambda$,
+and the maximizer $\lambda_\mu^\star(z;\xi)$ is unique.
+Even when $W$ is not full row rank, strict concavity in $W^\top\lambda$ implies that $W^\top\lambda$ is the same
+for all $\lambda\in\Lambda_\mu(z;\xi)$ (equivalently, $q-W^\top\lambda=\mu(y_\mu^\star(z;\xi))^{-1}$ is unique).
+\end{proof}
+
+\begin{remark}[Barrier duality as ``barrier of the dual'']\label{rem:barrier-of-dual}
+For the unsmoothed recourse \eqref{eq:recourse-LP}, the dual is
+\[
+Q(z,\xi)=\max_{\lambda\in\mathbb{R}^m}\Bigl\{r(z)^\top\lambda:\;W^\top\lambda\le q\Bigr\}.
+\]
+Comparing with \eqref{eq:barrier-dual-recourse}, the log-barrier smoothed primal recourse is (up to the
+constant $\mu n_2(1-\log\mu)$) the log-barrier regularization of the dual constraints $W^\top\lambda\le q$,
+via the term $\mu\sum_k\log\bigl(q-W^\top\lambda\bigr)_k$.
+\end{remark}
+
+\subsection{KKT conditions and continuous dependence}\label{subsec:barrier:kkt}
+
+\begin{proposition}[Second-stage KKT system]\label{prop:second-stage-kkt}
+Assume $Q_\mu(z,\xi)<+\infty$. Let $y_\mu^\star(z;\xi)$ be the unique primal minimizer of
+\eqref{eq:recourse-barrier} and let $\Lambda_\mu(z;\xi)$ be the (nonempty) dual maximizer set defined in
+Proposition~\ref{prop:barrier-dual}. Then:
+\begin{enumerate}
+\item For any $\lambda\in\Lambda_\mu(z;\xi)$, the pair $(y_\mu^\star(z;\xi),\lambda)$ satisfies the KKT system
+\begin{equation}\label{eq:KKT-second-stage}
+\begin{aligned}
+Wy &= h-Tz,\\
+q-W^\top\lambda &= \mu\,y^{-1},
+\end{aligned}
+\qquad\text{with}\quad y\in\mathbb{R}^{n_2}_{++},\;q-W^\top\lambda\in\mathbb{R}^{n_2}_{++}.
+\end{equation}
+\item Conversely, any pair $(y,\lambda)$ satisfying \eqref{eq:KKT-second-stage} is primal--dual optimal
+for \eqref{eq:recourse-barrier}--\eqref{eq:barrier-dual-recourse}.
+\end{enumerate}
+In particular, $q-W^\top\lambda=\mu(y_\mu^\star(z;\xi))^{-1}$ is unique, so $W^\top\lambda$ is the same
+for all $\lambda\in\Lambda_\mu(z;\xi)$.
+\end{proposition}
+
+\begin{proof}
+Because the objective in \eqref{eq:recourse-barrier} is strictly convex on $\mathbb{R}^{n_2}_{++}$, the primal
+minimizer $y_\mu^\star(z;\xi)$ is unique. Strong duality and attainment hold as in
+Proposition~\ref{prop:barrier-dual}. Stationarity of the Lagrangian with respect to $y$ yields
+$q-W^\top\lambda-\mu y^{-1}=0$, and primal feasibility gives $Wy=h-Tz$, i.e.\ \eqref{eq:KKT-second-stage}.
+Conversely, any $(y,\lambda)$ satisfying \eqref{eq:KKT-second-stage} is primal feasible and satisfies
+stationarity; since the problem is strictly convex with equality constraints on an open domain, KKT
+conditions are sufficient, hence $(y,\lambda)$ is primal--dual optimal.
+\end{proof}
+
+\begin{proposition}[Continuity of barrier minimizers for fixed $\mu>0$]\label{prop:IFT}
+Fix $\mu>0$. Consider the one-scenario barrier problem \eqref{eq:barrier-one-scenario} with data
+$\xi=(q,W,T,h)$. On any set of scenarios for which the barrier problem is feasible and attains a finite
+minimum, the minimizer $(z_\mu^\star(\xi),y_\mu^\star(\xi))$ is unique and the mapping
+\[
+\xi \longmapsto (z_\mu^\star(\xi),y_\mu^\star(\xi))
+\]
+is continuous.
+\end{proposition}
+
+\begin{proof}
+For fixed $\mu>0$, the barrier objective is continuous in $(z,y,\xi)$ on its domain and strictly convex
+in $(z,y)$ on the affine feasible set. Under the stated feasibility and attainment assumptions, the
+argmin is nonempty and compact-valued (minimizers lie in a bounded level set), hence Berge's
+maximum theorem gives upper hemicontinuity of the solution map. Uniqueness of the minimizer
+upgrades this to continuity.
+\end{proof}
+
+\subsection{Subgradients and first-stage optimality}\label{subsec:barrier:grad}
+
+We now turn to the smoothed \emph{first-stage} objective.
+For the finite support $\{(\xi_i,p_i)\}_{i=1}^N$ introduced in Section~\ref{sec:setting}, define
+\[
+G_\mu(z)
+:= c^\top z - \mu\sum_{j=1}^{n_1}\log(z_j) + \sum_{i=1}^N p_i\,Q_\mu(z,\xi_i),
+\]
+with domain consisting of $z$ satisfying the first-stage constraints (e.g. $Az=b$) and for which each
+recourse problem $Q_\mu(z,\xi_i)$ is feasible.
+When $\mu=0$, $G_0(z)=c^\top z+\sum_i p_iQ(z,\xi_i)$ is the usual risk-neutral first-stage cost.
+
+\begin{proposition}[Subgradients of $Q_\mu$ and of $G_\mu$]\label{prop:grad}
+Fix $\mu>0$. Assume $Q_\mu(z,\xi_i)<+\infty$ for the $z$ under consideration. Let
+$\Lambda_\mu(z;\xi_i)$ be the dual maximizer set from Proposition~\ref{prop:barrier-dual} for scenario
+$\xi_i$. Then $Q_\mu(\cdot,\xi_i)$ is convex and its subdifferential at $z$ satisfies
+\begin{equation}\label{eq:subgrad-Qmu}
+\partial_z Q_\mu(z,\xi_i)
+=
+\conv\left\{-T_i^\top\lambda:\ \lambda\in\Lambda_\mu(z;\xi_i)\right\}.
+\end{equation}
+In particular, for any $\lambda\in\Lambda_\mu(z;\xi_i)$ we have $-T_i^\top\lambda\in\partial_z Q_\mu(z,\xi_i)$.
+If $W_i$ has full row rank, then $\Lambda_\mu(z;\xi_i)$ is a singleton and $Q_\mu(\cdot,\xi_i)$ is
+differentiable with $\nabla_z Q_\mu(z,\xi_i)=-T_i^\top\lambda_\mu^\star(z;\xi_i)$.
+
+Consequently, $G_\mu$ is convex and
+\begin{equation}\label{eq:subgrad-Gmu}
+\partial G_\mu(z)
+=
+c-\mu z^{-1} + \sum_{i=1}^N p_i\,\partial_z Q_\mu(z,\xi_i).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Using the dual representation \eqref{eq:barrier-dual-recourse}, the only dependence on $z$ is through
+the affine term $(h_i-T_i z)^\top\lambda$. For each fixed $\lambda$, the derivative of that affine term is
+$-T_i^\top\lambda$. Danskin's theorem (subdifferential form) yields \eqref{eq:subgrad-Qmu}. Summing with
+weights $p_i$ and adding the explicit derivative of $c^\top z-\mu\sum_j\log z_j$ gives \eqref{eq:subgrad-Gmu}.
+\end{proof}
+
+\begin{proposition}[KKT conditions for the smoothed first-stage decision]\label{prop:first-stage-KKT}
+Fix $\mu>0$ and consider the smoothed stochastic program
+\begin{equation}\label{eq:stoch-mu}
+\min_{z\in\mathbb{R}^{n_1}_{++}}\;\Bigl\{G_\mu(z):\;Az=b\Bigr\}.
+\end{equation}
+Assume it attains its minimum (standing assumptions). Let $z_\mu^\star$ denote its unique minimizer.
+Then there exist a multiplier $\nu_\mu^\star$ for the equality constraint $Az=b$ and vectors
+$\lambda_{\mu}^{\star,i}\in\Lambda_\mu(z_\mu^\star;\xi_i)$, $i=1,\dots,N$, such that
+\begin{equation}\label{eq:KKT-first-stage}
+Az_\mu^\star=b,\qquad
+c-\mu\,(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star-\sum_{i=1}^N p_i\,T_i^\top\,\lambda_{\mu}^{\star,i}=0.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+By Proposition~\ref{prop:grad}, $G_\mu$ is convex on its domain and its subdifferential is given by
+\eqref{eq:subgrad-Gmu}. The feasible set $\{z>0:Az=b\}$ is affine. Standard first-order conditions for
+equality-constrained convex minimization imply the existence of $\nu_\mu^\star$ such that
+$0\in\partial G_\mu(z_\mu^\star)+A^\top\nu_\mu^\star$ together with feasibility $Az_\mu^\star=b$.
+Expanding $\partial G_\mu(z_\mu^\star)$ via \eqref{eq:subgrad-Gmu} and selecting
+$\lambda_{\mu}^{\star,i}\in\Lambda_\mu(z_\mu^\star;\xi_i)$ yields \eqref{eq:KKT-first-stage}.
+Uniqueness of $z_\mu^\star$ follows from strict convexity of $-\sum_j\log z_j$ on the affine feasible set.
+\end{proof}
+
+\subsection[As mu to 0: central-path convergence]{As $\mu\downarrow 0$: central-path convergence}\label{subsec:barrier:convergence}
+
+We next relate the barrier-smoothed solutions to their unsmoothed counterparts. We state the result in the
+single-scenario form; the extensive-form version follows by applying the same argument to the extensive-form
+LP.
+
+Fix a scenario $\xi=(q,W,T,h)$ and consider the one-scenario LP
+\begin{equation}\label{eq:LP-one-scenario}
+\min_{z\ge 0,\;y\ge 0}\Bigl\{c^\top z+q^\top y:\;Az=b,\;Wy=h-Tz\Bigr\}.
+\end{equation}
+Let $\mathcal{F}(\xi)$ denote its feasible set and $\mathcal{S}(\xi)$ its optimal solution set, assumed nonempty.
+Under our standing recession-cone assumption, $\mathcal{S}(\xi)$ is a bounded polyhedron.
+Let $\mathcal{S}^\circ(\xi):=\mathcal{S}(\xi)\cap\ri(\mathcal{F}(\xi))$ denote the relative interior of the optimal face.
+
+\begin{definition}[Analytic-center selection for LP optima]\label{def:ac}
+Assume $\mathcal{S}^\circ(\xi)\neq\emptyset$ (standing assumptions imply this). The \emph{analytic center}
+of the optimal face is the unique point $(z^{\mathrm{ac}}(\xi),y^{\mathrm{ac}}(\xi))\in\mathcal{S}^\circ(\xi)$ solving
+\begin{equation}\label{eq:ac}
+(z^{\mathrm{ac}}(\xi),y^{\mathrm{ac}}(\xi))
+\in\argmax_{(z,y)\in\mathcal{S}^\circ(\xi)}
+\Bigl\{\sum_{j=1}^{n_1}\log(z_j)+\sum_{k=1}^{n_2}\log(y_k)\Bigr\}.
+\end{equation}
+We define the \emph{canonical} first-stage decision of the one-scenario LP as
+\[
+z^\star(\xi):=z^{\mathrm{ac}}(\xi).
+\]
+\end{definition}
+
+\begin{theorem}[Barrier limit selects the analytic center]\label{thm:central-path-limit}
+Fix $\xi=(q,W,T,h)$ and assume the one-scenario LP \eqref{eq:LP-one-scenario} is feasible, has a finite
+optimal value, and that $\ri(\mathcal{F}(\xi))\neq\emptyset$ and $\mathcal{S}^\circ(\xi)\neq\emptyset$.
+For each $\mu>0$, consider the barrier-regularized one-scenario problem
+\begin{equation}\label{eq:barrier-one-scenario}
+\min_{z\in\mathbb{R}^{n_1}_{++},\;y\in\mathbb{R}^{n_2}_{++}}
+\Bigl\{c^\top z+q^\top y-\mu\sum_{j=1}^{n_1}\log z_j-\mu\sum_{k=1}^{n_2}\log y_k:\;Az=b,\;Wy=h-Tz\Bigr\},
+\end{equation}
+and let $(z_\mu^\star(\xi),y_\mu^\star(\xi))$ denote its unique minimizer.
+Then
+\[
+(z_\mu^\star(\xi),y_\mu^\star(\xi))\xrightarrow[\mu\downarrow 0]{}\bigl(z^{\mathrm{ac}}(\xi),y^{\mathrm{ac}}(\xi)\bigr),
+\qquad\text{in particular}\quad z_\mu^\star(\xi)\to z^\star(\xi).
+\]
+\end{theorem}
+
+This is a standard central-path result from interior-point theory; see, e.g., Nesterov and Nemirovskii (1994) or Wright (1997).
+
+% ============================================================
+% Section 3: Existence of decision-optimal single-scenario forecasts
+% ============================================================
+
+\section{Existence of decision-optimal single-scenario forecasts}\label{sec:existence}
+
+In this section we prove that, for several ``noise regimes'', there exist \emph{single-scenario forecasts}
+$\hat\xi$ for which solving the one-scenario problem returns exactly the (canonical) optimal first-stage
+decision of the original stochastic program. We treat first the $\mu$-smoothed setting (where the canonical
+solution is the unique log-barrier minimizer), and then show how to pass to the unsmoothed LP via
+$\mu\downarrow 0$.
+
+\subsection[A technical lemma: translating q translates the barrier dual]{A technical lemma: translating $q$ translates the barrier dual}\label{subsec:q-translation}
+
+\begin{lemma}[$q$-translation for the barrier dual]\label{lem:q-translation}
+Fix $(W,T,h,z)$ and $\mu>0$. Let $q\in\mathbb{R}^{n_2}$ be such that the dual domain
+$\{\lambda:W^\top\lambda<q\}$ is nonempty, and let $\Delta\in\mathbb{R}^m$.
+Define $q^+:=q+W^\top\Delta$.
+Then the barrier-dual maximizer sets satisfy
+\begin{equation}\label{eq:q-translation}
+\argmax_{\lambda:\;W^\top\lambda<q^+}
+\Bigl\{(h-Tz)^\top\lambda+\mu\sum_{k=1}^{n_2}\log\bigl(q^+-W^\top\lambda\bigr)_k\Bigr\}
+=
+\Bigl(\argmax_{\lambda:\;W^\top\lambda<q}
+\{\cdots\}\Bigr)+\Delta,
+\end{equation}
+i.e.\ maximizers translate by $\Delta$. In particular, if $W$ has full row rank so that the maximizer is unique,
+then
+\[
+\lambda_\mu^\star(z;q^+,W,T,h)=\lambda_\mu^\star(z;q,W,T,h)+\Delta.
+\]
+\end{lemma}
+
+\begin{proof}
+Consider the barrier dual objective for $q^+$:
+\[
+\Psi_{q^+}(\lambda)
+:=
+(h-Tz)^\top\lambda+\mu\sum_{k=1}^{n_2}\log\bigl(q^+-W^\top\lambda\bigr)_k,
+\qquad\text{dom}(\Psi_{q^+})=\{\lambda:W^\top\lambda<q^+\}.
+\]
+With the change of variables $\lambda=\tilde\lambda+\Delta$, we have
+$W^\top\lambda<q^+ \iff W^\top\tilde\lambda<q$, and
+\[
+\Psi_{q^+}(\tilde\lambda+\Delta)
+=
+(h-Tz)^\top\tilde\lambda+(h-Tz)^\top\Delta
++\mu\sum_{k=1}^{n_2}\log\bigl(q-W^\top\tilde\lambda\bigr)_k.
+\]
+The term $(h-Tz)^\top\Delta$ is constant in $\tilde\lambda$, so the maximizers in $\tilde\lambda$ are exactly those
+for $q$, and the stated translation of maximizers follows.
+\end{proof}
+
+\subsection{Decision-optimal forecasts for the barrier-smoothed problem}\label{subsec:existence:mu}
+
+Throughout this subsection, fix $\mu>0$ and let $z_\mu^\star$ be the unique minimizer of the smoothed
+stochastic program \eqref{eq:stoch-mu}. For each scenario $i$ and each $z$, let
+$\Lambda_\mu^i(z):=\Lambda_\mu(z;\xi_i)$ denote the (possibly set-valued) dual maximizer set in
+\eqref{eq:barrier-dual-recourse} for the barrier recourse $Q_\mu(z,\xi_i)$. When $W_i$ is rank-deficient,
+$\Lambda_\mu^i(z)$ need not be a singleton.
+
+In the constructions below we only need dual multipliers at the stochastic optimum $z_\mu^\star$.
+We fix a canonical choice as follows. Consider the extensive-form barrier problem equivalent to
+\eqref{eq:stoch-mu}:
+\[
+\min_{\substack{z\in\mathbb{R}^{n_1}_{++}\\ y_i\in\mathbb{R}^{n_2}_{++}}}
+\ c^\top z - \mu\sum_{j=1}^{n_1}\log z_j
++\sum_{i=1}^N p_i\left(q_i^\top y_i-\mu\sum_{k=1}^{n_2}\log (y_i)_k\right)
+\quad\text{s.t.}\quad
+Az=b,\ \ W_i y_i = h_i - T_i z\ (i\in[N]).
+\]
+Let $(z_\mu^\star,y_{\mu,1}^\star,\dots,y_{\mu,N}^\star)$ be its unique minimizer. Under
+Assumption~\ref{ass:full-row-rank}, the equality-constraint multipliers are unique; let $\nu_\mu^\star$
+be the multiplier for $Az=b$ and let $\widehat\lambda_{\mu}^{\star,i}$ be the multiplier for
+$W_i y_i = h_i - T_i z$. Define the scaled multipliers
+\[
+\lambda_{\mu}^{\star,i} := \widehat\lambda_{\mu}^{\star,i}/p_i \qquad (i\in[N]).
+\]
+Then for each $i$, $(y_{\mu,i}^\star,\lambda_{\mu}^{\star,i})$ satisfies the second-stage KKT system
+\eqref{eq:KKT-second-stage} at $z=z_\mu^\star$, hence $\lambda_{\mu}^{\star,i}\in\Lambda_\mu^i(z_\mu^\star)$.
+
+\subsubsection[Noise in (q,h) with fixed (W,T), and q* chosen a priori]{Noise in $(q,h)$ with fixed $(W,T)$, and \texorpdfstring{$q^\star$}{q*} chosen \emph{a priori}}\label{subsec:qh-fixedWT}
+
+Assume in this subsection that $W_i\equiv W$ and $T_i\equiv T$ are deterministic and fixed across scenarios,
+while $(q_i,h_i)$ may vary with $i$.
+
+\begin{theorem}[A decision-optimal $(q^\star,h_\mu^\star)$ under fixed $(W,T)$]\label{thm:qh-fixedWT-barrier}
+Assume $W$ and $T$ are fixed across scenarios, and let $z_\mu^\star$ be the unique minimizer of the smoothed
+stochastic program \eqref{eq:stoch-mu}. Define the averaged second-stage dual vector
+\[
+\bar\lambda_\mu:=\sum_{i=1}^N p_i\,\lambda_{\mu}^{\star,i}\in\mathbb{R}^m,
+\]
+and fix a parameter $\delta>0$ (chosen a priori). Define the componentwise maximum
+\[
+q^{\max}_k:=\max_{i=1,\dots,N}(q_i)_k,\qquad k=1,\dots,n_2,
+\]
+and set
+\begin{equation}\label{eq:qmax}
+(q^\star)_k:= q^{\max}_k + \delta\,|q^{\max}_k|,\qquad k=1,\dots,n_2,
+\end{equation}
+where $|\cdot|$ denotes absolute value (componentwise).
+Then $q^\star-W^\top\bar\lambda_\mu\in\mathbb{R}^{n_2}_{++}$, and the quantities
+\[
+y_\mu^\star:=\mu\,(q^\star-W^\top\bar\lambda_\mu)^{-1}\in\mathbb{R}^{n_2}_{++},
+\qquad
+h_\mu^\star:=Tz_\mu^\star+Wy_\mu^\star\in\mathbb{R}^m
+\]
+define a single-scenario forecast $\hat\xi_\mu^\star:=(q^\star,W,T,h_\mu^\star)$ such that
+\begin{equation}\label{eq:decision-optimal-qh}
+z_\mu^\star = z_\mu^\star(\hat\xi_\mu^\star),
+\end{equation}
+i.e.\ the one-scenario barrier problem with scenario $\hat\xi_\mu^\star$ returns the same first-stage decision
+as the full smoothed stochastic program.
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1: $\bar\lambda_\mu$ is strictly dual-feasible for $q^\star$.}
+For each scenario $i$, Proposition~\ref{prop:second-stage-kkt} gives
+\[
+q_i-W^\top\lambda_{\mu}^{\star,i}=\mu\,\bigl(y_{\mu,i}^\star\bigr)^{-1}\in\mathbb{R}^{n_2}_{++}.
+\]
+By \eqref{eq:qmax}, $q^\star\ge q^{\max}\ge q_i$ componentwise, so
+$q^\star-W^\top\lambda_{\mu}^{\star,i}\in\mathbb{R}^{n_2}_{++}$ for all $i$.
+Taking the $p_i$-weighted average yields
+\[
+q^\star-W^\top\bar\lambda_\mu
+=\sum_{i=1}^N p_i\bigl(q^\star-W^\top\lambda_{\mu}^{\star,i}\bigr)\in\mathbb{R}^{n_2}_{++}.
+\]
+
+\emph{Step 2: Construct $(y_\mu^\star,h_\mu^\star)$ so that $\bar\lambda_\mu$ is second-stage optimal.}
+Define $y_\mu^\star:=\mu(q^\star-W^\top\bar\lambda_\mu)^{-1}$ and $h_\mu^\star:=Tz_\mu^\star+Wy_\mu^\star$.
+Then $Wy_\mu^\star=h_\mu^\star-Tz_\mu^\star$ by construction, and also
+$q^\star-W^\top\bar\lambda_\mu=\mu(y_\mu^\star)^{-1}$.
+Thus the pair $(y_\mu^\star,\bar\lambda_\mu)$ satisfies the KKT system \eqref{eq:KKT-second-stage}
+for the \emph{single-scenario} second-stage barrier problem with data $(q^\star,W,T,h_\mu^\star)$ at $z=z_\mu^\star$.
+In particular, $\bar\lambda_\mu\in\Lambda_\mu(z_\mu^\star;\hat\xi_\mu^\star)$.
+
+\emph{Step 3: Verify first-stage optimality for the one-scenario problem.}
+Because $T$ is fixed across scenarios, the first-stage KKT condition \eqref{eq:KKT-first-stage} for the
+stochastic problem reads
+\[
+c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star - T^\top\Bigl(\sum_{i=1}^N p_i\lambda_{\mu}^{\star,i}\Bigr)=0,
+\]
+i.e.\ $c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star-T^\top\bar\lambda_\mu=0$.
+Together with $Az_\mu^\star=b$ and the second-stage KKT relations from Step~2 (with multiplier
+$\bar\lambda_\mu$), this is exactly the KKT system for the one-scenario barrier problem with scenario
+$\hat\xi_\mu^\star$ at $z=z_\mu^\star$. Hence $z_\mu^\star$ is optimal for the one-scenario problem,
+proving \eqref{eq:decision-optimal-qh}.
+\end{proof}
+
+\subsubsection[Noise in (W,q,h) with fixed T, and (W*, h*) chosen a priori]{Noise in $(W,q,h)$ with fixed $T$, and $(W^\star,h^\star)$ chosen \emph{a priori}}\label{subsec:Wqh-fixedT}
+
+Assume now that $T_i\equiv T$ is fixed across scenarios, but $(W_i,q_i,h_i)$ may vary with $i$.
+
+\begin{theorem}[A decision-optimal $q_\mu^\star$ under fixed $T$ and a priori $(W^\star,h^\star)$]\label{thm:Wqh-fixedT-barrier}
+Assume $T$ is fixed across scenarios. Let $z_\mu^\star$ be the unique minimizer of the smoothed stochastic
+program \eqref{eq:stoch-mu}, and define the averaged dual vector
+\[
+\bar\lambda_\mu:=\sum_{i=1}^N p_i\,\lambda_{\mu}^{\star,i}.
+\]
+Fix an index $i_0\in\{1,\dots,N\}$ (chosen a priori) and set
+\[
+W^\star:=W_{i_0},\qquad h^\star:=h_{i_0},\qquad \lambda_{0,\mu}:=\lambda_{\mu}^{\star,i_0}.
+\]
+Define
+\begin{equation}\label{eq:qstar-Wqh}
+q_\mu^\star:=q_{i_0}+{W^\star}^\top(\bar\lambda_\mu-\lambda_{0,\mu}),
+\end{equation}
+and the single-scenario forecast $\hat\xi_\mu^\star:=(q_\mu^\star,W^\star,T,h^\star)$.
+Then
+\[
+z_\mu^\star = z_\mu^\star(\hat\xi_\mu^\star),
+\]
+i.e.\ $\hat\xi_\mu^\star$ is a decision-optimal single-scenario forecast for the barrier-smoothed problem.
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1: $\bar\lambda_\mu$ is second-stage optimal for $(q_\mu^\star,W^\star,h^\star)$ at $z_\mu^\star$.}
+By definition, $\Delta:=\bar\lambda_\mu-\lambda_{0,\mu}$ and $q_\mu^\star=q_{i_0}+{W^\star}^\top\Delta$.
+Lemma~\ref{lem:q-translation} applies with $W=W^\star$, $h=h^\star$ and $z=z_\mu^\star$, and yields
+\[
+\Lambda_\mu\bigl(z_\mu^\star;\,q_\mu^\star,W^\star,T,h^\star\bigr)
+=
+\Lambda_\mu\bigl(z_\mu^\star;\,q_{i_0},W^\star,T,h^\star\bigr)+\Delta.
+\]
+Since $\lambda_{0,\mu}\in\Lambda_\mu(z_\mu^\star;\,q_{i_0},W^\star,T,h^\star)$, it follows that
+$\lambda_{0,\mu}+\Delta=\bar\lambda_\mu$ belongs to
+$\Lambda_\mu(z_\mu^\star;\,q_\mu^\star,W^\star,T,h^\star)$.
+
+\emph{Step 2: First-stage optimality.}
+Since $T$ is fixed across scenarios, the smoothed first-stage KKT condition \eqref{eq:KKT-first-stage} can be written
+\[
+c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star - T^\top\bar\lambda_\mu=0.
+\]
+Together with feasibility $Az_\mu^\star=b$ and Step~1 (which provides a valid second-stage multiplier
+$\bar\lambda_\mu$ for the one-scenario recourse at $z_\mu^\star$), this is precisely the KKT system of the
+one-scenario barrier problem with scenario $\hat\xi_\mu^\star$. Hence $z_\mu^\star$ is optimal for the
+one-scenario problem with $\hat\xi_\mu^\star$.
+\end{proof}
+
+\subsubsection[Full noise in (W,T,q,h), with (W*, T*) chosen a priori]{Full noise in $(W,T,q,h)$, with $(W^\star,T^\star)$ chosen \emph{a priori}}\label{subsec:full-noise}
+
+In the fully stochastic case, the first-stage KKT condition involves the combination $\sum_i p_i T_i^\top\lambda_{\mu}^{\star,i}$,
+which generally cannot be written as $T^\top(\cdot)$ for a \emph{fixed} $T$ unless $T$ is fixed.
+We therefore choose an \emph{a priori} matrix $T^\star$ whose row space dominates all scenario row spaces.
+
+\begin{assumption}[Row-space dominance for $T^\star$]\label{ass:rowspace}
+There exists a matrix $T^\star\in\mathbb{R}^{m^\star\times n_1}$, chosen a priori, such that
+\[
+\Row(T_i)\subseteq \Row(T^\star)\quad\text{for all }i=1,\dots,N,
+\]
+and $T^\star$ has full row rank.
+\end{assumption}
+
+\begin{remark}[Constructing such a $T^\star$]\label{rem:construct-Tstar}
+Because the support is finite, one can construct $T^\star$ by stacking all $T_i$ vertically, extracting a basis of the resulting
+row space (e.g.\ by Gaussian elimination), and taking those basis vectors as the rows of $T^\star$.
+\end{remark}
+
+We also choose a compatible $W^\star$ by selecting the corresponding rows from the scenario matrices $W_i$.
+
+\begin{assumption}[Compatible choice of $W^\star$]\label{ass:Wstar}
+Let the rows of $T^\star$ be selected from the collection of scenario rows $\{(T_i)_{j,:}\}$.
+For each row of $T^\star$, pick the matching row of $W$ from the same scenario, and assemble them into a matrix
+$W^\star\in\mathbb{R}^{m^\star\times n_2}$. We assume (and enforce by removing redundant rows) that $W^\star$ has full row rank.
+\end{assumption}
+
+\begin{theorem}[A decision-optimal single scenario under full noise]\label{thm:full-noise-barrier}
+Assume \ref{ass:rowspace}--\ref{ass:Wstar}. Let $z_\mu^\star$ be the unique minimizer of the smoothed stochastic program
+\eqref{eq:stoch-mu}.
+Define
+\[
+g_\mu:=\sum_{i=1}^N p_i\,T_i^\top\lambda_{\mu}^{\star,i}\in\mathbb{R}^{n_1}.
+\]
+Then $g_\mu\in\Row(T^\star)=\col({T^\star}^\top)$, so there exists a unique vector $\lambda_\mu^\star\in\mathbb{R}^{m^\star}$
+satisfying
+\begin{equation}\label{eq:lambda-star-full-noise}
+{T^\star}^\top\lambda_\mu^\star=g_\mu.
+\end{equation}
+Fix any reference vector $y^{\mathrm{ref}}\in\mathbb{R}^{n_2}_{++}$ (chosen a priori) and define
+\begin{equation}\label{eq:full-noise-forecast}
+q_\mu^\star:={W^\star}^\top\lambda_\mu^\star+\mu\,(y^{\mathrm{ref}})^{-1},
+\qquad
+h_\mu^\star:=T^\star z_\mu^\star+W^\star y^{\mathrm{ref}}.
+\end{equation}
+Let $\hat\xi_\mu^\star:=(q_\mu^\star,W^\star,T^\star,h_\mu^\star)$. Then
+\[
+z_\mu^\star = z_\mu^\star(\hat\xi_\mu^\star),
+\]
+i.e.\ $\hat\xi_\mu^\star$ is a decision-optimal single-scenario forecast for the barrier-smoothed problem.
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1: Existence and uniqueness of $\lambda_\mu^\star$.}
+Each vector $T_i^\top\lambda_{\mu}^{\star,i}$ lies in $\Row(T_i)$, hence $g_\mu$ is a convex combination of vectors in $\Row(T_i)$.
+Assumption~\ref{ass:rowspace} gives $\Row(T_i)\subseteq\Row(T^\star)$ for all $i$, hence $g_\mu\in\Row(T^\star)=\col({T^\star}^\top)$.
+Since $T^\star$ has full row rank, ${T^\star}^\top$ has full column rank, so \eqref{eq:lambda-star-full-noise} has a unique solution.
+
+\emph{Step 2: $\lambda_\mu^\star$ is second-stage optimal for the constructed one-scenario data.}
+By construction \eqref{eq:full-noise-forecast}, the pair $(y^{\mathrm{ref}},\lambda_\mu^\star)$ satisfies
+\[
+W^\star y^{\mathrm{ref}} = h_\mu^\star - T^\star z_\mu^\star,
+\qquad
+q_\mu^\star - {W^\star}^\top\lambda_\mu^\star = \mu\,(y^{\mathrm{ref}})^{-1}.
+\]
+Thus it satisfies the KKT system \eqref{eq:KKT-second-stage} for the one-scenario second-stage barrier problem with data
+$(q_\mu^\star,W^\star,T^\star,h_\mu^\star)$ at $z=z_\mu^\star$. In particular,
+$\lambda_\mu^\star\in\Lambda_\mu(z_\mu^\star;\hat\xi_\mu^\star)$.
+
+\emph{Step 3: First-stage optimality.}
+The first-stage KKT condition \eqref{eq:KKT-first-stage} for the stochastic problem gives a multiplier $\nu_\mu^\star$ such that
+\[
+c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star - \sum_{i=1}^N p_i T_i^\top\lambda_{\mu}^{\star,i}=0,
+\]
+i.e.\ $c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star-g_\mu=0$.
+Using \eqref{eq:lambda-star-full-noise}, $g_\mu={T^\star}^\top\lambda_\mu^\star$, so we obtain
+\[
+c-\mu(z_\mu^\star)^{-1}+A^\top\nu_\mu^\star-{T^\star}^\top\lambda_\mu^\star=0,
+\]
+which is precisely the one-scenario KKT stationarity for $\hat\xi_\mu^\star$ at $z_\mu^\star$.
+Therefore $z_\mu^\star$ is optimal for the one-scenario barrier problem with scenario $\hat\xi_\mu^\star$.
+\end{proof}
+
+\subsection{From barrier forecasts to LP forecasts}\label{subsec:existence:LP}
+
+We now relate the $\mu$-decision-optimal forecasts of Section~\ref{subsec:existence:mu} to their unsmoothed
+LP counterparts as $\mu\downarrow 0$. Recall from Definition~\ref{def:ac} that for a one-scenario LP
+we use $z^\star(\xi)$ to denote the analytic-center selection of its (possibly non-unique) optimal first-stage decisions.
+
+\paragraph{Notation: analytic-center dual multipliers for unsmoothed recourse.}
+Fix a first-stage decision $z\in Z$ and a scenario $\xi_i=(q_i,h_i,W_i,T_i)$.
+The dual of the unsmoothed recourse LP $Q(z,\xi_i)$ is
+\[
+\max_{\lambda\in\mathbb{R}^{m_2}}\ \{(h_i-T_i z)^\top\lambda:\ W_i^\top\lambda\le q_i\}.
+\]
+Let $\Lambda^{\mathrm{LP}}(z;\xi_i)$ denote its (possibly set-valued) optimal solution set.
+Define the set of dual-slack coordinates that are not identically zero on the optimal face by
+\[
+\mathcal J^{\mathrm{dual}}(z;\xi_i)
+:=\Bigl\{k:\ \exists \lambda\in\Lambda^{\mathrm{LP}}(z;\xi_i)\ \text{with}\ (q_i-W_i^\top\lambda)_k>0\Bigr\}.
+\]
+The \emph{analytic-center dual multiplier} is the unique vector $\lambda^{\star,i}(z)\in\Lambda^{\mathrm{LP}}(z;\xi_i)$ solving
+\[
+\lambda^{\star,i}(z)\in
+\argmax_{\lambda\in\Lambda^{\mathrm{LP}}(z;\xi_i)}
+\ \sum_{k\in\mathcal J^{\mathrm{dual}}(z;\xi_i)}\log\bigl((q_i-W_i^\top\lambda)_k\bigr),
+\]
+where the maximization is taken over the relative interior of $\Lambda^{\mathrm{LP}}(z;\xi_i)$ in its affine hull.
+
+\begin{lemma}[Closed-graph lemma at $\mu=0$ for one-scenario forecasts]\label{lem:closed-graph}
+Let $\mu_k\downarrow 0$ and let $\hat\xi_k\to\hat\xi$ be any convergent sequence of one-scenario data.
+Assume that for each $k$, the one-scenario barrier problem \eqref{eq:barrier-one-scenario} with data $\hat\xi_k$
+is feasible and has a unique minimizer, and denote its first-stage component by $z_{\mu_k}^\star(\hat\xi_k)$.
+If
+\[
+z_{\mu_k}^\star(\hat\xi_k)\to \bar z,
+\]
+then $\bar z = z^\star(\hat\xi)$, i.e.\ the limit is the analytic-center first-stage decision of the
+\emph{unsmoothed} one-scenario LP with data $\hat\xi$.
+\end{lemma}
+
+\begin{proof}
+Fix any $k$ and consider the map $\xi\mapsto (z_{\mu_k}^\star(\xi),y_{\mu_k}^\star(\xi))$.
+For $\mu_k>0$, Proposition~\ref{prop:IFT} implies this map is continuous on any set where feasibility holds, hence
+\[
+\bigl\|z_{\mu_k}^\star(\hat\xi_k)-z_{\mu_k}^\star(\hat\xi)\bigr\|\xrightarrow[k\to\infty]{}0.
+\]
+Therefore $z_{\mu_k}^\star(\hat\xi)=z_{\mu_k}^\star(\hat\xi_k)+o(1)\to\bar z$.
+On the other hand, for fixed $\hat\xi$, Theorem~\ref{thm:central-path-limit} shows that
+$z_{\mu_k}^\star(\hat\xi)\to z^\star(\hat\xi)$ as $\mu_k\downarrow 0$.
+Hence $\bar z=z^\star(\hat\xi)$.
+\end{proof}
+
+By Lemma~\ref{lem:closed-graph}, if a family of one-scenario forecasts $\{\hat\xi_\mu^\star\}_{\mu>0}$ satisfies
+$z_\mu^\star = z_\mu^\star(\hat\xi_\mu^\star)$ for all $\mu>0$ and along some sequence $\mu_k\downarrow 0$ we have
+$\hat\xi_{\mu_k}^\star\to \hat\xi^\star$, then $\hat\xi^\star$ is LP
+decision-optimal, i.e.\ $z^\star = z^\star(\hat\xi^\star)$.
+
+\subsubsection[A concrete LP limit for the (q*, h mu*) construction]{A concrete LP limit for the $(q^\star,h_\mu^\star)$ construction}\label{subsec:qh-limit}
+
+We now specialize to the fixed-$(W,T)$ setting of Theorem~\ref{thm:qh-fixedWT-barrier}.
+In that setting, $\hat\xi_\mu^\star=(q^\star,W,T,h_\mu^\star)$ with fixed $q^\star$ and varying $h_\mu^\star$.
+
+\begin{theorem}[Convergence of the $h_\mu^\star$ construction]\label{thm:hmu-converges}
+Assume the fixed-$(W,T)$ regime of Theorem~\ref{thm:qh-fixedWT-barrier}, and let $q^\star$ be
+defined by \eqref{eq:qmax} with some fixed $\delta>0$. Let $z_\mu^\star$ be the unique minimizer
+of the smoothed stochastic program \eqref{eq:stoch-mu}, let $\bar\lambda_\mu$ be as in Theorem~\ref{thm:qh-fixedWT-barrier},
+and let $h_\mu^\star$ be defined by that theorem. Assume $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$.
+Then
+\[
+h_\mu^\star \xrightarrow[\mu\downarrow 0]{} h^\star:=Tz^\star.
+\]
+In particular, any accumulation point of the forecasts $(q^\star,W,T,h_\mu^\star)$ is the LP decision-optimal forecast
+$(q^\star,W,T,Tz^\star)$.
+\end{theorem}
+
+\begin{proof}
+Write $y_\mu^\star=\mu(q^\star-W^\top\bar\lambda_\mu)^{-1}$ so that $h_\mu^\star=Tz_\mu^\star+Wy_\mu^\star$.
+We first show $y_\mu^\star\to 0$.
+For each scenario $i$, the second-stage KKT gives $W^\top\lambda_{\mu}^{\star,i}=q_i-\mu(y_{\mu,i}^\star)^{-1}\le q_i$ componentwise.
+Taking the probability-weighted average yields
+\[
+W^\top\bar\lambda_\mu=\sum_{i=1}^N p_i W^\top\lambda_{\mu}^{\star,i} \le \sum_{i=1}^N p_i q_i \quad\text{componentwise}.
+\]
+Let $q^{\max}\in\mathbb{R}^{n_2}$ be the componentwise maximum of the $(q_i)_{i=1}^N$, so that
+$q^{\max}_k=\max_i(q_i)_k$ and $q^\star=q^{\max}+\delta|q^{\max}|$ by \eqref{eq:qmax}.
+Since $\sum_i p_i q_i \le q^{\max}$ componentwise, we obtain
+\[
+q^\star - \sum_{i=1}^N p_i q_i \ \ge\ q^\star-q^{\max} \ =\ \delta\,|q^{\max}| \ \ge\ 0
+\qquad\text{(componentwise)}.
+\]
+Combining with $W^\top\bar\lambda_\mu \le \sum_i p_i q_i$ yields
+\[
+q^\star - W^\top\bar\lambda_\mu \ \ge\ \delta\,|q^{\max}|.
+\]
+Therefore, componentwise,
+\[
+0<y_\mu^\star=\mu(q^\star-W^\top\bar\lambda_\mu)^{-1}
+\ \le\ \mu\,(\delta|q^{\max}|)^{-1}
+\ \xrightarrow[\mu\downarrow 0]{}\ 0,
+\]
+and hence $Wy_\mu^\star\to 0$.
+Therefore $Wy_\mu^\star\to 0$ and, using $z_\mu^\star\to z^\star$,
+\[
+h_\mu^\star=Tz_\mu^\star+Wy_\mu^\star \to Tz^\star+0 = Tz^\star.
+\]
+Since $\hat\xi_\mu^\star=(q^\star,W,T,h_\mu^\star)$ and we have shown $h_\mu^\star\to Tz^\star$,
+we obtain $\hat\xi_\mu^\star\to \hat\xi^\star:=(q^\star,W,T,Tz^\star)$.
+Because $z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$ for all $\mu>0$
+(Theorem~\ref{thm:qh-fixedWT-barrier}), Lemma~\ref{lem:closed-graph} yields
+$z^\star=z^\star(\hat\xi^\star)$, i.e.\ $\hat\xi^\star$ is LP decision-optimal.
+\end{proof}
+
+\subsubsection[A concrete LP limit for the (q mu*, W*, T, h*) construction]{A concrete LP limit for the $(q_\mu^\star,W^\star,T,h^\star)$ construction}\label{subsec:Wqh-limit-LP}
+
+We now specialize to the fixed-$T$ setting of Theorem~\ref{thm:Wqh-fixedT-barrier}.
+In that setting, $\hat\xi_\mu^\star=(q_\mu^\star,W^\star,T,h^\star)$ with fixed $(W^\star,h^\star)$ and varying $q_\mu^\star$.
+
+\begin{theorem}[LP limit of the $q_\mu^\star$ construction under fixed $T$]\label{thm:Wqh-fixedT-LP}
+Assume the fixed-$T$ regime of Theorem~\ref{thm:Wqh-fixedT-barrier}: $T_i\equiv T$ is fixed across scenarios,
+while $(W_i,q_i,h_i)$ may vary. Fix an index $i_0\in\{1,\dots,N\}$ \emph{a priori} and set
+\[
+W^\star:=W_{i_0},\qquad h^\star:=h_{i_0}.
+\]
+Let $\hat\xi_\mu^\star=(q_\mu^\star,W^\star,T,h^\star)$ be the $\mu$-decision-optimal barrier forecast from
+Theorem~\ref{thm:Wqh-fixedT-barrier}, i.e.\ with $q_\mu^\star$ defined by \eqref{eq:qstar-Wqh} and
+$z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$ for all $\mu>0$.
+
+Let $z^\star$ denote the canonical (analytic-center) optimal first-stage decision of the \emph{unsmoothed}
+extensive-form LP. Under the standing assumptions, $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$
+(by applying Theorem~\ref{thm:central-path-limit} to the extensive-form LP).
+
+For each scenario $i$, let $\lambda^{\star,i}:=\lambda^{\star,i}(z^\star)$ denote the analytic-center dual-optimal
+solution of the \emph{unsmoothed} second-stage dual LP at first-stage decision $z^\star$ and scenario $\xi_i$
+(as defined in the notation block at the start of Section~\ref{subsec:existence:LP}). Define the averaged dual vector
+\[
+\lambda^\star := \sum_{i=1}^N p_i\,\lambda^{\star,i}.
+\]
+Then the LP-limit second-stage cost vector is given explicitly by
+\begin{equation}\label{eq:qstar-fixedT-LP}
+q^\star
+:= q_{i_0} - {W^\star}^\top\bigl(\lambda^{\star,i_0}-\lambda^\star\bigr)
+\;=\; q_{i_0} + {W^\star}^\top\bigl(\lambda^\star-\lambda^{\star,i_0}\bigr),
+\end{equation}
+i.e.\ in the form requested,
+\[
+q^\star = q_i - W_i^\top(\lambda^{\star,i}-\lambda^\star)\quad\text{with }i=i_0.
+\]
+Moreover, $q_\mu^\star\to q^\star$ as $\mu\downarrow 0$, hence $\hat\xi_\mu^\star\to \hat\xi^\star:=(q^\star,W^\star,T,h^\star)$.
+In particular, $\hat\xi^\star$ is decision-optimal for the \emph{unsmoothed} problem:
+\[
+z^\star = z^\star(\hat\xi^\star).
+\]
+\end{theorem}
+
+\begin{proof}
+By Theorem~\ref{thm:Wqh-fixedT-barrier}, we have $z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$ for all $\mu>0$.
+By Theorem~\ref{thm:central-path-limit} applied to the extensive-form LP, $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$.
+
+Next, use the standard primal--dual central-path convergence for the \emph{second-stage} problems (equivalently, for the
+barrier-of-the-dual formulation in Proposition~\ref{prop:barrier-dual}) together with the fact that the analytic-center dual
+solution depends continuously on the right-hand side $h_i-Tz$ (in particular, on $z$ under fixed $T$): this yields
+\[
+\lambda_{\mu}^{\star,i}\longrightarrow \lambda^{\star,i}\qquad (i=1,\dots,N),
+\]
+and hence $\bar\lambda_\mu=\sum_i p_i\lambda_{\mu}^{\star,i}\to\lambda^\star$ and
+$\lambda_{0,\mu}=\lambda_{\mu}^{\star,i_0}\to\lambda^{\star,i_0}$.
+Taking $\mu\downarrow 0$ in the definition $q_\mu^\star=q_{i_0}+{W^\star}^\top(\bar\lambda_\mu-\lambda_{0,\mu})$
+gives $q_\mu^\star\to q^\star$ with $q^\star$ as in \eqref{eq:qstar-fixedT-LP}.
+Therefore $\hat\xi_\mu^\star\to\hat\xi^\star$.
+
+Finally, apply the convergent-scenario lemma (Lemma~\ref{lem:closed-graph}) to the sequence
+$\hat\xi_\mu^\star\to\hat\xi^\star$ and the corresponding identities $z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$.
+We obtain $z^\star=z^\star(\hat\xi^\star)$, i.e.\ $\hat\xi^\star$ is LP decision-optimal.
+\end{proof}
+
+\subsubsection{A concrete LP limit for the full-noise construction}\label{subsec:full-noise-limit-LP}
+
+We now specialize to the full-noise setting of Theorem~\ref{thm:full-noise-barrier}.
+In that setting, $\hat\xi_\mu^\star=(q_\mu^\star,W^\star,T^\star,h_\mu^\star)$ with fixed $(W^\star,T^\star)$ and varying $(q_\mu^\star,h_\mu^\star)$.
+
+\begin{theorem}[LP limit of the full-noise construction]\label{thm:full-noise-LP}
+Assume the full-noise regime and the a priori choices $(W^\star,T^\star)$ of
+Assumptions~\ref{ass:rowspace}--\ref{ass:Wstar}. Let $z_\mu^\star$ denote the unique minimizer of the smoothed stochastic
+program \eqref{eq:stoch-mu}, and let $z^\star$ denote the canonical (analytic-center) optimal first-stage decision of the
+\emph{unsmoothed} extensive-form LP. Under the standing assumptions, $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$
+(by applying Theorem~\ref{thm:central-path-limit} to the extensive-form LP).
+
+Define the LP-limit right-hand side by
+\begin{equation}\label{eq:hstar-full-noise-LP}
+h^\star := T^\star z^\star.
+\end{equation}
+
+For each scenario $i$, let $\lambda^{\star,i}:=\lambda^{\star,i}(z^\star)$ denote the analytic-center dual-optimal solution
+of the \emph{unsmoothed} second-stage dual LP at first-stage decision $z^\star$ and scenario $\xi_i$.
+Define
+\[
+g^\star := \sum_{i=1}^N p_i\,T_i^\top \lambda^{\star,i}\in\mathbb{R}^{n_1}.
+\]
+By Assumption~\ref{ass:rowspace}, $g^\star\in\Row(T^\star)=\col({T^\star}^\top)$, hence there exists a unique
+$\lambda^\star\in\mathbb{R}^{m^\star}$ satisfying
+\begin{equation}\label{eq:lambdastar-full-noise-LP}
+{T^\star}^\top \lambda^\star = g^\star,
+\qquad\text{equivalently}\qquad
+\lambda^\star = (T^\star)^{-T}\,g^\star,
+\end{equation}
+where $(T^\star)^{-T}$ denotes the (unique) left-inverse action implied by \eqref{eq:lambdastar-full-noise-LP}.
+
+Let $\lambda^{\star,0}\in\mathbb{R}^{m^\star}$ denote the analytic-center dual-optimal solution of the \emph{reference}
+second-stage dual LP defined by first-stage decision $z=z^\star$ and second-stage data
+\[
+(W,T,h,q)=(W^\star,T^\star,h^\star,0),
+\]
+i.e.\ the analytic-center selection from the optimal set of
+\[
+\max_{\lambda\in\mathbb{R}^{m^\star}}\ \{(h^\star-T^\star z^\star)^\top\lambda:\ {W^\star}^\top\lambda\le 0\}.
+\]
+Then the LP-limit second-stage cost vector is chosen explicitly as
+\begin{equation}\label{eq:qstar-full-noise-LP}
+q^\star := -{W^\star}^\top\bigl(\lambda^{\star,0}-\lambda^\star\bigr),
+\end{equation}
+and the corresponding one-scenario LP forecast is $\hat\xi^\star:=(q^\star,W^\star,T^\star,h^\star)$.
+
+Moreover, the full-noise barrier-optimal forecasts from Section~\ref{subsec:full-noise} converge to $\hat\xi^\star$ as
+$\mu\downarrow 0$, and $\hat\xi^\star$ is decision-optimal for the \emph{unsmoothed} problem:
+\[
+z^\star = z^\star(\hat\xi^\star).
+\]
+\end{theorem}
+
+\begin{proof}
+By the full-noise barrier theorem (Theorem~\ref{thm:full-noise-barrier}), for each $\mu>0$ there is a
+$\mu$-decision-optimal one-scenario barrier forecast $\hat\xi_\mu^\star$ such that
+$z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$.
+
+By Theorem~\ref{thm:central-path-limit} applied to the extensive-form LP, $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$,
+hence (by definition) $h_\mu^\star:=T^\star z_\mu^\star \to h^\star=T^\star z^\star$.
+
+Next, by standard primal--dual central-path convergence for the \emph{second-stage} problems, the canonical barrier dual
+multipliers converge to analytic-center dual-optimal multipliers of the unsmoothed second-stage dual LPs; in particular,
+for each scenario $i$ we have $\lambda_{\mu}^{\star,i}\to\lambda^{\star,i}$, hence
+$g_\mu:=\sum_i p_iT_i^\top\lambda_{\mu}^{\star,i}\to g^\star$.
+Since the linear map $\lambda\mapsto {T^\star}^\top\lambda$ is injective and $g_\mu,g^\star\in\col({T^\star}^\top)$,
+the unique solutions $\lambda_\mu^\star$ of ${T^\star}^\top\lambda_\mu^\star=g_\mu$ converge to the unique solution
+$\lambda^\star$ of \eqref{eq:lambdastar-full-noise-LP}.
+
+Finally, use continuity of the \emph{analytic-center dual solution map} for the second-stage dual LP with respect to the
+right-hand side $h$ (with fixed $W^\star,T^\star$ and fixed $q=0$): since $h_\mu^\star\to h^\star$, the corresponding
+reference analytic-center dual optimizers satisfy $\lambda_{\mu}^{\star,0}\to\lambda^{\star,0}$. Taking limits in the
+(full-noise) $q$-translation defining the one-scenario forecast yields $q_\mu^\star\to q^\star$ with $q^\star$ given by
+\eqref{eq:qstar-full-noise-LP}. Therefore $\hat\xi_\mu^\star\to\hat\xi^\star$.
+
+Apply Lemma~\ref{lem:closed-graph} to $\hat\xi_\mu^\star\to\hat\xi^\star$ and $z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$.
+We obtain $z^\star=z^\star(\hat\xi^\star)$, i.e.\ $\hat\xi^\star$ is LP decision-optimal.
+\end{proof}
+
+\begin{lemma}[Continuity of the analytic-center solution map]\label{lem:ac-continuity}
+Suppose $\xi_k\to\xi$ and that the corresponding one-scenario LPs satisfy the standing assumptions guaranteeing
+existence of analytic centers. Then $z^\star(\xi_k)\to z^\star(\xi)$.
+\end{lemma}
+
+\begin{proof}
+Pick any sequence $\mu_\ell\downarrow 0$.
+By Theorem~\ref{thm:central-path-limit}, for each fixed $k$ we have $z_{\mu_\ell}^\star(\xi_k)\to z^\star(\xi_k)$ as $\ell\to\infty$,
+and similarly $z_{\mu_\ell}^\star(\xi)\to z^\star(\xi)$.
+For each fixed $\mu_\ell>0$, continuity of $\xi\mapsto z_{\mu_\ell}^\star(\xi)$ (Proposition~\ref{prop:IFT}) yields
+$z_{\mu_\ell}^\star(\xi_k)\to z_{\mu_\ell}^\star(\xi)$ as $k\to\infty$.
+A standard diagonal argument then yields $z^\star(\xi_k)\to z^\star(\xi)$.
+\end{proof}
+
+\begin{remark}[From a barrier forecaster to a high-quality LP decision]\label{rem:procedure}
+The results in this section justify the following practical pipeline for obtaining a high-quality \emph{unsmoothed} (LP) decision:
+\begin{enumerate}
+\item Choose a sufficiently small barrier parameter $\mu>0$.
+\item Use the appropriate theorem from Section~\ref{subsec:existence:mu} to construct a $\mu$-decision-optimal
+one-scenario barrier forecast $\hat\xi_\mu^\star$.
+\item Solve the one-scenario \emph{barrier} problem with forecast $\hat\xi_\mu^\star$ to obtain its canonical barrier decision
+$z_\mu^\star=z_\mu^\star(\hat\xi_\mu^\star)$.
+\item Build a \emph{canonical LP forecast} from $z_\mu^\star$ using the corresponding theorem for the noise regime:
+\begin{itemize}
+\item fixed $(W,T)$: set $h:=Tz_\mu^\star$ (and keep the chosen $q^\star$);
+\item fixed $T$ with a priori $(W^\star,h^\star)$: use the $q$-construction corresponding to Theorem~\ref{thm:Wqh-fixedT-LP};
+\item full noise with a priori $(W^\star,T^\star)$: use the construction corresponding to Theorem~\ref{thm:full-noise-LP}.
+\end{itemize}
+Denote the resulting LP forecast by $\hat\xi^{\mathrm{LP}}_\mu$.
+\item Solve the one-scenario \emph{unsmoothed} LP with forecast $\hat\xi^{\mathrm{LP}}_\mu$ and take the analytic-center decision
+$z^\star(\hat\xi^{\mathrm{LP}}_\mu)$.
+\end{enumerate}
+
+If $\hat\xi^{\mathrm{LP}}_\mu\to \hat\xi^\star$ and $z_\mu^\star\to z^\star$ as $\mu\downarrow 0$, then
+Lemma~\ref{lem:ac-continuity} implies $z^\star(\hat\xi^{\mathrm{LP}}_\mu)\to z^\star(\hat\xi^\star)=z^\star$.
+\end{remark}
+\bibliographystyle{plain}
+% \bibliography{refs}
+
+\end{document}

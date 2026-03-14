@@ -1,0 +1,1313 @@
+% main.tex
+% NeurIPS 2023 submission template.
+% Requires neurips_2023.sty placed next to this file.
+
+\documentclass{article}
+
+% If you need to pass options to natbib, use, e.g.:
+\PassOptionsToPackage{numbers,compress}{natbib}
+% before loading neurips_2023.
+
+% Ready for submission (anonymous + line numbers):
+% \usepackage{neurips_2023}
+
+% Preprint (non-anonymous, no line numbers):
+\usepackage[preprint]{neurips_2023}
+
+% Camera-ready:
+% \usepackage[final]{neurips_2023}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsmath}        % math
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amssymb}        % math symbols
+\usepackage{amsthm}         % theorem environments
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{graphicx}       % figures
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% --------------------
+% Convenience macros
+% --------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\placeholder}[1]{%
+  \ifmmode
+    \text{\color{red}\textbf{[PLACEHOLDER:} #1\textbf{]}}%
+  \else
+    \textcolor{red}{\textbf{[PLACEHOLDER:} #1\textbf{]}}%
+  \fi
+}
+\newcommand{\TODO}[1]{\textcolor{orange}{\textbf{[TODO:} #1\textbf{]}}}
+\newcommand{\thc}[1]{\textcolor{magenta}{\textbf{[TITO:} #1\textbf{]}}}
+
+% --------------------
+% Theorem environments
+% --------------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+% --------------------
+% Title / Authors
+% --------------------
+\title{Decision-Focused Scenario\\
+Generation\\
+for Contextual Two-Stage Stochastic Linear Programs}
+
+% For anonymous submission, omit author information (and remove [preprint] above).
+\author{Anonymous Authors}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Decision focused scenario generation has emerged as a popular strategy for tackling stochastic linear programs with contextual data. It naturally handles decision constraints, and can be straightforwardly extended to cases with integer variables. While having been observed to perform well in practice, a general theory for when scenario generators can learn optimal policies is currently lacking. Additionally, current approaches typically require restrictive assumptions on the structure of second-stage randomness.
+This paper makes three contributions. On the theoretical side, we present a comprehensive theory for when scenario generators can capture an optimal decision policy. Notably, we show that for a broad class of linear programs, a single scenario is sufficient for as long as it is permitted to be chosen outside of the support.
+We next show that the challenging task of learning a second-stage constraint matrix can be simplified to the much more tractable task of learning a second-stage cost vector, thereby potentially significantly extending the applicability of existing methods.
+Finally, we present a novel method for scenario generation, inspired by classical interior point methods.
+\textcolor{blue}{Our method can deal with arbitrary second-stage randomness, is trained to directly minimize down-stream loss without the need for surrogates, and has a loss-function whose local minima are guaranteed to be global.}
+We experimentally validate the method, showing that it rivals or outperforms baselines on standard test beds and succeeds on instances where prior methods are not applicable.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+\textcolor{red}{\textbf{TODO: I have not yet filled out this section.}}
+
+\subsection{Background}
+\label{sec:background}
+% Introduce contextual stochastic linear programming
+% Stochastic programming
+% Different approaches for the contextual case:
+%   - Predict-then-optimize
+%   - Direct policy learning
+%   - Decision-focused learning
+% Decision-focused scenario generation
+% Decision focused learning
+% Our contribution
+%
+% (Intentionally left blank for now.)
+
+\subsection{Our contribution}
+\begin{itemize}
+    \item We present a general theory for when scenario generators can learn an optimal
+    policy for contextual two-stage stochastic linear programs.
+    We show that, under weak assumptions, any optimal first-stage decision can be 
+    represented as the unique, analytic center solution obtained by solving a 
+    well-chosen single-scenario problem. 
+    \item We show a redu
+    \item We present a novel method for decision focused scenario generation inspired 
+     by classical interior point methods. Our method works for arbitrary second-stage
+     randomness, solves the known vanishing gradients pathology of quadratic smoothing methods, 
+     and circumvents the need for surrogates, training directly on the downstream objective.
+\end{itemize}
+\label{sec:contributions}
+% See abstract, but add much more explanation.
+%
+% (Intentionally left blank for now.)
+
+\subsection{Closest approaches in the literature}
+\label{sec:related-work}
+A rich strand of work in the literature examines decision focused learning for single-stage problems with random cost vectors \cite{placeholder-single-stage-decfoc}. In particular, a substrand kick-started by ``Mandi'' \cite{mandi} explores using log-barrier smoothing for such problems, demonstrating empirical benefits across a range of contexts \cite{placeholder-barrier-benefits}.
+
+This problem class is strictly generalized by contextual two-stage problems, which accordingly, due to its richness and significance, has recently received increased attention. See \cite{review-contextual-two-stage} for an up-to-date review of the state-of-the-art.
+
+A recent strand of literature has tried to derive theoretical guarantees for when single-scenario generators can learn optimal decision policies. Homem-de-Mello and \cite{placeholder-abstract-conditions} both take steps towards a general theory, but the former imposes assumptions on the structure on noise, while the latter derives only abstract conditions. Other works derive single scenario optimality guarantees, but only for highly specific applications \cite{placeholder-specific-applications}.
+
+Donti presented one of the earliest attempts at decision-focused learning for stochastic programming \cite{donti}. They too rely on smoothing the LP to enable end-to-end learning, but use quadratic smoothing rather than log-barriers, and try to learn conditional distributions rather than collections of scenarios. Distributional learning can be computationally challenging. Quadratically smoothed LPs suffer from a well-known pathology of vanishing gradients in non-zero regret regions \cite{quad-vanish-1,quad-vanish-2,quad-vanish-3}.
+
+Islip presents a method for decision focused scenario generation very similar in principle to ours \cite{islip}. While their approach has strong general applicability, it relies on black-box surrogates and thus does not leverage the underlying LP geometry and lacks theoretical guarantees. Lex-SPO and Homem-de-Mello both focus on generating decision-optimal single-scenario forecasts, but they restrict themselves to problems where randomness is restricted to the second-stage constraint vector \cite{lex-spo,homem-de-mello}.
+
+To the best of our knowledge, there has not yet been an attempt made to construct a decision focused scenario generator for dealing with two-stage problems with arbitrary randomness in the second-stage recourse matrix.
+
+\section{Problem description}
+\label{sec:problem}
+
+\subsection{Two-stage stochastic programming}
+\label{sec:two-stage}
+In a two-stage stochastic linear program, decisions are made in two steps. The first-stage decision is chosen before the noise is observed. After the noise is realized, a second-stage (recourse) decision is chosen as a correction after the fact. In the classical setting, the decision maker knows the full distribution of the noise when selecting the first-stage decision.
+
+\begin{definition}[Two-stage stochastic linear program]
+\label{def:two-stage-slp}
+Let $z\in\R^n$ be the first-stage decision, $y\in\R^m$ the second-stage decision, $(A,b,c)$ deterministic first-stage data, and $\xi=\big(W(\xi),T(\xi),h(\xi),q(\xi)\big)$ the random second-stage data.
+Define the recourse function by
+\begin{equation}
+\label{eq:recourse-function}
+Q(z,\xi)\;:=\;\min_{y\in\R^m}\left\{q(\xi)^\top y:\;W(\xi)y=h(\xi)-T(\xi)z\right\}.
+\end{equation}
+The two-stage stochastic linear program is
+\begin{equation}
+\label{eq:two-stage-slp}
+\min_{z\in\R^n}\ c^\top z+\E_{\xi}\!\left[Q(z,\xi)\right]
+\quad\text{s.t.}\quad Az=b.
+\end{equation}
+\end{definition}
+
+
+\subsection{Contextual two-stage stochastic programming}
+\label{sec:contextual}
+In the contextual setting, the second-stage noise depends on a context variable $x\in\mathcal X$ observed before the first-stage decision is made.
+
+\begin{definition}[Contextual two-stage stochastic linear program]
+\label{def:contextual-two-stage-slp}
+Given a context $x\in\mathcal X$ and conditional law $\xi\sim\mathbb P(\cdot\mid x)$, the contextual two-stage problem is
+\begin{equation}
+\label{eq:contextual-two-stage}
+\min_{z\in\R^n}\ c^\top z+\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[Q(z,\xi)\right]
+\quad\text{s.t.}\quad Az=b.
+\end{equation}
+Its context-dependent optimal policy map is
+\begin{equation}
+\label{eq:optimal-policy-map}
+z^*(x)\in\operatorname*{arg\,min}_{\{z\in\R^n:\,Az=b\}}
+\left(c^\top z+\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[Q(z,\xi)\right]\right),
+\qquad x\in\operatorname{supp}(X).
+\end{equation}
+\end{definition}
+
+Unlike in the classical setting (Equation~\eqref{eq:two-stage-slp}), the conditional distribution $\mathbb P(\cdot\mid x)$ is not assumed known. Instead, the decision maker only observes historical context--scenario data
+\[
+\mathcal D=\{(x_i,\xi_i)\}_{i=1}^k.
+\]
+Hence contextual two-stage stochastic programming is a learning problem, solved by learning an optimal decision policy $x\mapsto z^*(x)$ from data.
+We remark that if the conditional distribution is known, the problem reduces to the classical case.
+
+\subsection{Standing assumptions}
+\label{sec:standing-assumptions}
+\textcolor{red}{\textbf{TODO: I don't like the presentation of this section. I'm open to suggestions on how to improve it.}}
+
+In what follows, we adopt the following standard assumptions for the two-stage problem under study:
+\begin{assumption}[Finite support]
+\label{ass:finite-support}
+The noise has finite support.
+\end{assumption}
+
+\begin{assumption}[Existence of a solution]
+\label{ass:solution-exists}
+The two-stage problem has a solution.
+\end{assumption}
+
+\begin{assumption}[No redundant constraints]
+\label{ass:no-redundant-constraints}
+There are no redundant constraints in the problem, either in the first stage or the second stage.
+\end{assumption}
+
+\begin{assumption}[Deterministic transition matrix]
+\label{ass:T-deterministic}
+The transition matrix is deterministic across scenarios; i.e., there exists a fixed matrix $T$ such that $T(\xi)=T$ for all scenarios $\xi$ in the support.
+\end{assumption}
+
+\begin{assumption}[First-stage relative interior]
+\label{ass:first-stage-ri}
+The first-stage feasible region has non-empty relative interior.
+\end{assumption}
+
+\begin{assumption}[Second-stage regularity]
+\label{ass:second-stage-regularity}
+For each feasible choice of first-stage decision and each possible realization of the noise, the second-stage problem has non-empty relative interior, a well-defined solution, and a non-empty recession cone.
+\end{assumption}
+
+\begin{assumption}[Transition matrix unaffected by noise]
+\label{ass:T-noise-unaffected}
+The transition matrix is deterministic and unaffected by noise; i.e., there exists a fixed matrix $T$ such that $T(\xi)=T$ for all scenarios $\xi$ in the support.
+\end{assumption}
+
+\section{Existence of decision-optimal scenarios for two-stage stochastic linear programming}
+\label{sec:existence}
+
+In this section, we present a theorem providing a general existence theory for ``decision-optimal'' single-scenario forecasts for contextual two-stage stochastic linear programming. Specifically, we show that for general two-stage stochastic linear programs, there exists a choice of scenario whose associated single-scenario problem has an optimality set whose analytic center contains an optimal first-stage decision for the full multi-scenario problem.
+
+\begin{theorem}[Decision-optimal single-scenario existence]
+\label{thm:decision-optimal-scenario}
+Consider the finite-scenario two-stage stochastic linear program
+\begin{equation}
+\label{eq:theorem-full-problem}
+\min_{z\in\R^n}\ c^\top z+\sum_{i=1}^{N}p_i\,Q(z,\xi_i)
+\quad\text{s.t.}\quad Az=b,
+\end{equation}
+with $p_i>0$, $\sum_{i=1}^N p_i=1$, and scenario data $\xi_i=(W_i,T,h_i,q_i)$ for $i\in[N]$.
+Where
+\[
+Q(z,\xi_i):=\min_{y_i\in\R^m}\left\{q_i^\top y_i:\;W_i y_i=h_i-Tz\right\}.
+\]
+Assume \ref{ass:finite-support}--\ref{ass:second-stage-regularity}.  
+
+For any candidate scenario $\xi'=(W',T,h',q')$, define the associated single-scenario problem
+\begin{equation}
+\label{eq:theorem-single-scenario}
+\min_{z\in\R^n}\ c^\top z+Q(z,\xi')
+\quad\text{s.t.}\quad Az=b,
+\end{equation}
+where
+\[
+Q(z,\xi'):=\min_{y\in\R^m}\left\{(q')^\top y:\;W' y=h'-Tz\right\}.
+\]
+Let $z^*(\xi')$ denote the analytic center solution of \eqref{eq:theorem-single-scenario}. \thc{Need to define analytic center.} Then there exists a scenario
+\[
+\xi^*=(W^*,T,h^*,q^*)
+\]
+that is decision-optimal in the sense that $z^*(\xi^*)$ is an optimal first-stage decision for \eqref{eq:theorem-full-problem}.
+
+Moreover:
+\begin{enumerate}
+\item If the noise affects $W$ (i.e., $W$ is scenario-dependent), then all components can be chosen \`a priori except $q^*$. In particular, fixing any support scenario index $i\in[N]$, there exists $q^*\in\R^m$ such that
+\[
+\xi^*=(W_i,T,h_i,q^*)
+\]
+is decision-optimal.
+\item If $W$ is deterministic across scenarios, then all components can be chosen \`a priori except $h^*$. In particular, for any $\epsilon>0$, there exists $h^*\in\R^m$ such that
+\[
+\xi^*=(W,T,h^*,q^*),\qquad q^*=\max_i q_i+\epsilon,
+\]
+is decision-optimal.
+\end{enumerate}
+\end{theorem}
+
+The theorem holds under weak assumption on the structure of the noise, with the only requirement being that the transition matrix $T$ is deterministic across scenarios \textcolor{blue}{[COMMENT: We could relax this assumption by adapting parts of Tito’s proof.]}.
+
+Notably, we show that even in cases where the recourse matrix $W$ is random, a scenario generator only needs to learn second-stage vector data $q$ and $h$ in order to encode an optimal policy. The recourse matrix in the optimal scenario can be chosen \`a priori as any recourse matrix in the support of the noise. In cases where noise only affect $W$, the optimal scenario can be found by rescaling the columns of an arbitrary $W_i$ in the support, still circumventing the need for learning matrix data.
+
+At first, the result may appear magical. But we emphasize that the decision-optimal scenario has no guarantees of being in the support of the noise, or even of respecting structural assumptions on the problem. For example, if the second stage constraint vector $h$ represents demand guaranteed to be positive, the decision optimal demand vector $h^*$ may still contain negative components. This restriction is fundamental, as even relatively weak restrictions on the noise structure is sufficient to render the theorem statement invalid \cite{placeholder-restriction-counterexample}.
+
+\textbf{Practical significance.}
+The result shows that under weak assumptions, decision focused scenario-generators are theoretically guaranteed to have the capacity to learn optimal policies. To the best of our knowledge, no such guarantees have been derived for the general case in prior literature. Additionally, the results offer practical computational value by resolving an existing bottleneck. Problems with arbitrary noise affecting the recourse matrix $W$ pose a challenge for existing methods for two reasons; in part because learning matrix data can be computationally expensive as the dimension of the problem increases, and in part because constraints on $W$ are necessary to ensure feasibility. The results below show that these difficulties can be circumvented, and that a scenario generator can learn an optimal decision policy by only outputting vector data.
+
+\subsection{Learning $W$ when necessary}
+As a general principle, we do not want our scenario generator to learn scenario data that is deterministic in the original problem. E.g., if the original problem has noise only in $h$, we would like our scenario generator to learn a scenario $h^*$, even though practically we could just as well fix $h^*=h_i$ for some $h_i$ in the noise, and learn to output $q^*$. By the theorem, this would result in an optimal policy, but interpretability would suffer.
+
+Since the theorem deals with choosing optimal $h$ or $q$, what then do we do in the case where noise only affects $W$? As it turns out, we can address this case by leveraging an equivalence between rescaling components of $q$ and columns of $W$.
+
+\begin{proposition}[Decision-optimal $W$ through rescaling columns]
+\label{prop:rescaling-W}
+Fix a support scenario index $i\in[N]$ and consider
+\[
+\xi^*=(W_i,T,h_i,q^*).
+\]
+\thc{If the noise only affects $W$, what is $h_i$?}
+Define
+\[
+\xi_W^*=(W^*,T,h_i,q_i),
+\]
+where $W^*$ is obtained by column-wise rescaling:
+\[
+W^*_{:,j}=(W_i)_{:,j}\frac{q^*_j}{(q_i)_j},\qquad j=1,\ldots,m,
+\]
+assuming w.l.g. $(q_i)_j\neq 0$ for all $j$.
+
+Then the single-scenario problems induced by $\xi^*$ and $\xi_W^*$ have the same optimal first-stage solution. Hence, if $\xi^*$ is decision-optimal, then $\xi_W^*$ is decision-optimal as well.
+\end{proposition}
+
+\subsection{Summary of cases}
+\label{sec:cases-table}
+The theorem shows that, even if the noise affects multiple components $W$, $h$, and $q$, our scenario generator needn't learn to generate each type of component. For example, if we have a random $q$ and $h$, our scenario generator can either be designed to choose $q^*$ \`a priori while learning an optimal $h^*$, or vice-versa. This offers flexibility.
+
+In practice, we often want to design our scenario generator with feasibility guarantees, as training will be difficult if generated scenarios run the risk of defining infeasible two-stage problems.
+
+As some problems may have guaranteed feasibility for any choice of $q$, and others may have guaranteed feasibility for any choice of $h$, we benefit from being able to choose the components that should be learned as exactly those that guarantee feasibility.
+
+In the table below, we summarize which components the scenario generator should learn depending on which components are affected by noise.
+
+\begin{table}[H]
+  \centering
+  \caption{Summary of learnable components by noise pattern.}
+  \label{tab:cases}
+  \begin{tabular}{p{0.26\linewidth} p{0.66\linewidth}}
+    \toprule
+    Noise affects & Choose to learn \\
+    \midrule
+    $W$ & $W$ (convert a learned $q^*$ into a $W^*$ via Proposition~\ref{prop:rescaling-W}) \\
+    $h$ & $h$ \\
+    $q$ & $q$ \\
+    $W,h$ & $W$ (convert a learned $q^*$ into a $W^*$ via Proposition~\ref{prop:rescaling-W}) \\
+    $W,q$ & $q$ \\
+    $W,h,q$ & $q$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Interior point based scenario generation}
+\label{sec:ip-scenarios}
+
+\subsection{Deep learning for decision focused scenario generation}
+\label{sec:deep-learning}
+We turn our attention back to the learning problem of contextual stochastic programming. By the results of Section~\ref{sec:existence}, we can, in theory, obtain an optimal policy by learning to map context data to ``decision optimal'' scenarios. Additionally, our scenario generator only needs to learn constraint vectors or cost vectors, circumventing the scaling and feasibility challenges inherent to learning constraint matrices.
+
+For practical implementation, deep learning is a natural choice. But to train a neural net to learn the \textit{decision} optimal scenarios associated with each context, it needs to be trained to minimize decision regret.
+
+We build our pipeline around a dataset of context--scenario pairs $\{(x_i,\xi_i)\}_{i=1}^k$. Training the neural net reduces to solving the following empirical risk minimization problem with a decision focused loss function:
+\begin{equation}
+\label{eq:erm}
+\min_{w}\ \sum_{i=1}^k L(\xi_{w}(x_i), \xi_i).
+\end{equation}
+Here $w$ denotes the weights of the neural net, and $\xi_w(x)$ denotes the scenario generated by the neural net when its input is $x$.
+
+The loss function $L$ for a generated scenario $\xi'$ with respect to a reference scenario $\xi$ is defined by decision regret:
+\begin{equation}
+\label{eq:decision-regret}
+L(\xi', \xi)
+\;:=\;
+G\!\big(z^*(\xi'),\xi\big)
+\;-\;
+G\!\big(z^*(\xi),\xi\big).
+\end{equation}
+\thc{We can drop the second term since it does not depend on $w$.}
+Where $G(z, \xi) = c \cdot z + Q(z, \xi)$ denotes the first-stage cost in case of scenario $\xi$. Let $z^*(\xi)$ denote the first-stage optimal decision map obtained by selecting the analytic center of the optimality set.
+\begin{equation}
+\label{eq:decision-map}
+z^*(\xi)\in \arg\min_{z}\ G(z,\xi).
+\end{equation}
+
+To train the neural net via back-propagation, we need to differentiate the loss with respect to the neural net weights. Using the chain rule on \eqref{eq:decision-regret}, we obtain the gradient in terms of three factors:
+\begin{equation}
+\label{eq:chain-rule}
+\frac{\partial L}{\partial w} \;=\; \frac{\partial L}{\partial z^*}\,\frac{\partial z^*}{\partial \xi}\,\frac{\partial \xi}{\partial w}.
+\end{equation}
+
+The first factor $\frac{\partial L}{\partial z^*}$ is simply the derivative of the first-stage cost-function with respect to the first-stage decision. Since the problem is convex, it is guaranteed to be (sub)differentiable. The differential has a closed form expression in terms of the dual optimum of the second stage problem (see appendix for details).
+
+The third factor $\frac{\partial \xi}{\partial w}$ is the gradient of the neural net output with respect to its model parameters. It is automatically handled by modern deep learning frameworks.
+
+The second factor $\frac{\partial z^*}{\partial \xi}$ presents a problem. The decision map is generally piecewise constant, and hence non-differentiable, in cases where the second stage cost vector is random. We solve this problem by smoothing the problem via log-barriers.
+
+\subsection{Enabling back-propagation via log-barrier smoothing of decision loss}
+\label{sec:log-barrier}
+To enable back-propagation through the decision map $z^*$, we smooth the linear program. To this end, we leverage log-barriers from the classical theory of interior point methods.
+
+The log-barrier smoothed problem has a unique solution and is obtained by solving:
+\begin{equation}
+\label{eq:barrier-formulation}
+z^*_\mu \in \operatorname*{arg\,min}_{\{z\in\R^n:\,Az=b\}}
+\left(c^\top z-\mu\sum_{j=1}^n\log(z_j)+\E_{\xi}\!\left[Q_\mu(z,\xi)\right]\right).
+\end{equation}
+
+We define the log-barrier regularized quantities $Q_\mu(z, \xi)$, $G_\mu(z,\xi)$, $G_\mu(z)$, $z^*_\mu$, $z^*_\mu(\xi)$, $\lambda_\mu^*(z, \xi)$, and $\lambda_\mu^*(z)$ analogously to their non-smoothed equivalents.
+
+\begin{equation}
+\label{eq:barrier-recourse}
+Q_\mu(z,\xi):=\min_{y\in\R^m}\left\{q(\xi)^\top y-\mu\sum_{\ell=1}^m\log(y_\ell):\;W(\xi)y=h(\xi)-Tz\right\}.
+\end{equation}
+
+We denote the scenario-specific first-stage payoff by:
+\begin{equation}
+\label{eq:Gmu-scenario}
+G_\mu(z,\xi):=c^\top z-\mu\sum_{j=1}^n\log(z_j)+Q_\mu(z,\xi).
+\end{equation}
+The expected first-stage payoff by:
+\begin{equation}
+\label{eq:Gmu-expected}
+G_\mu(z):=\E_{\xi}\!\left[G_\mu(z,\xi)\right].
+\end{equation}
+
+As the smoothing parameter $\mu$ is reduced to zero, classical theory guarantees that the smoothed solution map converges to the original solution map: \thc{We need to prove this, I'm not sure it just follows from classical theory. Moreover, the right hand side is not uniquely defined, see eq. (9)}
+\begin{equation}
+\label{eq:mu-to-zero}
+\lim_{\mu\to 0} z^*_\mu(\xi) = z^*(\xi).
+\end{equation}
+
+\begin{figure}[t]
+  \centering
+  \placeholder{Illustration of log-barrier smoothing.}
+  \caption{Log-barrier smoothing illustration (placeholder).}
+  \label{fig:barrier-illustration}
+\end{figure}
+
+By applying the implicit function theorem to KKT optimality conditions, we obtain closed-form expressions for the derivatives of the smoothed solution map with respect to $h$ and $q$ (see appendix for a detailed derivation).
+\begin{proposition}
+We introduce the following formalisms:
+\[
+\begin{aligned}
+H_\mu(\xi):=\mathrm{Diag}\!\big((z_\mu^*(\xi))^2\big),\quad
+P_\mu(\xi):=\frac{1}{\mu}\Big(H_\mu(\xi)-H_\mu(\xi)A^\top\big(AH_\mu(\xi)A^\top\big)^{-1}AH_\mu(\xi)\Big),\\
+D_\mu(z,\xi):=\mathrm{Diag}\!\left(\left(q(\xi)-W(\xi)^\top\lambda_\mu^*(z,\xi)\right)^{-2}\right),\quad
+S_\mu(z,\xi):=T\,P_\mu(\xi)\,T^\top+\mu\,W(\xi)\,D_\mu(z,\xi)\,W(\xi)^\top.
+\end{aligned}
+\]
+And we denote $\lambda_\mu^*(z, \xi)$ as the unique optimal solution of the dual of the second-stage probem.
+\begin{equation}
+\label{eq:lambda-argmax}
+\lambda_\mu^*(z,\xi)\in
+\operatorname*{arg\,max}_{\{\lambda:\,q(\xi)-W(\xi)^\top\lambda>0\}}
+\left\{
+\lambda^\top\!\big(h(\xi)-Tz\big)
+\;+\;
+\mu\sum_{j=1}^{m}\log\!\left(q_j(\xi)-\big[W(\xi)^\top\lambda\big]_j\right)
+\right\}.
+\end{equation}
+Then, evaluated at $z=z_\mu^*(\xi)$, we obtain the derivative w.r.t $h$ and $q$ as :
+\begin{equation}
+\label{eq:dzdxi}
+\begin{aligned}
+\frac{\partial z^*_\mu(\xi)}{\partial h}
+&=
+P_\mu(\xi)\,T^\top
+\left(S_\mu\!\big(z_\mu^*(\xi),\xi\big)\right)^{-1},\\
+\frac{\partial z^*_\mu(\xi)}{\partial q}
+&=
+P_\mu(\xi)\,T^\top
+\left(S_\mu\!\big(z_\mu^*(\xi),\xi\big)\right)^{-1}
+\;\mu\,W(\xi)\,D_\mu\!\big(z_\mu^*(\xi),\xi\big).
+\end{aligned}
+\end{equation}
+\end{proposition}
+
+We define the log-barrier smoothed version of our decision loss by:
+\begin{equation}
+\label{eq:Lmu-muprime}
+L_{\mu,\mu'}(\xi',\xi)
+\;:=\;
+G_{\mu'}\!\big(z_\mu^*(\xi'),\xi\big)
+\;-\;
+G_{\mu'}\!\big(z_{\mu'}^*(\xi),\xi\big).
+\end{equation}
+Which, by \eqref{eq:chain-rule} and \eqref{eq:dzdxi}, is now differentiable with respect to the neural-net weights $w$. We remark that we allow for different choices of smoothing parameters for the decision map $z^*_\mu$ and the cost function. The reason for this choice will become evident in the following subsection.
+
+\subsection{The method step-by-step}
+\label{sec:method}
+We train our neural net in a multi-step continuation process analogous to classical interior point methods used for solving LPs. Such classical methods proceed by first solving a highly-regularized log-barrier smoothed version of the target problem, with a large value of $\mu$. The $\mu$ parameter is then progressively decreased, and the solution path is traced via Newton steps, until it approaches the solution of the target problem.
+
+We proceed similarly. For a sequence of progressively decreasing smoothing parameters $\mu_1,\ldots,\mu_S$, we retrain our scenario generator at each iteration using the weights from the previous iteration as a warm-start. In each stage, our training algorithm solves the empirical risk minimization problem:
+\begin{equation}
+\label{eq:stagewise-erm}
+\min_{w}\ \sum_{i=1}^k L_{\mu_i,\mu_i}(\xi_w(x_i),\xi_i).
+\end{equation}
+
+Finally, in an ultimate fine-tuning stage, we remove the smoothing from the cost function, still keeping the smoothing factor on the decision map:
+\begin{equation}
+\label{eq:finetune}
+L_{\mu_S,0}(\xi',\xi) \;=\; G\!\left(z^*_{\mu_S}(\xi'), \xi\right).
+\end{equation}
+We rely on subgradients of the convex loss $G(\cdot,\xi)$ for back propagation \cite{placeholder-subgradients}. This stage allows optimizing for the true downstream objective, significantly reducing the bias induced by the smoothing.
+
+At inference, when dealing with problems without integer variables, we have the option of either solving for a first-stage decision with smoothing parameter $\mu_S$ or without it. We remark that we observe better empirical performance when keeping it.
+
+\begin{algorithm}[H]
+\caption{Interior point based decision-focused scenario generation.}
+\label{alg:ip-scenario-gen}
+\begin{algorithmic}[1]
+\Statex \textbf{Input:} training data $\mathcal D=\{(x_i,\xi_i)\}_{i=1}^k$; scenario generator $\xi_w(\cdot)$;
+decreasing barrier schedule $\mu_1>\cdots>\mu_S$.
+\Statex \textbf{Output:} trained parameters $w$.
+\State Initialize $w$.
+\For{$s=1$ \textbf{to} $S$} \Comment{continuation over $\mu$}
+    \State Set $\mu \gets \mu_s$.
+    \For{training iterations}
+        \State Sample minibatch $(x,\xi)\sim \mathcal D$.
+        \State $\hat\xi \gets \xi_w(x)$ \Comment{generate scenario(s)}
+        \State $z \gets$ \textbf{Forward pass:} solve log-barrier surrogate at $\mu$ using $\hat\xi$.
+        \State \textbf{Backward pass:} backpropagate through the surrogate (implicit differentiation) and update $w$
+    \EndFor
+\EndFor
+\State \Comment{fine-tuning: remove smoothing in the loss, keep smoothing in the decision map}
+\For{training iterations}
+    \State Sample minibatch $(x,\xi)\sim \mathcal D$.
+    \State $\hat\xi \gets \xi_w(x)$.
+    \State $z \gets$ \textbf{Forward pass:} solve log-barrier surrogate at $\mu_S$ using $\hat\xi$.
+    \State \textbf{Backward pass:} backpropagate the true downstream loss and update $w$.
+\EndFor
+\State \textbf{return} $w$.
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theoretical analysis of log-barrier smoothed loss function}
+\label{sec:theory}
+It turns out that our log-barrier smoothed loss regret function has a number of favorable theoretical properties with respect to consistency and training. Here, we simply state the theorems and discuss their implications. For an in-detail derivation, we refer to the appendix.
+
+To begin with, we find a single scenario optimality result for the log-barrier smoothed problem analogous to Theorem~\ref{thm:decision-optimal-scenario}, showing that a scenario generator can represent an optimal policy for the log-barrier version of the problem:
+\begin{theorem}[Single-scenario optimality under log-barrier smoothing]
+\label{thm:barrier-existence}
+The result of Theorem~\ref{thm:decision-optimal-scenario} also applies to the
+log-barrier smoothed version of the problem.
+\end{theorem}
+
+Additionally, we obtain the following consistency result:
+\begin{theorem}[Consistency and regret bounds as $\mu\to 0$]
+\label{thm:consistency}
+\end{theorem}
+
+\textcolor{red}{[TODO: For this theorem to have any sense, we need to specify the closed form of the optimal scenarios $q^*$ and $h^*$. Right now, this is not done (to keep the theorems lean and readable). We should discuss what the best approach is.]}
+
+Theorem~\ref{thm:consistency} is of practical significance. It gives guarantees both for using the smoothed map $z_\mu^*(\xi)$ and the unsmoothed map $z^*(\xi)$ at deployment, showing that for a small enough $\mu$, the smoothed and non-smoothed losses are similar in all the ways that matter.
+
+Finally, we obtain a result relevant for optimization, showing that the expected log-barrier smoothed loss is invex with respect to its scenario input. This means that the loss landscape over the scenario output induced by our loss is ``trap free'', in the sense that all of its critical points are global minima. The optimizer may get stuck in local minima when training the neural net (as is always a risk in deep learning) but only due to non-convexities in the net itself, not due to the loss function.
+\begin{theorem}[Invexity of the expected smoothed loss]
+\label{thm:invex}
+Fix $\mu>0$ and a finite support distribution $\{(\xi_i,p_i)\}_{i=1}^N$.
+Let $\Xi_\mu$ denote the set of candidate scenarios $\xi'=(W',T,h',q')$ for which the
+single-scenario $\mu$-log-barrier problem defining $z_\mu^*(\xi')$ is well-defined.
+
+We denote the scenario-specific first-stage payoff by:
+\[
+G_\mu(z,\xi):=c^\top z-\mu\sum_{j=1}^{n}\log(z_j)+Q_\mu(z,\xi).
+\]
+The expected first-stage payoff by:
+\[
+G_\mu(z):=\E_{\xi}\!\left[G_\mu(z,\xi)\right].
+\]
+And the optimal solution map by
+\[
+z_\mu^*(\xi)=\arg\min_{\{Az=b\}}G_\mu(z,\xi).
+\]
+Finally, define the decision-focused loss for a scenario $\xi'$ by:
+\[
+\bar G_\mu(\xi'):=G\!\big(z^*(\xi')\big).
+\]
+
+Then $\bar G_\mu$ is invex. Equivalently, $\bar G_\mu$ has no spurious stationary points:
+\[
+\nabla_{\xi'}\,\bar G_\mu(\xi')=0
+\quad\Longrightarrow\quad
+\xi'=\arg\min_{\tilde\xi\in\Xi_\mu}\bar G_\mu(\tilde\xi).
+\]
+\end{theorem}
+
+This theorem expresses a significant benefit for log-barrier smoothing compared with quadratic smoothing, which is known to suffer from vanishing gradient pathologies \cite{quad-vanish-1}.
+
+\section{Experiments}
+\label{sec:experiments}
+% (Intentionally left blank for now.)
+\textcolor{red}{\textbf{TODO: Present one instance dealing with only with random $h$ (the one we have).}}
+
+\textcolor{red}{\textbf{TODO: Present one instance dealing with only random $c$.}}
+
+\textcolor{red}{\textbf{TODO: Present one instance dealing with random $W$ of arbitrary noise (existing methods can not deal with this case).}}
+
+\section{Conclusion}
+\label{sec:conclusion}
+% (Intentionally left blank for now.)
+
+\section*{References}
+% Placeholder references (do not worry about completeness yet).
+\begin{thebibliography}{99}
+
+\bibitem{placeholder-single-stage-decfoc}
+\placeholder{Decision-focused learning for single-stage problems with random costs.}
+
+\bibitem{mandi}
+\placeholder{``Mandi'' paper on log-barrier smoothing / decision-focused learning.}
+
+\bibitem{placeholder-barrier-benefits}
+\placeholder{Additional references showing empirical benefits of log-barrier smoothing.}
+
+\bibitem{review-contextual-two-stage}
+\placeholder{Review paper on contextual two-stage stochastic programming / decision-focused methods.}
+
+\bibitem{placeholder-abstract-conditions}
+\placeholder{Work deriving abstract conditions for single-scenario optimality.}
+
+\bibitem{placeholder-specific-applications}
+\placeholder{Single-scenario optimality guarantees for specific applications.}
+
+\bibitem{donti}
+\placeholder{Donti et al. early decision-focused learning for stochastic programming (quadratic smoothing, distribution learning).}
+
+\bibitem{quad-vanish-1}
+\placeholder{Reference on vanishing gradients for quadratic smoothing (1).}
+
+\bibitem{quad-vanish-2}
+\placeholder{Reference on vanishing gradients for quadratic smoothing (2).}
+
+\bibitem{quad-vanish-3}
+\placeholder{Reference on vanishing gradients for quadratic smoothing (3).}
+
+\bibitem{islip}
+\placeholder{Islip et al. method similar in spirit; relies on black-box surrogates.}
+
+\bibitem{lex-spo}
+\placeholder{Lex-SPO reference.}
+
+\bibitem{homem-de-mello}
+\placeholder{Homem-de-Mello reference (single-scenario decision-optimality under restrictions).}
+
+\bibitem{placeholder-restriction-counterexample}
+\placeholder{Reference showing noise structure restrictions invalidate the theorem.}
+
+\bibitem{placeholder-subgradients}
+\placeholder{Reference for subgradient backpropagation through convex objectives.}
+
+\end{thebibliography}
+
+\appendix
+
+\section{Appendix}
+\label{sec:appendix}
+
+\subsection{Step-by-step derivation of closed-form derivatives}
+\label{sec:appendix-derivatives}
+\begin{proof}[Derivation of \eqref{eq:dzdxi}]
+Fix a scenario $\xi=(W,T,h,q)$ and abbreviate
+\[
+z^*:=z_\mu^*(\xi),\qquad
+\lambda^*:=\lambda_\mu^*(z^*,\xi).
+\]
+Let $\nu^*$ denote the multiplier associated with the first-stage constraint $Az=b$.
+For readability, suppress the dependence on $\mu$ and $\xi$ and write
+\[
+H:=\mathrm{Diag}\big((z^*)^2\big),\qquad
+D:=\mathrm{Diag}\big((q-W^\top\lambda^*)^{-2}\big),
+\]
+where inverses and powers are taken componentwise. Since the barrier solution is strictly
+interior, $H\succ 0$ and $D\succ 0$. Under Assumption~\ref{ass:no-redundant-constraints},
+both $A$ and $W$ have full row rank, hence $AHA^\top$ and $WDW^\top$ are invertible.
+
+By the dual representation \eqref{eq:lambda-argmax}, the gradient of the second-stage value
+with respect to $z$ is
+\[
+\nabla_z Q_\mu(z,\xi)=-T^\top\lambda_\mu^*(z,\xi),
+\]
+so the KKT conditions for the first-stage single-scenario barrier problem are
+\[
+c-\mu z^{-1}-T^\top\lambda_\mu^*(z,\xi)+A^\top\nu=0,
+\qquad
+Az=b.
+\]
+Differentiating these conditions at $z=z^*$ with respect to a parameter
+$\theta\in\{h,q\}$ yields
+\[
+\mu H^{-1}\frac{\partial z^*}{\partial \theta}
+-
+T^\top\frac{\partial \lambda^*}{\partial \theta}
++
+A^\top\frac{\partial \nu^*}{\partial \theta}
+=0,
+\qquad
+A\frac{\partial z^*}{\partial \theta}=0.
+\]
+Solving this linear system for $\frac{\partial z^*}{\partial \theta}$ gives
+\[
+\frac{\partial z^*}{\partial \theta}
+=
+\frac{1}{\mu}
+\Big(
+H-HA^\top(AHA^\top)^{-1}AH
+\Big)
+T^\top\frac{\partial \lambda^*}{\partial \theta}.
+\]
+Hence, with
+\[
+P:=\frac{1}{\mu}
+\Big(
+H-HA^\top(AHA^\top)^{-1}AH
+\Big),
+\]
+we have
+\[
+\frac{\partial z^*}{\partial \theta}
+=
+PT^\top\frac{\partial \lambda^*}{\partial \theta}.
+\]
+
+It remains to compute the derivatives of $\lambda^*$. The KKT condition for the dual problem
+\eqref{eq:lambda-argmax} is
+\[
+h-Tz-\mu W(q-W^\top\lambda)^{-1}=0.
+\]
+Define
+\[
+F(z,\lambda,h,q):=h-Tz-\mu W(q-W^\top\lambda)^{-1}.
+\]
+Since
+\[
+\nabla_\lambda F(z^*,\lambda^*,h,q)=-\mu WDW^\top
+\]
+is nonsingular, the implicit function theorem implies that $\lambda^*$ is differentiable with
+respect to $h$ and $q$ in a neighborhood of $(z^*,h,q)$.
+
+Differentiating $F(z^*,\lambda^*,h,q)=0$ with respect to $h$ gives
+\[
+I
+-
+T\frac{\partial z^*}{\partial h}
+-
+\mu WDW^\top\frac{\partial \lambda^*}{\partial h}
+=0.
+\]
+Substituting $\frac{\partial z^*}{\partial h}=PT^\top\frac{\partial \lambda^*}{\partial h}$
+yields
+\[
+\Big(TPT^\top+\mu WDW^\top\Big)\frac{\partial \lambda^*}{\partial h}=I.
+\]
+Thus, if we define
+\[
+S:=TPT^\top+\mu WDW^\top,
+\]
+then
+\[
+\frac{\partial \lambda^*}{\partial h}=S^{-1}.
+\]
+
+For the derivative with respect to $q$, note that
+\[
+d\big((q-W^\top\lambda)^{-1}\big)
+=
+-D\,(dq-W^\top d\lambda).
+\]
+Therefore differentiating $F(z^*,\lambda^*,h,q)=0$ with respect to $q$ gives
+\[
+-T\frac{\partial z^*}{\partial q}
++
+\mu WD
+-
+\mu WDW^\top\frac{\partial \lambda^*}{\partial q}
+=0.
+\]
+Substituting $\frac{\partial z^*}{\partial q}=PT^\top\frac{\partial \lambda^*}{\partial q}$
+yields
+\[
+\Big(TPT^\top+\mu WDW^\top\Big)\frac{\partial \lambda^*}{\partial q}
+=
+\mu WD,
+\]
+and hence
+\[
+\frac{\partial \lambda^*}{\partial q}=S^{-1}\mu WD.
+\]
+
+Finally, substituting these two identities back into
+\[
+\frac{\partial z^*}{\partial \theta}
+=
+PT^\top\frac{\partial \lambda^*}{\partial \theta}
+\]
+gives
+\[
+\frac{\partial z^*}{\partial h}=PT^\top S^{-1},
+\qquad
+\frac{\partial z^*}{\partial q}=PT^\top S^{-1}\mu WD.
+\]
+Reinstating the full notation,
+\[
+\frac{\partial z_\mu^*(\xi)}{\partial h}
+=
+P_\mu(\xi)\,T^\top
+\left(S_\mu\!\big(z_\mu^*(\xi),\xi\big)\right)^{-1},
+\]
+and
+\[
+\frac{\partial z_\mu^*(\xi)}{\partial q}
+=
+P_\mu(\xi)\,T^\top
+\left(S_\mu\!\big(z_\mu^*(\xi),\xi\big)\right)^{-1}
+\,\mu\,W(\xi)\,D_\mu\!\big(z_\mu^*(\xi),\xi\big),
+\]
+which is exactly \eqref{eq:dzdxi}.
+\end{proof}
+
+\subsection{Proofs of theoretical results}
+\label{sec:appendix-proofs}
+% Suggested companion edits to the theorem statement:
+% 1. replace \bar G_\mu(\xi'):=G(z^*(\xi')) by \bar G_\mu(\xi'):=G_\mu(z_\mu^*(\xi'));
+% 2. replace \xi'=\arg\min \cdots by \xi'\in\arg\min \cdots;
+% 3. interpret \xi' as the learnable scenario block selected according to Table~\ref{tab:cases}.
+\subsubsection{Proof of Theorem~\ref{thm:invex}}
+\begin{proof}[Proof of Theorem~\ref{thm:invex}]
+We prove the ``no spurious stationary points'' statement; the invexity claim then follows from the standard characterization of continuously differentiable invex functions.
+
+In view of Section~\ref{sec:cases-table}, the scenario generator does not need to learn all components of
+\(\xi'=(W',T,h',q')\) simultaneously. Instead, without loss of generality, the learnable parameter is
+either \(h'\) (when \(W\) is deterministic across scenarios), \(q'\) (when the noise affects \(W\)), or \(W'\) obtained from a learned \(q'\) by the column-rescaling construction of Section~\ref{sec:existence}. Accordingly, let \(\theta\) denote the learnable scenario block and write
+\[
+\bar G_\mu(\theta):=G_\mu(F_\mu(\theta)),
+\qquad
+F_\mu(\theta):=z_\mu^*(\xi'(\theta)).
+\]
+Thus \(\bar G_\mu\) is exactly the expected smoothed loss viewed as a function of the generator output.
+
+Fix \(\bar z\) with \(A\bar z=b\) and \(\bar z>0\), and let \(N\) be a full-column-rank matrix with \(\operatorname{range}(N)=\ker(A)\). Every barrier-feasible first-stage point can then be written uniquely as
+\[
+z=\bar z+Nx.
+\]
+Set \(B:=TN\) and define the reduced objective
+\[
+g_\mu(x):=G_\mu(\bar z+Nx).
+\]
+The first-stage barrier term is strictly convex, and each barrier recourse term is convex. Hence \(g_\mu\) is \(C^1\) and strictly convex on its open convex domain. Therefore
+\[
+\nabla g_\mu(x^\star)=0
+\quad\Longleftrightarrow\quad
+x^\star \text{ is the unique global minimizer of } g_\mu.
+\]
+For each admissible parameterization \(\theta\), write
+\[
+F_\mu(\theta)=\bar z+N x_\mu(\theta).
+\]
+Then
+\[
+\bar G_\mu(\theta)=g_\mu(x_\mu(\theta)),
+\qquad
+\nabla \bar G_\mu(\theta)=\nabla x_\mu(\theta)^\top \nabla g_\mu(x_\mu(\theta)).
+\]
+We now show that \(\nabla \bar G_\mu(\theta^\star)=0\) implies \(\nabla g_\mu(x_\mu(\theta^\star))=0\).
+
+\paragraph{Case 1: the learnable component is \(h'\).}
+Here \(W\) is deterministic across scenarios, and we may write \(\xi'(h')=(W,T,h',q^\star)\) with \(q^\star\) fixed a priori.
+Introduce the shifted right-hand side \(\hat h:=h'-T\bar z\); since \(h'\mapsto \hat h\) is affine, stationarity in \(h'\) and in \(\hat h\) are equivalent.
+In reduced coordinates the single-scenario \(\mu\)-barrier surrogate becomes
+\[
+\min_{x,\;y>0}\;
+\varphi_\mu(x)+{q^\star}^\top y-\mu\sum_{j=1}^{m}\log y_j
+\quad\text{s.t.}\quad
+Bx+Wy=\hat h,
+\]
+where
+\[
+\varphi_\mu(x):=c^\top(\bar z+Nx)-\mu\sum_{j=1}^{n}\log(\bar z+Nx)_j.
+\]
+Let \((x,y,\nu)\) be the unique KKT point. The KKT system is
+\[
+\nabla \varphi_\mu(x)+B^\top \nu=0,
+\qquad
+q^\star-\mu y^{-1}+W^\top \nu=0,
+\qquad
+Bx+Wy=\hat h.
+\]
+The first equation shows that \(\nabla \varphi_\mu(x)\in \operatorname{range}(B^\top)\). On the other hand, for each scenario in the stochastic objective, the envelope theorem and the chain rule imply that the gradient of the corresponding barrier recourse term with respect to \(x\) has the form \(B^\top \pi_s\) for some multiplier \(\pi_s\). Hence
+\[
+\nabla g_\mu(x_\mu(\hat h))\in \operatorname{range}(B^\top).
+\]
+Differentiating the KKT system with respect to \(\hat h\) yields
+\[
+\nabla x_\mu(\hat h)^\top
+=
+S_h(\hat h)\,B\,H_x^{-1},
+\qquad
+S_h(\hat h):=
+\big(BH_x^{-1}B^\top+WH_y^{-1}W^\top\big)^{-1},
+\]
+where \(H_x:=\nabla^2\varphi_\mu(x)\succ 0\) and \(H_y:=\operatorname{Diag}(\mu/y_j^2)\succ 0\), both evaluated at the corresponding KKT point.
+This Jacobian transpose is injective on \(\operatorname{range}(B^\top)\): if \(v=B^\top w\) and \(\nabla x_\mu(\hat h)^\top v=0\), then
+\[
+0=w^\top B H_x^{-1} B^\top w = v^\top H_x^{-1} v,
+\]
+so \(v=0\).
+
+Now let \(h^{\prime\star}\) be a stationary point of \(\bar G_\mu\), and set \(\hat h^\star:=h^{\prime\star}-T\bar z\). Then
+\[
+0=\nabla \bar G_\mu(h^{\prime\star})
+=\nabla x_\mu(\hat h^\star)^\top \nabla g_\mu(x_\mu(\hat h^\star)).
+\]
+Since \(\nabla g_\mu(x_\mu(\hat h^\star))\in \operatorname{range}(B^\top)\) and \(\nabla x_\mu(\hat h^\star)^\top\) is injective on that subspace, it follows that
+\[
+\nabla g_\mu(x_\mu(\hat h^\star))=0.
+\]
+Thus \(x_\mu(\hat h^\star)\) is the unique global minimizer of \(g_\mu\), and \(F_\mu(h^{\prime\star})\) is the unique global minimizer of \(G_\mu\) on \(\operatorname{dom}(G_\mu)\).
+
+\paragraph{Case 2: the learnable component is \(q'\).}
+Fix any support scenario index \(i\) and write \(\xi'(q')=(W_i,T,h_i,q')\).
+With \(\hat h_i:=h_i-T\bar z\), the reduced single-scenario surrogate is
+\[
+\min_{x,\;y>0}\;
+\varphi_\mu(x)+{q'}^\top y-\mu\sum_{j=1}^{m}\log y_j
+\quad\text{s.t.}\quad
+Bx+W_i y=\hat h_i.
+\]
+Its KKT system is
+\[
+\nabla \varphi_\mu(x)+B^\top \nu=0,
+\qquad
+q'-\mu y^{-1}+W_i^\top \nu=0,
+\qquad
+Bx+W_i y=\hat h_i.
+\]
+Exactly as in Case~1, the surrogate KKT conditions together with the envelope formula for the stochastic recourse terms imply
+\[
+\nabla g_\mu(x_\mu(q'))\in \operatorname{range}(B^\top).
+\]
+Differentiating the KKT system with respect to \(q'\) gives
+\[
+\nabla x_\mu(q')^\top
+=
+H_y^{-1}W_i^\top S_q(q')\,B\,H_x^{-1},
+\qquad
+S_q(q'):=\big(BH_x^{-1}B^\top+W_iH_y^{-1}W_i^\top\big)^{-1},
+\]
+again with \(H_x\succ 0\) and \(H_y\succ 0\) evaluated at the relevant KKT point.
+This Jacobian transpose is injective on \(\operatorname{range}(B^\top)\). Indeed, if \(v=B^\top w\) and \(\nabla x_\mu(q')^\top v=0\), then
+\[
+W_i^\top S_q(q') B H_x^{-1} v = 0.
+\]
+Because \(W_i\) has full row rank, \(W_i^\top\) is injective; because \(S_q(q')\) is invertible, this implies \(B H_x^{-1} v=0\). Multiplying on the left by \(w^\top\) gives
+\[
+0=w^\top B H_x^{-1} B^\top w = v^\top H_x^{-1} v,
+\]
+and hence \(v=0\).
+
+Therefore, if \(q^{\prime\star}\) is a stationary point of \(\bar G_\mu(q')=G_\mu(F_\mu(q'))\), then
+\[
+0=\nabla \bar G_\mu(q^{\prime\star})
+=\nabla x_\mu(q^{\prime\star})^\top \nabla g_\mu(x_\mu(q^{\prime\star})).
+\]
+Since \(\nabla g_\mu(x_\mu(q^{\prime\star}))\in \operatorname{range}(B^\top)\) and \(\nabla x_\mu(q^{\prime\star})^\top\) is injective on that subspace, we conclude that
+\[
+\nabla g_\mu(x_\mu(q^{\prime\star}))=0.
+\]
+Hence \(F_\mu(q^{\prime\star})\) is the unique global minimizer of \(G_\mu\) on \(\operatorname{dom}(G_\mu)\).
+
+\paragraph{Case 3: the learnable component is \(W'\).}
+As prescribed by Table~\ref{tab:cases}, this case is implemented by first learning a vector \(q'\) and then converting it to \(W'\) by the column-rescaling construction of Section~\ref{sec:existence}.
+Indeed, if \(W'\) is obtained from a reference scenario \((W_i,h_i,q_i)\) by column-wise scaling
+\[
+W'_{:,j}=(W_i)_{:,j}\alpha_j,
+\qquad
+\alpha_j:=\frac{q'_j}{(q_i)_j},
+\]
+and we define \(y'_j:=\alpha_j^{-1}y_j\), then \(W_i y'=W' y\) and
+\[
+q_i^\top y' - \mu\sum_{j=1}^m \log y'_j
+=
+{q'}^\top y - \mu\sum_{j=1}^m \log y_j
++\mu\sum_{j=1}^m \log \alpha_j.
+\]
+The two single-scenario barrier objectives therefore differ only by an additive constant independent of \(z\), so they induce exactly the same first-stage decision map. Consequently the no-spurious-stationary-point property is inherited from Case~2.
+
+We have shown that in every admissible parameterization of the generator output, any stationary point \(\theta^\star\) of \(\bar G_\mu\) satisfies
+\[
+F_\mu(\theta^\star)\in \operatorname*{arg\,min}_{z\in\operatorname{dom}(G_\mu)} G_\mu(z).
+\]
+Hence, for every admissible \(\tilde\theta\),
+\[
+\bar G_\mu(\theta^\star)
+=
+G_\mu(F_\mu(\theta^\star))
+=
+\min_{z\in\operatorname{dom}(G_\mu)} G_\mu(z)
+\le
+G_\mu(F_\mu(\tilde\theta))
+=
+\bar G_\mu(\tilde\theta).
+\]
+Thus \(\theta^\star\in \operatorname*{arg\,min}\bar G_\mu\); equivalently, \(\bar G_\mu\) has no spurious stationary points. Reverting to the theorem notation \(\xi'\) for the learnable scenario input gives
+\[
+\nabla_{\xi'}\bar G_\mu(\xi^{\prime\star})=0
+\quad\Longrightarrow\quad
+\xi^{\prime\star}\in \operatorname*{arg\,min}_{\tilde\xi\in\Xi_\mu}\bar G_\mu(\tilde\xi).
+\]
+Since \(\bar G_\mu\) is continuously differentiable on its domain, the standard first-order characterization of invexity yields that \(\bar G_\mu\) is invex.
+\end{proof}
+
+\subsubsection{Proof of Theorem~\ref{thm:barrier-existence}}
+\begin{proof}[Proof of Theorem~\ref{thm:barrier-existence}]
+We prove the explicit barrier analogue of Theorem~\ref{thm:decision-optimal-scenario}. Fix $\mu>0$, and let $\bar z_\mu$ denote the unique optimizer of the finite-support version of \eqref{eq:barrier-formulation}, namely
+\[
+\bar z_\mu
+\in
+\operatorname*{arg\,min}_{\{z\in\R^n:\,Az=b\}}
+\left(
+ c^\top z
+ -
+ \mu\sum_{j=1}^{n}\log(z_j)
+ +
+ \sum_{i=1}^N p_i Q_\mu(z,\xi_i)
+\right).
+\]
+For each $i\in[N]$, let $y_{\mu,i}$ be the unique optimizer of $Q_\mu(\bar z_\mu,\xi_i)$ and let
+\[
+\lambda_{\mu,i}:=\lambda_\mu^*(\bar z_\mu,\xi_i)
+\]
+be the corresponding dual optimizer from \eqref{eq:lambda-argmax}. Then the barrier KKT conditions give
+\[
+W_i y_{\mu,i}=h_i-T\bar z_\mu,
+\qquad
+q_i-W_i^\top\lambda_{\mu,i}=\mu\,y_{\mu,i}^{-1},
+\qquad i\in[N],
+\]
+where the inverse is componentwise. Moreover, since $T$ is deterministic across scenarios, the first-order optimality condition for the smoothed first-stage problem yields a multiplier $\nu_\mu$ such that
+\[
+A\bar z_\mu=b,
+\qquad
+c-\mu\bar z_\mu^{-1}+A^\top\nu_\mu-T^\top\Big(\sum_{i=1}^N p_i\lambda_{\mu,i}\Big)=0.
+\]
+Define the averaged second-stage multiplier
+\[
+\bar\lambda_\mu:=\sum_{i=1}^N p_i\lambda_{\mu,i}.
+\]
+We now construct a single scenario whose barrier-smoothed decision is exactly $\bar z_\mu$.
+
+\paragraph{Case 1: $W$ is scenario-dependent.}
+Fix any support index $i_0\in[N]$ a priori and set
+\[
+W^*:=W_{i_0},
+\qquad
+h^*:=h_{i_0},
+\qquad
+q_\mu^*:=q_{i_0}+W_{i_0}^\top\big(\bar\lambda_\mu-\lambda_{\mu,i_0}\big).
+\]
+Let $\xi_\mu^*:=(W^*,T,h^*,q_\mu^*)$. Using the KKT relations for scenario $i_0$, we obtain
+\[
+W^* y_{\mu,i_0}=h^*-T\bar z_\mu,
+\]
+and
+\[
+q_\mu^*-(W^*)^\top\bar\lambda_\mu
+=
+q_{i_0}+W_{i_0}^\top\big(\bar\lambda_\mu-\lambda_{\mu,i_0}\big)-W_{i_0}^\top\bar\lambda_\mu
+=
+q_{i_0}-W_{i_0}^\top\lambda_{\mu,i_0}
+=
+\mu\,y_{\mu,i_0}^{-1}.
+\]
+Hence $(y_{\mu,i_0},\bar\lambda_\mu)$ satisfies the barrier KKT system for the single-scenario recourse problem associated with $\xi_\mu^*$ at $z=\bar z_\mu$. Combining this with
+\[
+A\bar z_\mu=b,
+\qquad
+c-\mu\bar z_\mu^{-1}+A^\top\nu_\mu-T^\top\bar\lambda_\mu=0,
+\]
+shows that $(\bar z_\mu,y_{\mu,i_0})$ satisfies the full KKT system of the one-scenario barrier problem induced by $\xi_\mu^*$. Since the barrier problem is strictly convex, its optimizer is unique, and therefore
+\[
+z_\mu^*(\xi_\mu^*)=\bar z_\mu.
+\]
+Thus, when $W$ is random, one may fix $W^*=W_{i_0}$ and $h^*=h_{i_0}$ a priori and only adjust the cost vector $q_\mu^*$.
+
+\paragraph{Case 2: $W$ is deterministic across scenarios.}
+Assume now that $W_i=W$ for all $i$. Fix $\epsilon>0$, and define $q^*\in\R^m$ componentwise by
+\[
+(q^*)_j:=\max_{i\in[N]}(q_i)_j+\epsilon,
+\qquad j=1,\dots,m.
+\]
+Then $q^*-q_i>0$ componentwise for every $i$. Therefore,
+\[
+q^*-W^\top\bar\lambda_\mu
+=
+\sum_{i=1}^N p_i\big(q^*-W^\top\lambda_{\mu,i}\big)
+=
+\sum_{i=1}^N p_i\big((q_i-W^\top\lambda_{\mu,i})+(q^*-q_i)\big)
+>
+0
+\]
+componentwise. Hence the vector
+\[
+y_\mu^*:=\mu\,(q^*-W^\top\bar\lambda_\mu)^{-1}
+\]
+is well-defined and strictly positive. Now define
+\[
+h_\mu^*:=T\bar z_\mu+Wy_\mu^*,
+\qquad
+\xi_\mu^*:=(W,T,h_\mu^*,q^*).
+\]
+By construction,
+\[
+Wy_\mu^*=h_\mu^*-T\bar z_\mu,
+\qquad
+q^*-W^\top\bar\lambda_\mu=\mu\,(y_\mu^*)^{-1}.
+\]
+Thus $(y_\mu^*,\bar\lambda_\mu)$ satisfies the barrier KKT system for the single-scenario recourse problem associated with $\xi_\mu^*$ at $z=\bar z_\mu$. Together with
+\[
+A\bar z_\mu=b,
+\qquad
+c-\mu\bar z_\mu^{-1}+A^\top\nu_\mu-T^\top\bar\lambda_\mu=0,
+\]
+this implies that $(\bar z_\mu,y_\mu^*)$ satisfies the KKT system of the one-scenario barrier problem induced by $\xi_\mu^*$. By uniqueness of the barrier optimizer,
+\[
+z_\mu^*(\xi_\mu^*)=\bar z_\mu.
+\]
+Therefore, when $W$ is deterministic across scenarios, all components can be chosen a priori except $h_\mu^*$, and one may fix the cost vector in advance as $q^*=\max_i q_i+\epsilon$ (componentwise).
+
+We have thus shown that, for every $\mu>0$, there exists a single scenario whose log-barrier smoothed decision coincides with the optimal first-stage decision of the full smoothed multi-scenario problem, with the same two structural cases as in Theorem~\ref{thm:decision-optimal-scenario}.
+\end{proof}
+
+\subsubsection{Proof of Theorem~\ref{thm:decision-optimal-scenario}}
+\begin{proof}[Proof of Theorem~\ref{thm:decision-optimal-scenario}]
+Let $z^{\mathrm{ac}}$ denote the first-stage component of the analytic center of the optimal face of the deterministic equivalent of \eqref{eq:theorem-full-problem}. In particular, $z^{\mathrm{ac}}$ is an optimal first-stage decision for \eqref{eq:theorem-full-problem}. We will construct a single scenario $\xi^*$ such that
+\[
+z^*(\xi^*)=z^{\mathrm{ac}},
+\]
+which is stronger than the theorem statement.
+
+By the log-barrier theory recalled in Section~\ref{sec:log-barrier}, for every $\mu>0$ the smoothed multi-scenario problem has a unique minimizer $z_\mu^*$, and
+\[
+z_\mu^* \longrightarrow z^{\mathrm{ac}}
+\qquad\text{as }\mu\downarrow 0.
+\]
+For each support scenario $\xi_i=(W_i,T,h_i,q_i)$, define
+\[
+\lambda_{\mu,i}:=\lambda_\mu^*(z_\mu^*,\xi_i),
+\]
+the optimal dual multiplier for the smoothed second-stage problem at the stochastic optimum $z_\mu^*$. The KKT conditions for the smoothed multi-scenario problem yield a multiplier $\nu_\mu$ and vectors $y_{\mu,i}$ such that
+\[
+Az_\mu^*=b,
+\]
+\[
+c-\mu (z_\mu^*)^{-1}+A^\top \nu_\mu-\sum_{i=1}^N p_iT^\top \lambda_{\mu,i}=0,
+\]
+and, for every $i\in[N]$,
+\[
+W_i y_{\mu,i}=h_i-Tz_\mu^*,
+\qquad
+q_i-W_i^\top \lambda_{\mu,i}=\mu (y_{\mu,i})^{-1}>0.
+\]
+Since $T$ is deterministic across scenarios, it is convenient to introduce the averaged dual vector
+\[
+\bar\lambda_\mu:=\sum_{i=1}^N p_i\lambda_{\mu,i}.
+\]
+Then the first-stage stationarity condition becomes
+\[
+c-\mu (z_\mu^*)^{-1}+A^\top \nu_\mu-T^\top \bar\lambda_\mu=0.
+\]
+
+We will repeatedly use the following observation: if $\mu_k\downarrow 0$, $\xi_k\to \xi$, and
+\[
+z_{\mu_k}^*(\xi_k)\to \bar z,
+\]
+then $\bar z=z^*(\xi)$. Indeed, for each fixed $\mu_k>0$, the map $\xi\mapsto z_{\mu_k}^*(\xi)$ is continuous, while \eqref{eq:mu-to-zero} gives $z_{\mu_k}^*(\xi)\to z^*(\xi)$ as $\mu_k\downarrow 0$. \thc{I think we need more than continuity, e.g., uniform continuity}
+
+\medskip
+\noindent\textit{Case 1: $W$ is scenario-dependent.}
+Fix any index $i_0\in[N]$. We keep $W_{i_0}$ and $h_{i_0}$ fixed and only modify the cost vector. Define
+\[
+\widehat q_\mu:=q_{i_0}+W_{i_0}^\top(\bar\lambda_\mu-\lambda_{\mu,i_0}),
+\qquad
+\widehat\xi_\mu:=(W_{i_0},T,h_{i_0},\widehat q_\mu).
+\]
+Set
+\[
+\Delta_\mu:=\bar\lambda_\mu-\lambda_{\mu,i_0}.
+\]
+Consider the barrier dual objective of the one-scenario recourse problem associated with $\widehat\xi_\mu$ at $z=z_\mu^*$:
+\[
+\Phi_\mu(\lambda)
+:=
+\lambda^\top(h_{i_0}-Tz_\mu^*)
++
+\mu\sum_{j=1}^m \log\!\big((\widehat q_\mu-W_{i_0}^\top\lambda)_j\big).
+\]
+Using $\widehat q_\mu=q_{i_0}+W_{i_0}^\top\Delta_\mu$ and the change of variables $\lambda=\widetilde\lambda+\Delta_\mu$, we obtain
+\[
+\Phi_\mu(\widetilde\lambda+\Delta_\mu)
+=
+(h_{i_0}-Tz_\mu^*)^\top\Delta_\mu
++
+\widetilde\lambda^\top(h_{i_0}-Tz_\mu^*)
++
+\mu\sum_{j=1}^m \log\!\big((q_{i_0}-W_{i_0}^\top\widetilde\lambda)_j\big).
+\]
+Thus the barrier dual for $\widehat\xi_\mu$ is exactly the barrier dual for scenario $i_0$, up to an additive constant. Therefore its maximizer is translated by $\Delta_\mu$, and since $\lambda_{\mu,i_0}$ is the maximizer for scenario $i_0$, the maximizer for $\widehat\xi_\mu$ is $\bar\lambda_\mu=\lambda_{\mu,i_0}+\Delta_\mu$. \thc{I don't understand this part}
+
+Hence, by barrier duality, there exists a unique primal second-stage vector $\widehat y_\mu>0$ such that $(\widehat y_\mu,\bar\lambda_\mu)$ satisfies the second-stage KKT system for the one-scenario barrier problem with data $\widehat\xi_\mu$ at $z=z_\mu^*$. Combining this with
+\[
+Az_\mu^*=b,
+\qquad
+c-\mu (z_\mu^*)^{-1}+A^\top \nu_\mu-T^\top \bar\lambda_\mu=0,
+\]
+we see that the full KKT system of the one-scenario barrier problem with scenario $\widehat\xi_\mu$ is satisfied at $z=z_\mu^*$. Therefore
+\[
+z_\mu^*(\widehat\xi_\mu)=z_\mu^*
+\qquad\text{for all }\mu>0.
+\quad \thc{Why?}
+\]
+
+Now let $\mu\downarrow 0$. By standard primal--dual central-path convergence for the second-stage barrier problems (equivalently, for the barrier-of-the-dual formulation), together with continuity in the right-hand side $h_i-Tz$ under fixed $T$, we have
+\[
+\lambda_{\mu,i}\longrightarrow \lambda_i^{\mathrm{ac}}
+\qquad (i=1,\dots,N),
+\]
+where $\lambda_i^{\mathrm{ac}}$ is the analytic-center dual-optimal multiplier of the unsmoothed recourse dual at $z=z^{\mathrm{ac}}$. Consequently,
+\[
+\widehat q_\mu\longrightarrow q^*
+:=
+q_{i_0}
++
+W_{i_0}^\top\!\left(\sum_{i=1}^N p_i\lambda_i^{\mathrm{ac}}-\lambda_{i_0}^{\mathrm{ac}}\right).
+\]
+Let
+\[
+\xi^*:=(W_{i_0},T,h_{i_0},q^*).
+\]
+Since $\widehat\xi_\mu\to \xi^*$ and $z_\mu^*(\widehat\xi_\mu)=z_\mu^*\to z^{\mathrm{ac}}$, the observation above implies
+\[
+z^*(\xi^*)=z^{\mathrm{ac}}.
+\]
+Thus $z^*(\xi^*)$ is an optimal first-stage decision for \eqref{eq:theorem-full-problem}, proving item~1.
+
+\medskip
+\noindent\textit{Case 2: $W$ is deterministic across scenarios.}
+Now assume $W_i\equiv W$. Write
+\[
+q^{\max}:=\max_{i=1,\dots,N} q_i
+\]
+componentwise, so the theorem's shorthand $q^*=\max_i q_i+\epsilon$ means
+\[
+q^*:=q^{\max}+\epsilon \mathbf 1,
+\]
+where $\mathbf 1$ is the all-ones vector. This choice is made \emph{a priori}. Define
+\[
+\widehat y_\mu:=\mu\big(q^*-W^\top\bar\lambda_\mu\big)^{-1},
+\qquad
+\widehat h_\mu:=Tz_\mu^*+W\widehat y_\mu,
+\qquad
+\widehat\xi_\mu:=(W,T,\widehat h_\mu,q^*).
+\]
+Because $q^{\max}\ge q_i$ componentwise and $q_i-W^\top\lambda_{\mu,i}>0$, we have
+\[
+q^*-W^\top\bar\lambda_\mu
+=
+\sum_{i=1}^N p_i\big(q^*-W^\top\lambda_{\mu,i}\big)
+\ge
+\sum_{i=1}^N p_i\big(q_i+\epsilon\mathbf 1-W^\top\lambda_{\mu,i}\big)
+>
+\epsilon\mathbf 1.
+\]
+Hence $\widehat y_\mu$ is well defined and strictly positive. By construction,
+\[
+W\widehat y_\mu=\widehat h_\mu-Tz_\mu^*,
+\qquad
+q^*-W^\top\bar\lambda_\mu=\mu(\widehat y_\mu)^{-1},
+\]
+so $(\widehat y_\mu,\bar\lambda_\mu)$ satisfies the second-stage KKT conditions for the one-scenario barrier problem with data $\widehat\xi_\mu$ at $z=z_\mu^*$. Together with
+\[
+Az_\mu^*=b,
+\qquad
+c-\mu (z_\mu^*)^{-1}+A^\top \nu_\mu-T^\top\bar\lambda_\mu=0,
+\]
+this gives
+\[
+z_\mu^*(\widehat\xi_\mu)=z_\mu^*
+\qquad\text{for all }\mu>0.
+\]
+
+Moreover, the strict lower bound above implies
+\[
+0<\widehat y_\mu\le \frac{\mu}{\epsilon}\mathbf 1 \longrightarrow 0,
+\]
+and therefore
+\[
+\widehat h_\mu=Tz_\mu^*+W\widehat y_\mu \longrightarrow Tz^{\mathrm{ac}}=:h^*.
+\]
+Let
+\[
+\xi^*:=(W,T,h^*,q^*).
+\]
+Again, since $\widehat\xi_\mu\to \xi^*$ and $z_\mu^*(\widehat\xi_\mu)=z_\mu^*\to z^{\mathrm{ac}}$, the observation above yields
+\[
+z^*(\xi^*)=z^{\mathrm{ac}}.
+\]
+Hence $z^*(\xi^*)$ is optimal for \eqref{eq:theorem-full-problem}, proving item~2.
+
+Since one of the two cases must hold, the theorem follows.
+\end{proof}
+
+\subsection{Details on implementation}
+\label{sec:appendix-impl}
+\placeholder{Implementation details: model architecture, training schedule, hyperparameters, solvers, datasets.}
+
+% --------------------
+% NeurIPS paper checklist
+% --------------------
+\clearpage
+\section*{NeurIPS Paper Checklist}
+\placeholder{Insert the NeurIPS checklist here (as required by the NeurIPS style/instructions).}
+
+\end{document}

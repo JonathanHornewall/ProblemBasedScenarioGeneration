@@ -1,4 +1,8 @@
 # Tests for the first experiments
+import Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
+
 using Revise
 using ProblemBasedScenarioGeneration
 using LinearAlgebra
@@ -14,7 +18,7 @@ diff_s1_cost, diff_opt_b, train!, CanLP, extensive_form_canonical, loss, relativ
 import Flux: params, gradient, Optimise, Adam
 import ProblemBasedScenarioGeneration: loss, relative_loss, surrogate_solution
 
-include("outdated/neural_net.jl")
+include("custom_code/neural_net.jl")
 
 
 # Import data
@@ -36,16 +40,15 @@ function main()
         sigma = 5 
         p = 2
         L = 3 
-        N_xi_per_x = 1000
+        N_xi_per_x = 100
 
-        data_set_training, data_set_testing, _, _=  dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L, nothing, nothing)
+        data_set_training, data_set_testing, _, _ = dataGeneration(problem_instance, Ntraining_samples, Ntesting_samples, N_xi_per_x, sigma, p, L)
 
         model = construct_neural_network(problem_instance; nr_of_scenarios = 1)
         # Train the neural network model
-        reg_param_prim = 0.0
         reg_param_ref = 0.0
         batchsize = 1
-        epochs = 10 #nb of epoch per  reg parameter
+        default_epochs = 10 # fallback epochs per stage
         step_size = 1e-3
         save_model_training = true
 
@@ -57,28 +60,42 @@ function main()
 
         # Train with original loss functions
 
-        param_list = [1.0, 0.7, 0.4, 0.1]
+        param_list = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]
+        epoch_list = fill(default_epochs, length(param_list) + 1) # configurable epochs per stage
+        epoch_list[1] = 20
+        @assert length(epoch_list) == length(param_list) + 1 "epoch_list must be one longer than param_list"
 
-        for reg_param_surr in param_list
+        function run_training_stage(reg_param_surr_stage, reg_param_prim_stage, stage_epochs)
+            input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
+            input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr_stage, reg_param_prim_stage, ξ_output, ξ_actual)
 
-            input_loss(ξ_output, ξ_actual) = loss(problem_instance, reg_param_surr, reg_param_prim, ξ_output, ξ_actual)
-            input_relative_loss(ξ_output, ξ_actual) = relative_loss(problem_instance, reg_param_surr, reg_param_prim, ξ_output, ξ_actual)
-
-            train!(input_loss, input_relative_loss, model, data_set_training; 
-                    opt = Adam(step_size), epochs = epochs, batchsize = batchsize, display_iterations = true, 
+            train!(input_loss, input_relative_loss, model, data_set_training;
+                    opt = Adam(step_size), epochs = stage_epochs, batchsize = batchsize, display_iterations = true,
                     save_model = save_model_training, model_save_path = "trained_model_annealing.jls")
 
-            save_experiment_state(model, data_set_training, data_set_testing, problem_instance, 
-                    Dict("reg_param_surr" => reg_param_surr, "reg_param_prim" => reg_param_prim, "reg_param_ref" => reg_param_ref), 
+            save_experiment_state(model, data_set_training, data_set_testing, problem_instance,
+                    Dict("reg_param_surr" => reg_param_surr_stage, "reg_param_prim" => reg_param_prim_stage, "reg_param_ref" => reg_param_ref),
                     filepath = "experiment_state_annealing.jls")
+        end
 
-        end 
+        for (idx, reg_param_surr) in enumerate(param_list)
+            stage_epochs = epoch_list[idx]
+            reg_param_prim_stage = reg_param_surr
+            println("Starting annealing stage $(idx) with reg_param_surr = $(reg_param_surr), reg_param_prim = $(reg_param_prim_stage), epochs = $(stage_epochs)")
+            run_training_stage(reg_param_surr, reg_param_prim_stage, stage_epochs)
+        end
+
+        final_reg_param_surr = param_list[end]
+        final_stage_epochs = epoch_list[end]
+        final_reg_param_prim = 0.0
+        println("Starting final annealing stage with reg_param_surr = $(final_reg_param_surr), reg_param_prim = $(final_reg_param_prim), epochs = $(final_stage_epochs)")
+        run_training_stage(final_reg_param_surr, final_reg_param_prim, final_stage_epochs)
 
         println("Training completed!")
 
         # Test the trained model
         println("Testing the trained model...")
-        test_result = testing_SAA(problem_instance, model, data_set_testing, param_list[end], reg_param_ref, N_xi_per_x)
+        test_result = testing_SAA(problem_instance, model, data_set_testing, final_reg_param_surr, reg_param_ref, N_xi_per_x)
         println("Test result: ", test_result)
 
         println("Experiment completed and saved!")

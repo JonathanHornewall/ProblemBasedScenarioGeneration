@@ -1,6 +1,7 @@
 using StatsPlots
 using JuMP
 using Gurobi
+using PlotlyJS
 
 using CSV
 using DataFrames
@@ -11,6 +12,11 @@ df = CSV.read(joinpath(@__DIR__, "df2.csv"), DataFrame)
 datasetsize = 10000
 filtered_df = filter(row -> row.T == datasetsize, df)
 filtered_df = select!(filtered_df, Not(:T))
+
+function optimal_value(instance::CanLP, solver=solve_canonical_lp; feasibility_margin::Real = 1e-8)
+    optimal_solution, optimal_dual = solver(instance)
+    return cost(instance, optimal_solution; feasibility_margin = feasibility_margin)
+end
 
 
 function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, reg_param_ref, N_xi_per_x)
@@ -86,14 +92,13 @@ function testing_SAA(problem_instance, model, dataset_testing, reg_param_surr, r
 
     # Créer un nouveau DataFrame avec les nouvelles lignes
     new_rows = DataFrame(method = fill("NN", length(UCB_list)), OoS = UCB_list)
-
     # Ajouter les nouvelles lignes au DataFrame existant
     append!(filtered_df, new_rows)
 
-    @df filtered_df boxplot(:method, :OoS, legend=true)
-
     mean_list = mean(UCB_list)
     println("mean UCB: ", mean_list)
+
+    @df df boxplot(:method, :OoS,  group = :method, legend=false, colour = [:blue :red :green :orange :purple :yellow :cyan :magenta])
     savefig("gap_boxplot.pdf") 
 
 end
@@ -105,7 +110,7 @@ function gurobi_solver(A, b, c, Ws, Ts, hs, qs, first_stage_decision)
     n = length(c)  # number of first stage decision variables
     m = size(Ws[1], 2) # number of second stage decision variables 
     S = length(Ws) # number of scenarios
-
+ku
     # model 
     model = Model(Gurobi.Optimizer)
     set_optimizer_attribute(model, "OutputFlag", 0)

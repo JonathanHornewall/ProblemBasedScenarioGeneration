@@ -1,0 +1,32 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\begin{document}
+Let
+\[
+P = \{x \in \mathbb{R}^n \mid Ax \le b\}.
+\]
+
+Define the translated polytope
+\[
+P_r = \{x \mid x = \hat{x} + r,\; \hat{x} \in P\}.
+\]
+
+Then
+\[
+x \in P_r
+\iff A(x-r) \le b
+\iff Ax \le b + Ar .
+\]
+
+\paragraph{Objective under translation}
+\[
+\begin{aligned}
+\min_{x \in P_r} c^\top x
+&= \min_{\hat{x} \in P} c^\top (\hat{x} + r) \\
+&= \min_{\hat{x} \in P} \big(c^\top \hat{x} + c^\top r\big) \\
+&= \min_{\hat{x} \in P} c^\top \hat{x} + c^\top r .
+\end{aligned}
+\]
+\end{document}

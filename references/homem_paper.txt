@@ -1,0 +1,3392 @@
+Forecasting Outside the Box: Application-Driven
+Optimal Pointwise Forecasts for Stochastic Optimization
+Tito Homem-de-Mello1 , Juan Valencia2 , Felipe Lagos3 , and Guido Lagos4
+
+arXiv:2411.03520v2 [math.OC] 8 Nov 2024
+
+1
+
+School of Business, Universidad Adolfo Ibáñez, Chile
+School of Business, Universidad Adolfo Ibáñez, Chile
+3
+Faculty of Engineering and Sciences, Universidad Adolfo Ibáñez, Chile
+4
+Faculty of Engineering and Sciences, Universidad Adolfo Ibáñez, Chile
+2
+
+November 12, 2024
+Abstract
+The exponential growth in data availability in recent years has led to new formulations of data-driven
+optimization problems. One such formulation is that of stochastic optimization problems with contextual
+information, where the goal is to optimize the expected value of a certain function given some contextual
+information (also called features) that accompany the main data of interest. The contextual information
+then allows for a better estimation of the quantity of interest via machine learning methods, thereby
+leading to better solutions. Oftentimes, however, machine learning methods yield just a pointwise estimate
+instead of an entire distribution. In this paper we show that, when the problem to be solved is a class
+of two-stage stochastic programs (namely, those with fixed recourse matrix and fixed costs), under mild
+assumptions the problem can be solved with just one scenario. While such a scenario—which does not have
+be unique—is usually unknown, we present an integrated learning and optimization procedure that yields
+the best approximation of that scenario within the modeler’s pre-specified set of parameterized forecast
+functions. Numerical results conducted with inventory problems from the literature (with synthetic data)
+as well as a bike-sharing problem with real data demonstrate that the proposed approach performs well
+when compared to benchmark methods from the literature.
+
+1
+
+Introduction
+
+The area of stochastic optimization has evolved considerably in the past decade. Traditionally, stochastic
+optimization models assumed the existence of a known probability distribution to represent the underlying
+uncertainty, and formulated the problem in terms of optimizing the expected value (or another risk measure) of
+a certain function with respect to a decision variable, where the expectation corresponds to that distribution.
+One can formulate the problem in a generic way as
+min EP [G(z, ξ)] ,
+z∈Z
+
+(1)
+
+where z is the decision variable, ξ represents the uncertainty, and P is the distribution of ξ. Much of the
+earlier efforts aimed at developing scenario generation/reduction techniques for the case where P has either
+large or infinite support, in order to approximate the original problem with one in which the distribution
+1
+
+has moderately-sized support and hence decomposition methods can be used to solve the problem. Among
+the scenario generation methods are clustering (Dupačová, Consigli, and Wallace, 2000), moment-matching
+techniques (Hoyland and Wallace, 2001; Hoyland, Kaut, and Wallace, 2003; Mehrotra and Papp, 2014), and
+Monte Carlo/Quasi-Monte Carlo methods (Shapiro, Dentcheva, and Ruszczynski, 2021, Chapter 5), (Homemde-Mello and Bayraksan, 2014; Leövey and Römisch, 2015). Another class of methods, based on probability
+metrics, aims at finding a distribution Q with relatively few scenarios in such a way that Q minimizes a
+distance d(P, Q) between Q and the original distribution P . We refer to Dupačová, Gröwe-Kuska, and
+Römisch (2003); Heitsch and Römisch (2003); Heitsch and Römisch (2009); Pflug (2001); Pflug and Pichler
+(2011) and references therein for further discussions on this type of methods.
+Recent efforts have been directed to developing scenario generation/reduction techniques that use the
+information from the optimization problem at hand rather using just the distribution of the underlying
+random variables. Such methods typically focus on two-stage stochastic programs in order to exploit the
+structure of the problem. For instance, Bertsimas and Mundru (2023) define the distance between two
+probability distributions in terms of the cost functions of the optimization problem. Henrion and Römisch
+(2022) use problem information to compute the distribution that leads to the best uniform approximation of
+EP [G(z, ξ)] over all feasible z, whereas Zhang, Wang, Jacquillat, and Wang (2023) propose a scenario subset
+selection model that optimizes the approximation of the recourse function over a pool of first-stage solutions.
+Keutchayan, Ortmann, and Rei (2023) develop a problem-driven scenario clustering method that produces
+a partition of the scenario set that enables representative scenarios to be identified. A different approach
+is used in Arpón, Homem-de-Mello, and Pagnoncelli (2018) and Fairbrother, Turner, and Wallace (2019),
+who work with a variation of (1) where the objective function is a tail risk measure such as Conditional
+Value-at-Risk, and develop scenario generation methods that exploit the structure of that objective.
+In the past few years, considerable attention has been given to the case where one does not know in advance
+the probability distribution; rather, only data is available. Of course, one possible approach in such cases is
+to fit a distribution P̂ to the data using standard techniques such as Maximum Likelihood Estimation, and
+then solve the stochastic optimization problem using P̂ as the “true” distribution. An alternative approach
+for the data-driven case is to use distributionally robust optimization (DRO); here, the goal is to find the
+solution that minimizes the worst expectation among a set of distributions, called the ambiguity set. In the
+data-driven setting the ambiguity set is often given by the set of distributions that are close to the empirical
+distribution corresponding to the data; such an approach, discussed for instance in Mohajerin Esfahani and
+Kuhn (2018) and Blanchet, Kang, and Murthy (2019), has the advantage of mitigating “overfitting” to the
+data, thereby yielding better out-of-sample performance of the solutions.
+The enormous growth in the availability of data in recent years—more specifically, the presence of contextual information in the data (also called covariates, or features in the literature)— has led to the development
+of new models in stochastic optimization. In such models the uncertainty represented by ξ can be predicted
+to some extent by the available contextual information. Thus, the goal is to optimize the expected value
+of a certain function conditionally on some given value of the contextual information, henceforth called the
+contextual information of interest. That is, the goal is to find the best decision corresponding to data with
+some characteristics. An example of such a situation will be discussed in Section 6; the goal is there to
+determine the best assignment of bicycles on a given day for a bike-sharing service, given some contextual
+information such as the weather forecast for that day. Formally, we can write the problem as
+min E [G(z, ξ) | X = x] ,
+z∈Z
+
+(2)
+
+where again z ∈ Rn is the decision variable, Z ⊆ Rn is the feasibility set, ξ is a random variable with support
+
+2
+
+Ξ ⊆ Rm that represents the main uncertainty, X is a random variable with support X ⊆ Rs that represents
+the contextual information and x is the contextual information of interest.
+The difficulty of optimizing by taking into account the presence of contextual information as in (2) is how
+to define a proper conditional distribution of ξ given X = x to use in the model. Simple techniques such as
+“slicing” the data to keep only the data points corresponding to the contextual information of interest are
+not practical since the resulting dataset may be too small or even empty, which occurs in case the particular
+contextual information of interest has not been observed in the dataset. An alternative in such cases is to use
+machine learning approaches that can forecast the uncertainty as a function of the contextual information.
+Modern machine learning methods such as neural networks, regularized regression and classification trees,
+among others, can be used to learn the dependence of ξ on x (see, e.g., Bottou, Curtis, and Nocedal (2018);
+Hastie, Tibshirani, and Friedman (2009)). The key then is how to combine these predictions with the
+optimization model.
+The use of machine-learning-based forecasts for optimization can be accomplished in multiple ways, and
+has become a fruitful topic in stochastic optimization with many papers in the past five years. As discussed
+in the recent survey paper by Sadana, Chenreddy, Delage, Forel, Frejinger, and Vidal (2024), three main
+approaches can be found in the literature: (i) decision-rule optimization, which aims to approximate directly
+the optimal solutions of (2) as a function of x by means of techniques such as linear decision rules or reproducing kernel Hilbert spaces; (ii) sequential learning and optimization, which uses machine learning techniques
+to estimate the conditional distribution of the uncertainty given the contextual information of interest, and
+then applies standard methods to solve the stochastic optimization problem corresponding to that conditional distribution; and (iii) integrated learning and optimization, where the forecast and optimization are
+combined within the same problem. For instance, in the SPO (smart “predict, then optimize") framework of
+Elmachtoub and Grigas (2021), for a given feature x the problem is written as
+
+
+min E ξ T z | X = x = min (E [ξ|x])T z,
+z∈Z
+
+z∈Z
+
+(3)
+
+where we use E [ξ|x] as a short for E [ξ | X = x]. Note that the linearity of the above model implies that in
+order to solve the problem we only need an estimate ξx of E [ξ|x]), i.e., a pointwise forecast. The key idea
+of the SPO approach is to measure the decision error induced by the estimation error of E [ξ|x]), and to
+measure the performance of the prediction in terms of its impact in the objective function instead of using a
+standard error criterion such as least-squares. Such an idea can actually be traced back to Bengio (1997) but
+has gained traction in recent years—albeit with different names such as integrated conditional expectation and
+optimization (Grigas, Qi, and Shen, 2021), end-to-end learning (Donti, Amos, and Kolter, 2017), applicationdriven learning (Dias-Garcia, Street, Homem-de-Mello, and Muñoz, 2024), and decision-focused learning
+(Mandi, Bucarey, Tchomba, and Guns, 2022), in addition to the other terminology mentioned above. The
+idea has gone even beyond scientific papers; for instance, a recent Harvard Business Review article describes
+the implementation of a forecasting methodology for supply chains, called optimal machine learning by the
+authors, that “involves using artificial intelligence technology to create a mathematical model that takes data
+inputs [...] and links them to planning decisions” (Agrawal, Cohen, Deshpande, and Deshpande, 2024).
+The goal of this is paper to solve problems of the form (2) when the function G corresponds to a
+two-stage stochastic program, using the problem information to measure the forecast error. Notice that the
+problem is considerably harder than (3), since in principle we need, as discussed earlier, to forecast the entire
+conditional distribution of ξ given X = x using a problem-based approach. This is in fact the approach used
+by Grigas et al. (2021), although the approach has some limitations such as fixing in advance the support
+of the distribution. We show however that forecasting the entire conditional distribution is not necessary
+
+3
+
+for an important class of problems. More specifically, we consider two-stage stochastic programs with fixed
+recourse and fixed costs (henceforth denoted FRFC), i.e.,
+min f (z) + E [Q(z, ξ)]
+z∈Z
+
+(4)
+
+where Z ⊆ Rn is a convex set, f : Rn 7→ R is a convex function such that Z ⊆ Dom f , Q is the second stage
+function
+Q(z, ξ) =
+s.t.
+
+min q ⊤ y
+
+(5)
+
+Wy = h − Tz
+
+(6)
+
+y≥0
+
+(7)
+
+and ξ denotes the random element (h, T ). The qualifier “fixed recourse and fixed costs” refers to the fact that
+in the second-stage problem (5)-(7) neither the matrix W nor the vector q are random. The class of twostage stochastic programs with FRFC is actually quite large, as it includes problems where the uncertainty
+corresponds to demand, as is the case in many inventory, energy, capacity planning and logistics problems; in
+fact, the vast majority of two-stage test problems reported in the literature, or available in public repositories
+such as stoprog.org, are of FRFC type. A notable exception consists of problems where the coefficient q
+corresponds to random prices or returns, as in the case of portfolio models for example.
+A key result of the paper is the proof that, under mild assumptions, the two-stage stochastic program given
+in (4)-(7) can be solved with only one scenario, in the sense that there exists one scenario ξ ∗ = (h∗ , T ∗ )
+(possibly outside the support of ξ) such that solving the problem minz∈Z f (z) + Q(z, ξ ∗ ) yields an optimal
+solution that is also optimal for (4)-(7). In other words, it suffices to solve the simpler problem
+min f (z) + q ⊤ y
+
+(8)
+
+s.t. T ∗ z + W y = h∗
+
+(9)
+
+y ≥ 0.
+
+(10)
+
+z∈Z
+
+instead of (4)-(7). This is a surprising result, which to best of our knowledge has not been shown in the
+literature. In fact, one of the main arguments for solving stochastic optimization problems such as (1)
+¯ for some fixed scenario ξ¯ is the fact that the oneinstead of the simpler one-scenario problem minu∈U G(u, ξ)
+scenario problem does not capture the variability of the uncertainty. For instance, Wallace (2000) presents a
+compelling argument by means of very simple examples of stochastic optimization problems for which solving
+the problem for one scenario (regardless of the choice of the scenario) can never yield the same solution as
+the stochastic one.
+So, how to reconcile our main result with the proven need to use the full distribution of the uncertainty?
+As we shall see later in the paper, the key lies in the particular characteristics of two-stage stochastic programs
+with FRFC. In light of that result, it is not surprising that none of examples presented in Wallace (2000) are
+two-stage stochastic programs with FRFC, so there is no contradiction between our result and the conclusions
+in Wallace (2000)1 . Our result can also be viewed as a generalization of a property that holds for the well
+known newsvendor problem, which is a particular case of a two-stage stochastic program with FRFC—indeed,
+u
+), where
+if we solve the newsvendor model with one scenario that coincides with the critical value F −1 ( cuc+c
+o
+
+1 Actually, Example 1 in Wallace (2000) could be formulated as a very special case of a two-stage stochastic program with
+FRFC where, in the notation of (5)-(7), the function Q is either 0 or ∞. Such a model however does not have relatively complete
+recourse, a common assumption that we also make in our developments.
+
+4
+
+cu and co are respectively underage and overage costs and F is the true distribution, then the optimal solution
+of the one-scenario problem is the same as the optimal solution of the original problem. While such a property
+appears obvious in the case of the newsvendor model, our results generalizes it for all two-stage stochastic
+programs with FRFC. We emphasize that the “optimal scenario” ξ ∗ might actually lie outside the support
+Ξ; that is, the model might produce a statistically impossible pointwise forecast, but which ultimately leads
+to the optimal solution of the original problem. This is what the expression “forecasting outside the box” in
+the title of the paper alludes to.
+The one-scenario result, while appealing from a theoretical perspective, has its caveats. One is that the
+“optimal scenario" does not respect any dependencies (either functional or statistical ones) among the random
+variables; we will discuss this issue in more detail later. Another caveat is that it is a result about existence
+of such a scenario; indeed, the result states that the scenario depends on the optimal solution z ∗ of (4)-(7), so
+generating that scenario is obviously as hard as solving the original problem. On the other hand, we make no
+claims about uniqueness of the optimal scenario. For our purposes, it suffices to know that we can search for
+some scenario with the property that solving the deterministic problem with that scenario yields the same
+solution as the stochastic one.
+Those caveats notwithstanding, in the context of (2) where there is contextual information, we shall see
+that the result becomes quite useful. Indeed, consider a mapping z ∗ (x) which yields an optimal solution to (2)
+as a function of x. As determining the entire mapping z ∗ (·) is impractical from a computational perspective,
+it is natural to think of ways to approximate that function, and this is precisely what we do in this paper
+by approximating the function that maps x to an “optimal scenario” for problem (2). That is, instead of
+approximating the optimal solution mapping as done for instance in Ban and Rudin (2019), we approximate
+an optimal scenario mapping, call it ξx∗ to emphasize its dependence on x. Thus, our approach can be
+viewed as a bridge between the “integrated learning and optimization” and the “decision rule optimization”
+methods, in the sense that we aim at producing problem-based biased forecasts but we already know that
+there exists an optimal forecast which is actually a (linear) function of the optimal solution. Note that in our
+approach we do not need to deal with distributions, only with parameterized pointwise forecasts Ψ(θ, x) which
+constitute the vast majority of forecasts obtained with machine learning techniques. Once an approximation
+to an optimal scenario mapping (call it Ψ(θ∗ , x)) is constructed from training data, we can easily obtain the
+corresponding solution to (2) for any given x by solving the one-scenario problem in (8)-(10) with Ψ(θ∗ , x)
+in place of ξ ∗ .
+Naturally, the task of approximating an optimal scenario mapping is not simple. This is where the notion
+of application-driven forecasts developed in Dias-Garcia et al. (2024) becomes key. As discussed earlier, the
+approach in that paper falls into the category of works that measure the quality of the pointwise forecast in
+terms of its impact on the optimization problem; in the case of Dias-Garcia et al. (2024), this is accomplished
+by solving a bi-level problem. A distinctive feature of the approach in Dias-Garcia et al. (2024) that is
+useful here is the fact the method aims at finding the best possible values of the parameters of the forecast
+function; thus, as we show in the present paper, as long as the class of forecast functions is flexible enough,
+the pointwise forecast yielded by the algorithm will be a good approximation of an optimal scenario. There is
+however a trade-off between the flexibility allowed by class of forecast functions and the computational effort
+required to solve the bi-level model; still, such an effort is spent at the training stage—as discussed above,
+once the optimal parameters are found, solving (2) amounts to solving a simple problem. Our numerical
+results in Section 6, where we study three problems from the literature—two with synthetic data and one
+with real data—indicate that the one-scenario forecast actually performs very well.
+The remainder of the paper structured as follows: in Section 2 we introduce our main result, which is the
+
+5
+
+existence of an optimal scenario for two-stage stochastic programs with FRFC. Section 3 discusses optimal
+solution mappings as a generalization of (2) for multiple values of the contextual information x. In Section 4
+we present our proposed approach and show that, in the limit, it produces the best possible parameters
+for given forecast function Ψ. We also show conditions under which the forecast will indeed yield a good
+approximation of an optimal scenario warranted by the result in Section 2. Section 5 presents two specific
+algorithms that implement our strategy—one based on regression, the other based on classification and
+regression trees (CART)—and a few algorithms from the literature that are used as benchmarks. Finally, in
+Section 6 we show numerical results for three problems from the literature. Concluding remarks are presented
+in Section 7.
+
+2
+
+One-scenario optimality
+
+We start by stating a key result of the paper, which will be used in the sequel. It ensures that, under certain
+conditions, there exists an “optimal scenario” for the two-stage problem given in (4)-(7) such that if the
+problem is solved only with that scenario, it yields an optimal solution to the original problem.
+To proceed, we make the following assumptions:
+Assumption 1. The feasibility set Z is non-empty, and the function f defined in (4) is such that the relative
+interior of its domain (denoted ri(Dom f )) is non-empty.
+The assumption on non-emptiness of Z is natural, otherwise the two-stage problem of interest is infeasible.
+The assumption on f is mild, holding for example if Dom f = Rn .
+Consider now the dual problem of (5)-(7):
+max (h−T z)⊤ u
+
+(11)
+
+⊤
+
+(12)
+
+W u≤q
+
+s.t.
+
+u ∈ Rm .
+
+(13)
+
+Assumption 2. The feasibility set U defined by (12)-(13) is non-empty and bounded.
+This assumption ensures that Q(z, ξ) is finite for all values of z and ξ.
+We state now the main result. Note that no assumptions are made about the distribution of the uncertainty.
+Theorem 1. Suppose Assumptions 1-2 hold, and let z ∗ be an optimal solution to (4)-(7). Let ξ ∗ = (h∗ , T ∗ )
+be defined such that T ∗ := E[T ] and h∗ := T ∗ z ∗ . Then, we have that
+z ∗ ∈ argmin f (z) + Q(z, ξ ∗ ).
+
+(14)
+
+z∈Z
+
+Thus, if the optimal solution of the one-scenario problem minz∈Z f (z) + Q(z, ξ ∗ ) is unique, then it must
+coincide with z ∗ .
+e := {u1 , . . . , uk } (where each ui is a vertex of U ) such
+Proof. Assumption 2 implies that there exist a set U
+that, for any values of z and ξ, we have
+e }.
+Q(z, ξ) = max{(h − T z)⊤ u : u ∈ U
+6
+
+(15)
+
+It is well known that Q(·, ξ) is convex for all ξ. From (15), define the set
+ez (ξ) := argmax (h − T z)⊤ u.
+U
+e
+u∈U
+
+(16)
+
+It follows (see, e.g., Rockafellar 1970) that the subdifferential set of Q at (z, ξ) w.r.t z is given by
+ez (ξ)) ⊆ −T ⊤ conv(U
+e ),
+∂z Q(z, ξ) = −T ⊤ conv(U
+
+(17)
+
+and so by applying the expectation operator to both sides of the above relationship we have that
+e ).
+E [∂z Q(z, ξ)] ⊆ −E[T ]⊤ conv(U
+
+(18)
+
+Now, since Q is a convex function, we have that
+∂z E [Q(z, ξ)] = E [∂z Q(z, ξ)]
+
+(19)
+
+and thus from (18)-(19) we conclude that
+e ).
+∂z E [Q(z, ξ)] ⊆ −E[T ]⊤ conv(U
+
+(20)
+
+Consider now any optimal solution z ∗ to (4)-(7). Since such a problem is convex, if follows that the
+optimality condition for z ∗ is
+
+0 ∈ ∂z f (z ∗ ) + E [Q(z ∗ , ξ)] + NZ (z ∗ )
+
+(21)
+
+where NZ (z) denotes the normal cone of Z at z ∈ Z. By Assumption 1 and 2, we have that
+̸ ∅ ⊆ ri(Dom f ) ∩ ri(Dom Q(·, ξ)),
+
+so the formula ∂z f (z) + E [Q(z, ξ)] = ∂z f (z) + ∂z E [Q(z, ξ)] applies (Rockafellar, 1970) and then from (20)
+and (21) we then have that
+e ).
+0 ∈ ∂z f (z ∗ ) + NZ (z ∗ ) − E[T ]⊤ conv(U
+
+(22)
+
+Define now ξ ∗ = (h∗ , T ∗ ) such that T ∗ := E[T ] and h∗ := T ∗ z ∗ . Then, from (16) we have
+ez∗ (ξ ∗ ) = U
+e
+U
+
+(23)
+
+(since any dual solution is optimal in that case) and thus from (17) it follows that
+e ) = −E[T ]⊤ conv(U
+e ).
+∂z Q(z ∗ , ξ ∗ ) = −(T ∗ )⊤ conv(U
+
+(24)
+
+From the above equation, together with (22), we conclude that
+0 ∈ ∂z f (z ∗ ) + NZ (z ∗ ) + ∂z Q(z ∗ , ξ ∗ ),
+
+(25)
+
+i.e., z ∗ is an optimal solution to the one-scenario problem minz∈Z f (z) + Q(z, ξ ∗ ). Clearly, if the latter
+problem has a unique optimal solution, then it must coincide with z ∗ .
+Note that the uniqueness of optimal solutions of minz∈Z f (z) + Q(z, ξ ∗ ) is assured for example when f is
+strictly convex—a property that can be enforced by adding a regularization term if needed.
+
+7
+
+Theorem 1 shows the existence of an optimal scenario. As discussed earlier, it is clear that such a result
+is not of immediate use as it depends on optimal solutions of the same problem. In next sections, however,
+we will see how Theorem 1 plays a fundamental role in the development of approximating policies.
+Still, some conclusions can be drawn from Theorem 1. For instance, the special case when T is random
+with E[T ] = 0 leads to a somewhat surprising result, which to the best of our knowledge has not been
+observed in the literature. Essentially, it says that in that setting the second stage is irrelevant for the firststage decision. While the result is obvious when T is constant equal to zero—since in that case there is no
+link between the first and second stages—it is interesting to see that such a property remains valid when T
+is random with E[T ] = 0.
+Corollary 1. Suppose Assumptions 1-2 hold. Suppose also that the random matrix T is such that E[T ] = 0.
+Then, if the first-stage problem minz∈Z f (z) has a unique optimal solution z ∗ , then z ∗ is an optimal solution
+of (4)-(7).
+Proof. By Theorem 1, the “optimal scenario” ξ ∗ is given by T ∗ = E[T ] = 0 and h∗ = T ∗ z ∗ = 0. It
+follows that Q(z, ξ ∗ ) does not depend on z and hence the optimal solutions of the one-scenario problem
+minz∈Z f (z) + Q(z, ξ ∗ ) are the same as those of the problem minz∈Z f (z). Again, Theorem 1 ensures that
+if the latter problem has a unique optimal solution, then such a solution is optimal for (4)-(7).
+Theorem 1 also provides an interesting support for a practice, observed in the context of energy system
+operators, of solving operational planning problems with only one scenario of demand instead of modeling
+the entire distribution. As discussed in Dias-Garcia et al. (2024), there are reasons for such a choice. System
+operators then compute pointwise forecasts of the demand and add a heuristic bias to it. Theorem 1 shows
+that, as long as the optimal bias is added, the practice is actually correct, in the sense that the final result
+is the same as though the full distribution were used. Indeed, the numerical results in Dias-Garcia et al.
+(2024)—using a method that actually motivated the development of the present paper—show that the use of
+a carefully computed bias in that setting yields very satisfactory results compared to practical benchmarks.
+Our results in Section 6 also corroborate that idea, now with the theoretical support provided by Theorem 1
+as well as the results in Sections 3 and 4.
+
+3
+
+Optimal solution mappings
+
+As discussed in Section 1, our goal is to derive approximations to the function that maps a contextual
+information x to an optimal solution of (2). We start by formalizing the notion of optimal solution mappings
+discussed in the introduction. Let zS∗ : Rs 7→ Rn be a mapping defined such that zS∗ (x) is an optimal solution
+of (2) for x ∈ Rs (we assume that (2) does indeed have an optimal solution for any x ∈ Rs ). Such a definition
+conveys the fact that, in practice, the decision maker will likely not be interested in solving the problem for a
+particular value of x; rather, the decision maker would like to have a policy that yields (or, more realistically,
+approximates) the optimal solution of (2) for any given x. In that sense, a policy π is a mapping π : Rs 7→ Rn
+such that π(x) is feasible (i.e., π(x) ∈ Z) for any x ∈ Rs ). Such a policy, of course, must be constructed from
+available data.
+A natural question that arises then is, how to evaluate one such policy? One way to do so is by computing
+the out-of-sample performance of that policy. That is given a dataset (x1 , ξ1 ), . . . , (xt , ξt ), we use part of the
+dataset as training data to construct the policy π, and then use the remaining dataset (the testing data)
+
+8
+
+to evaluate out-of-sample performance. This is a standard procedure but it illustrates the need for policies
+rather than seeking for just an optimal solution for a given x. In fact, if the contextual information of interest
+x does not appear in the testing dataset, or if there are only a handful of observations with that x, we cannot
+really evaluate the objective function of (2). Such an issue of course is also present in the training data,
+but in that case building approximations of the conditional distribution of ξ with respect to x constitutes
+one way to generate a policy, as seen in Section 1. In the out-of-sample evaluation we cannot resort to such
+approximations, otherwise we would be distorting the actual value of the objective function of (2).
+The above discussion suggests that what we are really interested in is the average performance of a policy
+π over the set of features, i.e.,
+Z
+P(π) :=
+
+Eξ [G(π(x), ξ) | X = x] FX (dx),
+
+(26)
+
+X
+
+where FX is the distribution of the features X. Note that we can rewrite (26) as
+P(π) = EX [Eξ [G(π(X), ξ) | X]]
+= EX,ξ [G(π(X), ξ)] .
+
+(27)
+
+The search for the best policy can then be formulated as
+min P(π),
+
+(28)
+
+π∈Π
+
+where Π is the set of mappings X 7→ Z. The notion of a policy in the above context is discussed in Sadana
+et al. (2024).
+An example of a mapping π ∈ Π is given by optimal solutions of (1), i.e., the solution of the problem that
+ignores the contextual information:
+πN F (x) ∈ argmin Eξ [G(z, ξ)]
+
+∀x ∈ X ,
+
+(29)
+
+z∈Z
+
+where the subscript N F stands for “no features”. As πN F (·) ∈ Π, we have that
+EX,ξ [G(πN F (X), ξ)] ≥ min EX,ξ [G(π(X), ξ)] ,
+π∈Π
+
+which conveys the intuitive notion that ignoring the contextual information may lead to sub-optimal solutions.
+Another example, of course, is given by optimal solutions of (2):
+πS (x) ∈ argmin Eξ [G(z, ξ) | X = x]
+
+∀x ∈ X .
+
+(30)
+
+z∈Z
+
+Proposition 1 below shows that πS in fact characterizes the optimal solutions of (28). Although the result is
+mentioned in Sadana et al. (2024) as a consequence of an interchangeability property from Rockafellar and
+Wets (1998), we present a proof here to make the paper self-contained and to add some intermediate steps
+to that argument.
+Proposition 1. Suppose Assumptions 1-2 hold. Then, the mapping πS defined in (30) solves (28). Moreover,
+if π ∗ solves (28), then π ∗ (x) ∈ argmin Eξ [G(z, ξ) | X = x] for all x ∈ X except perhaps on a set of FX measure zero.
+
+z∈Z
+
+9
+
+Proof. Consider the function f : Rn × Rs 7→ R defined as
+f (z, x) := Eξ [G(z, ξ) | X = x] .
+Then, from (30) we have that πS (x) ∈ argmin f (z, x). Moreover, we have that
+z∈Z
+
+min P(π) = min EX,ξ [G(π(X), ξ)]
+π∈Π
+π∈Π
+Z
+= min
+Eξ [G(π(x), ξ) | X = x] FX (dx)
+π∈Π X
+Z
+= min
+f (π(x), x) FX (dx)
+π∈Π X
+Z
+=
+min f (z, x) FX (dx)
+z∈Z
+ZX
+=
+f (πS (x), x) FX (dx)
+ZX 
+
+=
+Eξ [G(πS (x), ξ) | X = x] FX (dx)
+
+(31)
+(32)
+
+X
+
+= EX,ξ [G(πS (X), ξ)] = P(πS ),
+where the equality in (32) follows from Theorem 14.60 in Rockafellar and Wets (1998) . Thus, πS solves (28).
+The converse statement also follows from the same Theorem 14.60, which ensures—under a finiteness assumption that holds under Assumptions 1-2 —that any π that solves (31) must coincide with the mapping
+defined by an optimal solution of the inner problem in (32) for FX -almost all x ∈ X .
+The result in Proposition 1 is intuitive—the mapping that yields an optimal solution for each x also yields
+an optimal solution on the average, and vice-versa. Approximating that mapping, however, is a difficult task.
+By using Theorem 1, however, we can obtain a stronger result in the case of two-stage problems of the
+form (4)-(7) under an additional assumption stated below.
+Assumption 3. The one-scenario problem minz∈Z f (z) + Q(z, ξ) has a unique optimal solution for each
+value of ξ ∈ Rm .
+As discussed earlier, the assumption holds for example when f is strictly convex. When f is linear, the
+assumption can be enforced by adding a regularization term, or by perturbing the coefficients c and q as
+discussed in Dias-Garcia et al. (2024).
+Proposition 2. Consider the mapping πS defined in (30), and suppose that G(z, ξ) = f (z) + Q(z, ξ) with Q
+defined in (5)-(7). Also, suppose Assumptions 1-3 hold. For each x ∈ X , define ξx∗ as an optimal scenario to
+(2)—the existence of which is ensured by Theorem 1. Then, by defining πD (x) as the unique optimal solution
+of one-scenario problem minz∈Z f (z) + Q(z, ξx∗ ) we have that the mapping πD is the unique solution to (28),
+except perhaps on a set of FX -measure zero.
+Proof. The proof follows the same steps as in the proof of Proposition 1, noting that under the assumptions
+of the proposition we have that πD (x) = πS (x) by virtue of Theorem 1.
+Proposition 2 has an important consequence: since πD (x) can be obtained simply by solving (8)-(10)
+with ξx∗ in place of ξ ∗ , to approximate the optimal mapping π ∗ that solves (28) it suffices to approximate an
+optimal scenario ξx∗ for each x. This leads to the notion of “optimal pointwise forecasts", a term that appears
+in the title of the paper. We discuss this topic in detail in the next section.
+10
+
+4
+
+Optimal pointwise forecasts
+
+Proposition 2 demonstrates that, when G(z, ξ) = f (z) + Q(z, ξ) with Q defined in (5)-(7)—which we will
+assume throughout this section—the search for policies that approximately solve (28) can be reduced to the
+search of policies that approximate the mapping πD (·). One way to derive approximations to πD (x) is by
+approximating an optimal scenario ξx∗ with another function of x. To see this, notice that Assumptions 1-3
+∗
+imply that the function zD
+(·) defined as
+∗
+zD
+(ξ) := argmin f (z) + Q(z, ξ)
+
+(33)
+
+z∈Z
+
+∗
+is continuous; see, e.g., Corollaries 8.1 and 9.1 in Hogan (1973). Since πD (x) = zD
+(ξx∗ ), it follows that if ψ(x)
+∗
+is a function such that ψ(x) ≈ ξx∗ , then π
+eD (x) := zD
+(ψ(x)) yields an approximation to πD (x).
+
+In light of the above discussion, we define the following data-driven approximation to ξx∗ , constructed
+from observations (x1 , ξ1 ), . . . , (xN , ξN ):
+∗
+ψ(x) := Ψ(θN
+, x),
+
+(34)
+
+∗
+where Ψ(θ, x) is a pointwise forecast function of ξ as a function of x parameterized by θ, and θN
+solves the
+
+bi-level problem
+N
+
+1 X
+∗ ˆ
+∗
+G(zD
+(ξn ), ξn ) − G(zD
+(ξn ), ξn )
+θ∈Θ N
+n=1
+
+min
+
+ξˆn = Ψ(θ, xn ),
+
+s.t.
+
+(35)
+
+n = 1, . . . , N
+
+∗ ˆ
+zD
+(ξn ) = argmin G z, ξˆn , n = 1, . . . , N
+
+(36)
+
+
+∗
+zD
+(ξn ) = argmin G z, ξn ,
+
+(38)
+
+(37)
+
+z∈Z
+
+n = 1, . . . , N.
+
+z∈Z
+
+A few remarks about Model (35)-(38) are in order. As discussed in Section 1, there is a growing body
+of literature on forecast models that are tailored to the optimization problem where such forecast is used.
+Model (35)-(38) falls in that category, as it measures the error between the forecast ξˆn and the observed
+data ξn in terms of the cost of using the respective optimal solutions. More specifically, given the scenario
+∗
+(ξn ) given by (38) would have been the best possible decision for that scenario, thereby
+realization ξn , zD
+realizing a cost of G(z ∗ (ξn ), ξn ). On the other hand, since we only have a forecast ξˆn = Ψ(θ, xn ) of ξn , we
+D
+
+∗ ˆ
+∗ ˆ
+compute the decision zD
+(ξn ) given by (37), which after the realization of ξn incurs a cost of G(zD
+(ξn ), ξn ).
+
+Thus, we want to bias the forecast function Ψ(θ, ·) so that it minimizes the post-hoc total forecast regret
+PN
+1
+∗ ˆ
+∗
+n=1 |G(zD (ξn ), ξn ) − G(zD (ξn ), ξn )|.
+N
+∗
+∗ ˆ
+∗
+Note that, by definition of zD
+, we must have G(zD
+(ξn ), ξn ) ≥ G(zD
+(ξn ), ξn ) so we can remove the absolute
+∗
+value in (35). Moreover, it is clear that G(zD
+(ξn ), ξn ) is constant for the optimization problem in θ. It follows
+
+that (35)-(38) can be equivalently written as follows, as in Dias-Garcia et al. (2024) Muñoz, Pineda, and
+Morales (2022):
+N
+
+1 X
+∗ ˆ
+G(zD
+(ξn ), ξn )
+θ∈Θ N
+n=1
+
+(39)
+
+ξˆn = Ψ(θ, xn ),
+
+(40)
+
+min
+
+s.t.
+
+n = 1, . . . , N
+
+∗ ˆ
+zD
+(ξn ) = argmin G z, ξˆn , n = 1, . . . , N.
+z∈Z
+
+11
+
+(41)
+
+The importance of Model (39)-(41) lies in Theorems 2 and 3 below, which show that the model yields in
+the limit the best possible policy among those based on forecasts parameterized by θ. Theorem 2 is shown in
+Dias-Garcia et al. (2024) for the case where G(z, ξ) = c⊤ z +Q(z, ξ), by using a similar argument to—but with
+weaker assumptions than—that used by Shapiro and Xu (2008) for more general optimization problems with
+equilibrium constraints. A closer look at that proof shows that the main requirements are the continuity of the
+function z ∗ (·)—which follows from Assumptions 1-3, as discussed above—and integrability of G(z ∗ (ξˆn ), ξn )
+D
+
+D
+
+as a function of θ, which is ensured by conditions (iv)-(vi) of the theorem. It follows that the result can be
+easily extended to the case in (8)-(10) where f is a convex function and Z is a convex set; we present the
+theorem here for completeness and to state the result in our notation.
+Theorem 2. Consider Model (39)-(41). Suppose that (i) Assumptions 1-3 hold, (ii) the forecasting function
+Ψ(·, ·) is continuous in both arguments, (iii) the data process (X1 , ξ1 ), . . . , (XN , ξN ) is independent and identically distributed (i.i.d.), (iv) the random variable ξ is integrable, (v) the feasibility set Z is bounded, and
+(vi) the set Θ is compact and non-empty. Then, with probability 1,
+∗
+lim d(θN
+, S ∗ ) = 0,
+
+N →∞
+
+(42)
+
+where d is the Euclidean distance from a point to a set and S ∗ is defined as
+
+θ
+S ∗ = argmin P π
+eD
+,
+
+(43)
+
+θ
+∗
+π
+eD
+(x) := zD
+(Ψ(θ, x)),
+
+(44)
+
+θ∈Θ
+
+with
+
+∗
+defined in (33).
+P defined in (27), and zD
+
+Note that the assumption that the data process (X1 , ξ1 ), . . . , (XN , ξN ) is i.i.d. is a common assumption in
+the literature. Also, in Dias-Garcia et al. (2024) the result is extended to the case where Xn is a (measurable)
+function of ξ1 , . . . , ξn−1 , and the data process generating {ξn }∞
+n=1 is a stationary ergodic time series. Such
+a situation covers the case where the contextual information actually consists of previous observations, or
+some function thereof.
+Theorem 2 assumes that the forecasting function Ψ(·, ·) is continuous in both arguments. Such an assumption covers many cases of interest, such as when the forecast value is an affine function of the contextual
+information (as in regression), or more generally when Ψ is given by a neural network built upon continuous
+functions such as ReLu.
+For some methods, however, continuity does not hold; this is the case for example of classification trees,
+or more generally of classification and regression trees (CART). When the continuity assumption does not
+hold, convergence can still be achieved as long as the parameter θ takes on only finitely many values. In that
+case, Theorem 3 below provides a reasonable alternative to Theorem 2.
+Theorem 3. Consider Model (39)-(41). Suppose that (i) Assumptions 1-3 hold, (ii) the data process
+(X1 , ξ1 ), . . . , (XN , ξN ) is independent and identically distributed (i.i.d.), (iv) the random variable ξ is integrable, (v) the feasibility set Z is bounded, and (vi) the set Θ is finite and non-empty. Then, the event
+∗
+θN
+∈ S∗
+
+(45)
+
+happens w.p.1 for N large enough, where S ∗ is defined in (43). If in addition, the support Ξ of ξ is bounded,
+then the convergence occurs exponentially fast, in the sense that there exist positive constants K and β such
+12
+
+that
+∗
+P (θN
+̸∈ S ∗ ) ≤ Ke−N β .
+
+(46)
+
+Proof. For the first claim, it suffices to show that the conditions of Proposition 2.1 in Kleywegt, Shapiro,
+and Homem-de-Mello (2002) hold in this case. As in that paper, Model (39)-(41) is a discrete stochastic
+optimization problem with finite feasibility set Θ. Moreover, as in the proof of Theorem 2, under the
+∗
+assumptions of the theorem the random variable G(zD
+(Ψ(θ, Xn ), ξn )) is integrable for all θ. Proposition 2.1
+
+in Kleywegt et al. (2002) then ensures that (45) holds w.p.1 for N large enough.
+The second claim follows from the fact that, under the assumption on boundedness of Ξ, the random
+variable G(z, ξ) is bounded for all z ∈ Z and hence Proposition 2.2 in Kleywegt et al. (2002) ensures
+that (46) holds. Note that the assumption on boundedness of Ξ can be relaxed to finiteness of a certain
+moment generating function in a neighborhood of zero; we refer to Kleywegt et al. (2002) for details.
+The finiteness assumption on Θ actually holds when standard CART is used as a forecast method, as long
+as the contextual information X takes on only finitely many values. Indeed, in that case the forecast function
+Ψ(θ, x) yields the average of the observations ξn in each leaf of the tree specified by θ. Such specification
+consists of the branching order of the components of x, together with the threshold associated with each
+branching. When the contextual information X takes on only finitely many values, it is clear that the set
+of possible thresholds can be reduced to the set of values taken by X. Thus, in that case the set of possible
+trees —and hence the set of possible values of θ—is finite. The finiteness property can also be seen from the
+mixed integer programming formulations for CART in Bertsimas and Dunn (2017) and Verwer and Zhang
+(2019), where it is shown that the branching order is modeled with a finite number of binary variables that
+depends on the depth of the tree, which is fixed a priori as a parameter of the method; the latter paper also
+shows that the thresholds can be modeled with finitely many binary variables, the number of which depend
+on the maximum number of distinct values for each feature.
+
+4.1
+
+Approximating the optimal forecast
+θ∗
+
+The results in Theorems 2 and 3 show that the policy π
+eDN defined in (44) converges to the best possible
+θ
+are from the policy
+policy obtained with the forecast function Ψ. It remains to study how far the policies π
+eD
+θ
+∗
+(Ψ(θ, x)), we see from Proposition 2 that the answer to that question lies
+that solves (28). Since π
+eD
+(x) = zD
+∗
+in how well Ψ(θN
+, x) approximates an “optimal scenario” ξx∗ . This is summarized in Theorem 4 below, which
+
+is proved for the case where the first-stage problem in (4) is linear:
+Theorem 4. Consider the case where the first-stage problem in (4) is linear, i.e., f (z) = c⊤ z and Z is
+b x) − ξ ∗ ∥ ≤ δ for all x ∈ X . Then, under
+polyhedral. Suppose that there exist δ ≥ 0 and θb ∈ Θ such that ∥Ψ(θ,
+x
+
+the assumptions of either Theorem 2 or Theorem 3, there exists a constant K ≥ 0—which depends only on
+θ∗
+
+the parameters that define the function G—such that the policy π
+eDN obtained from Model (39)-(41) satisfies
+
+θ∗ 
+lim P π
+eDN − min P π ≤ Kδ.
+
+N →∞
+
+π∈Π
+
+(47)
+
+∗
+∗
+Proof. Under conditions of the theorem, the function zD
+defined in (33) (which we write here as zD
+(h, T )) is
+
+13
+
+the optimal solution of the linear program
+min c⊤ z + q ⊤ y
+z∈Z
+
+s.t. T z + W y = h
+y ≥ 0.
+∗
+It follows from (Robinson, 1973, Corollary 3.1) that zD
+(h, T ) is a Lipschitz function of (h, T ) with constant,
+b x) − ξ ∗ ∥ ≤ δ for
+say, M1 . Thus, by the assumption in the theorem there exist δ ≥ 0 and θb such that ∥Ψ(θ,
+x
+
+all x ∈ X , which implies that
+b
+θ
+π
+eD
+(x) − πD (x)
+
+=
+
+∗
+b x)) − z ∗ (ξ ∗ )
+zD
+(Ψ(θ,
+D x
+
+≤ M1 δ.
+
+(48)
+
+Next, note that we have, for sufficiently large N ,
+
+
+θ∗ 
+θ∗ 
+P π
+eDN − min P π = P π
+eDN − P πD
+π∈Π
+
+
+
+b
+θ
+≤ P π
+eD
+− P πD .
+
+(49)
+
+The inequality in (49) follows from the fact that under the assumptions of either Theorem 2 or Theorem 3
+
+θ∗ 
+θ
+e N ≤P π
+the sequence {θ∗ } approaches the optimal set S ∗ and so for N large enough we have that P π
+eb
+.
+N
+
+D
+
+D
+
+Moreover, from (17) we have that the subdifferential set of G(z, ξ) is bounded for all z ∈ Z and ξ ∈ Ξ which
+in turn implies that G(·, ξ) is uniformly Lipschitz, i.e., there exists a constant M2 ≥ 0 such that
+G(z1 , ξ) − G(z2 , ξ) ≤ M2 ∥z1 − z2 ∥
+
+for all z1 , z2 ∈ Z and all ξ ∈ Ξ.
+
+(50)
+
+Inequalities (48) and (50), together with (49) and definition (27) of P, then imply that
+
+θ∗ 
+P π
+eDN − min P π ≤ Kδ,
+π∈Π
+
+where K := M1 M2 δ.
+Theorem 4 materializes the notion of “optimal pointwise forecasts” alluded to in the title of the paper: as
+long as an optimal scenario ξx∗ (viewed as a function of x) can be approximated uniformly by some function
+∗
+Ψ(θ, ·), a pointwise forecast constructed with the parameters θN
+resulting from Model (39)-(41) will suffice,
+θ∗
+
+∗
+∗
+in the sense that the policy π
+eDN (x) defined as zD
+(Ψ(θN
+, x)) will yield an approximate solution to (28). As
+∗
+indicated by (47), the quality of the latter approximation depends on how well Ψ(θ, ·) approximates ξ(·)
+. Note
+
+that, while the form of Ψ must be specified in advance, the actual values of θ that make Ψ(θ, ·) approximate
+∗
+ξ(·)
+need not be known in advance—in fact, they result from applying Model (39)-(41) as stated in Theorem 4.
+
+Thus, the more functions the set {Ψ(θ, ·) : θ ∈ Θ} contains, the better the approximation of the policy that
+solves (28).
+∗
+Naturally, in order to be able to approximate ξ(·)
+we need this function to have some properties. One
+
+such property is described in Proposition 3 below.
+Proposition 3. Suppose that X is a continuous set and that the conditional distribution of ξ|x 2 is close to
+the distribution of ξ|x′ when x is close to x′ . More precisely, suppose that given ε > 0, there exists δ > 0
+2 Here we abuse the notation—by “the conditional distribution of ξ|x" we mean the conditional probability measure defined
+as Px (A) := P (ξ ∈ A | X = x) for Borel sets A.
+
+14
+
+such that
+∥x − x′ ∥ < δ =⇒ dW (ξ|x, ξ|x′ ) < ε,
+
+(51)
+
+where dW denotes the Wasserstein distance between two distributions. Then, if the mapping πS (·) defined
+∗
+in (30) is single-valued for each x, then πS (·) is continuous and hence ξ(·)
+constructed in Theorem 1 is
+
+continuous.
+Proof. The results follows from classical stability results for optimal solutions of stochastic programs. For
+instance, Corollary 14 in Römisch (2003) shows that, in the case of the two-stage stochastic program (4)-(7),
+there exists δ > 0 such that, if P and Q are two distributions such that dW (P, Q) < δ, then we have that
+Z ∗ (Q) ⊆ Z ∗ (P ) + φ(L dW (P, Q)) B
+where Z ∗ (Q) and Z ∗ (P ) are the optimal solution sets of (4)-(7) when the distribution of ξ is respectively
+Q and P , φ(·) is a certain increasing function that vanishes at zero, L is a positive constant, and B is the
+Euclidean unit ball. Thus, if Z ∗ (P ) and Z ∗ (Q) are singletons, it follows that given η > 0 sufficiently small,
+there exists 0 < ε < δ such that ∥Z ∗ (P ) − Z ∗ (Q)∥ < η whenever dW (P, Q) < ε. By putting the conditional
+distributions of ξ|x and ξ|x′ in place of P and Q, from (51) we see that the condition dW (P, Q) < ε holds
+whenever ∥x − x′ ∥ < δ. We conclude that πS (·) is continuous. Since ξx∗ = T ∗ πS (x), we see that in that case
+∗
+ξ(·)
+is continuous as well.
+
+A particular case where condition (51) in Proposition 3 is satisfied is when the uncertainty ξ can be
+written as a linear model of x, i.e.,
+ξ = A + Bx + ϵ,
+where A is a constant vector, B is a matrix of coefficients, and ϵ has a multi-variate Normal distribution with
+mean 0 and covariance matrix Σ. That is, for fixed x and x′ we have that
+ξ|x ∼ Normal(A + Bx, Σ),
+
+ξ|x′ ∼ Normal(A + Bx′ , Σ)
+
+which are close when x is close to x′ .
+
+4.2
+
+Solving the bi-level problem
+
+We discuss now some methods to solve the bi-level problem (39)-(41) which is constructed from observations
+(x1 , ξ1 ), . . . , (xN , ξN ) of the feature X and the random variable ξ. Throughout this section, we will assume
+that the matrix T in (6) is not random, so the random variable ξ corresponds only to the right-hand side
+term h. Recalling that G(z, ξ) is defined as c⊤ z + Q(z, ξ) (with Q defined in (5)-(7)), we can write (39)-(41)
+as
+N
+
+1 X ⊤
+c zn + q ⊤ ynu
+u) N
+θ,(z1 ,y1 ),...,(zN ,yN
+n=1
+min
+u
+
+s.t.
+
+(52)
+
+θ∈Θ
+
+(53)
+
+zn ∈ Z, ynu ≥ 0,
+
+n = 1, . . . , N
+
+(54)
+
+T zn + W ynu = ξn ,
+
+n = 1, . . . , N
+n
+o
+(zn , ynℓ ) = argmin c⊤ z + q ⊤ y : T z + W y = Ψ(θ, xn ) ,
+z∈Z, y≥0
+
+15
+
+(55)
+n = 1, . . . , N.
+
+(56)
+
+Note that we have different second-stage variables for the upper and lower level problems, denoted respectively
+ynu and ynℓ , n = 1, . . . , N . Also, since the lower level problems are just linear programs, we can write (52)(56) as a single level problem using KKT conditions, as customary in the bi-level literature. For instance,
+assuming for simplicity that the set Z is the positive orthant, we have that (52)-(56) is equivalent to
+N
+
+1 X ⊤
+c zn + q ⊤ ynu
+N
+u
+ℓ
+θ,{(zn ,yn ,yn ,λn )}n=1 N
+n=1
+min
+
+s.t.
+
+(57)
+
+θ∈Θ
+zn ≥ 0,
+
+(58)
+n = 1, . . . , N
+
+(59)
+
+T zn + W ynu = ξn , ynu ≥ 0,
+T zn + W ynℓ = Ψ(θ, xn ),
+T ⊤ λn ≤ c,
+⊤
+
+W λn ≤ q,
+
+n = 1, . . . , N
+
+ynℓ ≥ 0,
+
+n = 1, . . . , N
+
+(60)
+(61)
+
+n = 1, . . . , N
+
+(62)
+
+n = 1, . . . , N
+
+(63)
+
+c⊤ zn + q ⊤ ynℓ − Ψ(θ, xn )⊤ λn ≤ 0,
+
+n = 1, . . . , N.
+
+(64)
+
+In the above formulation, (58)-(60) are the upper level constraints, (61) represents the lower level primal
+constraints, (62)-(63) are the lower level dual constraints, and (64) imposes strong duality on the lower level,
+which is equivalent to writing the complementarity constraints.
+Problem (57)-(64) is in general hard to solve, especially when the forecast function Ψ(θ, x) is a complicated
+function of θ. A situation where the above model can be solved reasonably efficiently is when (i) the set
+Θ is polyhedral, and (ii) the function Ψ(θ, x) is linear in θ, i.e. Ψ(θ, x) = Bx θ for some matrix Bx . The
+latter condition corresponds to an “application-driven regression” whereby, instead of measuring the error
+with quadratic loss functions as in standard regression, we measure it using the objective function of the
+problem. This is actually the approach we use in our numerical experiments, as discussed in Section 5. In
+that case, the problem given by (57)-(64) is a linear program except for (64), which contains the bilinear term
+θ⊤ Bx⊤n λn . Some alternatives to address that issue include using binary variables to eliminate the bilinear
+term (or to model the equivalent complementarity constraints), or relaxing (64) by putting it in the objective
+function. The latter can be solved with a penalty alternating direction method; we refer to Kleinert and
+Schmidt (2021) for further discussion and comparisons between these approaches. We also remark that some
+commercial solvers can solve problems with bilinear terms very efficiently.
+When Θ is finite, as in Theorem 3, it may be possible to solve (57)-(64) as a mixed integer program,
+depending again on the form of Ψ(θ, x) as a function of θ. Designing efficient algorithms for such a problem
+is a topic for future research.
+
+4.3
+
+The case with functional dependencies
+
+We end this section by noticing that the “optimal scenario” constructed in Theorem 1 is defined according to
+the constraints of the second-stage problem rather than by the random variables present in those constraints.
+This is an important distinction, as it implies that dependencies between random variables in different
+constraints are not necessarily respected by the optimal scenario.
+We illustrate this issue with a simple example. Consider the standard newsvendor model, with purchase
+cost cP = 0, inventory cost cI , and shortage cost cS . We can write the problem as the two-stage problem
+
+16
+
+minz≥0 E[Q(z, D)], where
+Q(z, D) = min
+cI y o + cS y u
+o u
+y ,y
+
+y o ≥ −D + z
+
+s.t.
+
+yu ≥ D − z
+y o , y u ≥ 0.
+In the notation of (6)-(7), we have y = [y o , y u ]⊤ , W = I, h = [−D, D]⊤ , and T = [−1, 1]⊤ . Note that
+the above model has two constraints with the same random variable (D). Note also that in this case the
+functional dependence between the two components of h (i.e., one is the negative of the other) is maintained,
+since the optimal scenario is h∗ := T z ∗ = [−z ∗ , z ∗ ]⊤ and thus D∗ = z ∗ , where z ∗ is the optimal solution of
+the newsvendor model. Indeed, it is easy to check that the one-scenario problem minz≥0 Q(z, D∗ ) also has
+optimal solution z ∗ , as stated by Theorem 1.
+"
+Suppose now that we add the constraint z ≥ 2D to the second stage, so now we have W =
+
+I
+
+0
+
+#
+
+,
+0 0
+h = [−D, D, 2D]⊤ , and T = [−1, 1, 1]⊤ (to ensure that the complete recourse assumption holds, we can
+add a slack variable to the constraint z ≥ 2D with high cost). Again, let z ∗ be the optimal solution of the
+stochastic model. Then, the optimal scenario is h∗ := T z ∗ = [−z ∗ , z ∗ , z ∗ ]⊤ , so we see that the functional
+dependence between the second and third components of h (i.e, that the third one is twice the second one)
+is not respected. However, it is easy to check that solving the one-scenario problem with h∗ in place of h will
+indeed yield the same solution z ∗ as the stochastic model. Thus, as discussed in Section 4.1, as long as one
+is able to approximate h∗ with the forecast function Ψ(·, ·), an approximation of the optimal solution z ∗ can
+still be obtained. Later, at the end of Section 6.5—and also in Appendix D—we will comment on the effect
+of this restriction on one of our case studies.
+
+5
+
+Solution Methods
+
+In this section, we present different approaches to find policies π ∈ Π to solve the problem (2). We begin by
+describing application-driven (AD) methods, which consider the structure of the problem and find a function
+θ
+∗
+Ψ(θ, x) that defines the policy π̃D
+(x) = zD
+(Ψ(θ, x)). Then, we present benchmark methods, where we include
+
+standard predict-then-optimize methods and conditional sampling methods.
+
+5.1
+
+Application-Driven Forecasts Methods
+
+For AD methods, we consider two Ψ(θ, x) forecast functions, linear regression and a method based on regression trees known as M5. In both cases, we seek to determine the optimal parameters for each function by
+solving the bi-level problem (39)-(41). We also propose a heuristic solution method.
+As mentioned above, the problem (39)-(41) seeks a parameterization of the function Ψ(θ, x) such that
+the z decisions obtained from this prediction function, ξˆn , n = 1 . . . , N , minimize the total cost obtained by
+considering observations ξn . Let xn be the covariates for observations ξn . The function Ψ(θ, x) allows us
+θ̂
+θ̂
+to obtain a policy π̃D
+(x), which minimizes the error G(π̃D
+(x), ξn ). Let θ̂ be the parameterization found by
+
+solving the bi-level problem. The policy is given by,
+θ̂
+π̃D
+(x) ∈ argmin G(z, Ψ(θ̂, x)).
+z∈Z
+
+17
+
+(65)
+
+In general, the bi-level problem (39)-(41) is difficult to solve, including the problems presented in our
+computational study. For this reason, we consider heuristic methods to solve it, in particular, the implementation of the Meta algorithm and the Nelder-Mead method presented in Dias-Garcia et al. (2024). In this
+work, this heuristic method yields high-quality solutions in short computational running times. The Meta
+algorithm is as follows:
+Output: Optimized θ
+1
+
+Initialize θ;
+
+2
+
+while Not converged do
+
+3
+
+Update θ;
+
+4
+
+foreach n ∈ {1, . . . , N } do
+Forecast: ξˆn ← Ψ(θ, xn );
+
+5
+
+Plan Policy: zn∗ ← argmin G(z, ξˆn );
+
+6
+
+z∈Z
+
+Cost Assessment: costn ← G(zn∗ , ξn );
+
+7
+8
+
+end
+
+9
+
+Compute cost: cost(θ) ←
+
+10
+
+PN
+
+n=1 costn ;
+
+end
+Algorithm 1: Meta algorithm.
+This algorithm starts by initializing the vector θ ∈ Θ, which can be simply initialized with zero values.
+
+As long as the algorithm does not converge, the variables are updated. The convergence criterion is that
+the objective function decreases less than ϵ = 10−7 between two consecutive iterations. The update for θ
+aims to minimize the objective function, for which we need an optimization method. As in Dias-Garcia et al.
+(2024), we propose to use a derivative-free method, the Nelder-Mead approach. For each n = 1, . . . , N, the
+forecast for observation (xn , ξn ) is found using the current θ vector and the covariate vector xn . Then, for
+the prediction ξˆn , a plan zn is obtained. The cost of this plan is calculated using the observation n value, ξn .
+Finally, the total cost for the current θ, cost(θ), is calculated.
+5.1.1
+
+Linear Regression Prediction
+
+For a linear regression, the parameterization of the Ψ(θ, x) function is given by,
+Ψ(θ, x) = θ0 +
+
+s
+X
+
+θ i xi .
+
+(66)
+
+i=1
+AD
+The resulting policy from the linear function under the Application-Driven approach is denoted as π̃N
+(x).
+
+5.1.2
+
+M5 Prediction
+
+The M5 model is presented in Quinlan (1992). It is a generalization to classification and regression tree
+models (CART) that seeks to improve the prediction made in each region, using linear regression instead of
+an average value.
+The CART method considers a partition of the feature space into R regions, where for each partition
+ℓ ∈ {1, . . . , R} a constant value is determined as a prediction (Hastie et al., 2009; Murphy, 2012). The
+partition is carried out by branching a decision tree and each region ℓ ∈ {1, . . . , R} is a leaf of the tree. Tree
+structures allow to fit nonlinear functions, obtaining high-quality predictions. In general, the method for
+defining these partitions is heuristic; when a node is branched, the splitting variable xj , j = 1, . . . , s, and the
+
+18
+
+cutoff value r that has the greatest impact on reducing the variance of the training data are identified. This
+splitting variable and point are defined so that two half-planes are obtained:
+R1 (j, r) = {n = 1, . . . , N | xn ≤ r} and R2 (j, r) = {n = 1, . . . , N | xn > r}.
+
+(67)
+
+We then seek the splitting variable j and the split point r that minimize
+
+min
+j,r
+
+
+
+
+min
+ ψ1
+
+X
+
+X
+
+(ξn − ψ1 )2 + min
+ψ2
+
+n∈R1 (j,r)
+
+(ξn − ψ2 )2
+
+
+
+
+.
+
+(68)
+
+ξn .
+
+(69)
+
+
+
+n∈R2 (j,r)
+
+For given j and r, the inner minimization is solved by
+ψ1 =
+
+1
+|R1 (j, r)|
+
+X
+
+ξn and ψ2 =
+
+n∈R1 (j,r)
+
+1
+|R2 (j, s)|
+
+X
+n∈R2 (j,s)
+
+In practice, the splitting variable and the split point are determined by reviewing all the given observations
+and then determining the best pair (j, r). This guarantees that the regions R1 (j, r) and R2 (j, r) are always
+non-empty.
+The branching continues until the tree reaches a given maximum height or the number of data points in
+each leaf is less than or equal to a given value, or both. The prediction for a new vector of covariates X,
+corresponding to a region ℓ ∈ {1, . . . , R}, is the average value of the observations in that region, ξ¯ℓ .
+The M5 model considers an additional step for prediction given a vector X: using the observations in
+a region, a linear regression is estimated. We propose to perform this linear regression considering an AD
+approach. That is, once a tree structure is defined, where each region has a set of observations, for this set, we
+solve the bi-level problem (39)-(41) and consider a linear regression function for Ψ(θ, x), as in equation (66).
+For each leaf ℓ ∈ R, we obtain a vector θℓ , which takes into account the structure of the problem. The
+training of the tree follows the same heuristic used by CART. The resulting policy from using M5 under the
+M 5+AD
+Application-Driven approach is denoted as π̃N
+(x).
+
+If the decision tree has a maximum tree size, with a fixed partition {1, . . . , R}, constructed using i.i.d.
+observations, then the convergence of each parameter θℓN , ℓ ∈ {1, . . . , R}, is guaranteed.
+Proposition 4. Consider a decision tree with a fixed partition {1, . . . , R}, constructed using independent
+and identically distributed (i.i.d.) N ′ < ∞ observations. Also, consider Model (39)-(41). Suppose that (i)
+Assumptions 1-3 hold, (ii) the data process (X1 , ξ1 ), . . . , (XN , ξN ) is i.i.d., (iii) the random variable ξ is
+integrable, and (iv) the primal and dual feasibility sets Z and U are bounded. Then, with probability 1,
+∗
+lim d(θℓN
+, Sℓ∗ ) = 0,
+
+(70)
+
+N →∞
+
+
+
+
+θ
+where d is the Euclidean distance from a point to a set and Sℓ∗ = argmin EX,ξ G π
+eD
+(X), ξ (X, ξ) ∈ (Xℓ , Ξℓ ) ,
+θ∈Θ
+
+and (Xℓ , Ξℓ ) is the support for region ℓ ∈ {1, . . . , R}.
+Proof. Let ℓ ∈ {1, . . . , R} be a region of the decision tree. Let hℓ (N ) be the number of elements in region ℓ,
+with N training data points. We want to show that hℓ (N ) goes to infinity when N goes to infinity. When
+(N )
+→ pℓ w.p. 1, where pℓ is the probability
+the data are i.i.d., by the law of large numbers, we have that hℓN
+
+that an observation belongs to that region. We then have 2 options:
+1. pℓ > 0: in this case, we have that for N large, hℓ (N ) ∼ N pℓ and hence hℓ (N ) → ∞ w.p. 1.
+19
+
+2. pℓ = 0: in this case, the probability that there are observations in the region ℓ is zero, i.e. hℓ (N ) = 0
+for all N w.p. 1. Since the region ℓ is not empty (at least one observation from N ′ training data is in
+region ℓ), this cannot happen.
+We conclude that the number of elements in the region ℓ goes to infinity. Then, we apply Theorem 2,
+∗
+which guarantees convergence of the parameter θℓN
+.
+
+5.2
+
+Benchmark methods
+
+In this section, we present benchmark methods, which we will use as a solution reference for our AD methods
+in our computational study. We start by describing predict-then-optimize methods (PO), commonly used in
+practice, and then conditional distribution methods (CD).
+5.2.1
+
+Predict then Optimize Framework
+
+Predict-then-optimize (PO) methods consider two stages to find a policy. In the first stage, the θ ∈ Θ
+parameters are found for the Ψ(θ, x) function, x ∈ X , so that an error metric takes its smallest value.
+This metric aims to measure the difference between the observed value and the prediction of the function
+PN
+2
+Ψ(θ, x). In general, for observations (x1 , ξ1 ), . . . , (xN , ξN ), the quadratic error,
+n=1 ∥ξn − Ψ(θ, xn )∥ , is
+used as the error metric. Once the parameter vector θ̂ is determined, the policy π ∈ Π is defined according
+to Equation (65).
+For these PO methods we consider a linear function (Equation (66)) and a decision tree method. The
+tree method we use is CART, which, unlike M5, partitions the feature space and then makes predictions as
+averages of the observations. CART manages to achieve a better approximation of the data function, but
+it is not an AD method. In fact, to define the CART parameters (structure of the tree), the objective is to
+minimize the quadratic error. Similarly to M5, CART is usually constructed by means of a greedy heuristic
+(Hastie et al., 2009).
+LS
+The resulting policy from the linear function is denoted as π̃N
+(x) and the resulting policy from CART,
+CART
+π̃N
+(x), x ∈ X .
+
+5.2.2
+
+Conditional Distribution Methods
+
+Conditional distribution methods (CD) seek to approximate the conditional expectation Eξ [G(z, ξ)|X = x],
+x ∈ X , in Equation (30), using a set of scenarios for each x. These methods also require two stages; in a first
+stage the scenarios for each x must be determined, a set N (x), and then, in the second stage, the following
+problem is solved to find the conditional distribution policy π̃(x):
+π̃(x) ∈ argmin
+z∈Z
+
+1
+|N (x)|
+
+X
+
+G(z, ξn ),
+
+∀x ∈ X .
+
+(71)
+
+n∈N (x)
+
+Note that here we are assuming that each scenario has the same weight (probability) in the objective
+function.
+The simplest of these conditional methods ignores the context x ∈ X , and the problem is simply solved by
+considering the observations (x1 , ξ1 ), . . . , (xN , ξN ) given. For this, the policy is determined by solving these
+scenarios as done using the sample average approximation approach (SAA). We denote this approach as the
+SAA policy. Note that this method can also be seen as an approximation of the π N F policy of Equation (29).
+
+20
+
+SAA
+Given a set of observations, the policy obtained π̃N
+(x), x ∈ X , is given by:
+N
+
+SAA
+π̃N
+(x) ∈ argmin
+z∈Z
+
+1 X
+G(z, ξn ),
+N n=1
+
+∀x ∈ X .
+
+(72)
+
+Other approaches to generate policies based on conditional scenarios are based on machine learning
+techniques. Using contextual information x ∈ X and predictive methods, scenarios for x are generated. Then,
+a solution is found by solving an approximation problem as in (71). In Bertsimas and Kallus (2020), several
+prediction methods are proposed to determine these scenarios, such as k-nearest-neighbors (KNN), local linear
+regression (LOESS), CART and random forests (RF). As a benchmark for our computational experiments,
+we consider the KNN method, since in other computational studies it has also been a benchmark approach,
+showing good performance (Kannan, Bayraksan,
+and Luedtke, 2022). The KNN method determines
+the k
+o
+n
+PN
+I[∥x
+−
+x
+∥
+≥
+∥x
+−
+x
+∥]
+≤
+k
+,
+where
+∥·∥
+is a
+nearest neighbors for an x ∈ X , N (x) = n = 1, . . . , N
+i
+j
+j=1
+KN N
+distance metric (e.g., Euclidean distance). The resulting policy π̃N
+(x), is given by:
+
+KN N
+π̃N
+(x) ∈ argmin
+z∈Z
+
+1
+|N (x)|
+
+X
+
+G(z, ξn ).
+
+(73)
+
+n∈N (x)
+
+The last CD method that we present is the one proposed in Kannan et al. (2022). In this method, we
+start by estimating θ by minimizing the squared error of the Ψ(θ, x) function and the observations (as for
+the linear regression), x ∈ X . Then, a point prediction is obtained for each x ∈ X . Using Ψ(θ̂, x), an error
+εn := ξn − Ψ(θ̂, xn ) is calculated, n = 1, . . . , N . The conditional distribution (30) can be approximated,
+ER−SAA
+obtaining a π̃N
+(x) policy given by:
+N
+
+ER−SAA
+π̃N
+(x) ∈ argmin
+z∈Z
+
+6
+
+
+1 X 
+G z, Ψ(θ̂, x) + εn ,
+N n=1
+
+x ∈ X.
+
+(74)
+
+Computational experiments
+
+In this section, we present some numerical experiments to support our theoretical results. The goal of
+these experiments is to provide a “proof of concept” for the idea introduced in this paper that solving
+stochastic optimization problems with fixed recourse and fixed costs can be accomplished by solving a onescenario problem, where this single scenario is generated as an “optimal” pointwise forecast in the sense of
+Theorems 2 and 3. Thus, we do not attempt to demonstrate that our method is superior to other methods in
+the literature; rather, we want to show that this is a new alternative approach to solve stochastic optimization
+problems with contextual information that deserves further investigation.
+We apply our methodology to three problems from the literature: a resource allocation one, a shipment
+planning problem, and also a bike-sharing reallocation problem with real-world data. We test the methods
+described in Section 5 and show their performance on each of the three problems.
+
+6.1
+
+Problem 1: two-stage resource allocation
+
+We first consider the two-stage resource allocation problem used in Kannan et al. (2022). There is a set I
+of resources and a set J of clients. The first-stage decision is the quantity zi ≥ 0 of resource i ordered, for
+each i in I. The uncertain parameter is the demand ξj of each client j in J, and once it is realized, we can
+s
+observe it and take two second-stage decisions: the amount yi,j
+≥ 0 of resource i assigned to client j, and the
+
+21
+
+amount yjc ≥ 0 of unmet demand of client j. Other parameters, assumed to be known, are the unitary cost
+ci of resource i, the unitary cost of unmet demand qj by client j, the yield ρi of resource i, and the service
+rate µi,j of the allocation of resource i to client j. In this way, the problem can be formulated as follows:
+min
+
+z∈RI+
+
+X
+
+ci zi + E [Q(z, ξ)]
+
+(75)
+
+i∈I
+
+where the expectation is taken with respect to the random vector ξ of demands of the clients, and where the
+second-stage cost function Q(z, ξ) is
+X
+
+Q(z, ξ) := min
+s
+c
+y ,y
+
+qj yjc
+
+(76)
+
+j∈J
+
+X
+
+s.t.
+
+s
+yi,j
+≤ ρi zi
+
+∀ resource i ∈ I
+
+(77)
+
+∀ client j ∈ J
+
+(78)
+
+j∈J
+
+X
+
+s
+µi,j yi,j
++ yjc ≥ ξj
+
+i∈I
+c
+I
+y s ∈ RI×J
++ , y ∈ R+
+
+(79)
+
+In Section 6.4 we consider instances with |I| = 20 resources and |J| = 30 clients.
+
+6.2
+
+Problem 2: two-stage shipment planning
+
+We also consider a two-stage shipment planning problem that appears in Bertsimas and Kallus (2020). It
+consists of a set I of warehouses and a set J of locations. In the first stage, we decide the amount zi ≥ 0 to
+be produced and stored at each warehouse i in I, at a cost of c > 0 per unit. Then, the demand ξj at location
+j in J is realized, and based on its values we make two second-stage decisions: the last-minute production of
+s
+yiw units at warehouse i, incurring a higher unit production cost of r > c, and the amount yi,j
+≥ 0 of product
+
+to be shipped from warehouse i to location j, at a unit shipment cost of si,j . The problem is formulated as
+follows:
+min
+
+z∈RI+
+
+c
+
+X
+
+zi + E [Q(z, ξ)]
+
+(80)
+
+i∈I
+
+where, again, the expectation is taken with respect to the random vector ξ of demands of the clients, and
+where the second-stage cost function Q(z, ξ) is now
+Q(z, ξ) := min
+w
+s
+y ,y
+
+s.t.
+
+r
+
+X
+i∈I
+
+X
+
+yiw +
+
+XX
+
+s
+si,j yi,j
+
+(81)
+
+i∈I j∈J
+
+s
+yi,j
+≥ ξj
+
+∀ location j ∈ J
+
+(82)
+
+∀ warehouse i ∈ I
+
+(83)
+
+i∈I
+
+X
+
+s
+yi,j
+≤ zi + yiw
+
+j∈J
+
+y w ∈ RI+ , y s ∈ RI×J
++
+In Section 6.4 we consider instances with |I| = 5 warehouses and |J| = 12 locations.
+
+22
+
+(84)
+
+6.3
+
+Data generation
+
+To generate the data for both problems described in Sections 6.1 and 6.2, we follow the method in Section 4
+of Kannan et al. (2022) to model the dependency between the clients’ or locations’ demands ξ = (ξj , j ∈ J)
+in RJ , as a function of a vector of covariates x = (xl , l ∈ L), for some finite set L. Specifically, we assume
+that for all j in J, the demand ξj is determined by the equation
+ξj = aj +
+
+X
+
+bj,l · (xl )p + ϵj ,
+
+(85)
+
+l∈L
+
+where p > 0 is a fixed degree, that we will later take in {0.5, 1, 2}; and ϵj ∼ N (0, σj2 ) for all j in J and
+are independent across J. Finally, (aj , j ∈ J), (bj,l , (j, l) ∈ J × L) and (σj , j ∈ J) are additional model
+parameters used in Section 4 of Kannan et al. (2022); see Appendix B for further details.
+In Section 6.4 we consider instances with |L| = 3 covariates, and the covariate vectors x in RL are modeled
+as i.i.d. draws from a multivariate folded/half-normal distributions, as in Section 4 of Kannan et al. (2022).
+That is, we take xl = |x̃l | for all l in L, where the vector x̃ in RL has a multivariate normal distribution with
+zero mean and with covariance matrix generated randomly from a beta(2, 2) distribution and then rescaled
+to [−1, 1], see Annex G of Kannan et al. (2022).
+
+6.4
+
+Results for Problems 1 and 2
+
+In this section we show the results of applying the methods discussed in Section 5 to the problems in
+Sections 6.1 and 6.2 using the data generation procedure in Section 6.3.
+We perform the experiments for the values p ∈ {0.5, 1, 2} for the degree p of the data generation procedure,
+and train the methods in Section 5 with N samples of the pair (x, ξ), for N ∈ {102 , 103 , 104 }. Once the
+training is done, we test the performance of each method by approximating its corresponding optimality gap
+using the estimation procedure in Mak, Morton, and Wood (1999) (see Algorithm 1 in Kannan et al. (2022)
+), which can be summarized as follows.
+1. Generate a sample of the covariate x.
+2. Generate 1,000 samples of the demand ξ conditional on the covariate value x, i.e., from the conditional
+distribution of ξ|x.
+3. Compute the solution z(x) of the method in Section 5 being tested, and compute the average cost of
+the solution z(x) on the latter 1,000 samples.
+4. Solve the problem minz∈Z E [G(z, ξ) | X = x] where the expected value is approximated using the 1,000
+samples of the demand ξ.
+5. Compute the gap between the value obtained in step 3. minus the one from step 4.
+6. Repeat 30 times steps 2. to 5., compute a confidence interval for the gap, and express it as a percentage
+of the value in step 3.
+By using the above algorithm we obtain a normalized estimate of 99%-confidence upper bound for the
+b99 (x). Since the data-driven solutions depend on the realization of the covariate sample
+covariate x, say B
+x, we repeat 30 times this procedure —generating 30 covariates x1 , . . . , x30 and their corresponding upper
+b99 (x1 ), . . . , B
+b99 (x30 )— and report the results using box plots of the latter 30 upper bounds.
+bounds B
+
+23
+
+Resource allocation problem. In Figure 1 we show the results for the resource allocation problem in
+Section 6.1 with |I| = 20 resources, |J| = 30 clients and |L| = 3 covariates.
+Our findings across the model degrees p ∈ {0.5, 1, 2} are as follows. For all values of p, we see that the
+pure SAA approach, which ignores the contextual information, has poor performance. This is expected when
+there is some correlation between ξ and x, as the knowledge of x improves the estimation of ξ.
+When the model degree is p = 0.5 pr p = 1, methods AD, M5+AD, and ER-SAA show very good
+performance, even when the training data size is small. As more information becomes available, the kNN
+method also improves its performance. We can see that the predict-then-optimize policies CART and LS
+perform much worse than the other policies (except SAA), although the difference decreases as N increases.
+When the model degree is p = 2, we see a somewhat different behavior. The optimality gaps’ variability
+increases due to the nonlinear form of the data. We also see that policies AD and ER-SAA end up performing
+worse (for larger N ) than CART and similar to LS. The best performing methods are kNN and M5+AD,
+which take advantage of partitioning the data space.
+Figure 5 in Appendix C shows a zoomed-in version of Figure 1 without CART, SAA and LS so as to
+emphasize the differences among the remaining four policies.
+
+24
+
+p = 0.5
+
+14
+
+14
+
+14
+
+12
+
+12
+
+12
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+p = 1.0
+
+0
+
+0
+
+N = 10^3
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+0
+
+p = 2.0
+
+0
+
+N = 10^2
+
+0
+
+N = 10^2
+
+0
+
+N = 10^3
+
+25
+
+25
+
+25
+
+20
+
+20
+
+20
+
+15
+
+15
+
+15
+
+10
+
+10
+
+10
+
+5
+
+5
+
+5
+
+0
+
+0
+
+N = 10^2
+AD
+
+CART
+
+ER-SAA
+
+N = 10^3
+KNN
+
+N = 10^4
+
+N = 10^4
+
+0
+LS
+
+M5 + AD
+
+N = 10^4
+SAA
+
+Figure 1: Comparison of methods proposed in Section 5 for the Problem 1 of resource allocation in Section 6.1.
+p is the degree of the data generation procedure in (85), and N is the number of samples with which each
+method is trained.
+Shipment planning problem. In Figure 2 we show the results for the shipment planning problem in
+Section 6.2 with |I| = 5 warehouses, |J| = 12 locations and |L| = 3 covariates. The conclusions are very
+similar to the previous problem, except that in this case the predict-then-optimize policies and the SAA
+policy perform much worse than AD policies and the conditional expectation ones even when p = 2. As
+before, Figure 6 in Appendix C shows a zoomed-in version of Figure 2 without CART, SAA and LS so as to
+emphasize the differences among the remaining four policies. We also see that, as in the previous problem, the
+methods that use an “optimal" pointwise forecast demonstrate in most cases similar or superior performance,
+compared to methods that consider multiple scenarios. In particular, the M5+AD method almost never loses
+to any of its competitors, regardless of the size of the training dataset, and has the best performance of all
+when p = 2. This supports our theoretical results, showing that a two-stage stochastic program can actually
+be solved with only one scenario.
+
+25
+
+p = 0.5
+
+14
+
+14
+
+14
+
+12
+
+12
+
+12
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+p = 1.0
+
+0
+
+0
+
+N = 10^3
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+0
+
+p = 2.0
+
+0
+
+N = 10^2
+
+0
+
+N = 10^2
+
+0
+
+N = 10^3
+
+25
+
+25
+
+25
+
+20
+
+20
+
+20
+
+15
+
+15
+
+15
+
+10
+
+10
+
+10
+
+5
+
+5
+
+5
+
+0
+
+0
+
+N = 10^2
+AD
+
+CART
+
+ER-SAA
+
+N = 10^3
+KNN
+
+N = 10^4
+
+N = 10^4
+
+0
+LS
+
+M5 + AD
+
+N = 10^4
+SAA
+
+Figure 2: Comparison of methods proposed in Section 5 for Problem 2 of shipment planning in Section 6.2.
+p is the degree of the data generation procedure in (85), and N is the number of samples with which each
+method is trained.
+
+6.5
+
+Problem 3: bike sharing reallocation with real-world data
+
+To test our methodology in a realistic problem with real-world data, we study the bike reallocation problem in Cavagnini (2019) that uses real-world data from the San Francisco, CA, bike-sharing system. The
+problem uses open-source data available in the website https://www.kaggle.com/datasets/benhamner/
+sf-bay-area-bike-share/data that describes a system with 350 bikes and 34 stations; see the distribution
+of the stations in Figure 3. It comprises four datasets containing several data fields, including station status,
+weather conditions (including temperature, wind speed, and humidity) and trip information. It covers the
+period from August 2013 to August 2015.
+Cavagnini (2019) proposes a two-stage stochastic model to address this bike-sharing problem in San
+Francisco. Even though their model did not consider features or covariate information, their formulation is
+
+26
+
+Figure 3: San Francisco’s stations of bike sharing system
+suitable for the framework of this paper of data-driven stochastic programming with covariates’ information.
+Importantly, though, their formulation considers integer variables, however, to be able to apply our methods,
+we relax them and consider only continuous variables.
+Sets
+I = {1, . . . , |I|}
+Parameters
+xi , i ∈ I \ {|I|}
+I¯|I|0
+Qi , i ∈ I \ {|I|}
+I¯i0 , i ∈ I \ {|I|}
+C
+pi , i ∈ I \ {|I|}
+ci , i ∈ I \ {|I|}
+ci
+i ∈ I \ {|I|}
+Qi ,
+fi , i ∈ I \ {|I|}
+ti,i+1 , i ∈ I \ {|I|}
+ξi , i ∈ I \ {|I|}
+Variables
+xi , i ∈ I \ {|I|}
+yi,i+1 , i ∈ I \ {|I|}
+Ii , i ∈ I \ {|I|}
+Ii+ , i ∈ I \ {|I|}
+Ii− , i ∈ I \ {|I|}
+Bi , i ∈ I \ {|I|}
+Bi+ , i ∈ I \ {|I|}
+Ei , i ∈ I \ {|I|}
+Ei+ , i ∈ I \ {|I|}
+
+set of stations, where the depot is station |I|
+Minimum number of bikes to allocate in station i ∈ I \ {|I|}
+Depot capacity
+Maximum capacity of station i
+Initial availability of bikes at station i
+Maximum capacity of the relocation truck
+bikes’ stock-out penalty at station i
+Excess penalty at station i
+Penalty associated to extra bikes placed at station i after the re-balancing period
+Allocation cost at station i
+Re-balancing cost to allocate bikes from station i to i + 1
+Net demand of station i
+Amount of bikes to allocate at station i in the first stage
+Amount of bikes to distribute from station i to i + 1 in the second stage
+Inventory or balance of bikes at station i
+Surplus of bikes at station i
+Number of stock-out bikes at station i
+Extra bikes balance at station i during the re-balancing period
+Balance of of extra bikes at station i during the re-balancing period
+Excess inventory balance of bikes at station i during the re-balancing period
+Excess of bikes at station i during the re-balancing period
+
+Table 1: Variables, parameters and sets for Problem 3 in Section 6.5.
+
+Problem formulation.
+
+With a slight abuse of notation, there is a set I = {1, 2, . . . , |I|} of stations,
+
+where station |I| is the bike depot. The problem starts at the beginning of the day, where, before knowing
+27
+
+the demand ξi of bikes at each station i ∈ I \ {|I|}, we have to decide the number xi of bikes to deliver from
+the depot to the station, incurring a unitary delivery cost of fi . Nonetheless, later we will assume that the
+decision-maker can predict the demand of each station by using covariate information. Each station i has a
+capacity of Qi bikes, and to ensure that a station can satisfy the demand, it requires a minimum number xi
+of bikes to be allocated at the beginning of the day. Later, during the day, the demand of each station ξi
+is realized and at the end of the day the service provider re-balances the bikes having to re-distribute yi,i+1
+bikes from station i ∈ I \ {|I|} to the next station on the fixed route, that without loss of generality, we
+assume to be station i + 1, incurring a moving cost of ti,i+1 . Also, we assume that the route begins and ends
+at the bike depot. The bikes are reallocated using a truck with a total capacity of C bikes. In this problem,
+the shared bike provider seeks to prevent situations where a user intends to return a bike to a station that
+is already full or wants to rent a bike from an empty station. The decision maker also aims to minimize the
+number of bikes reallocated to prevent bike damage. To archive this, Cavagnini proposes using a starvation
+and a congestion term. The starvation is measured by the variable Ii− and a stock-out penalty pi , for each
+station i ∈ I \ {|I|}. The congestion is measured with two extra terms at each station i in I \ {|I|}: the extra
+inventory term Bi+ ≥ 0 measures the number of bikes beyond the number initially allocated, and the excess
+inventory term Ei+ ≥ 0 measures the number of bikes over the station’s capacity Qi . Any non-negative value
+of these is penalized with a unit cost of ci and ci /Qi , respectively.
+With this, the problem formulation is as follows:
+min
+x
+
+X
+
+fi xi + E [Q(x, ξ)]
+
+(86)
+
+i∈I
+
+s.t. xi ≥ xi
+I¯i0 + xi ≤ Qi
+X
+xi ≤ I¯|I|0
+
+∀i ∈ I \ {|I|}
+
+(87)
+
+∀i ∈ I \ {|I|}
+
+(88)
+(89)
+
+i∈I\{|I|}
+
+xi ≥ 0
+
+∀i ∈ I
+
+28
+
+(90)
+
+where the second-stage cost function Q(x, ξ) is
+Q(x, ξ) = min
+
+X
+i∈I\{|I|}
+
+
+
+ci +
+−
++
+ti,i+1 yi,i+1 +
+B + ci Ei + pi (−Ii )
+Qi i
+
+s.t. yi,i+1 ≤ C
+
+(91)
+∀i ∈ I \ {|I|}
+
+X
+
+I|I| = I¯|I|0 −
+
+xi + y|I|−1,|I|
+
+(92)
+(93)
+
+i∈I\{|I|}
+
+I|I| ≤ I¯|I|0
+
+(94)
+
+I1 = I¯|I|0 + x1 − ξ1 − y1,2
+
+(95)
+
+Ii = I¯i0 + xi − ξi + yi−1,i − yi,i+1
+
+∀i ∈ I \ {1, |I|}
+
+(96)
+
+Ii+ = max{0, Ii }
+
+∀i ∈ I \ {|I|}
+
+(97)
+
+Ii− = min{0, Ii }
+
+∀i ∈ I \ {|I|}
+
+(98)
+
+Ei = Ii+ − Qi
+
+∀i ∈ I \ {|I|}
+
+(99)
+
+Ei+ = max{0, Ei }
+
+∀i ∈ I \ {|I|}
+
+(100)
+
+Bi = Ii+ − xi − I¯i0 − Ei+
+
+∀i ∈ I \ {|I|}
+
+(101)
+
+Bi+ = max{0, Bi }
+
+∀i ∈ I \ {|I|}
+
+(102)
+
+Ii , B i , E i ∈ R
+
+∀i ∈ I \ {|I|}
+
+(103)
+
+yi,i+1 , Ii+ , Bi+ , Ei+ ≥ 0
+
+∀i ∈ I \ {|I|}
+
+(104)
+
+Ii− ≤ 0
+
+∀i ∈ I \ {|I|}
+
+(105)
+
+where the constraints (97), (98), (100) and (102) are easily linearized using additional decision variables that
+bound the max and min terms.
+We describe now the components of the above model, following closely the discussion in Cavagnini (2019).
+The objective functions (86) and (91) minimize the total expected penalty, obtained by summing over all
+the penalties for delivery, re-balancing, extra and excess inventory, and stock-out. The constraints (87)
+require that the delivered quantity to each station has to be at least the initial requirement. Additionally,
+constraints (88) guarantee that the sum of the quantity allocated and the initial availability at each station
+does not exceed the station’s capacity. Constraints (89) imply that the total number of allocated bikes
+within stations is less than the available quantity at the depot. Constraints (92) ensure that the number of
+bikes transported by the vehicle during re-balancing never exceeds its capacity. Constraints (93) guarantee
+that the quantity of bikes at the depot at the end of each scenario equals the initial bike availability plus
+the amount received from the last visited station, minus the quantities delivered to stations. Additionally,
+constraints (94) ensure that the number of bikes at the depot at the end of the re-balancing period does not
+exceed its capacity. Furthermore, the “flow balance” constraints for bikes at the first station on the route
+differ from the remaining stations. Specifically, constraints (95) ensure that for the first visited station, the
+amount of bikes at the end of the re-balancing period equals the sum of the initially available quantity and
+the quantity received from the depot, minus the amounts used to satisfy the demand and those bikes that are
+redistributed to subsequent stations on the route. Similarly, constraints (96) determine the inventory position
+at a station other than the first, as a function of the initial inventory level, the number allocated, the number
+withdrawn/returned, and the number redistributed to another station. Constraints (97) and (98) determine
+the surplus and stock-out quantities for each station. Considering the presence of a valet service, wherein
+bikes can be returned to full stations, constraints (99) and (100) calculate the number of bikes at each station
+that exceeds station capacity. Constraints (101) and (102) determine when more bikes are positioned at a
+
+29
+
+station after re-balancing than were initially allocated, but not more than station capacity.
+
+6.6
+
+Results
+
+We now show the results of applying the methods in Section 5 for the previous two-stage problem. The
+uncertain parameter is the daily demand for bikes at each station, and our methodology uses additional
+covariate information to obtain a forecast of the demand. In our experiments, we use six features: one
+indicator (values 0 or 1) showing if it is a business day or not, an integer variable that indicates the number
+of the week, the month of the year, the year, the precipitation inches, and the wind direction. Also, the dataset
+contains approximately 730 data points when grouping the demands and features daily for the prediction
+and optimization procedure.
+To estimate the optimality gap of each method we compute its out-of-sample performance by randomly
+splitting the dataset in a training and test set, keeping a standard proportion of 80:20 of training and test
+size, and we take the out-of-sample cost as the average of the bike-sharing problem cost over the testing data.
+Since the solutions’ are conditioned to the particular realization of the training and test sets, we replicate
+this procedure by obtaining 10 training and test sets keeping the proportions mentioned.
+
+284
+
+282
+
+280
+
+278
+
+276
+
+274
+
+272
+
+AD
+
+CART
+
+ER-SAA
+
+KNN
+
+LS
+
+M5 + AD
+
+SAA
+
+Figure 4: Average out-of-sample costs for 10 different train and test sets for methods proposed in Section 5.
+Figure 4 shows the out-of-sample costs for all the methods and the proposed multiple replications procedure. We see that all the methods except KNN and SAA perform similarly, while KNN and SAA are
+clearly worse in this case. The similarity among the five best methods could be explained by the fact that,
+as seen in the previous experiments, some of the methods require more data to perform well, but in this
+case the data set is rather small (730 records). As before, the inferior performance of SAA can be attributed
+to the fact that such an approach does not take advantage of the contextual information. Similarly to our
+previous experiments, this example demonstrates that methods that use a properly chosen pointwise forecast
+such as AD and M5+AD show similar or superior performance compared to methods that consider multiple
+scenarios.
+Remark: Cavagnini (2019) proposes the two-stage bike relocation model presented in (86)-(105) that assumes
+static demand, but in the published version of that work (Cavagnini, Maggioni, Bertazzi, and Hewitt, 2024)
+the authors attempt to address that limitation by proposing a small model variation that requires estimating
+
+30
+
+additional random quantities such as the maximum number of consecutive bikes that are returned to a
+station before being withdrawn. Unfortunately, the limited size of the dataset does not allow for an accurate
+estimation of those quantities (68, i.e. twice the number of stations); in fact, Cavagnini et al. (2024) generate
+random samples from the empirical distribution. As our goal in this example is to truly estimate the random
+quantities directly from the data—by using contextual information—one possible way to circumvent the
+problem is to define such quantities as fractions of the demand in each node. While such an approach
+bypasses the need for more data—since it only requires estimating the demand, as in the original model—it
+leads to functional dependencies among the right-hand side of different constraints, which as discussed in
+Section 4.3 is not respected by the one-scenario approach. In Appendix D we present the results, where we
+see that indeed the AD and M5+AD approaches perform worse than other methods. In fact, in that case
+SAA is among the best performers, thereby suggesting that the contextual information is of little use in such
+a model. In summary, to properly solve the model in Cavagnini et al. (2024) using contextual information it
+would be necessary to have a larger dataset that would allow us to estimate all required quantities directly
+from the data.
+
+7
+
+Conclusions
+
+Stochastic optimization problems are defined in terms of the (possibly unknown) distributions of the underlying random variables. Accordingly, methods to solve such problems typically estimate the input distributions
+and then apply some some scenario generation/reduction technique, perhaps combined with an approach
+that allows for the decomposition of the problem across scenarios. In the setting of optimization problems
+with contextual information, the estimation task becomes more difficult as it requires the estimation of
+conditional distributions for any given value of the contextual information. On the other hand, end-to-end
+learning techniques proposed in the literature have proven very valuable in the contextual information setting
+by combining the estimation and optimization steps. Still, those methods typically do not estimate entire
+distributions—or do so in a limited way—so their use for classical two-stage stochastic programs may be
+restricted.
+In this paper we have considered an alternative application-driven approach whereby only pointwise
+estimates are required, when the problem to be solved belongs to the class of two-stage stochastic programs
+with fixed recourse and fixed costs. The basis for the proposed approach is a novel result that shows that, for
+that class of problems, it suffices to use one scenario, in the sense that solving the problem with that single
+scenario yields the same solution as the original problem. Our integrated learning and optimization method
+uses problem information to determine the best parametric approximation of that (unknown) scenario.
+The main goal of this work is to show that our novel pointwise approach provides a practical alternative
+way to solve two-stage problems with contextual information, which by-passes the need for estimating distributions. Our numerical results corroborate that idea. There is of course much room for improvements,
+especially regarding the development of specialized techniques to solve the bilevel models that are part of
+the method, and the use of other machine learning methods such as neural networks within our setting. We
+hope our work will stimulate further research on these topics. We also hope that our one-scenario result can
+spur new research on alternative methods for stochastic optimization problems that searches over the space
+of scenarios rather than over the space of solutions.
+Acknowledgments. T. Homem-de Mello and J. Valencia acknowledge the support of grant FONDECYT
+1221770, ANID, Chile. The authors thank Erick Delage for discussions related to Proposition 1.
+
+31
+
+Appendices
+A
+
+Estimation of the stations’ daily demand
+
+To calculate the net demand for each station di , we need to forecast the daily demand for the entire system.
+This is based on the features X that provide information on the daily weather in San Francisco. Subsequently,
+an adjacency matrix Pij is computed to estimate the proportion of daily trips between stations. The demand
+for each station is determined by subtracting the number of bikes returned dri from the number of bikes
+withdrawn dw
+i at each station, following the procedure proposed by Cavaginini. To estimate the daily demand
+for stations using different methods, we first calculate the overall demand using the methods outlined in
+Section 5. Then, we calculate the estimated number of bikes withdrawn and returned to each station by
+multiplying the adjacency matrix by the forecast obtained from the methods proposed. Finally, the net
+r
+demand is obtained by subtracting the estimated number of withdrawn and returned bikes (i.e. di = dw
+i −di ).
+
+The data that supports the experiments conducted within problem in Section 6 and Appendix D is available
+at: https://www.kaggle.com/datasets/benhamner/sf-bay-area-bike-share.
+Data treatment and forecasting.
+
+The dataset provides four datasets where information on the trips,
+
+theater, and stations’ status and information are given. The trips dataset contains information on all the
+trips within stations, indicating the station and time of beginning and end of each trip. The trip data was
+grouped to present daily trips for the whole system. The weather dataset contains daily information about
+weather conditions such as temperature, wind speed, and others. The dataset comprises continuous and
+categorical variables, however, a vectorization of categorical variables is proposed to address this issue. A
+binary variable is created to indicate whether a particular day is a holiday. Using station data, a variable
+has been created to indicate the available docks within stations for each day. Lastly, the station data is used
+to estimate optimization model parameters such as the capacity of each station. In regards to forecasting,
+after conducting feature engineering and a feature importance procedure, we selected 6 features to predict
+the demand for the methods outlined in Section 5. Based on these features, the forecast aims to predict the
+number of bikes in the system.
+Adjacent matrix calculation and stations’ estimated net demand.
+
+We used the trip data to compute
+
+the adjacency matrix Pij . This involved counting the number of bikes that departed from each station i and
+ended at station j, which is represented in the i, j position of the matrix obtaining a matrix Cij . It is
+important to mention that the diagonal of the matrix represents the trips that start and end in the same
+station. To obtain the proportion of the trips we divide the matrix Cij with the total amount of trips of
+P
+the system in the whole dataset (Pij := Cij / k,l Ckl ). Finally, given the proportion of trips and the daily
+t
+system forecast for each method, ŷsys
+, we obtain the estimated trips within a day of operation by simply
+t
+multiplying the estimated daily demand by the adjacency matrix (ŷsys
+Pij ). Finally, given the estimate of the
+
+withdrawn and returned bikes for each day and each method, we simply compute the estimated net demand
+r
+di by subtracting the estimated number of withdrawn and returned (i.e. dw
+i − di ), which are computed by
+
+summing the rows and columns of each station respectively, obtaining the net demand for each station di .
+
+32
+
+B
+
+Data generation details
+
+The parameters (aj , j ∈ J), (bj,l , (j, l) ∈ J × L) and (σj , j ∈ J) in the data generation procedure (85) are
+taken in Kannan et al. (2022) as follows:
+aj = 50 + 5δj,0
+
+(106)
+
+bj,1 = 10 + δj,1
+
+(107)
+
+bj, 2 = 5 + δj,2
+
+(108)
+
+bj, 3 = 2 + δj,2
+
+(109)
+
+where {δj,0 }j∈J are i.i.d. samples from the standard normal distribution, and {δj,1 }j∈J , {δj,2 }j∈J , {δj,3 }j∈J
+are i.i.d. samples from a uniform distribution U (−4, 4). Also, σj = σ = 5 for all j in J.
+
+C
+
+Zoomed-in versions of Figures 1 and 2
+
+We present below zoomed-in versions of Figures1 and 2 that display only the best four contenders, i.e. we
+remove the SAA, LS and CART policies.
+
+33
+
+p = 0.5
+
+5
+
+5
+
+5
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+p = 1.0
+
+0
+
+0
+
+0
+
+N = 10^3
+
+5
+
+5
+
+5
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+0
+
+p = 2.0
+
+N = 10^2
+
+N = 10^2
+
+0
+
+0
+
+N = 10^3
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+0
+
+N = 10^2
+
+0
+AD
+
+N = 10^3
+ER-SAA
+KNN
+
+0
+
+N = 10^4
+
+N = 10^4
+
+N = 10^4
+
+M5 + AD
+
+Figure 5: Detalied comparison of methods proposed in Section 5 for the Problem 1 of resource allocation in
+Section 6.1. p is the degree of the data generation procedure in (85), and N is the number of samples with
+which each method is trained.
+
+D
+
+Problem 4: bike sharing rellocation with real data
+
+Cavagnini (2019) proposed the two-stage bike relocation model presented in (86)-(105) that assumed static
+demand, but Cavagnini et al. (2024) attempted to address this limitation by proposing a small model variation. The proposed model ensures that there are always at least as many bikes available as the maximum
+number of consecutive bikes that have been withdrawn from a station before being returned. It also ensures
+that there are always at least as many free docks available as the maximum number of consecutive bikes
+that have been returned to a station before being withdrawn. This approach helps to prevent congestion
+and shortages, especially during times of peak consecutive bike withdrawals and returns. To archive that,
+Cavagnini et al. (2024) introduced extra stochastic parameters gi and hi representing the maximum number
+of consecutive bikes withdrawn from station i ∈ I \ {|I|} before a return occurs, and the maximum number
+of consecutive bikes returned station i ∈ I \ {|I|} before a withdrawal occurs. These parameters are obtained
+by using Montecarlo sampling using the historical demand, however, in our setting, we considered them as
+34
+
+p = 0.5
+
+5
+
+5
+
+5
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+p = 1.0
+
+0
+
+0
+
+0
+
+N = 10^3
+
+5
+
+5
+
+5
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+0
+
+p = 2.0
+
+N = 10^2
+
+N = 10^2
+
+0
+
+0
+
+N = 10^3
+
+10
+
+10
+
+10
+
+8
+
+8
+
+8
+
+6
+
+6
+
+6
+
+4
+
+4
+
+4
+
+2
+
+2
+
+2
+
+0
+
+N = 10^2
+
+0
+AD
+
+N = 10^3
+ER-SAA
+KNN
+
+0
+
+N = 10^4
+
+N = 10^4
+
+N = 10^4
+
+M5 + AD
+
+Figure 6: Detailed comparison of methods proposed in Section 5 for Problem 2 of shipment planning in
+Section 6.2. p is the degree of the data generation procedure in (85), and N is the number of samples with
+which each method is trained.
+fixed parameters due to feasibility, which depends on the estimate of the total number of bikes returned dri
+and the estimate of the total of bikes withdrawn dw
+i at each station.
+Estimating the new parameters. To determine the parameters, we calculated the total number of
+bikes withdrawn, Wi,t , and returned, Ri,t , as well as the maximum number of consecutive bikes withdrawn,
+wi,t , and returned, ri,t , at each station i ∈ I \ {|I|} on each day t ∈ T within the trip dataset. With this
+data, we calculated αi,t := wi,t /Wi,t and βi,t := ri,t /Ri,t
+
+∀i∈I\{|I|},t∈T , representing the proportion of the
+
+maximum number of consecutive bikes withdrawn and returned over the total withdrawn and returned bikes
+P
+P
+at each station. Then, we calculate the vectors ᾱi := T1 t∈T αi,t and β̄i := T1 t∈T βi, t that represent the
+expected proportion of maximum number of consecutive bikes withdrawn and returned over the total number
+of bikes withdrawn and returned. Finally, we estimate hi and gi as a proportion of the estimated withdrawn
+r
+r
+w
+and returned demand, that is, hi := ᾱi dw
+i and gi := β̄i di where di and di are obtained by using the forecast
+
+35
+
+methods of Section 5 and the methodology detailed in Appendix A.
+Problem formulation. The model proposed by Cavagnini et al. (2024) is similar to the proposed in
+Cavagnini (2019), however, they introduce some parameters and constraints to address the limitation of the
+static demand. The problem considers a set I = {1, 2, . . . , |I|} of stations with capacity of Qi bikes, where
+station |I| is the bike depot. The bike planning starts at the beginning of the day, where, before knowing
+the demand ξi of bikes at each station i ∈ I \ {|I|}, we have to allocate a number xi of bikes to deliver from
+the depot to the station having a fixed cost of fi per bike.
+Later in the day, the demand for each station ξi is realized. At the end of the day, the service provider
+rebalances the bikes, having to re-distribute yi,i+1 bikes from station i ∈ I \ {|I|} to the next station i + 1
+on the fixed route, incurring a moving cost of ti,i+1 . The bikes are redistributed using a truck with a total
+capacity of C bikes. The bike provider aims to avoid situations where a user wants to return a bike to a
+full station or needs to rent a bike from an empty station. The decision maker also wants to minimize the
+number of bikes redistributed. To achieve this, Cavagnini suggests using starvation and a congestion term.
+The starvation is parametized by the variable Ii− and a stock-out penalty pi , for each station i ∈ I \ {|I|}.
+The congestion is measured with two terms at each station i in I \ {|I|}: the extra inventory term Bi+ ≥ 0
+measures the number of bikes beyond the number initially allocated, and the excess inventory term Ei+ ≥ 0
+measures the number of bikes over the station’s capacity Qi . Any non-negative value of these is penalized
+with a unit cost of ci and ci /Qi , respectively. Finally, the model introduces the stochastic parameters gi
+and hi are used to prompt the model to determine a target inventory level that is higher than the maximum
+number of consecutive withdrawn bikes,gi , and to ensure that there are at least hi free docks. To ensure
+that we can find a feasible solution even if the total number of bikes withdrawn and returned consecutively
+exceeds the station capacity, we introduce the variables ai to represent the difference between the number of
+allocated bikes xi and gi at station i ∈ I \ {|I|}. Similarly, the variables bi represent the difference between
+the number of free racks Qi − xi and hi at station i ∈ I \ {|I|}.
+The problem formulation is as follows:
+
+min
+x
+
+X
+
+fi xi + E [Q(x, ξ)]
+
+(110)
+
+i∈I
+
+s.t. xi ≥ gi − ai
+
+∀i ∈ I \ {|I|}
+
+(111)
+
+Qi − xi ≥ hi − bi
+
+∀i ∈ I \ {|I|}
+
+(112)
+
+I¯i0 + xi ≤ Qi
+X
+xi ≤ I¯|I|0
+
+∀i ∈ I \ {|I|}
+
+(113)
+(114)
+
+i∈I\{|I|}
+
+xi ≥ 0
+
+∀i ∈ I
+
+36
+
+(115)
+
+Sets
+I = {1, . . . , |I|}
+Parameters
+I¯|I|0
+Qi , i ∈ I \ {|I|}
+I¯i0 , i ∈ I \ {|I|}
+C
+pi , i ∈ I \ {|I|}
+ci , i ∈ I \ {|I|}
+ci
+i ∈ I \ {|I|}
+Qi ,
+fi , i ∈ I \ {|I|}
+ti,i+1 , i ∈ I \ {|I|}
+ξi , i ∈ I \ {|I|}
+gi , i ∈ I \ {|I|}
+hi , i ∈ I \ {|I|}
+Variables
+xi , i ∈ I \ {|I|}
+ai , i ∈ I \ {|I|}
+bi ,
+
+i ∈ I \ {|I|}
+
+yi,i+1 , i ∈ I \ {|I|}
+Ii , i ∈ I \ {|I|}
+Ii+ , i ∈ I \ {|I|}
+Ii− , i ∈ I \ {|I|}
+Bi , i ∈ I \ {|I|}
+Bi+ , i ∈ I \ {|I|}
+Ei , i ∈ I \ {|I|}
+Ei+ , i ∈ I \ {|I|}
+
+set of stations, where the depot is station |I|
+Depot capacity
+Maximum capacity of station i
+Initial availability of bikes at station i
+Maximum capacity of the relocation truck
+bikes’ stock-out penalty at station i
+Excess penalty at station i
+Penalty associated to extra bikes placed at station i after the re-balancing period
+Allocation cost at station i
+Re-balancing cost to allocate bikes from station i to i + 1
+Net demand of station i
+Maximum number of consecutive bikes withdrawn from station i
+maximum number of consecutive bikes returned from station i
+Amount of bikes to allocate at station i in the first stage
+Slack units between the number of allocated bikes in the first stage and the maximum
+number of consecutive bikes withdrawn at station i
+Slack units between the number of available racks and the maximum consecutive
+bikes returned at station i.
+Amount of bikes to distribute from station i to i + 1 in the second stage
+Inventory or balance of bikes at station i
+Surplus of bikes at station i
+Number of stock-out bikes at station i
+Extra bikes balance at station i during the re-balancing period
+Balance of of extra bikes at station i during the re-balancing period
+Excess inventory balance of bikes at station i during the re-balancing period
+Excess of bikes at station i during the re-balancing period
+
+Table 2: Variables, parameters, and sets for Problem 4 in AAAAA.
+where the second-stage cost function Q(x, ξ) is
+Q(x, ξ) = min
+
+X
+i∈I\{|I|}
+
+
+
+ci +
+−
++
+ti,i+1 yi,i+1 +
+B + ci Ei + pi (−Ii ) + pi ai + ci bi
+Qi i
+
+s.t. yi,i+1 ≤ C
+
+(116)
+∀i ∈ I \ {|I|}
+
+X
+
+I|I| = I¯|I|0 −
+
+xi + y|I|−1,|I|
+
+(117)
+(118)
+
+i∈I\{|I|}
+
+I|I| ≤ I¯|I|0
+
+(119)
+
+I1 = I¯|I|0 + x1 − ξ1 − y1,2
+
+(120)
+
+Ii = I¯i0 + xi − ξi + yi−1,i − yi,i+1
+
+∀i ∈ I \ {1, |I|}
+
+(121)
+
+Ii+ = max{0, Ii }
+
+∀i ∈ I \ {|I|}
+
+(122)
+
+Ii− = min{0, Ii }
+
+∀i ∈ I \ {|I|}
+
+(123)
+
+Ei = Ii+ − Qi
+
+∀i ∈ I \ {|I|}
+
+(124)
+
+Ei+ = max{0, Ei }
+
+∀i ∈ I \ {|I|}
+
+(125)
+
+Bi = Ii+ − xi − I¯i0 − Ei+
+
+∀i ∈ I \ {|I|}
+
+(126)
+
+Bi+ = max{0, Bi }
+
+∀i ∈ I \ {|I|}
+
+(127)
+
+Ii , Bi , Ei ∈ R
+
+∀i ∈ I \ {|I|}
+
+(128)
+
+∀i ∈ I \ {|I|}
+
+(129)
+
+∀i ∈ I \ {|I|}
+
+(130)
+
+yi,i+1 , Ii+ , Bi+ , Ei+ ≥ 0
+Ii− ≤ 0
+
+37
+
+The formulated problem is similar to the model presented in Section 6.5 but with slight differences. The
+objective functions (110) and (116) aim to minimize the total expected costs, obtained by summing over all
+the penalties for delivery, re-balancing, extra and excess inventory, and stock-out in addition to the penalties
+of the slack variables. Constraints (111) encourage the target inventory quantity to be greater than or equal
+to the maximum number of consecutive withdrawals, while constraints (112) encourage the number of free
+racks to be greater than or equal to the maximum number of consecutive returns. To guarantee that a feasible
+solution can be found if the sum of the maximum number of consecutive withdrawn and returned bikes is
+greater than the station capacity the slack variables ai and bi allow for deviations from these quantities.
+Constraints (113) ensure that the sum of the allocated quantity and the initial availability at each station
+does not exceed the station’s capacity. Constraints (114) indicate that the total number of allocated bikes
+within stations is less than the available quantity at the depot. Constraints (117) ensure that the number of
+bikes transported by the vehicle during re-balancing never exceeds its capacity. Constraints (118) guarantee
+that the quantity of bikes at the depot at the end of each scenario equals the initial bike availability plus
+the amount received from the last visited station, minus the quantities delivered to stations. Additionally,
+constraints (119) ensure that the number of bikes at the depot at the end of the re-balancing period does
+not exceed its capacity. The flow balance constraints for bikes at the first station on the route differ from
+the remaining stations. Specifically, constraints (120) ensure that for the first visited station, the amount of
+bikes at the end of the re-balancing period equals the sum of the initially available quantity and the quantity
+received from the depot, minus the amounts used to satisfy the demand and those bikes that are redistributed to subsequent stations on the route. Similarly, constraints (121) determine the inventory position at
+a station other than the first, as a function of the initial inventory level, the number allocated, the number
+withdrawn/returned, and the number redistributed to another station. Constraints (122) and (123) determine the surplus and stock-out quantities for each station.Constraints (124) and (125) calculate the number
+of bikes at each station that exceeds station capacity. Constraints (126) and (127) determine when more bikes
+are positioned at a station after re-balancing than were initially allocated, but not more than station capacity.
+
+D.1
+
+Results
+
+We now show the results of applying the methods in Section 5 for the previous two-stage problem. The uncertain parameter is the daily demand for bikes at each station, and our methodology uses additional covariate
+information to obtain a forecast of the demand. As discussed in Section 6, we estimate the parameters gi and
+hi in (111)-(112) as fractions of the demand in node i. In our experiments, we use the same features, data,
+and methodology used in Section 6.5 . To evaluate each method’s optimality gap, we randomly split the
+dataset into training and test sets with an 80:20 ratio. We then calculate the out-of-sample cost by averaging
+the bike-sharing problem cost over the test data. This process is repeated with 10 sets of training and test
+data.
+Figure 7 displays the out-of-sample costs for the proposed multiple replications procedure for the model
+discussed in Cavagnini et al. (2024). Despite similar variance in out-of-sample results across all methods, the
+approaches that consider multi-scenarios such as ER-SAA, KNN, and SAA outperform other methods that
+use point-wise forecast approximation, such as AD, CART, M5+AD, and LS, showing lower out-of-sample
+costs. Additionally, application-driven forecast methods within the point-wise forecast methods, such as AD
+and M5+AD, perform considerably better than methods such as CART and LS. Even though both problems
+(86)-(105) and (110)-(130) are relatively similar, the results differ due to the functional dependencies among
+the right-hand side presented because of constraints (111)-(112), as discussed in Section 2, indicating the
+
+38
+
+3200
+
+3000
+
+2800
+
+2600
+
+2400
+
+2200
+
+2000
+
+AD
+
+CART
+
+ER-SAA
+
+KNN
+
+LS
+
+M5 + AD
+
+SAA
+
+Figure 7: Average out-of-sample costs for 10 different train and test sets for methods proposed in Section 5.
+need for a larger data set to solve this problem.
+
+39
+
+References
+N. Agrawal, M. A. Cohen, R. Deshpande, and V. Deshpande. How machine learning will transform supply
+chain management. HARVARD BUSINESS REVIEW, 103(3-4):128–137, 2024.
+S. Arpón, T. Homem-de-Mello, and B. Pagnoncelli. Scenario reduction for stochastic programs with Conditional Value-at-Risk. Mathematical Programming, 170:327–356, 2018.
+G.-Y. Ban and C. Rudin. The big data newsvendor: Practical insights from machine learning. Operations
+Research, 67(1):90–108, 2019.
+Y. Bengio. Using a financial training criterion rather than a prediction criterion. International Journal of
+Neural Systems, 8(04):433–443, 1997.
+D. Bertsimas and J. Dunn. Optimal classification trees. Machine Learning, 106:1039–1082, 2017.
+D. Bertsimas and N. Kallus. From predictive to prescriptive analytics. Management Science, 66(3):1025–1044,
+2020.
+D. Bertsimas and N. Mundru. Optimization-based scenario reduction for data-driven two-stage stochastic
+optimization. Operations Research, 71(4):1343–1361, 2023.
+J. Blanchet, Y. Kang, and K. Murthy. Robust wasserstein profile inference and applications to machine
+learning. Journal of Applied Probability, 56(3):830–857, 2019. 10.1017/jpr.2019.49.
+L. Bottou, F. E. Curtis, and J. Nocedal. Optimization methods for large-scale machine learning. Siam
+Review, 60(2):223–311, 2018.
+R. Cavagnini. Stochastic programming models for distribution logistics, bikesharing and production management. PhD thesis, Università degli studi di Bergamo, 2019.
+R. Cavagnini, F. Maggioni, L. Bertazzi, and M. Hewitt. A two-stage stochastic programming model for bikesharing systems with rebalancing. EURO Journal on Transportation and Logistics, page 100140, 2024.
+ISSN 2192-4376. https://doi.org/10.1016/j.ejtl.2024.100140. URL https://www.sciencedirect.com/
+science/article/pii/S2192437624000153.
+J. Dias-Garcia, A. Street, T. Homem-de-Mello, and F. D. Muñoz. Application-driven learning via joint
+prediction and optimization of demand and reserves requirement. Operations Research, 2024. Published
+online, DOI https://doi.org/10.1287/opre.2023.0565.
+P. Donti, B. Amos, and J. Z. Kolter. Task-based end-to-end model learning in stochastic optimization. In
+Advances in Neural Information Processing Systems, pages 5484–5494, 2017.
+J. Dupačová, G. Consigli, and S. W. Wallace. Scenarios for multistage stochastic programs. Ann Oper Res,
+100:25–53, 2000.
+J. Dupačová, N. Gröwe-Kuska, and W. Römisch. Scenario reduction in stochastic programming: An approach
+using probability metrics. Math Program, 95:493–511, 2003.
+A. N. Elmachtoub and P. Grigas. Smart “predict, then optimize”. Management Science, 2021. URL https://
+doi.org/10.1287/mnsc.2020.3922.
+J. Fairbrother, A. Turner, and S. W. Wallace. Problem-driven scenario generation: an analytical approach
+for stochastic programs with tail risk measure. Mathematical Programming, pages 1–42, 2019.
+P. Grigas, M. Qi, and Z.-J. M. Shen. Integrated conditional estimation-optimization. arXiv preprintarXiv:2110.12351, 2021.
+T. Hastie, R. Tibshirani, and J. Friedman. The elements of statistical learning: data mining, inference, and
+prediction. Springer Science & Business Media, 2009.
+H. Heitsch and W. Römisch. Scenario reduction algorithms in stochastic programming. Comput Optim Appl,
+24:187–206, 2003.
+H. Heitsch and W. Römisch. Scenario tree modeling for multistage stochastic programs. Math Program, 118:
+371–406, 2009.
+40
+
+R. Henrion and W. Römisch. Problem-based optimal scenario generation and reduction in stochastic programming. Mathematical Programming, 191(1):183–205, 2022.
+W. W. Hogan. Point-to-set maps in mathematical programming. SIAM review, 15(3):591–603, 1973.
+T. Homem-de-Mello and G. Bayraksan. Monte Carlo sampling-based methods for stochastic optimization.
+Surveys in Operations Research and Management Science, 19:56–85, 2014.
+K. Hoyland and S. W. Wallace. Generating scenario trees for multistage decision problems. Manage Sci, 47
+(2):295–307, 2001.
+K. Hoyland, M. Kaut, and S. W. Wallace. A heuristic for moment-matching scenario generation. Comput
+Optim Appl, 24:169–185, 2003.
+R. Kannan, G. Bayraksan, and J. R. Luedtke. Data-driven sample average approximation with covariate
+information. arXiv preprint arXiv:2207.13554, 2022.
+J. Keutchayan, J. Ortmann, and W. Rei. Problem-driven scenario clustering in stochastic optimization.
+Computational Management Science, 20(1):13, 2023.
+T. Kleinert and M. Schmidt. Computing feasible points of bilevel problems with a penalty alternating
+direction method. INFORMS Journal on Computing, 33(1):198–215, 2021.
+A. J. Kleywegt, A. Shapiro, and T. Homem-de-Mello. The sample average approximation method for stochastic discrete optimization. SIAM Journal on Optimization, 12(2):479–502, 2002.
+H. Leövey and W. Römisch. Quasi-monte carlo methods for linear two-stage stochastic programming problems. Mathematical Programming, 151:315–345, 2015.
+W.-K. Mak, D. P. Morton, and R. K. Wood. Monte carlo bounding techniques for determining solution
+quality in stochastic programs. Operations research letters, 24(1-2):47–56, 1999.
+J. Mandi, V. Bucarey, M. M. K. Tchomba, and T. Guns. Decision-focused learning: Through the lens of
+learning to rank. In K. Chaudhuri, S. Jegelka, L. Song, C. Szepesvari, G. Niu, and S. Sabato, editors,
+Proceedings of the 39th International Conference on Machine Learning, volume 162 of Proceedings of
+Machine Learning Research, pages 14935–14947. PMLR, 17–23 Jul 2022. URL https://proceedings
+.mlr.press/v162/mandi22a.html.
+S. Mehrotra and D. Papp. A cutting surface algorithm for semi-infinite convex programming with an application to moment robust optimization. SIAM Journal on Optimization, 24(4):1670–1697, 2014.
+P. Mohajerin Esfahani and D. Kuhn. Data-driven distributionally robust optimization using the wasserstein
+metric: Performance guarantees and tractable reformulations. Mathematical Programming, 171(1-2):
+115–166, 2018.
+M. Muñoz, S. Pineda, and J. Morales. A bilevel framework for decision-making under uncertainty with
+contextual information. Omega, 108:102575, 2022. ISSN 0305-0483.
+K. P. Murphy. Machine learning: a probabilistic perspective. MIT Press, 2012.
+G. C. Pflug. Scenario tree generation for multiperiod financial optimization by optimal discretization. Mathematical Programming, Series B, 89(2):251–271, 2001.
+G. C. Pflug and A. Pichler. Approximations for probability distributions and stochastic optimization problems. In M. Bertocchi, G. Consigli, and M. A. H. Dempster, editors, Stochastic Optimization Methods
+in Finance and Energy, pages 343–387. Springer, 2011.
+J. R. Quinlan. Learning with continuous classes. In 5th Australian joint conference on artificial intelligence,
+volume 92, pages 343–348. World Scientific, 1992.
+S. M. Robinson. Bounds for error in the solution set of a perturbed linear program. Linear Algebra and its
+applications, 6:69–81, 1973.
+R. T. Rockafellar. Convex Analysis. Princeton University Press, 1970.
+R. T. Rockafellar and R. J.-B. Wets. Variational Analysis. Springer, Berlin, 1998.
+
+41
+
+W. Römisch. Stability of stochastic programming problems. In A. Ruszczyński and A. Shapiro, editors,
+Handbook of Stochastic Optimization. Elsevier Science Publishers B.V., Amsterdam, Netherlands, 2003.
+U. Sadana, A. Chenreddy, E. Delage, A. Forel, E. Frejinger, and T. Vidal. A survey of contextual optimization
+methods for decision-making under uncertainty. European Journal of Operational Research, 2024.
+A. Shapiro and H. Xu. Stochastic mathematical programs with equilibrium constraints, modelling and sample
+average approximation. Optimization, 57(3):395–418, 2008. 10.1080/02331930801954177.
+A. Shapiro, D. Dentcheva, and A. Ruszczynski. Lectures on stochastic programming: modeling and theory.
+SIAM, 3rd edition, 2021.
+S. Verwer and Y. Zhang. Learning optimal classification trees using a binary linear program formulation. In
+Proceedings of the AAAI conference on artificial intelligence, volume 33, pages 1625–1632, 2019.
+S. W. Wallace. Decision making under uncertainty: Is sensitivity analysis of any use? Operations Research,
+48(1):20–25, 2000.
+W. Zhang, K. Wang, A. Jacquillat, and S. Wang. Optimized scenario reduction: Solving large-scale stochastic
+programs with quality guarantees. INFORMS Journal on Computing, 35(4):886–908, 2023.
+
+42
+
+

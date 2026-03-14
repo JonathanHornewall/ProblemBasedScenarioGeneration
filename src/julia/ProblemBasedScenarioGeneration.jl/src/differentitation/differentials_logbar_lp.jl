@@ -78,13 +78,13 @@ end
     cost(instance::LogBarCanLP, decision)
 cost function for log barrier regularized canonical form problem evaluated at a given decision.
 """
-function cost(instance::LogBarCanLP, decision)
+function cost(instance::LogBarCanLP, decision; feasibility_margin::Real=1e-8)
     LP = instance.linear_program
     c = LP.cost_vector
     mu = instance.regularization_parameters
     x = decision
-    iszero(mu) && return cost(LP, x)
-    if !isfeasible(instance, decision) 
+    iszero(mu) && return cost(LP, x; feasibility_margin = feasibility_margin)
+    if !isfeasible(instance, decision; feasibility_margin = feasibility_margin) 
         if !all(decision .> 0)
             println("Positivity error")
         elseif !all(isapprox.(instance.linear_program.constraint_matrix * decision, instance.linear_program.constraint_vector; atol=feasibility_margin))
@@ -95,8 +95,8 @@ function cost(instance::LogBarCanLP, decision)
     return dot(c, x) - dot(mu, log.(x))
 end
 
-function cost(instance::CanLP, decision) 
-    !isfeasible(instance, decision) && error("Decision is not feasible")
+function cost(instance::CanLP, decision; feasibility_margin::Real=1e-8) 
+    !isfeasible(instance, decision; feasibility_margin = feasibility_margin) && error("Decision is not feasible")
     return dot(instance.cost_vector, decision) 
 end
 

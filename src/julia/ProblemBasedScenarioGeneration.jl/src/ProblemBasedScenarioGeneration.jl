@@ -27,6 +27,12 @@ include("utils.jl")
 # Inclusions for specific problem instances
 include("problem_instances/resource_allocation/resource_allocation_problem.jl")
 include("problem_instances/resource_allocation/data_generation.jl")
+include("problem_instances/shipment_planning/shipment_planning_problem.jl")
+include("problem_instances/shipment_planning/data_generation.jl")
+include("problem_instances/shipment_planning/parameters.jl")
+
+include("problem_instances/unreliable_newsvendor/unreliable_newsvendor_problem.jl")
+include("problem_instances/unreliable_newsvendor/data_generation.jl")
 
 export ProblemInstanceC2SCanLP
 export manual_C2SCanLP
@@ -34,6 +40,12 @@ export Scenario
 
 export ResourceAllocationProblem
 export ResourceAllocationProblemData
+export ShipmentPlanningProblem
+export ShipmentPlanningProblemData
+export shipment_planning_problem_data
+
+export UnreliableNewsvendorProblem
+export UnreliableNewsvendorProblemData
 
 export construct_neural_network
 export train!
@@ -50,7 +62,7 @@ export convert_standard_to_canonical_form_regular
 export TwoStageSLP, LogBarCanLP, CanLP
 export LogBarCanLP_standard_solver, LogBarCanLP_standard_solver_primal
 export s1_cost, diff_s1_cost
-export diff_cache_computation, diff_opt
-export scenario_collection_realization, surrogate_solution
+export diff_cache_computation, diff_opt, diff_opt_b
+export scenario_collection_realization, surrogate_solution, scenario_realization, optimal_value
 
 end # module ProblemBasedScenarioGeneration
