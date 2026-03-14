@@ -9,5 +9,5 @@ const shipment_training_config = Dict(
     :sigma => 5.0,
     :seasonal_scale => 12.0,
     :trend_decay => 2.0,
-    :collections_per_sample => 1
+    :collections_per_sample => 30
 )

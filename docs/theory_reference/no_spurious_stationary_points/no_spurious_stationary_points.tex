@@ -1,0 +1,792 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amsfonts,amssymb,amsthm,mathtools}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+% ---------- Macros ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\bbP}{\mathbb{P}}
+
+\DeclareMathOperator{\argmin}{argmin}
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\kerop}{ker}
+
+% ---------- Theorem environments ----------
+\theoremstyle{plain}
+\newtheorem{assumption}{Assumption}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+% ---------- Document ----------
+\title{No Spurious Stationary Points for Single--Scenario Log--Barrier Surrogates\\
+of Two--Stage Stochastic Linear Programs with a Fixed Linking Matrix}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We consider two--stage stochastic linear programs with fixed recourse and fixed second--stage costs,
+in which the linking matrix is deterministic and only the second--stage right--hand side is random.
+For a log--barrier parameter $\mu>0$, we define a \emph{single--scenario} log--barrier surrogate
+indexed by a deterministic right--hand side $h\in\R^{m_2}$, and let $F_\mu(h)$ denote its
+first--stage solution map. We study the composite objective
+\[
+H_\mu(h)\;:=\; G_\mu(F_\mu(h)),
+\]
+where $G_\mu$ is the log--barrier regularized stochastic objective of the original problem.
+Under standard regularity and strict feasibility assumptions, we prove that $H_\mu$ has
+\emph{no spurious stationary points}: any stationary point $h^\star$ of $H_\mu$ induces a first--stage
+decision $F_\mu(h^\star)$ that is the unique global minimizer of $G_\mu$.
+The proof does not require any full--column--rank condition on the linking matrix.
+\end{abstract}
+
+\section{Problem setting}
+
+Fix integers $m_1,m_2,n_1,n_2\ge 1$. Let $(\Omega,\mathcal{F},\bbP)$ be a probability space.
+The random input is a measurable mapping
+\[
+h:\Omega\to\R^{m_2}.
+\]
+All other data are deterministic:
+\[
+A\in\R^{m_1\times n_1},\quad b\in\R^{m_1},\quad c\in\R^{n_1},\quad
+W\in\R^{m_2\times n_2},\quad q\in\R^{n_2},\quad T\in\R^{m_2\times n_1}.
+\]
+The first--stage decision is $z\in\R^{n_1}$ and the second--stage decision is $u\in\R^{n_2}$.
+Define the first--stage feasible set
+\[
+Z \;:=\; \{\, z\in\R^{n_1} : Az=b,\ z\ge 0 \,\},
+\qquad
+Z^\circ \;:=\; \{\, z\in\R^{n_1} : Az=b,\ z>0 \,\}.
+\]
+For any $z\in Z$ and right--hand side $h\in\R^{m_2}$, the (unregularized) recourse function is
+\begin{equation}\label{eq:Q}
+Q(z,h) \;:=\; \min_{u\ge 0}\ \{\, q^\top u : Wu = h - Tz \,\},
+\end{equation}
+whenever the feasible set is nonempty and the value is finite. The corresponding two--stage
+stochastic linear program is
+\[
+\min_{z\in Z}\ \Big(c^\top z + \E\big[\,Q(z,h(\omega))\,\big]\Big).
+\]
+
+\begin{assumption}[Fixed recourse and strict feasibility]\label{ass:basic}
+We assume:
+\begin{enumerate}[label=\textup{(\alph*)}]
+\item \label{ass:rank} $A$ and $W$ have full row rank.
+\item \label{ass:SlaterZ} $Z^\circ\neq\emptyset$.
+\item \label{ass:SlaterRecourse}
+(\emph{Strict relatively complete recourse}) For every $z\in Z^\circ$,
+\[
+\bbP\big(\ \exists u\in\R^{n_2}_{>0}\ \text{such that}\ Wu=h(\omega)-Tz\ \big)=1.
+\]
+\item \label{ass:integrability}
+For the chosen $\mu>0$ (defined below), the random variables
+$Q_\mu(z,h(\omega))$ and $\|\nabla_z Q_\mu(z,h(\omega))\|$ are integrable for each $z\in Z^\circ$,
+and differentiation under the expectation in \eqref{eq:Gmu} is justified
+(e.g.\ by a dominated convergence argument on compact subsets of $Z^\circ$).
+\end{enumerate}
+\end{assumption}
+
+\section{Log--barrier regularization}
+
+Fix $\mu>0$. Define the log--barrier first--stage term on $\R^{n_1}_{>0}$ by
+\begin{equation}\label{eq:fmu}
+f_\mu(z) \;:=\; c^\top z - \mu\sum_{i=1}^{n_1}\log z_i.
+\end{equation}
+For a (deterministic) right--hand side $r\in\R^{m_2}$, consider the second--stage log--barrier problem
+\begin{equation}\label{eq:recourse_r}
+\mathcal{Q}_\mu(r)\;:=\;
+\min_{u\in\R^{n_2}_{>0}}\ \Big(q^\top u - \mu\sum_{j=1}^{n_2}\log u_j\Big)
+\quad\text{s.t.}\quad Wu=r.
+\end{equation}
+Let $\mathcal{R}^\circ := \{\, r\in\R^{m_2}: \exists u\in\R^{n_2}_{>0}\ \text{with}\ Wu=r\,\}$
+denote the set of right--hand sides for which \eqref{eq:recourse_r} is strictly feasible.
+
+\begin{lemma}[Barrier recourse regularity]\label{lem:recourse_reg}
+Assume \ref{ass:rank}. Then the following hold.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item For every $r\in\mathcal{R}^\circ$, problem \eqref{eq:recourse_r} has a unique solution
+$u_\mu(r)\in\R^{n_2}_{>0}$ and a unique Lagrange multiplier $\pi_\mu(r)\in\R^{m_2}$ associated with $Wu=r$.
+\item The maps $r\mapsto u_\mu(r)$ and $r\mapsto \pi_\mu(r)$ are $C^1$ on $\mathcal{R}^\circ$.
+\item The value function $\mathcal{Q}_\mu$ is $C^2$ on $\mathcal{R}^\circ$, and
+\begin{equation}\label{eq:grad_Qr}
+\nabla \mathcal{Q}_\mu(r) \;=\; -\,\pi_\mu(r)\qquad\forall r\in\mathcal{R}^\circ.
+\end{equation}
+Moreover, $\nabla^2\mathcal{Q}_\mu(r)$ is positive definite for all $r\in\mathcal{R}^\circ$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Fix $r\in\mathcal{R}^\circ$. The objective in \eqref{eq:recourse_r} is $C^\infty$ and strictly convex on
+$\R^{n_2}_{>0}$ with Hessian $\nabla^2_u\big(q^\top u-\mu\sum_j\log u_j\big)=\mathrm{diag}(\mu/u_j^2)\succ 0$.
+Since the feasible set $\{u>0:Wu=r\}$ is nonempty and affine, strict convexity implies a unique minimizer
+$u_\mu(r)$.
+
+The KKT conditions for \eqref{eq:recourse_r} are
+\begin{equation}\label{eq:KKT_recourse}
+q - \mu\,u^{-1} + W^\top \pi = 0,
+\qquad
+Wu=r,
+\end{equation}
+where $u^{-1}$ is taken componentwise. Because $W$ has full row rank and the Hessian in $u$ is positive definite,
+the Jacobian of the KKT system \eqref{eq:KKT_recourse} with respect to $(u,\pi)$ is nonsingular.
+The implicit function theorem therefore yields local $C^1$ dependence $(u_\mu(r),\pi_\mu(r))$ on $r$.
+Uniqueness implies these local maps agree on overlaps, giving global $C^1$ maps on $\mathcal{R}^\circ$.
+
+For the gradient formula, define the Lagrangian
+\[
+\mathcal{L}(u,\pi;r):= q^\top u - \mu\sum_{j=1}^{n_2}\log u_j + \pi^\top(Wu-r).
+\]
+At the unique KKT point $(u_\mu(r),\pi_\mu(r))$, the envelope theorem (or direct differentiation of the optimal
+value along any differentiable curve $r(t)$, using stationarity in $u$) gives
+\[
+\frac{d}{dt}\mathcal{Q}_\mu(r(t))\Big|_{t=0}
+=
+\frac{\partial}{\partial t}\mathcal{L}(u_\mu(r),\pi_\mu(r);r(t))\Big|_{t=0}
+=
+-\pi_\mu(r)^\top r'(0),
+\]
+which is exactly \eqref{eq:grad_Qr}. Differentiability of $\nabla \mathcal{Q}_\mu$ follows from the $C^1$
+regularity of $\pi_\mu(\cdot)$, hence $\mathcal{Q}_\mu\in C^2$. The Hessian is positive definite because
+\eqref{eq:recourse_r} is a strictly convex program with full--row--rank equality constraints; explicitly,
+\[
+\nabla^2 \mathcal{Q}_\mu(r) = \big(W\,H_y(r)^{-1}W^\top\big)^{-1}\succ 0,\qquad
+H_y(r):=\mathrm{diag}\!\Big(\frac{\mu}{u_{\mu,j}(r)^2}\Big),
+\]
+where $u_{\mu,j}(r)$ denotes the $j$th component of $u_\mu(r)$.
+\end{proof}
+
+For $z\in Z^\circ$ and a scenario $h\in\R^{m_2}$, define the regularized recourse by
+\[
+Q_\mu(z,h)\;:=\;\mathcal{Q}_\mu(h-Tz),
+\]
+which is finite for almost every $\omega$ by Assumption~\ref{ass:basic}\ref{ass:SlaterRecourse}.
+The regularized stochastic objective is
+\begin{equation}\label{eq:Gmu}
+G_\mu(z) \;:=\; f_\mu(z) + \E\big[\,Q_\mu(z,h(\omega))\,\big],\qquad z\in Z^\circ.
+\end{equation}
+
+\begin{proposition}[Smoothness and strict convexity of $G_\mu$]\label{prop:Gmu}
+Under Assumption~\ref{ass:basic}, the function $G_\mu$ is finite, $C^2$, and strictly convex on $Z^\circ$.
+\end{proposition}
+
+\begin{proof}
+The barrier term $f_\mu$ is $C^\infty$ and strictly convex on $\R^{n_1}_{>0}$ because its Hessian is
+$\nabla^2 f_\mu(z)=\mathrm{diag}(\mu/z_i^2)\succ 0$.
+For each fixed $h$, the map $z\mapsto Q_\mu(z,h)=\mathcal{Q}_\mu(h-Tz)$ is convex on $Z^\circ$, and by
+Lemma~\ref{lem:recourse_reg} it is $C^2$ on the set where $h-Tz\in\mathcal{R}^\circ$.
+Assumption~\ref{ass:basic}\ref{ass:SlaterRecourse} ensures this holds almost surely for every $z\in Z^\circ$.
+Assumption~\ref{ass:basic}\ref{ass:integrability} allows differentiation under the expectation in \eqref{eq:Gmu},
+so $G_\mu\in C^2(Z^\circ)$. Finally, strict convexity follows because $f_\mu$ is strictly convex and the sum of a
+strictly convex function and a convex function is strictly convex.
+\end{proof}
+
+\section{A single--scenario surrogate and its decision map}
+
+For a deterministic $h\in\R^{m_2}$, consider the \emph{single--scenario} log--barrier problem
+\begin{equation}\label{eq:Pmu}
+\begin{aligned}
+\min_{z\in\R^{n_1}_{>0},\ y\in\R^{n_2}_{>0}}\quad
+& f_\mu(z) + \Big(q^\top y - \mu\sum_{j=1}^{n_2}\log y_j\Big) \\
+\text{s.t.}\quad & Az=b,\qquad Wy + Tz = h.
+\end{aligned}
+\end{equation}
+Let
+\[
+\mathcal{H}\;:=\;\{\, h\in\R^{m_2} : \text{\eqref{eq:Pmu} is feasible}\,\}.
+\]
+For $h\in\mathcal{H}$, strict convexity implies \eqref{eq:Pmu} has a unique minimizer, denoted
+$(z_\mu(h),y_\mu(h))$. We define the first--stage decision map
+\[
+F_\mu:\mathcal{H}\to Z^\circ,\qquad F_\mu(h):=z_\mu(h).
+\]
+
+\begin{lemma}[Regularity of the decision map]\label{lem:Fmu_C1}
+Under Assumption~\ref{ass:basic}\ref{ass:rank} and $\mu>0$, the map $F_\mu$ is well defined and $C^1$ on
+$\mathcal{H}$.
+\end{lemma}
+
+\begin{proof}
+Fix $h\in\mathcal{H}$, and let $(z,y)$ be the unique solution of \eqref{eq:Pmu}.
+Consider the KKT system for \eqref{eq:Pmu} with multipliers $\lambda\in\R^{m_1}$ and $\nu\in\R^{m_2}$:
+\begin{equation}\label{eq:KKT_Pmu}
+\begin{aligned}
+\nabla f_\mu(z) + A^\top\lambda + T^\top \nu &= 0,\\
+q - \mu\,y^{-1} + W^\top \nu &= 0,\\
+Az=b,\qquad Wy+Tz &= h.
+\end{aligned}
+\end{equation}
+The Jacobian of \eqref{eq:KKT_Pmu} with respect to $(z,y,\lambda,\nu)$ is nonsingular because
+$\nabla^2 f_\mu(z)\succ 0$, $\mathrm{diag}(\mu/y_j^2)\succ 0$, and $A,W$ have full row rank.
+(Equivalently, the corresponding KKT matrix has a negative definite Schur complement.)
+By the implicit function theorem, there exists a neighborhood of $h$ on which
+$(z_\mu(\cdot),y_\mu(\cdot),\lambda(\cdot),\nu(\cdot))$ is a $C^1$ function of $h$.
+Uniqueness of the KKT point for each feasible $h$ implies these local maps agree on overlaps,
+so $F_\mu(h)=z_\mu(h)$ is $C^1$ on all of $\mathcal{H}$.
+\end{proof}
+
+\section{Nullspace coordinates for the first stage}
+
+To avoid carrying the constraint $Az=b$ throughout the sensitivity analysis, we parameterize $Z^\circ$
+by a basis of $\ker(A)$.
+Fix an arbitrary $\bar z\in Z^\circ$ (Assumption~\ref{ass:basic}\ref{ass:SlaterZ} guarantees existence).
+Let $N\in\R^{n_1\times d}$ have full column rank $d:=n_1-m_1$ and $\range(N)=\ker(A)$.
+Then every $z\in Z^\circ$ can be written uniquely as
+\begin{equation}\label{eq:param}
+z=\bar z + N x,\qquad x\in\mathcal{X}^\circ := \{\,x\in\R^d : \bar z+Nx>0\,\}.
+\end{equation}
+Define the \emph{effective linking matrix}
+\begin{equation}\label{eq:B}
+B := TN\in\R^{m_2\times d},
+\end{equation}
+and the functions
+\[
+\phi_\mu(x):= f_\mu(\bar z+Nx),\qquad
+\psi_\mu(y):= q^\top y - \mu\sum_{j=1}^{n_2}\log y_j.
+\]
+For a deterministic $h\in\mathcal{H}$, set $\hat h := h - T\bar z$ and consider the equivalent surrogate
+\begin{equation}\label{eq:Px}
+\begin{aligned}
+\min_{x\in\mathcal{X}^\circ,\ y\in\R^{n_2}_{>0}}\quad & \phi_\mu(x) + \psi_\mu(y)\\
+\text{s.t.}\quad & Bx + Wy = \hat h.
+\end{aligned}
+\end{equation}
+Let $\hat{\mathcal{H}}:=\{\,\hat h\in\R^{m_2}: \text{\eqref{eq:Px} is feasible}\,\}$.
+For $\hat h\in\hat{\mathcal{H}}$, denote the unique minimizer by $(x_\mu(\hat h),y_\mu(\hat h))$.
+Then
+\begin{equation}\label{eq:relateF}
+F_\mu(h) = \bar z + N x_\mu(h-T\bar z).
+\end{equation}
+
+Define the pullback of $G_\mu$ to $\mathcal{X}^\circ$,
+\[
+g_\mu(x) := G_\mu(\bar z+Nx),\qquad x\in\mathcal{X}^\circ.
+\]
+By Proposition~\ref{prop:Gmu}, $g_\mu$ is $C^2$ and strictly convex on $\mathcal{X}^\circ$.
+Define the composite objective in shifted coordinates
+\begin{equation}\label{eq:Hhat}
+\widehat H_\mu(\hat h) := g_\mu\big(x_\mu(\hat h)\big),\qquad \hat h\in\hat{\mathcal{H}}.
+\end{equation}
+Because $\hat h = h - T\bar z$ is an affine change of variables, stationary points of
+$H_\mu(h):=G_\mu(F_\mu(h))$ on $\mathcal{H}$ correspond exactly to stationary points of
+$\widehat H_\mu$ on $\hat{\mathcal{H}}$.
+
+\section{Two structural lemmas}
+
+The proof of the main theorem hinges on two facts:
+(i) at points $x_\mu(\hat h)$ on the decision manifold, $\nabla g_\mu(x_\mu(\hat h))$ lies in the
+subspace $\range(B^\top)$, and (ii) the Jacobian transpose $\nabla x_\mu(\hat h)^\top$ is injective on
+that same subspace.
+
+\subsection{Gradients lie in $\range(B^\top)$}
+
+\begin{lemma}[Gradient range property]\label{lem:range}
+Let Assumption~\ref{ass:basic} hold.
+For every $\hat h\in\hat{\mathcal{H}}$ we have
+\[
+\nabla g_\mu\big(x_\mu(\hat h)\big)\ \in\ \range(B^\top).
+\]
+\end{lemma}
+
+\begin{proof}
+Fix $\hat h\in\hat{\mathcal{H}}$ and write $(x,y)=(x_\mu(\hat h),y_\mu(\hat h))$.
+Let $\nu\in\R^{m_2}$ be the Lagrange multiplier associated with the constraint $Bx+Wy=\hat h$ in
+\eqref{eq:Px}. The KKT conditions are
+\begin{equation}\label{eq:KKT_Px}
+\nabla\phi_\mu(x) + B^\top \nu = 0,\qquad
+\nabla\psi_\mu(y) + W^\top \nu = 0,\qquad
+Bx+Wy=\hat h.
+\end{equation}
+In particular, $\nabla\phi_\mu(x)=-B^\top\nu\in\range(B^\top)$.
+
+Next, write $z=\bar z+Nx$. For almost every $\omega$, the regularized recourse satisfies
+$Q_\mu(z,h(\omega))=\mathcal{Q}_\mu(h(\omega)-Tz)$, so by Lemma~\ref{lem:recourse_reg} and the chain rule,
+\[
+\nabla_x Q_\mu(z,h(\omega))
+=
+N^\top \nabla_z Q_\mu(z,h(\omega))
+=
+N^\top T^\top \pi_\mu\big(h(\omega)-Tz\big)
+=
+B^\top \pi_\mu\big(h(\omega)-Tz\big),
+\]
+which lies in $\range(B^\top)$. By Assumption~\ref{ass:basic}\ref{ass:integrability}, we may take expectations
+and obtain
+\[
+\nabla g_\mu(x)
+=
+\nabla\phi_\mu(x) + \E\big[\nabla_x Q_\mu(z,h(\omega))\big]
+\in \range(B^\top)+\range(B^\top)=\range(B^\top),
+\]
+as claimed.
+\end{proof}
+
+\subsection{The Jacobian is injective on $\range(B^\top)$}
+
+\begin{lemma}[Jacobian formula]\label{lem:Jacobian}
+Let Assumption~\ref{ass:basic}\ref{ass:rank} hold and fix $\hat h\in\hat{\mathcal{H}}$.
+Let $(x,y)=(x_\mu(\hat h),y_\mu(\hat h))$ and define the Hessians
+\[
+H_x := \nabla^2\phi_\mu(x)\in\R^{d\times d},\qquad
+H_y := \nabla^2\psi_\mu(y)\in\R^{n_2\times n_2}.
+\]
+Then $H_x\succ 0$ and $H_y\succ 0$. Moreover,
+\begin{equation}\label{eq:Jtranspose}
+\nabla x_\mu(\hat h)^\top
+\;=\;
+S(\hat h)\,B\,H_x^{-1},
+\qquad
+S(\hat h):=\big(BH_x^{-1}B^\top + W H_y^{-1}W^\top\big)^{-1}\in\R^{m_2\times m_2}.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Positive definiteness of $H_y$ is immediate from $\psi_\mu(y)=q^\top y-\mu\sum_j\log y_j$.
+For $H_x$, note that $\phi_\mu(x)=f_\mu(\bar z+Nx)$ and $\nabla^2 f_\mu(\bar z+Nx)\succ 0$ on $\mathcal{X}^\circ$,
+so for any $v\neq 0$,
+\[
+v^\top H_x v
+=
+(Nv)^\top \nabla^2 f_\mu(\bar z+Nx)\,(Nv) > 0,
+\]
+because $N$ has full column rank and hence $Nv\neq 0$.
+
+To obtain \eqref{eq:Jtranspose}, differentiate the KKT system \eqref{eq:KKT_Px} with respect to $\hat h$.
+Let $\delta \hat h\in\R^{m_2}$ be arbitrary and let $(\delta x,\delta y,\delta \nu)$ denote the corresponding
+variations. Linearizing \eqref{eq:KKT_Px} yields
+\[
+H_x\,\delta x + B^\top \delta\nu = 0,\qquad
+H_y\,\delta y + W^\top \delta\nu = 0,\qquad
+B\,\delta x + W\,\delta y = \delta \hat h.
+\]
+Eliminating $(\delta x,\delta y)$ gives
+\[
+-\big(BH_x^{-1}B^\top + W H_y^{-1}W^\top\big)\,\delta\nu = \delta \hat h.
+\]
+The matrix in parentheses is symmetric positive definite because $H_x^{-1}\succ 0$, $H_y^{-1}\succ 0$,
+and $W$ has full row rank, hence it is invertible. Therefore
+\[
+\delta\nu = -S(\hat h)\,\delta\hat h,
+\qquad
+\delta x = H_x^{-1}B^\top S(\hat h)\,\delta\hat h.
+\]
+This shows $\nabla x_\mu(\hat h)=H_x^{-1}B^\top S(\hat h)$, hence \eqref{eq:Jtranspose}.
+\end{proof}
+
+\begin{corollary}[Injectivity on $\range(B^\top)$]\label{cor:injective}
+For every $\hat h\in\hat{\mathcal{H}}$, the linear map $\nabla x_\mu(\hat h)^\top:\R^d\to\R^{m_2}$
+is injective on $\range(B^\top)$. That is, if $v\in\range(B^\top)$ and $\nabla x_\mu(\hat h)^\top v=0$,
+then $v=0$.
+\end{corollary}
+
+\begin{proof}
+Fix $\hat h$ and write $\nabla x_\mu(\hat h)^\top = S B H_x^{-1}$ as in Lemma~\ref{lem:Jacobian}.
+Let $v\in\range(B^\top)$, so $v=B^\top w$ for some $w\in\R^{m_2}$. If $S B H_x^{-1} v=0$ then, since
+$S$ is invertible, $B H_x^{-1}B^\top w=0$. Taking the quadratic form yields
+\[
+0 = w^\top BH_x^{-1}B^\top w = (B^\top w)^\top H_x^{-1}(B^\top w)=v^\top H_x^{-1}v.
+\]
+Because $H_x^{-1}\succ 0$, this implies $v=0$.
+\end{proof}
+
+\begin{remark}[A geometric ``kernel projection'' interpretation]\label{rem:kernel}
+Let $\mathcal{K}:=\kerop(B)$ and $\mathcal{R}:=\mathcal{K}^\perp=\range(B^\top)\subset\R^d$.
+Then $B$ restricted to $\mathcal{R}$ is injective, since $\mathcal{R}\cap\kerop(B)=\{0\}$.
+Lemma~\ref{lem:range} shows that at points on the decision manifold $x_\mu(\hat h)$,
+the gradient $\nabla g_\mu$ lies entirely in $\mathcal{R}$, i.e., it has no component along $\kerop(B)$.
+Corollary~\ref{cor:injective} shows that the Jacobian transpose of the decision map is injective on that same
+subspace. Thus the proof of the main theorem may be viewed as ``projecting out'' the kernel directions
+that the constraint $Bx+Wy=\hat h$ cannot influence.
+\end{remark}
+
+\section{No spurious stationary points}
+
+We can now state and prove the main result.
+
+\begin{theorem}[No spurious stationary points (random $q$ and $h$, tuning $h$)]\label{thm:main}
+Let $\mu>0$. All deterministic problem data are as in Sections~1--5, except that the
+random input is now a pair $(q,h):\Omega\to\R^{n_2}\times\R^{m_2}$ (not necessarily independent),
+while $A,b,c,W,T$ remain deterministic.
+
+Assume:
+\begin{enumerate}
+\item[(a)] $A$ and $W$ have full row rank, and $Z^\circ\neq\emptyset$.
+\item[(b)] \emph{Strict relatively complete recourse:} for every $z\in Z^\circ$,
+\[
+\bbP\Bigl(\exists\,u\in\R^{n_2}_{>0}\ \text{s.t.}\ W u = h(\omega)-Tz\Bigr)=1.
+\]
+\item[(c)] For the chosen $\mu>0$, the random variables
+$Q_\mu(z;q(\omega),h(\omega))$ and $\|\nabla_z Q_\mu(z;q(\omega),h(\omega))\|$
+are integrable for each $z\in Z^\circ$, and differentiation under the expectation defining
+$G_\mu$ below is justified (e.g.\ by dominated convergence on compact subsets of $Z^\circ$).
+\end{enumerate}
+
+Fix an arbitrary deterministic vector $q^\star\in\R^{n_2}$ (chosen \emph{a priori}, e.g.\ in a robust way),
+and define the \emph{single-scenario} log-barrier surrogate decision map $F_\mu$ exactly as in \eqref{eq:Pmu},
+but with the second-stage term $q^\top y$ replaced by $(q^\star)^\top y$.
+(Thus $F_\mu(h)=z_\mu(h)$, where $(z_\mu(h),y_\mu(h))$ is the unique minimizer of the surrogate.)
+
+For each realization $(q,h)$, define the log-barrier recourse value
+\[
+Q_\mu(z;q,h)\ :=\ 
+\min_{u\in\R^{n_2}_{>0}}
+\Bigl\{\,q^\top u-\mu\textstyle\sum_{j=1}^{n_2}\log(u_j)\ :\ W u = h-Tz\,\Bigr\},
+\]
+and define the log-barrier regularized stochastic objective
+\[
+G_\mu(z)\ :=\ f_\mu(z)+\E\bigl[\,Q_\mu(z;q(\omega),h(\omega))\,\bigr],\qquad z\in Z^\circ.
+\]
+Finally define the composite objective
+\[
+H_\mu(h)\ :=\ G_\mu(F_\mu(h)),\qquad h\in \mathcal{H}.
+\]
+
+If $h^\star\in \mathcal{H}$ is a stationary point of $H_\mu$, i.e.\ $\nabla H_\mu(h^\star)=0$, then
+$F_\mu(h^\star)$ is the unique global minimizer of $G_\mu$ over $Z^\circ$.
+\end{theorem}
+
+\begin{proof}
+Let $\hat h^\star := h^\star - T\bar z$, so $h\mapsto \hat h:=h-T\bar z$ is an affine shift. Since
+$H_\mu(h)=\widehat H_\mu(\hat h)$ (with $\widehat H_\mu$ defined in \eqref{eq:Hhat}), we have
+$\nabla H_\mu(h^\star)=0$ if and only if $\nabla \widehat H_\mu(\hat h^\star)=0$.
+
+Set $x^\star := x_\mu(\hat h^\star)$. By the chain rule applied to \eqref{eq:Hhat},
+\[
+\nabla \widehat H_\mu(\hat h^\star)
+= \nabla x_\mu(\hat h^\star)^\top\,\nabla g_\mu(x^\star).
+\]
+Thus $\nabla \widehat H_\mu(\hat h^\star)=0$ implies
+\begin{equation}\label{eq:chainzero-qh}
+\nabla x_\mu(\hat h^\star)^\top\,\nabla g_\mu(x^\star)=0.
+\end{equation}
+
+\smallskip
+\noindent\emph{Step 1: $\nabla g_\mu(x^\star)\in\mathrm{range}(B^\top)$.}
+Write $z^\star:=\bar z+N x^\star$. By definition, $g_\mu(x)=G_\mu(\bar z+Nx)$ on $\mathcal{X}^\circ$, hence
+\[
+\nabla g_\mu(x^\star)=\nabla \phi_\mu(x^\star)
++\E\bigl[\nabla_x Q_\mu(z^\star;q(\omega),h(\omega))\bigr].
+\]
+Let $\nu$ be the Lagrange multiplier associated with the surrogate constraint $Bx+Wy=\hat h^\star$
+in the $(x,y)$-formulation \eqref{eq:Px} of the surrogate (with $q^\star$ in the second-stage term).
+The surrogate KKT conditions give
+$\nabla\phi_\mu(x^\star)+B^\top\nu=0$, hence $\nabla\phi_\mu(x^\star)\in\mathrm{range}(B^\top)$.
+
+Next, fix $\omega$ such that the second-stage barrier problem with data $(q(\omega),h(\omega))$ is
+strictly feasible at $z^\star$ (this holds a.s.\ by assumption (b)). Let $\pi_\mu(\omega)\in\R^{m_2}$
+denote the (unique) Lagrange multiplier associated with the equality constraint
+$W u = h(\omega)-T z^\star$ in the corresponding second-stage barrier problem. The envelope theorem yields
+\[
+\nabla_z Q_\mu(z^\star;q(\omega),h(\omega)) = T^\top \pi_\mu(\omega).
+\]
+Therefore, using $z^\star=\bar z+N x^\star$ and $B=TN$,
+\[
+\nabla_x Q_\mu(z^\star;q(\omega),h(\omega))
+= N^\top \nabla_z Q_\mu(z^\star;q(\omega),h(\omega))
+= N^\top T^\top \pi_\mu(\omega)
+= B^\top \pi_\mu(\omega)\ \in\ \mathrm{range}(B^\top).
+\]
+Taking expectations (justified by assumption (c)) shows
+$\E[\nabla_x Q_\mu(z^\star;q(\omega),h(\omega))]\in\mathrm{range}(B^\top)$, hence
+$\nabla g_\mu(x^\star)\in\mathrm{range}(B^\top)$.
+
+\smallskip
+\noindent\emph{Step 2: Conclude $\nabla g_\mu(x^\star)=0$.}
+By Corollary~\ref{cor:injective}, the linear map $\nabla x_\mu(\hat h^\star)^\top$ is injective on $\mathrm{range}(B^\top)$.
+Combining this injectivity with \eqref{eq:chainzero-qh} and the fact that
+$\nabla g_\mu(x^\star)\in\mathrm{range}(B^\top)$ yields $\nabla g_\mu(x^\star)=0$.
+
+\smallskip
+\noindent\emph{Step 3: Optimality.}
+The function $g_\mu$ is $C^1$ and strictly convex on the open convex set $\mathcal{X}^\circ$:
+strict convexity holds because $\phi_\mu(x)=f_\mu(\bar z+Nx)$ is strictly convex on $\mathcal{X}^\circ$
+(and the expectation term is convex), while $C^1$ follows from assumption (c).
+Therefore, the first-order condition $\nabla g_\mu(x^\star)=0$ is necessary and sufficient for $x^\star$
+to be the unique global minimizer of $g_\mu$ over $\mathcal{X}^\circ$.
+
+Finally define $z^\star:=\bar z+N x^\star\in Z^\circ$. By the one-to-one parametrization \eqref{eq:param},
+minimizing $g_\mu(x)=G_\mu(\bar z+Nx)$ over $x\in \mathcal{X}^\circ$ is equivalent to minimizing $G_\mu(z)$
+over $z\in Z^\circ$. Hence $z^\star$ is the unique global minimizer of $G_\mu$ on $Z^\circ$.
+By \eqref{eq:relateF}, $z^\star = F_\mu(h^\star)$, completing the proof.
+\end{proof}
+
+% ------------------------------------------------------------
+% No-spurious-stationary-points theorem for "tuning q"
+% (noise in (q,W,h), deterministic T; single-scenario surrogate)
+% ------------------------------------------------------------
+
+\begin{theorem}[No spurious stationary points when tuning the second-stage cost]
+\label{thm:no-spurious-q}
+Fix $\mu>0$. Let $\xi:=(q,W,h)$ be a random vector with \emph{finite support}
+$\{(q_s,W_s,h_s)\}_{s=1}^S$ and probabilities $p_s>0$ (so $\sum_{s=1}^S p_s=1$), where
+$q_s\in\mathbb{R}^{n_2}$, $W_s\in\mathbb{R}^{m_2\times n_2}$, and $h_s\in\mathbb{R}^{m_2}$.
+Let $A\in\mathbb{R}^{m_1\times n_1}$, $b\in\mathbb{R}^{m_1}$, $c\in\mathbb{R}^{n_1}$, and
+$T\in\mathbb{R}^{m_2\times n_1}$ be deterministic.
+
+Assume:
+\begin{enumerate}
+\item[\textnormal{(i)}] $A$ has full row rank and the strictly feasible first-stage set
+\[
+Z^\circ:=\{z\in\mathbb{R}^{n_1}:\ Az=b,\ z>0\}
+\]
+is nonempty.
+\item[\textnormal{(ii)}] For each $s\in\{1,\dots,S\}$, $W_s$ has full row rank.
+\item[\textnormal{(iii)}] (\emph{Strict feasibility of the log-barrier extensive form}) There exists
+$\bar z\in Z^\circ$ and vectors $\bar y_s\in\mathbb{R}^{n_2}_{>0}$ such that
+$W_s\bar y_s = h_s - T\bar z$ for all $s$.
+\end{enumerate}
+
+For $z\in Z^\circ$ and scenario $s$, define the log-barrier recourse value function
+\[
+Q_{\mu,s}(z)
+:=\min_{y\in\mathbb{R}^{n_2}_{>0}}
+\Bigl\{q_s^\top y-\mu\sum_{j=1}^{n_2}\log y_j:\ W_s y = h_s - Tz\Bigr\},
+\]
+and define the regularized stochastic first-stage objective
+\[
+G_\mu(z)
+:=c^\top z-\mu\sum_{j=1}^{n_1}\log z_j+\sum_{s=1}^S p_s\,Q_{\mu,s}(z).
+\]
+Let
+\[
+Z_\mu^\circ
+:=\Bigl\{z\in Z^\circ:\ \forall s,\ \exists y_s\in\mathbb{R}^{n_2}_{>0}\ \text{s.t.}\ W_s y_s=h_s-Tz\Bigr\}.
+\]
+Assumption \textnormal{(iii)} implies $Z_\mu^\circ\neq\varnothing$.
+
+Fix an index $i\in\{1,\dots,S\}$ and the corresponding pair $(W_i,h_i)$.
+For any $q\in\mathbb{R}^{n_2}$ for which the following single-scenario barrier problem is feasible
+and attains a finite value, define $F_\mu(q)\in Z^\circ$ as its unique first-stage minimizer:
+\[
+F_\mu(q)
+:=\arg\min_{\substack{z\in\mathbb{R}^{n_1}_{>0}\\ y\in\mathbb{R}^{n_2}_{>0}}}
+\left\{
+\begin{aligned}
+& c^\top z-\mu\sum_{j=1}^{n_1}\log z_j + q^\top y-\mu\sum_{j=1}^{n_2}\log y_j \\
+& \textnormal{s.t.}\ \ Az=b,\quad W_i y = h_i - Tz
+\end{aligned}
+\right\}.
+\]
+Define the composite objective
+\[
+H_\mu(q):=G_\mu(F_\mu(q))
+\]
+on the set of $q$ such that $F_\mu(q)\in Z_\mu^\circ$.
+
+Then $H_\mu$ is continuously differentiable on its domain, and it has \emph{no spurious stationary points}:
+if $q^\star$ satisfies $\nabla H_\mu(q^\star)=0$, then $F_\mu(q^\star)$ is the \emph{unique} global
+minimizer of $G_\mu$ over $Z_\mu^\circ$.
+\end{theorem}
+
+\begin{proof}
+We split the argument into four steps.
+
+\paragraph{Step 1: Reduced coordinates and smoothness/strict convexity of $G_\mu$.}
+Fix $\bar z\in Z^\circ$ as in Assumption \textnormal{(iii)} and let
+$N\in\mathbb{R}^{n_1\times d}$ have full column rank $d:=n_1-m_1$ with
+$\mathrm{range}(N)=\ker(A)$. Then each $z\in Z^\circ$ can be written uniquely as
+\[
+z=\bar z+Nx,\qquad x\in X^\circ:=\{x\in\mathbb{R}^d:\ \bar z+Nx>0\},
+\]
+and $X^\circ$ is open and convex. Define
+\[
+B:=TN\in\mathbb{R}^{m_2\times d},
+\qquad
+\hat h_s:=h_s-T\bar z\in\mathbb{R}^{m_2}.
+\]
+Define the (first-stage) barrier term in $x$-coordinates by
+\[
+\phi_\mu(x):=c^\top(\bar z+Nx)-\mu\sum_{j=1}^{n_1}\log(\bar z+Nx)_j.
+\]
+Since $\nabla^2\bigl[-\sum_j\log(\bar z+Nx)_j\bigr]=N^\top\mathrm{diag}((\bar z+Nx)^{-2})N$ and
+$N$ has full column rank, we have $\nabla^2\phi_\mu(x)\succ0$ on $X^\circ$; hence $\phi_\mu$ is $C^\infty$
+and strictly convex on $X^\circ$.
+
+For each scenario $s$, define the right-hand-side domain
+\[
+\mathcal{R}_s:=W_s(\mathbb{R}^{n_2}_{>0})\subset\mathbb{R}^{m_2}.
+\]
+Because $W_s$ has full row rank, the linear map $y\mapsto W_s y$ is surjective and open;
+therefore $\mathcal{R}_s$ is an open convex subset of $\mathbb{R}^{m_2}$.
+Define the recourse value as a function of the right-hand side:
+\[
+\mathcal{Q}_{\mu,s}(r)
+:=\min_{y\in\mathbb{R}^{n_2}_{>0}}
+\Bigl\{q_s^\top y-\mu\sum_{j=1}^{n_2}\log y_j:\ W_s y=r\Bigr\},
+\qquad r\in\mathcal{R}_s.
+\]
+For any $r\in\mathcal{R}_s$, the feasible set is nonempty and convex, and the objective is strictly convex
+in $y$, so the minimizer $y_{\mu,s}(r)$ is unique. Let $\pi_{\mu,s}(r)\in\mathbb{R}^{m_2}$ be the
+(unique) Lagrange multiplier for the equality $W_s y=r$. The KKT system reads
+\[
+q_s-\mu y^{-1}+W_s^\top\pi=0,\qquad W_s y=r,
+\]
+where $y^{-1}$ is componentwise. Its Jacobian with respect to $(y,\pi)$ is
+\[
+\begin{bmatrix}
+\mathrm{diag}(\mu/y^2) & W_s^\top\\
+W_s & 0
+\end{bmatrix},
+\]
+which is nonsingular because $\mathrm{diag}(\mu/y^2)\succ0$ and $W_s$ has full row rank; hence, by the
+implicit function theorem, $r\mapsto(y_{\mu,s}(r),\pi_{\mu,s}(r))$ is $C^1$ on $\mathcal{R}_s$.
+Moreover, the envelope theorem (or differentiation along curves $r(t)$ using stationarity in $y$)
+yields
+\begin{equation}
+\label{eq:envelope-rec}
+\nabla_r\mathcal{Q}_{\mu,s}(r)=-\pi_{\mu,s}(r),\qquad r\in\mathcal{R}_s.
+\end{equation}
+
+Define the reduced feasible domain
+\[
+X_\mu^\circ:=\{x\in X^\circ:\ \hat h_s-Bx\in\mathcal{R}_s\ \ \forall s\}.
+\]
+As an intersection of inverse images of open convex sets under affine maps, $X_\mu^\circ$ is open and convex.
+Assumption \textnormal{(iii)} implies $\mathbf{0}\in X_\mu^\circ$, so $X_\mu^\circ\neq\varnothing$.
+
+For $x\in X_\mu^\circ$, define the reduced stochastic objective
+\[
+g_\mu(x):=G_\mu(\bar z+Nx)
+=\phi_\mu(x)+\sum_{s=1}^S p_s\,\mathcal{Q}_{\mu,s}(\hat h_s-Bx).
+\]
+Using \eqref{eq:envelope-rec} and the chain rule, $g_\mu$ is $C^1$ on $X_\mu^\circ$.
+Since $\phi_\mu$ is strictly convex and each $\mathcal{Q}_{\mu,s}(\hat h_s-Bx)$ is convex in $x$,
+their sum $g_\mu$ is strictly convex on the open convex set $X_\mu^\circ$.
+
+\paragraph{Step 2: The surrogate decision map and its Jacobian with respect to $q$.}
+Fix the scenario index $i$ and write $\hat h_i:=h_i-T\bar z$.
+For each $q$ in the domain of $F_\mu$, the definition of $F_\mu(q)$ is equivalent to
+\[
+F_\mu(q)=\bar z+N x_\mu(q),
+\]
+where $(x_\mu(q),y_\mu(q))$ is the unique minimizer of
+\begin{equation}
+\label{eq:surrogate-x}
+\min_{x\in X^\circ,\ y\in\mathbb{R}^{n_2}_{>0}}
+\Bigl\{\phi_\mu(x)+q^\top y-\mu\sum_{j=1}^{n_2}\log y_j:\ Bx+W_i y=\hat h_i\Bigr\}.
+\end{equation}
+Let $\nu_\mu(q)\in\mathbb{R}^{m_2}$ be the multiplier associated with $Bx+W_i y=\hat h_i$.
+The KKT conditions for \eqref{eq:surrogate-x} are
+\begin{equation}
+\label{eq:kkt-surrogate}
+\nabla\phi_\mu(x)+B^\top\nu=0,\qquad
+q-\mu y^{-1}+W_i^\top\nu=0,\qquad
+Bx+W_i y=\hat h_i.
+\end{equation}
+At any KKT point, define
+\[
+H_x:=\nabla^2\phi_\mu(x)\succ0,\qquad
+H_y:=\mathrm{diag}\!\Bigl(\frac{\mu}{y_j^2}\Bigr)\succ0.
+\]
+The Jacobian of \eqref{eq:kkt-surrogate} with respect to $(x,y,\nu)$ is the symmetric matrix
+\[
+\mathcal{J}
+=
+\begin{bmatrix}
+H_x & 0 & B^\top\\
+0 & H_y & W_i^\top\\
+B & W_i & 0
+\end{bmatrix}.
+\]
+Because $W_i$ has full row rank, the Schur complement of $\mathcal{J}$ in the $\nu$-block equals
+$-(B H_x^{-1}B^\top+W_i H_y^{-1}W_i^\top)\prec0$, hence $\mathcal{J}$ is nonsingular.
+Thus, by the implicit function theorem, the map $q\mapsto(x_\mu(q),y_\mu(q),\nu_\mu(q))$ is locally $C^1$,
+and by uniqueness of the KKT point it is $C^1$ on the entire domain. In particular, $F_\mu$ is $C^1$ there.
+
+Differentiate \eqref{eq:kkt-surrogate} with respect to $q$. For an arbitrary perturbation $\delta q$, the
+corresponding variations $(\delta x,\delta y,\delta\nu)$ satisfy the linear system
+\begin{equation}
+\label{eq:lin-kkt-q}
+H_x\delta x+B^\top\delta\nu=0,\qquad
+\delta q+H_y\delta y+W_i^\top\delta\nu=0,\qquad
+B\delta x+W_i\delta y=0.
+\end{equation}
+Eliminating $(\delta x,\delta y)$ from \eqref{eq:lin-kkt-q} yields
+\[
+(B H_x^{-1}B^\top+W_i H_y^{-1}W_i^\top)\,\delta\nu=-W_i H_y^{-1}\delta q.
+\]
+Define the symmetric positive definite matrix
+\[
+S(q):=\bigl(B H_x^{-1}B^\top+W_i H_y^{-1}W_i^\top\bigr)^{-1}\in\mathbb{R}^{m_2\times m_2}.
+\]
+Then $\delta\nu=-S(q)\,W_iH_y^{-1}\delta q$, and therefore
+\[
+\delta x
+=H_x^{-1}B^\top S(q)\,W_iH_y^{-1}\delta q.
+\]
+Taking transposes gives the Jacobian transpose formula
+\begin{equation}
+\label{eq:jacobian-x-q}
+\nabla x_\mu(q)^\top
+=
+H_y^{-1}W_i^\top S(q)\,B H_x^{-1}.
+\end{equation}
+
+\paragraph{Step 3: Two structural properties on the decision manifold.}
+Fix any $q$ such that $x_\mu(q)\in X_\mu^\circ$.
+
+\smallskip
+\noindent\emph{(a) Gradient range property.}
+We show
+\begin{equation}
+\label{eq:grad-range-q}
+\nabla g_\mu(x_\mu(q))\in\mathrm{range}(B^\top).
+\end{equation}
+At $x=x_\mu(q)$, the first KKT condition in \eqref{eq:kkt-surrogate} gives
+$\nabla\phi_\mu(x)=-B^\top\nu_\mu(q)\in\mathrm{range}(B^\top)$.
+For each scenario $s$, using \eqref{eq:envelope-rec} and the chain rule,
+\[
+\begin{aligned}
+\nabla_x\bigl[\mathcal{Q}_{\mu,s}(\hat h_s-Bx)\bigr]
+&=(-B^\top)\nabla_r\mathcal{Q}_{\mu,s}(\hat h_s-Bx)\\
+&=B^\top\pi_{\mu,s}(\hat h_s-Bx)\in\mathrm{range}(B^\top).
+\end{aligned}
+\]
+Summing the terms in $\nabla g_\mu(x)$ thus yields \eqref{eq:grad-range-q}.
+
+\smallskip
+\noindent\emph{(b) Injectivity of $\nabla x_\mu(q)^\top$ on $\mathrm{range}(B^\top)$.}
+Let $v\in\mathrm{range}(B^\top)$ and suppose $\nabla x_\mu(q)^\top v=0$.
+From \eqref{eq:jacobian-x-q} and invertibility of $H_y$ we obtain
+\[
+W_i^\top S(q)\,B H_x^{-1}v=0.
+\]
+Since $W_i$ has full row rank, $W_i^\top$ has full column rank and is therefore injective, hence
+$S(q)\,B H_x^{-1}v=0$. As $S(q)$ is invertible, this implies $B H_x^{-1}v=0$.
+Write $v=B^\top w$ for some $w\in\mathbb{R}^{m_2}$. Then
+\[
+0=w^\top B H_x^{-1}B^\top w=v^\top H_x^{-1}v.
+\]
+Because $H_x^{-1}\succ0$, we conclude $v=0$. Therefore $\nabla x_\mu(q)^\top$ is injective on
+$\mathrm{range}(B^\top)$.
+
+\paragraph{Step 4: Stationarity of $H_\mu$ implies optimality for $G_\mu$.}
+Let $q^\star$ be a stationary point of $H_\mu$ and set $x^\star:=x_\mu(q^\star)\in X_\mu^\circ$.
+Since $H_\mu(q)=g_\mu(x_\mu(q))$, the chain rule yields
+\[
+\nabla H_\mu(q^\star)=\nabla x_\mu(q^\star)^\top\,\nabla g_\mu(x^\star).
+\]
+By assumption $\nabla H_\mu(q^\star)=0$, hence $\nabla x_\mu(q^\star)^\top\,\nabla g_\mu(x^\star)=0$.
+By Step~3(a), $\nabla g_\mu(x^\star)\in\mathrm{range}(B^\top)$, and by Step~3(b) the linear map
+$\nabla x_\mu(q^\star)^\top$ is injective on $\mathrm{range}(B^\top)$. Therefore $\nabla g_\mu(x^\star)=0$.
+
+Because $g_\mu$ is strictly convex and $C^1$ on the open convex set $X_\mu^\circ$, the first-order condition
+$\nabla g_\mu(x^\star)=0$ is necessary and sufficient for $x^\star$ to be the unique global minimizer of
+$g_\mu$ on $X_\mu^\circ$. Mapping back via $z=\bar z+Nx$ gives that
+\[
+z^\star:=\bar z+Nx^\star=F_\mu(q^\star)
+\]
+is the unique global minimizer of $G_\mu$ on $Z_\mu^\circ$, completing the proof.
+\end{proof}
+
+\end{document}
