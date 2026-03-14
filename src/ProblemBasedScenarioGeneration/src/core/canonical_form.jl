@@ -94,15 +94,13 @@ function extensive_form(slp::TwoStageSLP{T}) where {T}
     # First-stage constraint row: [A₁ | 0 ... 0]
     first_stage_row = hcat(slp.A, zeros(T, m1, S * n2))
 
-    # Second-stage rows: one block per scenario
-    second_stage_rows = Matrix{T}[]
-    for s in 1:S
-        sc = slp.scenarios[s]
-        zeros_before = zeros(T, m2, (s - 1) * n2)
-        zeros_after  = zeros(T, m2, (S - s) * n2)
-        row = hcat(sc.T, zeros_before, sc.W, zeros_after)
-        push!(second_stage_rows, row)
-    end
+    # Second-stage rows: one block per scenario (no mutation for Zygote compatibility)
+    second_stage_rows = [
+        let sc = slp.scenarios[s]
+            hcat(sc.T, zeros(T, m2, (s - 1) * n2), sc.W, zeros(T, m2, (S - s) * n2))
+        end
+        for s in 1:S
+    ]
 
     A_ext = vcat(first_stage_row, second_stage_rows...)
 

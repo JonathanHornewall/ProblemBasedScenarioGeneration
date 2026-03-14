@@ -48,11 +48,9 @@ function build_mu_vector(slp::TwoStageSLP{T}, mu::Real) where {T}
     n1 = length(slp.c)
     n2 = size(slp.scenarios[1].W, 2)
     S  = length(slp.scenarios)
-    mu_vec = mu .* ones(T, n1)
-    for s in 1:S
-        append!(mu_vec, mu .* slp.p[s] .* ones(T, n2))
-    end
-    return mu_vec
+    # Use vcat instead of append! for Zygote compatibility (no mutation)
+    return vcat(mu .* ones(T, n1),
+                [mu .* slp.p[s] .* ones(T, n2) for s in 1:S]...)
 end
 
 # -----------------------------------------------------------------------
