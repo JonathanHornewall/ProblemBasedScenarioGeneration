@@ -4,7 +4,9 @@ authors = ["Nicolas"]
 version = "0.2.0"
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Einsum = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
@@ -22,6 +24,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 julia = "1.9"
+ArgParse = "1"
 ChainRulesCore = "1"
 Distributions = "0.25"
 Einsum = "0.4"

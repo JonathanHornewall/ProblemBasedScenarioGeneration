@@ -72,6 +72,12 @@ include("training/trainer.jl")
 include("training/continuation.jl")
 
 # -----------------------------------------------------------------------
+# Persistence and CLI
+# -----------------------------------------------------------------------
+include("persistence.jl")
+include("cli.jl")
+
+# -----------------------------------------------------------------------
 # Exports
 # -----------------------------------------------------------------------
 
@@ -105,5 +111,9 @@ export _scenario_param_dim, _context_dim
 
 # Training
 export train!, continuation_train!
+
+# Persistence
+export save_checkpoint, load_checkpoint, restore_model, print_checkpoint_info
+export resolve_problem
 
 end  # module ProblemBasedScenarioGeneration

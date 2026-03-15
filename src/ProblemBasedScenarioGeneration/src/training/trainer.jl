@@ -12,7 +12,7 @@ using Flux, Statistics
     train!(model, prob, dataset;
            mu_surr=1.0, mu_prim=0.0,
            opt=Adam(1e-3), epochs=30, batchsize=1,
-           verbose=false) -> Vector{Float64}
+           verbose=false, opt_state=nothing) -> Vector{Float64}
 
 Train a scenario generator `model` using decision regret as the loss.
 
@@ -40,9 +40,10 @@ function train!(
     opt               = Adam(1e-3),
     epochs::Int       = 30,
     batchsize::Int    = 1,
-    verbose::Bool     = false
+    verbose::Bool     = false,
+    opt_state         = nothing
 )
-    opt_state = Flux.setup(opt, model)
+    opt_state = isnothing(opt_state) ? Flux.setup(opt, model) : opt_state
     loss_history = Float64[]
     N = length(dataset)
 
