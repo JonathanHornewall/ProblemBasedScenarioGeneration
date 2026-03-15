@@ -1,12 +1,13 @@
 """
 Command-line interface for ProblemBasedScenarioGeneration.
 
-Subcommands: train, continue, test, info.
+Subcommands: train, continue, test, evaluate, info.
 
 Usage:
     julia bin/pbsg.jl train -p newsvendor --epochs 10 -v -o model.jls
     julia bin/pbsg.jl info -c model.jls
     julia bin/pbsg.jl test -c model.jls --n-test 50
+    julia bin/pbsg.jl evaluate -c model.jls --n-test 100 -d ./eval_results
     julia bin/pbsg.jl continue -c model.jls --epochs 5 -o model_v2.jls
 """
 
@@ -71,6 +72,7 @@ function build_arg_parser()
             "  julia bin/pbsg.jl train -p resource_allocation --continuation -v\n" *
             "  julia bin/pbsg.jl info -c model.jls\n" *
             "  julia bin/pbsg.jl test -c model.jls --n-test 100\n" *
+            "  julia bin/pbsg.jl evaluate -c model.jls -d eval_out --csv -v\n" *
             "  julia bin/pbsg.jl continue -c model.jls --epochs 10 -v",
     )
 
@@ -87,6 +89,9 @@ function build_arg_parser()
         "test"
             action = :command
             help = "Evaluate a trained model on test data"
+        "evaluate"
+            action = :command
+            help = "Full evaluation with metrics, plots, and CSV export"
         "info"
             action = :command
             help = "Show checkpoint metadata and training history"
@@ -350,6 +355,55 @@ function build_arg_parser()
         "--output", "-o"
             help = "Write per-sample results to this CSV file"
             default = ""
+    end
+
+    # ---------------------------------------------------------------
+    # evaluate
+    # ---------------------------------------------------------------
+    s_eval = s["evaluate"]
+    s_eval.description = "Full evaluation of a trained model with metrics, plots, and CSV.\n\n" *
+        "Generates detailed statistics (95% CI, threshold fractions, median)\n" *
+        "and publication-ready plots (loss curve, regret histogram, violin,\n" *
+        "CDF, scenario scatter). Requires Plots.jl (loaded on first use)."
+    s_eval.epilog = "examples:\n" *
+        "  # Full evaluation with plots\n" *
+        "  julia bin/pbsg.jl evaluate -c model.jls --n-test 100 -d eval_out\n\n" *
+        "  # Metrics only (no plots, faster)\n" *
+        "  julia bin/pbsg.jl evaluate -c model.jls --no-plots --csv\n\n" *
+        "  # PDF plots\n" *
+        "  julia bin/pbsg.jl evaluate -c model.jls --format pdf -d plots/"
+
+    @add_arg_table! s_eval begin
+        "--checkpoint", "-c"
+            help = "Path to the trained model checkpoint (.jls)"
+            required = true
+        "--n-test"
+            help = "Number of test samples to generate"
+            arg_type = Int
+            default = 100
+        "--mu-prim"
+            help = "Barrier parameter for cost evaluation (0 = exact LP)"
+            arg_type = Float64
+            default = 0.0
+        "--seed"
+            help = "Random seed for test data generation (-1 = no fixed seed)"
+            arg_type = Int
+            default = -1
+        "--output-dir", "-d"
+            help = "Directory to save plots and CSV output"
+            default = "./eval_results"
+        "--format"
+            help = "Plot file format: png, pdf, or svg"
+            default = "png"
+        "--no-plots"
+            help = "Skip plot generation (metrics only)"
+            action = :store_true
+        "--csv"
+            help = "Save per-sample metrics to CSV"
+            action = :store_true
+        "--verbose", "-v"
+            help = "Print detailed progress"
+            action = :store_true
     end
 
     # ---------------------------------------------------------------
@@ -694,6 +748,104 @@ function cmd_test(args::Dict)
 end
 
 # -----------------------------------------------------------------------
+# Subcommand: evaluate
+# -----------------------------------------------------------------------
+
+function cmd_evaluate(args::Dict)
+    # Load checkpoint
+    ckpt_path = args["checkpoint"]
+    println("Loading checkpoint: $ckpt_path")
+    ckpt = load_checkpoint(ckpt_path)
+
+    # Seed
+    seed = args["seed"]
+    seed >= 0 && Random.seed!(seed)
+
+    # Restore model
+    generator = restore_model(ckpt)
+    verbose = args["verbose"]
+    verbose && println("Model restored: $(generator)")
+
+    # Resolve problem
+    problem_name = ckpt["problem_type"]
+    prob = resolve_problem(problem_name)
+    println("Problem: $problem_name")
+
+    # Parameters
+    tc = get(ckpt, "training_config", Dict())
+    mu_surr = get(tc, "mu_surr", 1.0)
+    mu_prim = args["mu-prim"]
+    sigma = get(tc, "sigma", 5.0)
+
+    # Generate test data
+    n_test = args["n-test"]
+    println("Generating $n_test test samples...")
+    test_data = _generate_dataset_for_problem(prob, n_test; sigma=sigma)
+
+    # Compute metrics
+    println("Computing evaluation metrics...")
+    metrics = compute_evaluation_metrics(generator, prob, test_data, mu_surr, mu_prim)
+
+    # Print summary
+    print_evaluation_summary(stdout, metrics)
+
+    # Output directory and format
+    output_dir = args["output-dir"]
+    fmt = args["format"]
+
+    # Plots
+    if !args["no-plots"]
+        mkpath(output_dir)
+        println("\nGenerating plots in $output_dir/ ...")
+
+        # Loss curve
+        loss_history = get(ckpt, "loss_history", Float64[])
+        if !isempty(loss_history)
+            plot_loss_curve(loss_history, joinpath(output_dir, "loss_curve.$fmt"))
+            verbose && println("  loss_curve.$fmt")
+        end
+
+        # Regret histogram
+        rel_regrets = metrics["rel_regrets"]
+        n = metrics["n"]
+        ci = 1.96 * std(rel_regrets) / sqrt(n)
+        plot_regret_histogram(rel_regrets, ci, joinpath(output_dir, "regret_histogram.$fmt"))
+        verbose && println("  regret_histogram.$fmt")
+
+        # Regret boxplot (violin)
+        plot_regret_boxplot(rel_regrets, joinpath(output_dir, "regret_boxplot.$fmt"))
+        verbose && println("  regret_boxplot.$fmt")
+
+        # Regret CDF
+        plot_regret_cdf(rel_regrets, joinpath(output_dir, "regret_cdf.$fmt"))
+        verbose && println("  regret_cdf.$fmt")
+
+        # Scenario scatter
+        sc_dim = _scenario_param_dim(prob)
+        if sc_dim <= 8
+            plot_scenario_scatter(
+                metrics["predicted_params"], metrics["actual_params"],
+                joinpath(output_dir, "scenario_scatter.$fmt"))
+            verbose && println("  scenario_scatter.$fmt")
+        else
+            verbose && println("  scenario_scatter skipped (dim=$sc_dim > 8)")
+        end
+
+        println("Plots saved to $output_dir/")
+    end
+
+    # CSV
+    if args["csv"]
+        mkpath(output_dir)
+        csv_path = joinpath(output_dir, "metrics.csv")
+        save_evaluation_csv(metrics, csv_path)
+        println("Metrics CSV saved: $csv_path")
+    end
+
+    return metrics
+end
+
+# -----------------------------------------------------------------------
 # Subcommand: info
 # -----------------------------------------------------------------------
 
@@ -727,6 +879,8 @@ function cli_main()
         cmd_continue(parsed["continue"])
     elseif cmd == "test"
         cmd_test(parsed["test"])
+    elseif cmd == "evaluate"
+        cmd_evaluate(parsed["evaluate"])
     elseif cmd == "info"
         cmd_info(parsed["info"])
     else
@@ -744,7 +898,8 @@ two-stage stochastic linear programming.
 COMMANDS
   train       Train a new scenario generator model
   continue    Resume training from a saved checkpoint
-  test        Evaluate a trained model on test data
+  test        Evaluate a trained model on test data (lightweight)
+  evaluate    Full evaluation with metrics, plots, and CSV export
   info        Show checkpoint metadata and training history
 
 PROBLEMS
@@ -766,8 +921,11 @@ EXAMPLES
   # Inspect a checkpoint
   julia bin/pbsg.jl info -c model.jls
 
-  # Evaluate on test data
+  # Evaluate on test data (lightweight)
   julia bin/pbsg.jl test -c model.jls --n-test 100 -o results.csv
+
+  # Full evaluation with plots and CSV
+  julia bin/pbsg.jl evaluate -c model.jls --n-test 100 -d eval_out --csv
 
   # Resume training
   julia bin/pbsg.jl continue -c model.jls --epochs 10 --lr 1e-4 -v

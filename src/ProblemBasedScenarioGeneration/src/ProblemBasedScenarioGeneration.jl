@@ -72,6 +72,11 @@ include("training/trainer.jl")
 include("training/continuation.jl")
 
 # -----------------------------------------------------------------------
+# Evaluation
+# -----------------------------------------------------------------------
+include("evaluation/evaluate.jl")
+
+# -----------------------------------------------------------------------
 # Persistence and CLI
 # -----------------------------------------------------------------------
 include("persistence.jl")
@@ -111,6 +116,11 @@ export _scenario_param_dim, _context_dim
 
 # Training
 export train!, continuation_train!
+
+# Evaluation
+export compute_evaluation_metrics, print_evaluation_summary, save_evaluation_csv
+export plot_loss_curve, plot_regret_histogram, plot_regret_boxplot
+export plot_regret_cdf, plot_scenario_scatter
 
 # Persistence
 export save_checkpoint, load_checkpoint, restore_model, print_checkpoint_info
