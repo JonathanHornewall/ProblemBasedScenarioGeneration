@@ -1,0 +1,94 @@
+================================================================================
+  TRAINING LOOP PROFILING REPORT
+  2026-03-28T20:49:17.520
+================================================================================
+
+Methodology: Each stage is timed independently with @elapsed over
+N=20 gradient steps per problem (after 3 warm-up steps for JIT).
+Architecture: hidden_dim=64, n_layers=2, activation=relu
+Settings: mu_surr=1.0, mu_prim=1.0, batchsize=1
+
+--------------------------------------------------------------------------------
+  Problem: newsvendor
+--------------------------------------------------------------------------------
+
+  Total per gradient step: 992.7 ms
+
+  Stage                      │  Mean (ms) │  Std (ms)  │  % of step │ Median (ms)
+  ───────────────────────────┼────────────┼────────────┼────────────┼────────────
+  NN forward pass             │       0.03 │        0.0 │       0.0% │       0.03
+  Scenario construction       │        0.0 │        0.0 │       0.0% │        0.0
+  Extensive form build        │       0.09 │       0.02 │       0.0% │       0.09
+  Surrogate LP solve          │       4.45 │       1.36 │       0.4% │       3.68
+  Recourse LP solve           │       3.62 │       1.28 │       0.4% │       3.13
+  Backward pass (AD)          │       2.45 │       1.82 │       0.2% │       2.01
+  Parameter update            │       0.19 │       0.05 │       0.0% │       0.19
+  Loss tracking (no grad)     │       7.44 │       2.16 │       0.7% │       8.03
+  Garbage collection          │      974.4 │       70.9 │      98.2% │     980.62
+
+  Full gradient step: 10.6 ms
+    ├─ Forward (in grad):  8.2 ms (77.0%)
+    └─ Backward (AD):      2.5 ms (23.0%)
+
+--------------------------------------------------------------------------------
+  Problem: resource_allocation
+--------------------------------------------------------------------------------
+
+  Total per gradient step: 1047.2 ms
+
+  Stage                      │  Mean (ms) │  Std (ms)  │  % of step │ Median (ms)
+  ───────────────────────────┼────────────┼────────────┼────────────┼────────────
+  NN forward pass             │       0.03 │       0.01 │       0.0% │       0.03
+  Scenario construction       │        0.0 │        0.0 │       0.0% │        0.0
+  Extensive form build        │       0.47 │       0.13 │       0.0% │        0.4
+  Surrogate LP solve          │      10.55 │       4.14 │       1.0% │       8.24
+  Recourse LP solve           │      11.77 │       4.19 │       1.1% │       9.61
+  Backward pass (AD)          │       5.38 │        5.6 │       0.5% │       2.59
+  Parameter update            │       0.22 │       0.07 │       0.0% │       0.22
+  Loss tracking (no grad)     │      27.17 │        8.3 │       2.6% │      33.21
+  Garbage collection          │     991.63 │      69.61 │      94.7% │    1008.22
+
+  Full gradient step: 28.2 ms
+    ├─ Forward (in grad):  22.8 ms (80.9%)
+    └─ Backward (AD):      5.4 ms (19.1%)
+
+--------------------------------------------------------------------------------
+  Problem: shipment_planning
+--------------------------------------------------------------------------------
+
+  Total per gradient step: 1000.3 ms
+
+  Stage                      │  Mean (ms) │  Std (ms)  │  % of step │ Median (ms)
+  ───────────────────────────┼────────────┼────────────┼────────────┼────────────
+  NN forward pass             │       0.03 │        0.0 │       0.0% │       0.03
+  Scenario construction       │       0.41 │       0.09 │       0.0% │       0.39
+  Extensive form build        │       0.11 │       0.02 │       0.0% │        0.1
+  Surrogate LP solve          │       4.14 │       1.03 │       0.4% │        3.8
+  Recourse LP solve           │       4.08 │       1.15 │       0.4% │       3.68
+  Backward pass (AD)          │       2.83 │       3.75 │       0.3% │       1.14
+  Parameter update            │       0.17 │       0.05 │       0.0% │       0.14
+  Loss tracking (no grad)     │      10.24 │       4.29 │       1.0% │       7.84
+  Garbage collection          │     978.29 │      70.28 │      97.8% │     930.71
+
+  Full gradient step: 11.6 ms
+    ├─ Forward (in grad):  8.7 ms (75.5%)
+    └─ Backward (AD):      2.8 ms (24.5%)
+
+================================================================================
+  KEY FINDINGS
+================================================================================
+
+  newsvendor (992.7 ms/step):
+    1. Garbage collection: 974.4 ms (98.2%)
+    2. Loss tracking (no grad): 7.4 ms (0.7%)
+    3. Surrogate LP solve: 4.5 ms (0.4%)
+
+  resource_allocation (1047.2 ms/step):
+    1. Garbage collection: 991.6 ms (94.7%)
+    2. Loss tracking (no grad): 27.2 ms (2.6%)
+    3. Recourse LP solve: 11.8 ms (1.1%)
+
+  shipment_planning (1000.3 ms/step):
+    1. Garbage collection: 978.3 ms (97.8%)
+    2. Loss tracking (no grad): 10.2 ms (1.0%)
+    3. Surrogate LP solve: 4.1 ms (0.4%)
