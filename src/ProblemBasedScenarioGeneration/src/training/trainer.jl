@@ -54,7 +54,8 @@ function train!(
         for batch_idx in Iterators.partition(indices, batchsize)
             batch = dataset[batch_idx]
 
-            # Compute batch loss and gradients
+            # Compute batch loss and gradients, capturing loss value
+            local batch_loss_val
             gs = Flux.gradient(model) do m
                 batch_loss = mean(batch) do (x, actual_sc)
                     # Model predicts scenario parameters from context
@@ -64,26 +65,19 @@ function train!(
                     # Compute decision regret
                     decision_regret(prob, mu_surr, mu_prim, predicted_sc, actual_sc)
                 end
+                batch_loss_val = batch_loss
                 batch_loss
             end
 
             gmodel = gs isa Tuple ? gs[1] : gs
             Flux.update!(opt_state, model, gmodel)
 
-            # Track loss (without gradient)
-            bl = mean(batch) do (x, actual_sc)
-                raw_params = model(x)
-                predicted_sc = _params_to_scenarios(prob, raw_params)
-                decision_regret(prob, mu_surr, mu_prim, predicted_sc, actual_sc)
-            end
-            push!(epoch_losses, bl)
+            push!(epoch_losses, batch_loss_val)
         end
 
         avg_loss = mean(epoch_losses)
         push!(loss_history, avg_loss)
         verbose && @info "Epoch $epoch: loss = $avg_loss"
-
-        GC.gc()
     end
 
     return loss_history
