@@ -1,6 +1,7 @@
 # Environments
 Manifest.toml
 env/conda/conda_env/
+.*/
 
 # LaTeX intermediate files
 *.aux

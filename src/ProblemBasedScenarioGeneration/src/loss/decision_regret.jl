@@ -23,17 +23,8 @@ function surrogate_first_stage(slp::TwoStageSLP, mu::Real; kw...)
     n1 = length(slp.c)
     A_ext, b_ext, c_ext = extensive_form(slp)
 
-    # Build per-variable barrier parameters: μ for x₁, μ*pₛ for yₛ
-    mu_ext = build_mu_vector(slp, mu)
-
-    # Use the barrier solver (differentiable)
-    if iszero(mu)
-        x_full, _ = solve_lp(A_ext, b_ext, c_ext)
-    else
-        # Solve with a uniform mu (the per-variable scaling is implicit in the problem scaling)
-        cache = solve_barrier(A_ext, b_ext, c_ext, mu; kw...)
-        x_full = cache.x
-    end
+    # Use HiGHS LP solver (fast, with subgradient rrule for AD)
+    x_full, _ = solve_lp(A_ext, b_ext, c_ext)
 
     return x_full[1:n1]
 end
@@ -66,12 +57,8 @@ Solves: min q'y - μ·Σ log(yᵢ)  s.t.  W·y = h - T·x1,  y > 0
 """
 function recourse_cost(x1::AbstractVector, sc::Scenario, mu::Real; kw...)
     b_rec = sc.h - sc.T * x1
-    if iszero(mu)
-        y_opt, _ = solve_lp(sc.W, b_rec, sc.q)
-    else
-        cache = solve_barrier(sc.W, b_rec, sc.q, mu; kw...)
-        y_opt = cache.x
-    end
+    # Use HiGHS LP solver (fast, with subgradient rrule for AD)
+    y_opt, _ = solve_lp(sc.W, b_rec, sc.q)
     return dot(sc.q, y_opt)
 end
 

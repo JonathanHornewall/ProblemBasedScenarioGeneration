@@ -133,9 +133,9 @@ function scenario_realization(prob::ShipmentPlanningProblem, param::AbstractVect
     n_wh  = length(prob.production_costs)
     length(param) == n_loc ||
         error("param must have length n_loc=$n_loc, got $(length(param))")
-    h = zeros(n_loc + n_wh)
-    h[1:n_loc] .= param
-    return Scenario(prob.W, prob.T, h, prob.q)
+    ET = promote_type(eltype(param), eltype(prob.q))
+    h = vcat(ET.(param), zeros(ET, n_wh))
+    return Scenario(ET.(prob.W), ET.(prob.T), h, ET.(prob.q))
 end
 
 """

@@ -26,12 +26,11 @@ function _kkt_matrix(cache::BarrierCache{T}) where {T}
     (; x, mu, A) = cache
     m, n = size(A)
     D_diag = mu ./ (x .^ 2)
-    K = zeros(T, n + m, n + m)
-    for i in 1:n
-        K[i, i] = D_diag[i]
-    end
-    K[1:n, n+1:end] = A'
-    K[n+1:end, 1:n] = A
+    # Build K = [D A'; A 0] without in-place mutation (Zygote-safe)
+    K = vcat(
+        hcat(Diagonal(D_diag), A'),
+        hcat(A, zeros(T, m, m))
+    )
     return K
 end
 
@@ -48,9 +47,8 @@ function implicit_diff_h(cache::BarrierCache{T}) where {T}
     m, n = size(cache.A)
     K = _kkt_matrix(cache)
 
-    # Right-hand side: [0_n; I_m]
-    RHS = zeros(T, n + m, m)
-    RHS[n+1:end, :] = Matrix{T}(I, m, m)
+    # Right-hand side: [0_n; I_m] (no mutation for Zygote safety)
+    RHS = vcat(zeros(T, n, m), Matrix{T}(I, m, m))
 
     sol = K \ RHS
     return sol[1:n, :]   # (n, m)
@@ -69,9 +67,8 @@ function implicit_diff_q(cache::BarrierCache{T}) where {T}
     m, n = size(cache.A)
     K = _kkt_matrix(cache)
 
-    # Right-hand side: [-I_n; 0_m]
-    RHS = zeros(T, n + m, n)
-    RHS[1:n, :] = -Matrix{T}(I, n, n)
+    # Right-hand side: [-I_n; 0_m] (no mutation for Zygote safety)
+    RHS = vcat(-Matrix{T}(I, n, n), zeros(T, m, n))
 
     sol = K \ RHS
     return sol[1:n, :]   # (n, n)

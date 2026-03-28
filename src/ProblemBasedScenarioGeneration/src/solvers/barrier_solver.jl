@@ -145,13 +145,12 @@ function solve_barrier(
             break
         end
 
-        # Build KKT matrix K = [D A'; A 0]
+        # Build KKT matrix K = [D A'; A 0] (no mutation for Zygote safety)
         D_diag = mu ./ (x .^ 2)
-        K = Matrix{T}(undef, n + m, n + m)
-        K[1:n, 1:n]         = Diagonal(D_diag)
-        K[1:n, n+1:end]     = A'
-        K[n+1:end, 1:n]     = A
-        K[n+1:end, n+1:end] = zeros(T, m, m)
+        K = vcat(
+            hcat(Diagonal(D_diag), A'),
+            hcat(A, zeros(T, m, m))
+        )
 
         # Right-hand side: -[r_dual; r_prim]
         rhs = vcat(-r_dual, -r_prim)
