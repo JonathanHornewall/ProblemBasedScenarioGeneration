@@ -302,8 +302,13 @@ production `z_i` plus emergency production `y^w_i`.
 ### 4.5 Scenario parameter vector
 
 `param` is a demand vector of length `J = 4`. The `scenario_realization`
-function constructs `h = [param; zeros(I)]` so demand appears in the RHS
-of the demand constraints (first `J` rows).
+function uses `promote_type(eltype(param), eltype(prob.q))` to determine a
+common element type `ET`, then converts all `Scenario` fields (`W`, `T`, `h`,
+`q`) to type `ET` before constructing the `Scenario`. This ensures
+compatibility when neural network outputs (typically `Float32` from Flux) are
+mixed with `Float64` problem data. The RHS vector is constructed as
+`h = vcat(ET.(param), zeros(ET, n_wh))`, so demand appears in the first `J`
+rows of the demand constraints.
 
 **Context:** a 3-dimensional vector `x in R^3`.
 

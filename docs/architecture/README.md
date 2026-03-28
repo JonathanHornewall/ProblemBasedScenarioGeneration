@@ -9,7 +9,7 @@ The core idea: a neural network observes contextual features and outputs scenari
 Key capabilities:
 
 - **End-to-end differentiable pipeline** from features through LP solving to decision cost
-- **Log-barrier Newton solver** with implicit differentiation via ChainRules rrules
+- **HiGHS LP solver** (primary, for training) with subgradient rrule, and **log-barrier Newton solver** (for implicit differentiation research) with implicit differentiation rrule
 - **mu-continuation training schedule** that anneals the barrier parameter from smooth to exact
 - **Problem-agnostic framework** with a `ProblemInstance` interface for plugging in new 2SLPs
 - **Three built-in problems**: resource allocation, shipment planning, unreliable newsvendor
@@ -46,18 +46,16 @@ Key capabilities:
   | (Adam optimizer) |                  |                           |
   +------------------+                  |                           v
                                         |                  +---------------------+
-                                        |                  | solve_barrier()     |
-                                        +----------------- | min c'x - mu*sum   |
-                                                           |   log(x_i)         |
-                                          x1* (first-     | s.t. Ax = b, x > 0 |
-                                          stage decision)  +---------------------+
-                                                                    |
+                                        |                  | solve_lp()          |
+                                        +----------------- | (HiGHS LP solver)   |
+                                                           | s.t. Ax = b, x >= 0|
+                                          x1* (first-      +---------------------+
+                                          stage decision)           |
                                                            +---------------------+
                                                            | rrule (pullback)    |
-                                                           | implicit_diff_h()   |
-                                                           | implicit_diff_q()   |
+                                                           | subgradient_rrule   |
                                                            | dx/db, dx/dc via    |
-                                                           | KKT implicit fn thm |
+                                                           | LP dual subgradients|
                                                            +---------------------+
 ```
 
@@ -69,10 +67,10 @@ features x_i --> neural_net(x_i) --> raw_params --> scenario_realization() --> S
                                                                                   v
             loss <-- evaluate_cost(x1*, actual) <-- surrogate_first_stage(TwoStageSLP)
               |                                          |
-              v                                    solve_barrier() + rrule
+              v                                    solve_lp() + subgradient rrule
          backprop via Flux.gradient()                    |
-              |                                    implicit_diff_h/q
-              v                                    (KKT system solve)
+              |                                    LP dual-based subgradients
+              v
          Flux.update!(opt_state, model, grads)
 ```
 
@@ -103,8 +101,8 @@ ProblemBasedScenarioGeneration.jl (entry point)
 |
 +-- loss/
 |   +-- decision_regret.jl     decision_regret, evaluate_cost, surrogate_first_stage
-|                              (depends on: TwoStageSLP, extensive_form, solve_barrier,
-|                               solve_lp, ProblemInstance)
+|                              (depends on: TwoStageSLP, extensive_form, solve_lp,
+|                               ProblemInstance)
 |
 +-- models/
 |   +-- scenario_generator.jl  build_generator (depends on: Flux, ProblemInstance)
@@ -130,11 +128,12 @@ ProblemBasedScenarioGeneration.jl (entry point)
 
 ### 4.1 Differentiable Optimization
 
-The entire pipeline from neural network output to decision cost must be differentiable so that Flux/Zygote can compute gradients for training. This is achieved through:
+The entire pipeline from neural network output to decision cost must be differentiable so that Flux/Zygote can compute gradients for training. Two solver backends are available, each with its own ChainRules rrule:
 
-- **Log-barrier solver** (`solve_barrier`): replaces the non-differentiable LP simplex method with a smooth Newton barrier method that solves `min c'x - mu * sum(log(x_i))` subject to `Ax = b, x > 0`.
-- **Implicit differentiation** (`implicit_diff_h`, `implicit_diff_q`): applies the implicit function theorem to the KKT conditions of the barrier problem to compute `dx*/db` and `dx*/dc` without differentiating through the Newton iterations.
-- **ChainRules rrules** (`barrier_rrule.jl`, `subgradient_rrule.jl`): register custom reverse-mode differentiation rules for `solve_barrier` and `solve_lp` so that Zygote can backpropagate through them automatically.
+- **`solve_lp` (HiGHS)** with **subgradient rrule** (`subgradient_rrule.jl`): the **primary solver used during training**. Uses LP duals as subgradients to provide approximate gradients. Fast, robust, and fully Zygote-compatible.
+- **`solve_barrier` (Newton log-barrier)** with **implicit differentiation rrule** (`barrier_rrule.jl`): solves `min c'x - mu * sum(log(x_i))` subject to `Ax = b, x > 0`, then applies the implicit function theorem to the KKT conditions to compute `dx*/db` and `dx*/dc`. **Retained for research and alternative use cases** but no longer on the default training path.
+
+Both `surrogate_first_stage` and `recourse_cost` now call `solve_lp` directly (via HiGHS), so standard training does not require the barrier solver.
 
 ### 4.2 No-Mutation for AD Compatibility
 
@@ -142,6 +141,9 @@ Zygote (the AD engine used by Flux) does not support in-place mutation. The code
 
 - `extensive_form` builds the block-structured constraint matrix using `hcat`/`vcat` and comprehensions instead of pre-allocating and filling.
 - `build_mu_vector` uses `vcat` instead of `append!`.
+- `_kkt_matrix` in `implicit_diff.jl` constructs the KKT system using `vcat`/`hcat` (e.g., `vcat(hcat(Diagonal(D_diag), A'), hcat(A, zeros(T, m, m)))`) for Zygote safety.
+- Barrier solver KKT assembly in `barrier_solver.jl` similarly uses mutation-free `vcat`/`hcat` construction.
+- `scenario_realization` in problem implementations uses `promote_type` for Float32/Float64 compatibility -- Flux models typically output Float32 while problem data is Float64, so type promotion ensures consistent element types throughout the pipeline.
 - All scenario construction uses functional patterns (creating new arrays rather than modifying existing ones).
 
 ### 4.3 Problem-Agnostic Framework
@@ -159,7 +161,9 @@ The `NoisePattern` enum (`H_ONLY`, `Q_ONLY`, `W_ONLY`, `WH`, `WQ`, `WHQ`) determ
 
 ### 4.4 mu-Continuation for the Log-Barrier Solver
 
-Training with the barrier solver requires choosing the barrier parameter mu. A large mu yields a smooth but biased loss landscape; mu = 0 gives the exact (non-smooth) LP. The `continuation_train!` function implements a three-phase schedule:
+Standard training now uses `solve_lp` directly -- the `mu` parameter accepted by `surrogate_first_stage` and `recourse_cost` does not affect solver choice, as both always call `solve_lp` (HiGHS).
+
+Continuation training with the barrier solver remains available via `continuation_train!`, which implements a three-phase schedule:
 
 1. **Warm-up**: train at the largest mu (e.g., 1.0) for `first_stage_epochs` to find a good region.
 2. **Annealing**: step through a decreasing `mu_schedule` (e.g., `[1.0, 0.8, ..., 0.01]`), training `epochs_per_stage` epochs at each level.

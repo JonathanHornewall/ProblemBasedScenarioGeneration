@@ -163,7 +163,7 @@ min  c' x    s.t.  A x = b,   x >= 0
 
 The solver throws on infeasibility or unboundedness. The variant `solve_lp_primal(A, b, c)` returns only the primal solution.
 
-This solver is used for evaluation (unsmoothed LP) and as a fallback when the barrier parameter is zero.
+This solver is used for both training (via the subgradient rrule) and evaluation.
 
 ---
 
@@ -303,6 +303,8 @@ By the implicit function theorem, the sensitivities of `(x*, lambda*)` with resp
 
 Assembles the `(n+m) x (n+m)` KKT matrix from the cached solution data.
 
+> **Implementation note:** The matrix is constructed using `vcat`/`hcat` (i.e., `vcat(hcat(Diagonal(D_diag), A'), hcat(A, zeros(T, m, m)))`) rather than pre-allocating and filling indices. This mutation-free construction is required for compatibility with Zygote automatic differentiation, which does not support in-place array mutation.
+
 ### 5.3 `implicit_diff_h(cache::BarrierCache)` -- Sensitivity w.r.t. RHS `b`
 
 Differentiating the KKT conditions with respect to `b`:
@@ -315,6 +317,8 @@ The right-hand side comes from `dg2/db = -I_m` (negated in the implicit function
 
 Returns `dx*/db` as an `(n, m)` matrix: the first `n` rows of `K \ [0; I_m]`.
 
+The RHS is constructed mutation-free as `vcat(zeros(T, n, m), Matrix{T}(I, m, m))`.
+
 ### 5.4 `implicit_diff_q(cache::BarrierCache)` -- Sensitivity w.r.t. cost `c`
 
 Differentiating the KKT conditions with respect to `c`:
@@ -326,6 +330,8 @@ K * [ dx*/dc; dlambda*/dc ] = [ -I_n; 0_m ]
 The right-hand side comes from `dg1/dc = I_n` (negated, giving `-I_n`).
 
 Returns `dx*/dc` as an `(n, n)` matrix: the first `n` rows of `K \ [-I_n; 0]`.
+
+The RHS is constructed mutation-free as `vcat(-Matrix{T}(I, n, n), zeros(T, m, n))`.
 
 ### 5.5 `recourse_multiplier(cache::BarrierCache)`
 
@@ -366,6 +372,8 @@ The tangents for `A` and `mu` are declared `NoTangent()` (gradients are not prop
 
 **Gradient extraction:** The pullback extracts `dx_bar` from the upstream `cache_bar` by checking for an `.x` property (matching the `BarrierCache` struct field).
 
+> **Note:** The barrier solver's implicit differentiation rrule still exists in the codebase but is not on the default training path. It is available for use when `solve_barrier` is called directly (e.g., for experimentation or when smooth interior solutions are desired).
+
 ### 6.2 LP Solver rrule (Subgradient Approximation)
 
 **Source:** `src/diff/subgradient_rrule.jl`
@@ -389,7 +397,7 @@ The rationale:
 - By LP duality, `dV/db = -lambda*` where `V(b) = min c'x s.t. Ax=b, x>=0` is the optimal value function. The dual variable serves as a subgradient for the primal-dual relationship.
 - The cost sensitivity uses the optimal primal as a proxy.
 
-This is the standard approach for differentiating through an LP at `mu = 0`, used during the fine-tuning phase of continuation training (where the barrier has been annealed to zero).
+This is the rrule used on the default training path, since both `surrogate_first_stage` and `recourse_cost` now call `solve_lp` exclusively.
 
 ---
 
@@ -406,22 +414,27 @@ The decision regret loss measures how much worse the first-stage decision is whe
 Solves the extensive-form 2SLP to obtain the first-stage decision:
 
 1. Build the extensive form `(A_ext, b_ext, c_ext)` from the `TwoStageSLP`.
-2. Construct a per-variable barrier parameter vector via `build_mu_vector`: `mu` for first-stage variables, `mu * p_s` for second-stage variables of scenario `s` (scaling the barrier by scenario probability).
-3. Solve with `solve_barrier` (or `solve_lp` if `mu = 0`).
-4. Return the first `n1` components of the solution (the first-stage decision `x1*`).
+2. Solve the LP using `solve_lp(A_ext, b_ext, c_ext)` (HiGHS).
+3. Return the first `n1` components of the solution (the first-stage decision `x1*`).
+
+The `mu` parameter is retained in the function signature for API compatibility but does not affect solver choice -- `solve_lp` is always used regardless of the value of `mu`. The helper function `build_mu_vector` still exists in the codebase but is no longer called by `surrogate_first_stage`.
+
+Gradients flow through this step via the subgradient rrule on `solve_lp` (see Section 6.2).
 
 ### 7.2 Recourse Cost
 
 **`recourse_cost(x1, sc::Scenario, mu)`**
 
-Evaluates the second-stage cost for a given first-stage decision `x1` under scenario `sc`:
+Evaluates the second-stage cost for a given first-stage decision `x1` under scenario `sc` by solving the pure LP:
 
 ```
-Q(x1, sc) = min  q' y  -  mu * sum log(y_i)
-            s.t. W y = h - T x1,   y > 0
+Q(x1, sc) = min  q' y
+            s.t. W y = h - T x1,   y >= 0
 ```
 
-Returns `q' y*` (the linear cost, not including the barrier term).
+The function computes the recourse RHS as `b_rec = h - T * x1`, solves `solve_lp(W, b_rec, q)` using HiGHS, and returns `q' y*`.
+
+As with `surrogate_first_stage`, the `mu` parameter is accepted for API compatibility but does not affect the computation -- there is no barrier term. Gradients flow through this step via the subgradient rrule on `solve_lp`.
 
 ### 7.3 Total Cost Evaluation
 
@@ -454,9 +467,7 @@ L_abs = c' x1_hat + Q(x1_hat, actual_scenario; mu_prim)
 
 This quantity is the total cost incurred by the surrogate decision. Minimizing it during training pushes the scenario generator to produce scenarios that lead to good first-stage decisions.
 
-The two barrier parameters serve different roles:
-- `mu_surr` smooths the surrogate optimization (enabling gradient flow during training).
-- `mu_prim` smooths the evaluation (typically set to a small value or zero).
+The two barrier parameters are retained in the function signature for API compatibility. In practice, both `surrogate_first_stage` and `recourse_cost` now use `solve_lp` regardless of the barrier parameter values.
 
 ### 7.5 Relative Decision Regret
 
@@ -493,15 +504,16 @@ Neural network  -->  predicted (W, T, h, q)  -->  Scenario structs
                                            extensive_form(slp)
                                                         |
                                                         v
-                                    solve_barrier(A_ext, b_ext, c_ext, mu)
-                                           [rrule: implicit diff]
+                                      solve_lp(A_ext, b_ext, c_ext)
+                                         [rrule: subgradient]
                                                         |
                                                         v
                                                 x1_hat (first-stage decision)
                                                         |
                                                         v
-                                    recourse_cost(x1_hat, actual_scenario, mu)
-                                           [rrule: implicit diff]
+                                      recourse_cost(x1_hat, actual_scenario)
+                                        -> solve_lp(W, b_rec, q)
+                                           [rrule: subgradient]
                                                         |
                                                         v
                                               decision_regret loss
@@ -510,8 +522,8 @@ Neural network  -->  predicted (W, T, h, q)  -->  Scenario structs
 Gradients flow backward through this chain via ChainRules:
 
 1. The loss provides `dL/dx1_hat`.
-2. The recourse solver's rrule computes `dL/dh_rec = dL/d(h - T*x1)`, which gives `dL/dx1_hat` via the chain rule through `h_rec = h - T * x1_hat`.
-3. The surrogate solver's rrule computes `dL/db_ext` and `dL/dc_ext` from `dL/dx1_hat`, using implicit differentiation through the KKT system.
+2. The recourse solver's subgradient rrule computes `dL/dh_rec = dL/d(h - T*x1)` using the LP dual variables as subgradients, which gives `dL/dx1_hat` via the chain rule through `h_rec = h - T * x1_hat`.
+3. The surrogate solver's subgradient rrule computes `dL/db_ext` and `dL/dc_ext` from `dL/dx1_hat`, using the LP duals from HiGHS as approximate sensitivities.
 4. Since `b_ext` and `c_ext` are functions of the scenario parameters `(W, T, h, q)`, Zygote propagates gradients through the `extensive_form` construction back to the neural network outputs.
 
-The barrier parameter `mu` is critical: at `mu > 0`, the KKT matrix `K` is non-singular (because `D = diag(mu/x^2)` has positive entries), so the implicit function theorem applies and gradients are well-defined. As `mu -> 0`, the problem approaches the true LP but gradients degrade. The continuation training schedule (covered separately) manages this tradeoff.
+Because both solvers now use `solve_lp` exclusively, the `mu` parameter is no longer critical for gradient flow. The subgradient rrule provides approximate gradients at any LP vertex solution without requiring a smooth interior point. The barrier solver's implicit differentiation rrule (Section 6.1) still exists in the codebase and can be used when `solve_barrier` is called directly, but it is not on the default training path.

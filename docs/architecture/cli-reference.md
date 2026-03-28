@@ -89,10 +89,12 @@ julia --project=. bin/pbsg.jl train -p <problem> [options]
 
 | Flag        | Short | Type    | Default | Description                                                            |
 |-------------|-------|---------|---------|------------------------------------------------------------------------|
-| `--mu-surr` |       | Float64 | `1.0`   | Log-barrier parameter for surrogate LP solve (smoothing level)         |
-| `--mu-prim` |       | Float64 | `0.0`   | Log-barrier parameter for cost evaluation (0 = exact LP)               |
+| `--mu-surr` |       | Float64 | `1.0`   | Log-barrier parameter for surrogate LP solve. Retained for API compatibility; standard training always uses the HiGHS LP solver (`solve_lp`) regardless of this value. Used by `continuation_train!` during mu-annealing. |
+| `--mu-prim` |       | Float64 | `0.0`   | Log-barrier parameter for cost evaluation. Retained for API compatibility; standard training always uses the HiGHS LP solver (`solve_lp`) regardless of this value. Used by `continuation_train!` during mu-annealing. |
 
 **Continuation schedule** (enabled with `--continuation`)
+
+> **Note:** Standard (non-continuation) training always uses the HiGHS LP solver (`solve_lp`) for both the surrogate first-stage solve and recourse cost evaluation, regardless of `--mu-surr` and `--mu-prim` values. Continuation training (`continuation_train!`) uses the log-barrier solver (`solve_barrier`) with mu-annealing as described below.
 
 | Flag                | Short | Type   | Default                                                    | Description                                                    |
 |---------------------|-------|--------|------------------------------------------------------------|----------------------------------------------------------------|

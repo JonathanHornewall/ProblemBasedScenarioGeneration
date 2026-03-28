@@ -28,8 +28,8 @@ context x ──► Neural Net ──► raw params ──► scenario_realizati
                   │                                              TwoStageSLP (surrogate)
                   │                                                          │
                   │                                                          ▼
-                  │                                              solve_barrier() ──► x̂₁
-                  │                                              (barrier LP)       │
+                  │                                              solve_lp() ──► x̂₁
+                  │                                              (HiGHS LP)       │
                   │                                                                 ▼
                   │                                              evaluate_cost(x̂₁, actual scenario)
                   │                                                                 │
@@ -42,7 +42,7 @@ context x ──► Neural Net ──► raw params ──► scenario_realizati
            Flux.update!(opt_state, model, gradients)
 ```
 
-The key insight is that gradients flow backward through the LP solver itself via the `rrule` defined on `solve_barrier`, which uses implicit differentiation of the KKT conditions. This makes the entire pipeline differentiable.
+The key insight is that gradients flow backward through the LP solver itself via the `rrule` defined on `solve_lp`, which uses a subgradient approximation based on the LP dual variables. This makes the entire pipeline differentiable.
 
 **Source files involved:**
 
@@ -55,8 +55,9 @@ The key insight is that gradients flow backward through the LP solver itself via
 | `src/persistence.jl` | Checkpoint serialization and model restoration |
 | `src/models/scenario_generator.jl` | `build_generator` neural network factory |
 | `src/models/output_heads.jl` | `build_output_head`, `build_full_model` |
-| `src/diff/barrier_rrule.jl` | ChainRules `rrule` for `solve_barrier` |
-| `src/diff/implicit_diff.jl` | `implicit_diff_h`, `implicit_diff_q` |
+| `src/diff/subgradient_rrule.jl` | ChainRules `rrule` for `solve_lp` (primary training path) |
+| `src/diff/barrier_rrule.jl` | ChainRules `rrule` for `solve_barrier` (not on default training path) |
+| `src/diff/implicit_diff.jl` | `implicit_diff_h`, `implicit_diff_q` (used by barrier rrule only) |
 
 ---
 
@@ -128,7 +129,7 @@ gs = Flux.gradient(model) do m
 end
 ```
 
-Under the hood, Zygote traces through the entire forward pass — including the barrier solver — and uses the custom `rrule` on `solve_barrier` to compute gradients via implicit differentiation (see [Section 4](#4-sgd-with-flux-and-zygote)).
+Under the hood, Zygote traces through the entire forward pass — including the LP solver — and uses the custom `rrule` on `solve_lp` to compute gradients via a subgradient approximation (see [Section 4](#4-sgd-with-flux-and-zygote)).
 
 **Step 4 — Parameter update.** The gradient is extracted and applied:
 
@@ -266,41 +267,34 @@ The training pipeline differentiates through the entire forward pass: neural net
 
 `Flux.gradient(model) do m ... end` invokes Zygote's reverse-mode AD. Zygote traces the forward computation and builds a "pullback" tape. On the backward pass, it propagates the gradient of the scalar loss back through every operation.
 
-#### 2. The ChainRules rrule on `solve_barrier`
+#### 2. The ChainRules rrule on `solve_lp` (Subgradient)
 
-The barrier solver is not natively differentiable (it involves iterative Newton steps). The custom `rrule` in `src/diff/barrier_rrule.jl` makes it differentiable:
+The HiGHS LP solver is not natively differentiable. The custom `rrule` in `src/diff/subgradient_rrule.jl` provides a subgradient approximation that makes it differentiable on the default training path:
 
 ```julia
-function ChainRulesCore.rrule(::typeof(solve_barrier), A, b, c, mu; ...)
-    cache = solve_barrier(A, b, c, mu; ...)
+function ChainRulesCore.rrule(::typeof(solve_lp), A, b, c; tol=1e-9)
+    (x_opt, lambda_opt) = solve_lp(A, b, c; tol)
 
-    function solve_barrier_pullback(cache_bar)
-        Δx = cache_bar.x  # upstream gradient w.r.t. primal solution
-
-        db_thunk = @thunk begin
-            Dh = implicit_diff_h(cache)   # ∂x*/∂b, shape (n, m)
-            Dh' * Δx                       # shape (m,)
-        end
-
-        dc_thunk = @thunk begin
-            Dq = implicit_diff_q(cache)   # ∂x*/∂c, shape (n, n)
-            Dq' * Δx                       # shape (n,)
-        end
-
-        return (NoTangent(), NoTangent(), db_thunk, dc_thunk, NoTangent())
+    function solve_lp_pullback(dx_bar)
+        db_bar = -lambda_opt * sum(dx_bar)
+        dc_bar =  x_opt * sum(dx_bar)
+        return (NoTangent(), NoTangent(), db_bar, dc_bar)
     end
 
-    return cache, solve_barrier_pullback
+    return (x_opt, lambda_opt), solve_lp_pullback
 end
 ```
 
 Key design choices:
-- **Lazy evaluation via `@thunk`**: The Jacobians `∂x*/∂b` and `∂x*/∂c` are only computed if that tangent is actually needed downstream. This avoids wasted computation.
-- **No tangent for A or mu**: Only gradients w.r.t. `b` (the RHS) and `c` (the cost vector) are propagated. This is sufficient because scenario parameters affect the LP through `b` and `c`.
+- **Subgradient via LP duality**: The pullback uses the optimal dual variable `lambda_opt` as a subgradient for `b`, and the optimal primal `x_opt` as a subgradient for `c`. This follows from LP sensitivity analysis: `dV/db = -lambda*` where `V(b) = min c'x s.t. Ax=b, x>=0`.
+- **No tangent for A**: Only gradients w.r.t. `b` (the RHS) and `c` (the cost vector) are propagated. This is sufficient because scenario parameters affect the LP through `b` and `c`.
+- **Lightweight pullback**: The gradients are computed directly from the cached primal and dual solutions, without needing to solve any additional linear systems.
 
-#### 3. Implicit Differentiation of KKT Conditions
+> **Note:** A barrier-based `rrule` for `solve_barrier` also exists in `src/diff/barrier_rrule.jl`, which uses implicit differentiation of the KKT conditions (see Section 4.3). However, it is **not on the default training path** since `surrogate_first_stage` and `recourse_cost` now use `solve_lp` exclusively.
 
-The functions `implicit_diff_h` and `implicit_diff_q` in `src/diff/implicit_diff.jl` compute the sensitivity of the LP optimum `x*` with respect to problem data by applying the implicit function theorem to the KKT conditions:
+#### 3. Implicit Differentiation of KKT Conditions (Barrier Path Only)
+
+The functions `implicit_diff_h` and `implicit_diff_q` in `src/diff/implicit_diff.jl` compute the sensitivity of the barrier LP optimum `x*` with respect to problem data by applying the implicit function theorem to the KKT conditions. These are used by the barrier `rrule` (not on the default training path), but are documented here for completeness:
 
 ```
 KKT conditions:
@@ -325,8 +319,9 @@ Here is the complete chain of differentiation, from loss back to model parameter
 d(loss)/d(model_params)
   = d(loss)/d(cost) * d(cost)/d(x₁) * d(x₁)/d(b,c) * d(b,c)/d(scenario_params) * d(scenario_params)/d(model_params)
     \_____________/   \____________/   \_____________/   \________________________/   \___________________________/
-     evaluate_cost     recourse_cost    implicit diff     scenario_realization          Flux.Chain (Dense layers)
-                                        via rrule
+     evaluate_cost     recourse_cost    subgradient       scenario_realization          Flux.Chain (Dense layers)
+                                        via solve_lp
+                                        rrule
 ```
 
 #### Zygote Compatibility Notes
@@ -334,7 +329,9 @@ d(loss)/d(model_params)
 The codebase takes care to avoid Zygote-incompatible patterns:
 - `build_mu_vector` uses `vcat` instead of `append!` (no mutation).
 - Scenario construction uses comprehensions rather than in-place array modification.
-- The barrier solver itself runs in the forward pass only; its pullback uses the cached solution.
+- `_kkt_matrix` in `implicit_diff.jl` and barrier solver KKT assembly use `vcat`/`hcat` to build the KKT matrix without in-place mutation (e.g., `K = vcat(hcat(Diagonal(D_diag), A'), hcat(A, zeros(T, m, m)))`).
+- `scenario_realization` for `ShipmentPlanningProblem` uses `promote_type(eltype(param), eltype(prob.q))` to handle Float32 model outputs mixing with Float64 problem data, ensuring type stability through the AD pipeline.
+- The LP solver runs in the forward pass only; its pullback uses the cached primal and dual solutions.
 
 ---
 
@@ -375,9 +372,8 @@ The returned cost is `c₁'x̂₁ + Q(x̂₁, actual_scenario)`, where `Q` is th
 Solves the extensive-form two-stage LP:
 
 1. Calls `extensive_form(slp)` to build the block-structured constraint matrix.
-2. When `mu > 0`: solves with `solve_barrier` (differentiable).
-3. When `mu = 0`: solves with `solve_lp` (exact, via HiGHS).
-4. Returns the first `n₁` components of the solution (first-stage decision variables).
+2. Solves with `solve_lp` (HiGHS), which is made differentiable via the subgradient `rrule`.
+3. Returns the first `n₁` components of the solution (first-stage decision variables).
 
 ### `evaluate_cost`
 
@@ -387,7 +383,7 @@ Computes the total cost of a first-stage decision:
 cost = c₁'x₁ + sum_s p_s * Q(x₁, s)
 ```
 
-where `Q(x₁, s)` is the recourse cost: solve `min q'y s.t. Wy = h - Tx₁, y > 0` with the appropriate barrier parameter.
+where `Q(x₁, s)` is the recourse cost: solve the LP `min q'y s.t. Wy = h - Tx₁, y >= 0` via `solve_lp`.
 
 ### `relative_decision_regret`
 
