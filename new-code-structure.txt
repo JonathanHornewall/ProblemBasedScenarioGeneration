@@ -1,0 +1,221 @@
+  - Code Structure
+    - Package1: ContextualDFL
+        - DFLScenarioGenerator.jl
+            - Has fields ScenarioRealization, Solver, neural_net, program
+            - Has method deploy(generator, \scenario), which returns a policy
+        - Directory: scenario_maps
+            - ScenarioMap.jl
+                - callable struct
+                    - when called, it returns W, T, h and q, changing out q or h depending on its target component.
+                - has field for q_map
+                - has field for h_map
+                - has base_scenario fields
+                    - base_W
+                    - base_T
+                    - base_h
+                    - base_q
+                - parametrized by target_component
+                    - :q
+                    - :h
+                    - or :q, :h
+            - ParametrizerQ.jl
+                - Abstract callable type
+                - default behavior is an identity function
+                - has one concrete default struct (DefaultQ)
+                - Note
+                    - set separate defaults for q_eq and q_ineq
+            - ParametrizerH.jl
+                - Abstract callable type
+                - default behavior is an identity function
+                - has one concrete default struct (DefaultH)
+                - Note
+                    - Set defaults for going to h_eq or h_ineq
+        - Directory: learning
+            - train.jl
+                - train()
+                - takes Loss, neural_net, \mu_schedule, \rho_schedule, step_size_schedule, batch_size_schedule
+            - test.jl
+                - test(z_policy, data_set)
+                    - z_policy is a set of first-stage decisions associated with each context in the data_set
+            - Directory: loss_functions
+                - Loss.jl
+                    - specifies an abstract class
+                    - it should be callable, taking (program, $\xi$, $\tilde \xi$  , $\mu$, $\rho$)
+                - DflScenLoss.jl
+                    - struct subtype of loss.jl
+                    - Takes scenario_realizer, solver, program
+                    - straight_forward implementation
+                - dfl_c_loss.jl
+                    - struct subtype of loss.jl
+                    - takes solver, program, \rho, \mu
+                - MSE_scen_loss.jl
+                    - has no fields, and is very simple
+                - projected_z_loss.jl
+                    - takes solver, program
+            - utils.jl
+                - here we build small helper functions for creating \mu, \rho, batch_size and step_size schedules for input into training
+        - Directory: data_generation
+            - directory: context_sampling/
+                - ContextSampler.jl
+                    - callable abstract type
+                    - generate_context_set(nr_context)
+                - directory: context_samplers/
+            - directory: scenario_sampling
+                - ScenarioSampler.jl
+                    - callable abstract type which takes a context as input.
+                    - generate_scenario_set(context_data, scenarios_per_context:int or vec)
+                - directory: scenario_samples/
+        - Directory: stochastic_programming
+            - StochasticProgram
+                - Has fields A_eq, A_in, b, c
+            - construct_lp.jl(sp, W_eq, W_in T_eq, T_in, h_eq, h_in q_eq, q_in)
+                - Figures out the extensive form of the LP, returning its lp representation as a huge matrix.
+            - solve.jl
+                - function implementation
+                    - calls on construct_lp
+                    - generates a solution
+                    - partitions the solution into first-stage and second stage components. Same with the dual variables (see differentiation)
+                - differentiation
+                    - Here we implement the chain rules
+                        - First, we begin with a simple matrix construction solution.
+                        - Then, once we know that works, we move to optimize via HVPs
+            - cost_function.jl
+                - Simply define the scenario_wise cost, and then iterate over it.
+                - Probably want to return both value, and optimal primal and dual variables (see differentiation)
+                - differentiation
+                    - here we rely entirely on dual information. Very straight forward.
+        - Directory: linear_programming
+            - LP.jl
+                - struct with field A_eq, A_in, b_eq, b_in, c_eq, c_in
+            - solver.jl
+                - Solver
+                    - define the solver abstract type
+                    - it has the method implement which is not defined, with lp and config as inputs
+                    - it has a solve method which is not defined, with a type agnostic input and a config input
+                    - And it has the method solve with an lp input, which first actualizes the lp and then calls a generic solve method on it.
+                    - the solve method has optional arguments for A_eq, b, c, in case you want to change either one.
+                - LPImplementation
+                    - an abstract type, with get_implementation() method
+                    - instantiate a concrete subtype with a field for a specific LP implementation, and a get_implementation method that simply returns the value of the field.
+                - Note
+                    - To implement a solver, you introduce a type for the solver, and the LP implementation, and define the solve and constructor methods for each one.
+                - NOTE on implementation
+                    - the first version can do away with the LPImplementation type.
+                    - You should still write it out though, and comment it out. It will be very important in the next stage of the project.
+                - NOTE on implementation nr 2
+                    - How do we deal with the \mu=0 and \rho = 0 cases separately?
+                    - We need to implement a SolverStrategy struct with one QP, LP and NLP solver as subfields
+            - diff_lp.jl
+                - differentiates the solve method with respect to the b and c inputs
+            - directory: solvers/
+                - glpk
+                - gurobi
+    - Package2: ContextualDFLExperiments
+        - Plan
+            - 
+            - 
+            - 
+            - 
+        - bechmark.jl
+            - This is the main loop. It runs a training run and returns the relevant information, saving it when appropriate.
+        - diagnostics.jl
+            - examines value of stochasticity
+        - Directory: problem_instances
+            - ProblemInstance.jl
+                - Abstract type with getter methods for…
+                    - A
+                    - b
+                    - c
+                    - W_base
+                    - T_base
+                    - h_base
+                    - q_base
+                - Note
+                    - to set up a new problem, you will generally need to
+                    - set up a problem_instance type with the appropriate  parameters 
+                    - set up a context and scenario generator
+                    - decide on a scenario parametrization
+            - ProblemInstance
+        - Ideas, etc.
+            - Always benchmark with the theoretical overfitted policy
+                - Check how well a policy optimal for the training data performs on the contexts in the training data
+            - Always benchmark with non-stochastic solution
+            - Always compare performance of policy on training data to the performance on testing data to determine overfitting tendencies
+    - Implementation plan
+        - Set up new package in Julia directory
+        - Ask Codex to start building the above.
+- Overview
+    - Dataset(Is trained over, and keeps track of optimal solutions)
+        - $(x_i,\xi_i)$
+        - Note: Does not need to be represented as an actual struct
+        - Related objects
+            - 1: Matrix with columns being $x$
+            - 2: Matrix with columns being  $\xi$
+            - 3: Scenario solution set
+            - 4: Full noise solution set
+            - 5: k-nearest neighbor versions(represent as a function transforming the data-set)
+            - 6: List of scenario-specific problems (ignore for now premature optimization)
+    - Scenario Generator(The main object)
+        - Struct
+            - default W_0, T_0, h_0, q_0
+                - either h_0 or q_0 will have value nothing, indicating it is the learned component.
+            - instance
+            - neural net
+            - nr_of_scenarios
+        - Neural net $x \to \xi$
+        - Depend on Dataset and Problem Object
+        - functions
+            - train!
+    - Stochastic program(Handles solution of two-stage + evalutation of first-stage decisions + differentiation)
+        - solve function taking A, b, c, W_i, T_i, h_i, q_i, p_i, $\mu$ and outputting a solution of the optimization problem along with the optimal value.
+        - evaluate function taking A, b, c, W_i, T_i, h_i, q_i, p_i, $\mu$ and a first-stage decision, then value of the problem under this decision.
+        - calls on *solver* for LP and LogBarLP
+        - has associated custom made *differentiation rules*
+    - Instance(Records data, “meta data”, realization function)
+        - contains Problem data, n_1, m_1, n_2, m_2
+        - function for returning optimization data
+            - A
+            - b
+            - c
+            - W_0
+            - T_0
+            - q_0
+            - h_0
+        - function for scenario realization
+            - $h(\xi)$
+            - $q(\xi)$
+            - standard behavior: first m_2 components are $h$, second n_2 components are $q$
+    - LP (support object for solvers)
+- To implement
+    - Codebase for current algorithm
+        - Project: LogBarImplementation
+            - Loss function
+                - $z^*(\xi)$
+                - $z_\mu^*(\xi)$
+                - $G(z, \xi)$
+                - $G_\mu(z, \xi)$
+                - $\nabla z^*(\xi)$
+                - $\nabla z_\mu^*(\xi)$
+                - $\nabla G(z, \xi)$
+                - $\nabla G_\mu(z, \xi)$
+            - Solvers
+                - LogBarSolver
+                - LP
+            - scenario_generator
+                - 
+        - Project: DFL Scenario Forecast Benchmark
+            
+            
+    - Codebase for experiments
+    - MILP extension
+    - Constrained scenario extension
+- Later extensions
+    - Distributed computation for evaluation
+        - When evaluating a first-stage solution in the benchmarking stage, we only need to solve separate second-stage problems.
+        - This should be optimized.
+    - Keeping in memory
+        - Keep the two-stage programs in memory, switching out only the $q$ and $h$ vector
+    - HVPs instead of forming matrices in memory
+        - When performing the back-propagation
+    - Warm-starting
+        - When resolving
