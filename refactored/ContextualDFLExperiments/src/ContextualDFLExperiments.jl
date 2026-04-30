@@ -18,8 +18,6 @@ export stochasticity_diagnostics, value_of_stochasticity
 export ProblemInstance
 export A, b, c
 export W_base, T_base, h_base, q_base
-export get_A, get_b, get_c
-export get_W_base, get_T_base, get_h_base, get_q_base
 export context_sampler, scenario_sampler, scenario_parametrization
 
 end
