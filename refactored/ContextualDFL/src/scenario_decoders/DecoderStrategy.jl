@@ -1,4 +1,11 @@
-struct DecoderStrategy{WEQ,WIN,TEQ,TIN,H,Q}
+struct DecoderStrategy{
+    WEQ<:ComponentDecoder,
+    WIN<:ComponentDecoder,
+    TEQ<:ComponentDecoder,
+    TIN<:ComponentDecoder,
+    H<:ComponentDecoder,
+    Q<:ComponentDecoder,
+}
     W_eq_decoder::WEQ
     W_ineq_decoder::WIN
     T_eq_decoder::TEQ
