@@ -78,10 +78,9 @@ export cost_function_rrule
 
 export LP
 export Solver, SolverConfig, SolverStrategy
-export LPImplementation, ConcreteLPImplementation
-export implement, get_implementation
+export implement
 export differentiate_solve
-export GLPKSolver, GLPKImplementation
-export GurobiSolver, GurobiImplementation
+export GLPKSolver
+export GurobiSolver
 
 end
