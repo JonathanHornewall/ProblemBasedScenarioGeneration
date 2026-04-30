@@ -1,0 +1,769 @@
+% new_version_main.tex
+
+\documentclass{article}
+
+\PassOptionsToPackage{numbers,compress}{natbib}
+\usepackage{neurips_2026}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\ri}{\operatorname{ri}}
+\newcommand{\diag}{\operatorname{Diag}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Decision-Focused Scenario\\
+Generation\\
+for Contextual Two-Stage Stochastic Linear Programs}
+
+\author{Anonymous Authors}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Decision focused scenario generation has emerged as a popular strategy for tackling stochastic linear programs with contextual data. It naturally handles decision constraints, and can be straightforwardly extended to cases with integer variables. While having been observed to perform well in practice, a general theory for when scenario generators can learn optimal policies is currently lacking. Additionally, current approaches typically require restrictive assumptions on the structure of second-stage randomness.
+This paper makes three contributions. On the theoretical side, we present a comprehensive theory for when scenario generators can capture an optimal decision policy. Notably, we show that for a broad class of linear programs, a single scenario is sufficient for as long as it is permitted to be chosen outside of the support.
+We next show that the challenging task of learning a second-stage constraint matrix can be simplified to the much more tractable task of learning a second-stage cost vector, thereby potentially significantly extending the applicability of existing methods.
+Finally, we present a novel method for scenario generation, inspired by classical interior point methods.
+Our method can deal with arbitrary second-stage randomness, is trained to directly minimize down-stream loss without the need for surrogates, and has a loss-function whose local minima are guaranteed to be global.
+We experimentally validate the method, showing that it rivals or outperforms baselines on standard test beds and succeeds on instances where prior methods are not applicable.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+\subsection{Background}
+\label{sec:background}
+\begin{itemize}
+    \item Mathematical programming and machine learning.
+    \item Stochastic programming.
+    \item Contextual stochastic programming.
+    \item Three primary approaches.
+\end{itemize}
+
+\subsection{Our contribution}
+\label{sec:contributions}
+\begin{itemize}
+    \item Our contribution.
+    \item Closest approaches in the literature.
+\end{itemize}
+
+\section{Notation and Problem Statement}
+\label{sec:notation-problem}
+
+\subsection{Data set and scenarios}
+\label{sec:data-scenarios}
+
+A context variable $x\in \R^{n_x}$ is represented as a Euclidean vector. A scenario is represented as a collection of three \emph{scenario components}
+\[
+\xi=\bigl(W(\xi),h(\xi),q(\xi)\bigr)
+\in \R^{m_2\times n_2}\times\R^{m_2}\times\R^{n_2},
+\]
+where the component $W(\xi)\in \R^{m_2\times n_2}$ represents a second-stage constraint matrix (recourse matrix), the component $h(\xi)\in \R^{m_2}$ represents a second-stage constraint vector (demand), and the component $q(\xi)\in \R^{n_2}$ represents a second-stage cost vector (cost).
+
+We assume the context and scenarios are sampled from a set $\mathcal X \times \Xi$ according to an unknown joint distribution $P$, and that we have access to a dataset $\mathcal D$ of $N$ context-scenario pairs
+\begin{equation}
+\label{eq:dataset}
+\mathcal D:=\{(x_i,\xi_i)\}_{i=1}^N\subseteq \mathcal X\times \Xi,
+\qquad
+(x_i,\xi_i)\overset{\mathrm{i.i.d.}}{\sim}P.
+\end{equation}
+
+Throughout, $A\in\R^{m_1\times n_1}$, $b\in\R^{m_1}$, $c\in\R^{n_1}$, and $T\in\R^{m_2\times n_1}$ denote deterministic first-stage and transition data.
+
+\subsection{Contextual stochastic programming with log-barrier smoothing}
+\label{sec:contextual-logbarrier}
+
+For each $x\in \mathcal X$, and each admissible choice of log-barrier smoothing parameter $\mu \in [0,\infty)$, the log-barrier smoothed two-stage stochastic linear program is given by
+\begin{equation}
+\label{eq:Pmu-x}
+\begin{aligned}
+(\mathcal{P}_\mu^{x})\qquad
+&\min_{z\in Z}
+\left\{
+c^\top z-\mu\sum_{j=1}^{n_1}\log z_j
++
+\E_{\boldsymbol{\xi}\sim P(\cdot\mid x)}\!\left[Q_\mu(z,\boldsymbol{\xi})\right]
+\right\},
+\\
+&Z:=\{z\in\R^{n_1}_+:\;Az=b\}.
+\end{aligned}
+\end{equation}
+where $Q_\mu$ denotes the second-stage pay-off
+\begin{equation}
+\label{eq:Qmu}
+\begin{aligned}
+Q_\mu(z,\xi)
+&:=
+\min_{y\in\mathcal Y(z,\xi)}
+q(\xi)^\top y-\mu\sum_{k=1}^{n_2}\log y_k,
+\\
+\mathcal Y(z,\xi)
+&:=
+\left\{
+y\in\R^{n_2}_+:\; W(\xi)y=h(\xi)-Tz
+\right\}.
+\end{aligned}
+\end{equation}
+Our main goal is to solve the unsmoothed problem, obtained by setting $\mu = 0$. We use the log-barrier smoothing as a means to this end.
+
+Throughout, we make the following assumptions on the problem data. We assume $\mathcal X$ and $\Xi$ are compact, and that $P$ has finite first moment. For each context $x \in \mathcal X$, we assume:
+\begin{itemize}
+    \item $Z$ is nonempty and has nonempty relative interior.
+    \item $\mathcal Y(z,\xi)$ has nonempty relative interior for every $z\in Z$ and every $\xi$ in the conditional support of $P(\cdot\mid x)$.
+    \item The contextual problem has a finite optimal value and at least one optimal solution.
+    \item The smoothed problem has a unique optimizer for every $\mu>0$.
+\end{itemize}
+
+Throughout, we will use the following equivalent formulation of $\mathcal{P}_\mu^{x}$:
+\begin{equation}
+\label{eq:Gmu-min}
+\min_{z\in\R^{n_1}} G_\mu(z,x).
+\end{equation}
+Where
+\begin{equation}
+\label{eq:Gmu}
+G_\mu(z,x):=\E_{\boldsymbol{\xi}\sim P(\cdot\mid x)}\!\left[\hat G_\mu(z,\boldsymbol{\xi})\right].
+\end{equation}
+With $\hat G_\mu$ denoting the scenario-specific cost function given by
+\begin{equation}
+\label{eq:hatGmu}
+\hat G_\mu(z,\xi):=
+c^\top z
+-\mu\sum_{j=1}^{n_1}\log z_j
++Q_\mu(z,\xi)
++\iota_{Z}(z),
+\end{equation}
+where $\iota_{Z}(z)=0$ if $z\in Z$ and $\iota_{Z}(z)=+\infty$ otherwise.
+
+For the original $\mu = 0$ problem, $\mathcal{P}_\mu^{x}$ may have multiple optimal solutions. However, for the smoothed problem with $\mu > 0$, the solution is unique. For $\mu \geq 0$, we denote the unique optimal policy by
+\begin{equation}
+\label{eq:zsharp-mu}
+z_\mu^\#:\mathcal X\to Z,
+\qquad
+z_\mu^\#(x):=\argmin_{z\in\R^{n_1}}G_\mu(z,x),
+\end{equation}
+with the case $\mu=0$ defined by the log-barrier central-path limit below.
+
+We will frequently omit the $\mu$ subscript when considering the unsmoothed, $\mu = 0$ case. By classical theory, the problem returns to its original non-smoothed version as $\mu$ goes to zero (see appendix for an elaborate explanation):
+\begin{equation}
+\label{eq:G-limit}
+G(z,x):=\lim_{\mu\downarrow 0}G_\mu(z,x),
+\qquad
+\hat G(z,\xi):=\lim_{\mu\downarrow 0}\hat G_\mu(z,\xi).
+\end{equation}
+In particular, we define
+\begin{equation}
+\label{eq:zsharp-limit}
+z^\#(x)=\lim_{\mu \downarrow 0} z_\mu^\#(x) \in \argmin_{z\in Z} G(z,x)
+\end{equation}
+as the unique optimal policy over the unsmoothed problem, defined by the log-barrier smooth limit.
+
+\subsection{Synthetic scenarios}
+\label{sec:synthetic-scenarios}
+
+Throughout, we will frequently consider ``synthetic'' feasible scenarios
+\begin{equation}
+\label{eq:Xi-synthetic}
+\Xi^{\mathrm{synthetic}}:=
+\left\{
+(W,h,q)\in
+\R^{m_2\times n_2}\times\R^{m_2}\times\R^{n_2}:
+-\infty<
+\min_{z\in Z}\hat G(z,(W,h,q))
+<\infty
+\right\}.
+\end{equation}
+Intuitively, $\Xi^{\mathrm{synthetic}}$ represents all scenarios that result in a feasible and bounded single-scenario problem. They are ``synthetic'' in the sense that they need not be included in the support of the randomness $\Xi$, and hence may not have a physical interpretation.
+
+We define the optimal decision map by:
+\begin{equation}
+\label{eq:single-scenario-map-mu}
+\hat z_\mu^\#:\Xi^{\mathrm{synthetic}}\to Z,
+\qquad
+\hat z_\mu^\#(\xi):=\argmin_{z\in\R^{n_1}}\hat G_\mu(z,\xi),
+\end{equation}
+\begin{equation}
+\label{eq:single-scenario-map}
+\hat z^\#:\Xi^{\mathrm{synthetic}}\to Z,
+\qquad
+\hat z^\#(\xi):=\lim_{\mu\downarrow 0}\hat z_\mu^\#(\xi)\in\argmin_{z\in Z}\hat G(z,\xi).
+\end{equation}
+
+The decision focused loss function over scenarios is
+\begin{equation}
+\label{eq:L}
+L(\xi,x):=G(\hat z^\#(\xi),x)
+=\E_{\boldsymbol{\xi}'\sim P(\cdot\mid x)}\!\left[\hat L(\xi,\boldsymbol{\xi}')\right],
+\end{equation}
+where
+\begin{equation}
+\label{eq:hatL}
+\hat L(\xi,\xi'):=\hat G(\hat z^\#(\xi),\xi')
+\end{equation}
+is the scenario-specific loss, interpreted as the cost of scenario $\xi'$ after optimizing with respect to scenario $\xi$.
+
+\subsection{Decision focused scenario generation}
+\label{sec:decision-focused-scenario-generation}
+
+As a learning problem, our contextual stochastic optimization reduces to solving the empirical minimization problem defined by
+\begin{equation}
+\label{eq:direct-policy-erm}
+\min_{\eta}\ \frac1N\sum_{i=1}^N G(\pi_\eta(x_i),x_i),
+\qquad
+\pi_\eta:\mathcal X\to Z,
+\end{equation}
+where $\eta$ parametrizes the optimization family.
+The decision focused scenario generation approach specifically consists of solving the problem
+\begin{equation}
+\label{eq:scenario-generation-erm}
+\min_{w}\ \frac1N\sum_{i=1}^N
+\hat G\!\left(\hat z^\#(\phi_w(x_i)),\xi_i\right),
+\qquad
+\phi_w:\mathcal X\to \Xi^{\mathrm{synthetic}}.
+\end{equation}
+We remark that decision focused scenario generation can be viewed as a specific case of direct policy learning, by setting the policy family in \eqref{eq:direct-policy-erm} as equal to all policies obtained by composing $\hat z^{\#}$ with the policies in the scenario policy class:
+\begin{equation}
+\label{eq:scenario-policy-class}
+\Pi_{\mathrm{SG}}:=
+\left\{
+\pi_w:\mathcal X\to Z:\;
+\pi_w=\hat z^\#\circ \phi_w,\ \phi_w:\mathcal X\to \Xi^{\mathrm{synthetic}}
+\right\}.
+\end{equation}
+
+\section{Optimal policy realizability via scenario generation}
+\label{sec:optimal-policy-realizability}
+
+\begin{theorem}[Optimal policy realizability via scenario generation]
+\label{thm:realizability}
+Let $x\in \mathcal X$ denote any context variable. Let $\mu \in [0,\infty)$ denote any admissible choice of log-barrier smoothing parameter, including $0$. There exists a ``synthetic'' scenario
+\[
+\xi_\mu^{\#,x}=
+\bigl(W_\mu^{\#,x},h_\mu^{\#,x},q_\mu^{\#,x}\bigr)
+\in
+\R^{m_2\times n_2}\times\R^{m_2}\times\R^{n_2}
+\]
+which is decision-optimal, in the sense that
+\begin{equation}
+\label{eq:realizability-decision-optimal}
+\hat z_\mu^\#(\xi_\mu^{\#,x})
+=
+z_\mu^\#(x)
+\in
+\argmin_{z\in Z}G_\mu(z,x).
+\end{equation}
+In particular, $\xi_\mu^{\#,x}$ can be constructed by only ``learning'' a single component $q$, $W$, or $h$.
+
+Let $\tilde\xi \in \Xi$ denote an arbitrary element in the shared scenario support, and write
+\[
+\tilde W:=W(\tilde\xi),
+\qquad
+\tilde h:=h(\tilde\xi),
+\qquad
+\tilde q:=q(\tilde\xi).
+\]
+
+\begin{enumerate}
+    \item \textbf{Case 1: Learning $q$.}
+    There exists a decision-optimal $q_\mu^{\#,\tilde\xi}(x)\in \R^{n_2}$ so that the scenario
+    \[
+    \xi_\mu^{\#,x,\tilde\xi}
+    =
+    \bigl(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x)\bigr).
+    \]
+    is a decision optimal scenario:
+    \begin{equation}
+    \label{eq:q-decision-optimal}
+    \hat z_\mu^\#(\xi_\mu^{\#,x,\tilde\xi})=z_\mu^\#(x).
+    \end{equation}
+
+    \item \textbf{Case 2: Learning $W$.}
+    There exists a decision-optimal $W_\mu^{\#,\tilde\xi}(x)\in \R^{m_2\times n_2}$ so that the scenario
+    \[
+    \xi_\mu^{\#,x,\tilde\xi}
+    =
+    \bigl(W_\mu^{\#,\tilde\xi}(x),\tilde h,\tilde q\bigr).
+    \]
+    is a decision optimal scenario:
+    \begin{equation}
+    \label{eq:W-decision-optimal}
+    \hat z_\mu^\#(\xi_\mu^{\#,x,\tilde\xi})=z_\mu^\#(x).
+    \end{equation}
+
+    \item \textbf{Case 3: Learning $h$.}
+    If we additionally assume that $W(\xi)$ is deterministic with value $W$,
+    \begin{equation}
+    \label{eq:W-deterministic}
+    W = W(\xi), \qquad \forall \xi \in \Xi,
+    \end{equation}
+    and we let $q^{\max,\delta}\in\R^{n_2}$ denote any strict upper bound on the $q$ components, for instance
+    \begin{equation}
+    \label{eq:qmaxdelta}
+    q^{\max,\delta}:=(\bar q+\delta)\1,
+    \qquad
+    \bar q:=\sup_{\xi\in\Xi}\max_{1\le j\le n_2}q(\xi)_j,
+    \qquad
+    \delta>0,
+    \end{equation}
+    then there exists a decision optimal $h_\mu^{\#,\delta}(x)\in \R^{m_2}$, so that the scenario
+    \begin{equation}
+    \label{eq:h-scenario}
+    \xi_\mu^{\#,x,\delta}
+    :=
+    \bigl(W,h_\mu^{\#,\delta}(x),q^{\max,\delta}\bigr)
+    \end{equation}
+    is a decision optimal scenario:
+    \begin{equation}
+    \label{eq:h-decision-optimal}
+    \hat z_\mu^\#(\xi_\mu^{\#,x,\delta})=z_\mu^\#(x).
+    \end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{remark}[Synthetic scenarios]
+\label{rem:synthetic-scenarios}
+While the theorem may seem magic at first, we emphasize that it does not guarantee that the decision optimal scenario will exist in the support of the distribution of $\xi$. The scenario is ``synthetic'', in the sense that it need not correspond to a physically realistic real-life outcome. In such cases, the scenario is best viewed as a parameter for encoding an optimal optimal decison.
+\end{remark}
+
+\begin{proposition}[Constructive expressions]
+\label{prop:constructive}
+The $q$, $W$, and $h$ constructions in Theorem~\ref{thm:realizability} have constructive expressions in terms of $z_\mu^\#(x)$ through the associated dual multipliers. Once $z_\mu^\#(x)$ and the required multipliers have been evaluated, these expressions can be evaluated in $O(m_2n_2)$ time. See Appendix~\ref{app:realizability-proof} for the detailed formulas.
+\end{proposition}
+
+\paragraph{Analysis of implications.}
+The above theorem shows that a scenario generator can realize an optimal decision policy, even under the restriction of generating only one scenario, or even a single component of a single scenario. Decision focused scenario generation is hence equally expressive as direct decision-policy learning.
+
+By Proposition~\ref{prop:constructive}, constructive formulas are available for decision-optimal scenarios in terms of optimal decisions. Of course, one can likewise construct an optimal decision from an optimal scenario by solving a single-scenario problem. Hence, if we know the value of the decision-optimal $q$, $h$, $W$, or $z$, we can infer the value of the others. Learning any of them is hence equivalent in terms of interpretability and realizability.
+
+Additionally, Proposition~\ref{prop:constructive} and Theorem~\ref{thm:realizability} show that the components you learn do not have to even correspond to the structure of the randomness in the stochastic program. For example, nothing prevents using a method for learning $q$, even if $q$ is deterministic in the original problem.
+
+In particular, this solves the issues associated with problems with random recourse $W$. Learning $W$ directly is generally infeasible due to high dimensionality and intractable constraints, but by the above, one can simply apply any method capable of learning $q$ instead. Since there are many machine learning methods available in the literature for learning $q$, but to the best of our knowledge, currently none capable of dealing with instances of randomness in $W$, this resolves a significant bottleneck by extending the applicability of existing methods.
+
+Generally, the choice of learning $q$ or $h$ via decision focused scenario generation, or $z$ directly through decision policy learning, should be made entirely based on the ease of the learning itself, as determined by dimensionality and complexity of the constraint sets of $\Xi^{\mathrm{synthetic}}_q$, $\Xi^{\mathrm{synthetic}}_h$, and $Z$ respectively. See Appendix~\ref{app:dfl-vs-direct} for a more elaborate discussion.
+
+\section{Decision focused learning via log-barrier smoothing}
+\label{sec:dfl-logbarrier}
+\label{sec:backprop-logbarriers}
+
+Neural nets are a natural choice for learning the scenario policy.
+To solve the scenario learning ERM in \eqref{eq:scenario-generation-erm}, we would like to use back-propagation.
+To this end, write the neural net policy as $\phi_\omega$ and define the per-example decision-focused scenario loss
+\begin{equation}
+\label{eq:C-loss}
+C(\omega;x,\xi)
+:=
+\hat G\!\left(\hat z^\#(\phi_\omega(x)),\xi\right).
+\end{equation}
+We need to differentiate $C$ with respect to the policy parameter $\omega$.
+By formally applying the chain rule, we obtain
+\begin{equation}
+\label{eq:scenario-chain-rule}
+\frac{\partial C}{\partial \omega}
+=
+\frac{\partial \hat G}{\partial z}
+\frac{\partial \hat z^\#}{\partial \xi}
+\frac{\partial \phi_\omega}{\partial \omega},
+\end{equation}
+where all terms are evaluated at $z=\hat z^\#(\phi_\omega(x))$ and at the generated scenario $\phi_\omega(x)$.
+
+The first factor $\frac{\partial \hat G}{\partial z}$ is the derivative of the realized first-stage cost with respect to the first-stage decision.
+Since the underlying problem is convex, this factor is guaranteed to be subdifferentiable, and its subgradients have closed form expressions in terms of the dual optima of the second-stage problem.
+The third factor $\frac{\partial \phi_\omega}{\partial \omega}$ is the derivative of the neural net output with respect to its parameters, and is handled automatically by modern deep learning frameworks.
+
+The second factor $\frac{\partial \hat z^\#}{\partial \xi}$ is the main difficulty.
+The optimal solution map is generally piecewise constant with respect to the cost component $q$, and piecewise linear with respect to the right-hand-side component $h$.
+It is therefore non-differentiable at the boundaries between regions, and may provide uninformative gradients away from them.
+
+As it turns out, log-barrier smoothing solves this problem.
+
+\begin{proposition}[Closed form derivatives for log-barriers]
+\label{prop:logbarrier-derivatives}
+Fix $\mu>0$ and a synthetic scenario $\xi=(W,h,q)$ for which the single-scenario smoothed problem is well defined. Let
+\[
+\hat z_\mu^\#:=\hat z_\mu^\#(\xi),
+\qquad
+\hat\lambda_\mu^\#:=\hat\lambda_\mu(\hat z_\mu^\#,\xi)
+\]
+denote the scenario-specific solution and its associated second-stage dual multiplier. Then the derivative of the smoothed objective with respect to $z$, and the derivatives of the smoothed optimization map with respect to $h$ and $q$, have closed form expressions in terms of $\hat z_\mu^\#$ and $\hat\lambda_\mu^\#$. In particular, for $z$ in the relative interior of $Z$,
+\[
+\partial_z G_\mu(z,x)
+=
+c-\mu z^{-1}
+-T^\top\E_{\boldsymbol{\xi}\sim P(\cdot\mid x)}
+\!\left[\hat\lambda_\mu(z,\boldsymbol{\xi})\right]
++N_Z(z),
+\]
+with the scenario-specific expression
+\[
+\partial_z \hat G_\mu(z,\xi)
+=
+c-\mu z^{-1}-T^\top\hat\lambda_\mu(z,\xi)+N_Z(z),
+\]
+and, whenever the displayed inverses exist,
+\[
+\begin{aligned}
+\frac{\partial \hat z_\mu^\#(\xi)}{\partial h}
+&=
+P_\mu(\xi)T^\top S_\mu(\xi)^{-1},
+\\
+\frac{\partial \hat z_\mu^\#(\xi)}{\partial q}
+&=
+P_\mu(\xi)T^\top S_\mu(\xi)^{-1}\mu W D_\mu(\xi),
+\end{aligned}
+\]
+where
+\[
+\begin{aligned}
+H_\mu(\xi)&:=\diag\!\big((\hat z_\mu^\#)^2\big),\\
+P_\mu(\xi)&:=\frac1\mu\left(H_\mu(\xi)-H_\mu(\xi)A^\top(AH_\mu(\xi)A^\top)^{-1}AH_\mu(\xi)\right),\\
+D_\mu(\xi)&:=\diag\!\left((q-W^\top\hat\lambda_\mu^\#)^{-2}\right),\\
+S_\mu(\xi)&:=TP_\mu(\xi)T^\top+\mu W D_\mu(\xi)W^\top.
+\end{aligned}
+\]
+\end{proposition}
+
+Additionally, we have the following generalized convexity result for the log-barrier smooth scenario learning loss function:
+
+\begin{theorem}[No vanishing gradients]
+\label{thm:no-vanishing-gradients}
+Fix $x \in \mathcal X$, $\mu > 0$. Choose an arbitrary scenario $\tilde\xi \in \Xi$ and let $\widetilde W = W(\tilde\xi)$ denote its recourse matrix.
+Let $L_\mu(\xi,x):=G_\mu(\hat z_\mu^\#(\xi),x)$ denote the log-barrier smooth scenario learning loss function.
+For a pair $(q^\#,h^\#)\in\R^{n_2}\times\R^{m_2}$, the following conditions are all equivalent:
+\begin{gather}
+\nabla_q L_\mu((\widetilde W,h^\#,q^\#),x)=0,
+\qquad
+\nabla_h L_\mu((\widetilde W,h^\#,q^\#),x)=0
+\label{eq:no-vg-stationary}
+\\
+\Longleftrightarrow
+\notag\\
+(\widetilde W,h^\#,q^\#)
+\in
+\argmin_{(W,h,q)\in\Xi^{\mathrm{synthetic}}}
+L_\mu((W,h,q),x)
+\label{eq:no-vg-loss-min}
+\\
+\Longleftrightarrow
+\notag\\
+\hat z_\mu^\#(\widetilde W,h^\#,q^\#)
+=
+\argmin_{z\in Z}G_\mu(z,x).
+\label{eq:no-vg-decision-optimal}
+\end{gather}
+\end{theorem}
+
+\section{An interior point inspired method for decision focused scenario generation}
+\label{sec:interior-point-method}
+\label{sec:nnipm}
+
+We call the resulting method the Neural Net Interior Point Method (NNIPM) for scenario generation.
+The previous section shows that log-barrier smoothing allows us to perform decision focused scenario learning.
+However, we face a dilemma when setting the smoothing parameter $\mu$.
+When $\mu$ is large, gradients will be well-behaved and stable, but the solution of the problem will be distorted.
+Classical interior point methods proceed by first solving the problem for a sufficiently large $\mu$, and then progressively decreasing it while tracing the optimal solution via Newton's method.
+Below, we present NNIPM, applying the same philosophy for decision focused scenario learning.
+
+For $\mu,\nu\geq 0$, define the mixed smoothing loss
+\begin{equation}
+\label{eq:mixed-smoothing-loss}
+\ell_{\mu,\nu}(w;x,\xi)
+:=
+\hat G_\nu\!\left(\hat z_\mu^\#(\phi_w(x)),\xi\right),
+\end{equation}
+with $\hat G_0:=\hat G$.
+Here, $\mu$ controls the smoothing of the single-scenario decision map through which we backpropagate, while $\nu$ controls the smoothing of the downstream loss evaluation.
+For a sequence of progressively decreasing smoothing parameters $\mu_1>\cdots>\mu_S>0$, NNIPM retrains the scenario generator at each stage using the weights from the previous stage as a warm start.
+At stage $s$, it solves the empirical risk minimization problem
+\begin{equation}
+\label{eq:nnipm-stagewise-erm}
+\min_w\ \frac1N\sum_{i=1}^N
+\ell_{\mu_s,\mu_s}(w;x_i,\xi_i).
+\end{equation}
+After the final continuation stage, we perform a fine-tuning stage in which smoothing is kept in the decision map but removed from the downstream objective:
+\begin{equation}
+\label{eq:nnipm-finetune}
+\min_w\ \frac1N\sum_{i=1}^N
+\ell_{\mu_S,0}(w;x_i,\xi_i)
+=
+\frac1N\sum_{i=1}^N
+\hat G\!\left(\hat z_{\mu_S}^\#(\phi_w(x_i)),\xi_i\right).
+\end{equation}
+This stage optimizes the true decision objective while retaining the smooth decision map needed for stable backpropagation.
+
+\begin{algorithm}[t]
+\caption{Neural Net Interior Point Method for scenario generation.}
+\label{alg:nnipm-training}
+\begin{algorithmic}[1]
+\Statex \textbf{Input:} training data $\mathcal D=\{(x_i,\xi_i)\}_{i=1}^N$; scenario generator $\phi_w$; decreasing barrier schedule $\mu_1>\cdots>\mu_S>0$.
+\Statex \textbf{Output:} trained parameters $w$.
+\State Initialize $w$.
+\For{$s=1$ \textbf{to} $S$}
+    \State Set $\mu\gets\mu_s$.
+    \For{training iterations}
+        \State Sample minibatch $\mathcal B\subseteq\mathcal D$.
+        \State Generate synthetic scenarios $\hat\xi_i\gets\phi_w(x_i)$ for $(x_i,\xi_i)\in\mathcal B$.
+        \State Solve $z_i\gets\hat z_\mu^\#(\hat\xi_i)$ for each generated scenario.
+        \State Update $w$ by backpropagating the minibatch loss $\frac1{|\mathcal B|}\sum_{(x_i,\xi_i)\in\mathcal B}\hat G_\mu(z_i,\xi_i)$.
+    \EndFor
+\EndFor
+\For{fine-tuning iterations}
+    \State Sample minibatch $\mathcal B\subseteq\mathcal D$.
+    \State Generate synthetic scenarios $\hat\xi_i\gets\phi_w(x_i)$ for $(x_i,\xi_i)\in\mathcal B$.
+    \State Solve $z_i\gets\hat z_{\mu_S}^\#(\hat\xi_i)$ for each generated scenario.
+    \State Update $w$ by backpropagating the true downstream loss $\frac1{|\mathcal B|}\sum_{(x_i,\xi_i)\in\mathcal B}\hat G(z_i,\xi_i)$.
+\EndFor
+\State \textbf{return} $w$.
+\end{algorithmic}
+\end{algorithm}
+
+At inference, the neural net outputs a scenario, and we solve the associated single-scenario problem with log-barrier smoothing to obtain the optimum:
+\begin{equation}
+\label{eq:nnipm-inference-map}
+\hat\xi=\phi_w(x),
+\qquad
+z=\hat z_{\mu_S}^\#(\hat\xi).
+\end{equation}
+For continuous problems one may also solve the unsmoothed single-scenario problem at inference, but in our implementation the final smoothing parameter $\mu_S$ is kept.
+
+\begin{algorithm}[t]
+\caption{NNIPM inference.}
+\label{alg:nnipm-inference}
+\begin{algorithmic}[1]
+\Statex \textbf{Input:} context $x$; trained scenario generator $\phi_w$; inference smoothing parameter $\mu_S$.
+\Statex \textbf{Output:} first-stage decision $z$.
+\State $\hat\xi\gets\phi_w(x)$.
+\State $z\gets\hat z_{\mu_S}^\#(\hat\xi)$.
+\State \textbf{return} $z$.
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experiments}
+\label{sec:experiments}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented both theoretical results, and a novel method. It is important to keep in mind their distinctness. While our theoretical results ground and justify our method, their relevance extends far beyond it, with general relevance for contextual stochastic programming. One could argue that they are the main contribution.
+
+To the best of our knowledge, we are the first to present a comprehensive theory of optimal policy realizability via scenario learning, in the contextual stochastic programming literature. Proposition~\ref{prop:constructive} extends the applicability of various existing methods, connection different methods in the literature, and rendering previously intractable problem instances tractable. Likewise, our theoretical results regarding log-barriers generalize beyond our method and even beyond contextual stochastic programming, providing a principled argument for their usage, and superiority over quadratic smoothing methods, for decision focused learning.
+
+Our method, inspired by these results, has several benefits. It has general applicability, and require no assumptions on the structure of the randomness for the underlying program. It is simultanesously dynamic, and can be adjusted to fit the needs of specific problems in terms of which components it learns. It can be applied both for problems with integer variables and those without. When integer variables are missing or the integrality gap is zero, it has the benefit or training directly on the decision objective, without the need for convex or black-box neural surrogates. On a conceptual level, it functions as a neural net extension of classical interior point methods, which have a rich theory that can be leveraged for theoretical analysis.
+
+However, there are also key limitations to keep in mind. The theoretical results only apply for synthetic scenarios, which function less as realistic predictions and more like arbitrary decision parameters. This limits interpretability. Additionally, the results only apply for problems where the integrality gap is zero. This is a common assumption in the theoretical literature, but still represents a clear weakness.
+
+Regarding our method, it suffers from a limitation common to mathematical programming specialized machine learning methods. While it is applicable to integer problem at inference, it does not take them account during training. For many problems with significant integrality gaps, such as routing problems, we can expect weak performance. Additionally, the method is most relevant for cases where the constraints on at least one scenario component is simple, which is not guaranteed to hold.
+
+Regarding our empirical results, they provide a convincing case for the viability of our method on problems the size of standard literature benchmarks. (They also provide preliminary indication of favorable scalability compared with baselines). However, one should bear in mind that industrial problem instances are often of much larger size.
+
+Our experiments provide preliminary indications of our method scaling favorably compared with baselines. Our experiments provide a convincing case for the viability of our method by considering standard benchmarks, but many realistic industrial problems are of much greater size. Future work will focus on validating the method on such instances.
+
+Future work will focus on extending the theory and the method to take integers into account more thoroughly. Additionally, we expect the theory to generalize both to risk-averse problems, and more general convex programs such as second-order conic programs and semi-definite programs. Experimentally, the next step will be to validate the method on realistic industrial scale problems.
+
+\appendix
+
+\section{Introduction}
+\label{app:introduction}
+
+This appendix collects material that supports the main paper without being necessary for following its primary argument. Section~\ref{app:extended-literature-review} contains an extended literature review. Section~\ref{app:theory} contains theoretical background, problem-formulation details, proofs, generalizations, and counterexamples. Section~\ref{app:experimental-details} contains experimental details and additional benchmarks.
+
+The main paper is reserved for the main problem formulation, core results, method, and headline empirical evidence. The appendix contains extended motivation, technical conditions, complete derivations, counterexamples, theoretically relevant extensions, and additional empirical material.
+
+\section{Extended literature review}
+\label{app:extended-literature-review}
+\label{app:additional-literature-review}
+
+This section will contain an extended literature review in a later version.
+
+\section{Theory}
+\label{app:theory}
+
+\subsection{Background and problem formulation}
+\label{app:background-problem-formulation}
+
+\subsubsection{Sufficient conditions for the smoothed problem to be well defined}
+\label{app:smoothed-problem-well-defined}
+
+\subsubsection{Constraints on synthetic scenarios}
+\label{app:synthetic-scenario-constraints}
+
+\subsubsection{Decision focused scenario learning contra direct policy learning}
+\label{app:dfl-vs-direct}
+
+This section is intentionally left blank for now.
+
+\subsection{Proofs of theorems and generalizations}
+\label{app:proofs-generalizations}
+
+\subsubsection{Realizability and single-scenario optimality}
+\label{app:realizability}
+
+\paragraph{Closed form expressions for $W^\#$, $h^\#$, and $q^\#$ in terms of $z^*$.}
+\label{app:realizability-proof}
+
+For a fixed recourse matrix $\widetilde W$, we may use the projection of $\Xi^{\mathrm{synthetic}}$ onto the $(q,h)$ components with recourse matrix $\widetilde W$:
+\begin{equation}
+\label{eq:appendix-Xi-synthetic-W}
+\Xi^{\mathrm{synthetic},\widetilde W}
+:=
+\left\{
+(q,h)\in\R^{n_2}\times\R^{m_2}:\;(\widetilde W,h,q)\in \Xi^{\mathrm{synthetic}}
+\right\}.
+\end{equation}
+
+Let $x\in\mathcal X$ and $\mu\in[0,\infty)$ be fixed. For compactness, write
+\[
+\lambda_\mu^{\#,x}:=\lambda_\mu^{x}(z_\mu^\#(x)),
+\qquad
+\tilde\lambda_\mu^{x}:=\hat\lambda_\mu(z_\mu^\#(x),\tilde\xi),
+\]
+with $\mu=0$ interpreted by the central-path limit.
+
+\paragraph{Learning $q$.}
+For any $\tilde\xi\in\Xi$, the decision-optimal cost vector in Theorem~\ref{thm:realizability} is
+\begin{equation}
+\label{eq:q-construct}
+q_\mu^{\#,\tilde\xi}(x)
+:=
+\tilde q+\tilde W^\top\!\left(\lambda_\mu^{\#,x}-\tilde\lambda_\mu^{x}\right).
+\end{equation}
+Thus the synthetic scenario is
+\begin{equation}
+\label{eq:q-scenario-appendix}
+\xi_\mu^{\#,x,\tilde\xi}
+:=
+\bigl(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x)\bigr).
+\end{equation}
+
+\paragraph{Learning $W$.}
+Assuming the componentwise ratios below are well-defined and positive, the equivalent decision-optimal recourse matrix is
+\begin{equation}
+\label{eq:W-construct}
+W_\mu^{\#,\tilde\xi}(x)
+:=
+\tilde W\,
+\diag\!\left(
+\frac{\tilde q}{q_\mu^{\#,\tilde\xi}(x)}
+\right),
+\end{equation}
+where division is componentwise. The corresponding synthetic scenario is
+\begin{equation}
+\label{eq:W-scenario-appendix}
+\xi_\mu^{\#,x,\tilde\xi}
+:=
+\bigl(W_\mu^{\#,\tilde\xi}(x),\tilde h,\tilde q\bigr).
+\end{equation}
+Indeed, the change of variables
+\[
+y
+=
+\diag\!\left(
+\frac{\tilde q}{q_\mu^{\#,\tilde\xi}(x)}
+\right)\tilde y
+\]
+maps the second-stage problem with data $(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x))$ to the second-stage problem with data $(W_\mu^{\#,\tilde\xi}(x),\tilde h,\tilde q)$, up to the additive log-barrier constant when $\mu>0$.
+
+\paragraph{Learning $h$.}
+When $W(\xi)=W$ for all $\xi\in\Xi$, the decision-optimal right-hand side is
+\begin{equation}
+\label{eq:h-construct}
+h_\mu^{\#,\delta}(x):=
+Tz_\mu^\#(x)+W y_\mu^{\#,\delta}(x),
+\qquad
+y_\mu^{\#,\delta}(x):=
+\begin{cases}
+\mu\left(q^{\max,\delta}-W^\top\lambda_\mu^{\#,x}\right)^{-1}, & \mu>0,\\
+0, & \mu=0.
+\end{cases}
+\end{equation}
+The corresponding synthetic scenario is
+\begin{equation}
+\label{eq:h-scenario-appendix}
+\xi_\mu^{\#,x,\delta}
+:=
+\bigl(W,h_\mu^{\#,\delta}(x),q^{\max,\delta}\bigr).
+\end{equation}
+
+\paragraph{Proof of realizability theorem and closed form expression for optimal scenarios.}
+
+\paragraph{Tightness of Theorem~\ref{thm:realizability}.}
+
+\subparagraph{Counter example showing the problem of restricting scenario component to zero.}
+\label{app:restricted-scenario-counterexample}
+
+\subparagraph{Counter example showing the necessity of deterministic $T$.}
+\label{app:deterministic-T-counterexample}
+
+\subparagraph{Counter example showing the need for deterministic $W$ when learning $h$.}
+\label{app:deterministic-W-counterexample}
+
+\paragraph{Theoretically relevant extensions.}
+\label{app:random-WT-extension}
+
+\subparagraph{General decision-optimal scenario existence.}
+\label{app:general-decision-optimal-scenario-existence}
+
+\subparagraph{Extension of theorem 1 to random $T$.}
+\label{app:random-T-extension}
+
+\subparagraph{Learning demand component while $W$ is random.}
+\label{app:learning-h-random-W}
+
+\subsubsection{Log-barrier smoothing theory}
+\label{app:logbarrier-theory}
+
+\paragraph{Background theory.}
+\label{app:logbarrier-background}
+
+\subparagraph{Sufficient conditions for the log-barrier problem to be well-posed.}
+\label{app:logbarrier-well-posed}
+
+\subparagraph{Recession direction condition.}
+\label{app:recession-direction-condition}
+
+\subparagraph{Convergence of the cost function and the optimal solutions.}
+\label{app:logbarrier-convergence}
+
+\paragraph{Closed form expressions for derivatives of $G$ and the optimization map.}
+\label{app:closed-form-derivatives}
+
+\paragraph{Proof of Theorem~\ref{thm:no-vanishing-gradients}.}
+\label{app:no-vanishing-gradients-proof}
+
+\paragraph{Proof for results on generalization and training loss.}
+\label{app:generalization-training-loss-proof}
+
+\section{Experimental details and additional benchmarks}
+\label{app:experimental-details}
+
+\end{document}

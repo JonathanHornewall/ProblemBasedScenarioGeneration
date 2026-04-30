@@ -38,6 +38,8 @@
 % --------------------
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\E}{\mathbb{E}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
 \newcommand{\placeholder}[1]{%
   \ifmmode
     \text{\color{red}\textbf{[PLACEHOLDER:} #1\textbf{]}}%
@@ -226,6 +228,158 @@ For each feasible choice of first-stage decision and each possible realization o
 \label{ass:T-noise-unaffected}
 The transition matrix is deterministic and unaffected by noise; i.e., there exists a fixed matrix $T$ such that $T(\xi)=T$ for all scenarios $\xi$ in the support.
 \end{assumption}
+
+\section{Contextual stochastic programming}
+\label{sec:contextual-stochastic}
+
+We assume access to a dataset of $N$ context-scenario pairs
+\[
+\{(x_i,\xi_i)\}_{i=1}^N \subseteq \mathcal X \times \Xi.
+\]
+For a fixed context $x\in\mathcal X$, its associated two-stage stochastic linear program is defined by
+\begin{equation}
+\label{eq:contextual-program}
+\min_{z\in Z} G(z,x),
+\qquad
+Z:=\{z\in\R^{n_1}_+:\;Az=b\}.
+\end{equation}
+where
+\begin{equation}
+\label{eq:contextual-G}
+G(z,x):=\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[\hat G(z,\xi)\right],
+\qquad
+\hat G(z,\xi):=c^\top z+\hat Q(z,\xi),
+\end{equation}
+and
+\begin{equation}
+\label{eq:contextual-hatQ}
+\hat Q(z,\xi):=\min_{y\in\R^{m}_+}\left\{q(\xi)^\top y:\;W(\xi)y=h(\xi)-T(\xi)z\right\}.
+\end{equation}
+
+We make a number of standard assumptions on \eqref{eq:contextual-program}:
+\begin{assumption}[Strictly relatively complete recourse]
+\label{ass:strict-recourse}
+For every context $x\in\mathcal X$, every feasible first-stage decision $z\in Z$, and every scenario
+$\xi\in\operatorname{supp}(\mathbb P(\cdot\mid x))$, the recourse feasible region
+\[
+\{y\in\R^{m}_+:\;W(\xi)y=h(\xi)-T(\xi)z\}
+\]
+is nonempty and has nonempty relative interior.
+\end{assumption}
+
+\begin{assumption}[Existence and empty recession cone]
+\label{ass:context-existence}
+For every context $x\in\mathcal X$, the problem \eqref{eq:contextual-program} has an optimal solution and its
+recession cone is empty.
+\end{assumption}
+
+\begin{assumption}[Compact support]
+\label{ass:compact-support}
+For every context $x\in\mathcal X$, the conditional law $\mathbb P(\cdot\mid x)$ has compact support.
+\end{assumption}
+
+\begin{assumption}[Deterministic transition matrix]
+\label{ass:contextual-T-deterministic}
+There exists a fixed matrix $T$ such that $T(\xi)=T$ for all scenarios $\xi\in\operatorname{supp}(\mathbb P(\cdot\mid x))$ and all contexts $x\in\mathcal X$.
+\end{assumption}
+
+For each $x\in\mathcal X$, the problem \eqref{eq:contextual-program} may have multiple solutions. We focus on
+the unique one:
+\begin{equation}
+\label{eq:canonical-contextual-solution}
+z^{\#,x}\in\argmin_{z\in Z}G(z,x)\qquad \text{(obtained via interior point method)}.
+\end{equation}
+We will also consider the optimal solution for single-scenario problems:
+\begin{equation}
+\label{eq:canonical-single-scenario}
+\hat z^{\#}(\xi)\in\argmin_{z\in Z}\hat G(z,\xi).
+\end{equation}
+
+And will also make use of the dual-optimal second-stage solutions
+\begin{equation}
+\label{eq:contextual-dual}
+\hat\lambda(z,\xi)\in
+\argmax_{\lambda\in\R^{m}}
+\left\{
+\big(h(\xi)-T(\xi)z\big)^\top\lambda:\;W(\xi)^\top\lambda\le q(\xi)
+\right\},
+\qquad
+\lambda^x(z):=\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[\hat\lambda(z,\xi)\right].
+\end{equation}
+which are important due to the following fundamental identity following from Danskin's theorem:
+\begin{equation}
+\label{eq:danskin-contextual}
+\partial_z \hat G(z,\xi)=c-T(\xi)^\top\hat\lambda(z,\xi),
+\qquad
+\partial_z G(z,x)=c-\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[T(\xi)^\top\hat\lambda(z,\xi)\right].
+\end{equation}
+
+\subsection{Log-barrier smoothed stochastic programming}
+\label{sec:contextual-logbarrier}
+Throughout, we will leverage the log-barrier smoothed version of \eqref{eq:contextual-program} and its unique
+optimal solution.
+\begin{equation}
+\label{eq:contextual-program-mu}
+\min_{z\in Z} G_\mu(z,x),
+\end{equation}
+where
+\begin{equation}
+\label{eq:contextual-G-mu}
+G_\mu(z,x):=\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[\hat G_\mu(z,\xi)\right],
+\qquad
+\hat G_\mu(z,\xi):=c^\top z-\mu\sum_{j=1}^{n_1}\log(z_j)+\hat Q_\mu(z,\xi),
+\end{equation}
+and
+\begin{equation}
+\label{eq:contextual-hatQ-mu}
+\hat Q_\mu(z,\xi):=
+\min_{y\in\R^{m}_{++}}
+\left\{
+q(\xi)^\top y-\mu\sum_{k=1}^{m}\log(y_k):\;W(\xi)y=h(\xi)-T(\xi)z
+\right\}.
+\end{equation}
+The smoothed version of the problem has a unique solution:
+\begin{equation}
+\label{eq:canonical-contextual-solution-mu}
+\begin{aligned}
+z_\mu^{\#,x} &\in \argmin_{z\in Z} G_\mu(z,x),\\
+\hat z_\mu^{\#}(\xi) &\in \argmin_{z\in Z} \hat G_\mu(z,\xi).
+\end{aligned}
+\end{equation}
+And unique dual-optimal solutions:
+\begin{equation}
+\label{eq:contextual-dual-mu}
+\begin{aligned}
+\hat\lambda_\mu(z,\xi)\in\;&
+\argmax_{\substack{\lambda\in\R^{m}\\ W(\xi)^\top\lambda<q(\xi)}}
+\Bigg\{
+\big(h(\xi)-T(\xi)z\big)^\top\lambda \\
+&\qquad
++ \mu\sum_{k=1}^{m}\log\!\left(q_k(\xi)-[W(\xi)^\top\lambda]_k\right)
+\Bigg\},\\
+\lambda_\mu^x(z):=\;&\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[\hat\lambda_\mu(z,\xi)\right].
+\end{aligned}
+\end{equation}
+Analogously to \eqref{eq:contextual-program}, we have
+\begin{equation}
+\label{eq:danskin-contextual-mu}
+\nabla_z \hat G_\mu(z,\xi)=c-\mu z^{-1}-T(\xi)^\top\hat\lambda_\mu(z,\xi),
+\qquad
+\nabla_z G_\mu(z,x)=c-\mu z^{-1}-\E_{\xi\sim\mathbb P(\cdot\mid x)}\!\left[T(\xi)^\top\hat\lambda_\mu(z,\xi)\right].
+\end{equation}
+By classical interior point theory, as the smoothing parameter approaches zero, the solutions of
+the smoothed problem approach the solution to the original problem:
+\begin{equation}
+\label{eq:contextual-central-path}
+\begin{aligned}
+\lim_{\mu\downarrow 0} z_\mu^{\#,x} &= z^{\#,x},
+\qquad &
+\lim_{\mu\downarrow 0} \hat z_\mu^{\#}(\xi) &= \hat z^{\#}(\xi),\\
+\lim_{\mu\downarrow 0} \lambda_\mu^x(z) &= \lambda^x(z),
+\qquad &
+\lim_{\mu\downarrow 0} \hat\lambda_\mu(z,\xi) &= \hat\lambda(z,\xi).
+\end{aligned}
+\end{equation}
 
 \section{Existence of decision-optimal scenarios for two-stage stochastic linear programming}
 \label{sec:existence}
