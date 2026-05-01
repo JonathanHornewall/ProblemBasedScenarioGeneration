@@ -77,6 +77,7 @@ export cost_function, scenario_wise_cost
 export cost_function_rrule
 
 export LP
+export canonical_form, BarrierCache
 export Solver, SolverConfig, SolverStrategy
 export implement
 export differentiate_solve

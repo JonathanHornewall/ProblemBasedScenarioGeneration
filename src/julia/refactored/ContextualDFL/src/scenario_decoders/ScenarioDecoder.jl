@@ -7,5 +7,5 @@ function (decoder::ScenarioDecoder)(xi)
 end
 
 function (decoder::TrivialDecoder)(xi)
-    return not_implemented(:TrivialDecoder)
+    return xi
 end

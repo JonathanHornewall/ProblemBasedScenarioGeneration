@@ -1,3 +1,4 @@
 function test(z_policy, data_set::DataSet)
-    return not_implemented(:test)
+    values = [z_policy(row.x, row) for row in data_set]
+    return (values=values, mean=mean(values))
 end

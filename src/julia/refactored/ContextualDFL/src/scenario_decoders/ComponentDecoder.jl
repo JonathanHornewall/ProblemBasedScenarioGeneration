@@ -13,9 +13,9 @@ function (decoder::ComponentDecoder)(component_data)
 end
 
 function (decoder::DefaultComponentDecoder)(component_data)
-    return not_implemented(:DefaultComponentDecoder)
+    return component_data
 end
 
 function (decoder::EmptyComponentDecoder)(component_data)
-    return not_implemented(:EmptyComponentDecoder)
+    error("No data decoder is configured for scenario component $(decoder.component_type).")
 end

@@ -8,7 +8,8 @@ function generate_scenario_set(
     context_data,
     scenarios_per_context::Union{Integer,AbstractVector{<:Integer}},
 )
-    return not_implemented(:generate_scenario_set)
+    counts = scenarios_per_context isa Integer ? fill(scenarios_per_context, length(context_data)) : scenarios_per_context
+    return [[nothing for _ in 1:counts[i]] for i in eachindex(context_data)]
 end
 
 function generate_scenario_set(
@@ -16,5 +17,7 @@ function generate_scenario_set(
     context_data,
     scenarios_per_context::Union{Integer,AbstractVector{<:Integer}},
 )
-    return not_implemented(:generate_scenario_set)
+    counts = scenarios_per_context isa Integer ? fill(scenarios_per_context, length(context_data)) : scenarios_per_context
+    length(counts) == length(context_data) || error("scenarios_per_context length must match context_data length")
+    return [[sampler(context_data[i]) for _ in 1:counts[i]] for i in eachindex(context_data)]
 end

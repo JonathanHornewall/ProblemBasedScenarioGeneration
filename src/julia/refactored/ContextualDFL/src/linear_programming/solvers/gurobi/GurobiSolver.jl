@@ -2,6 +2,8 @@ struct GurobiSolver{C} <: Solver
     config::C
 end
 
+GurobiSolver() = GurobiSolver(nothing)
+
 #=
 struct GurobiImplementation{T} <: LPImplementation
     implementation::T
@@ -9,9 +11,9 @@ end
 =#
 
 function implement(solver::GurobiSolver, lp::LP, config=nothing)
-    return not_implemented(:GurobiSolver)
+    error("Gurobi backend unavailable unless Gurobi.jl is added to ContextualDFL dependencies.")
 end
 
 function solve(solver::GurobiSolver, lp::LP, config=nothing; kwargs...)
-    return not_implemented(:GurobiSolver)
+    error("Gurobi backend unavailable unless Gurobi.jl is added to ContextualDFL dependencies.")
 end
