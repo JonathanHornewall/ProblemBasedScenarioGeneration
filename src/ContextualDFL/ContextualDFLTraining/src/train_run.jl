@@ -1,5 +1,7 @@
 using Dates
 using Distributed
+using Flux
+using Random
 using Sockets
 using Statistics
 
@@ -31,28 +33,26 @@ function train_and_evaluate(config::NamedTuple)
 
     try
         train_result = nothing
+        training_backend = ""
+        fallback_reason = ""
         objects = nothing
 
         elapsed_seconds = @elapsed begin
             objects = resource_allocation_training_objects(cfg)
-            train_result = ContextualDFL.train(
-                objects.scenario_generator,
-                objects.loss,
-                objects.data.train,
-                objects.scenario_decoder,
-                objects.schedules.mu,
-                objects.schedules.rho,
-                objects.schedules.batch_size,
-                objects.schedules.step_size;
-                epochs=cfg.epochs,
-                validation_data=objects.data.validation,
-                test_data=objects.data.test,
-                config=cfg,
-            )
+            training = train_with_contextualdfl_or_fallback(objects, cfg)
+            train_result = training.result
+            training_backend = training.backend
+            fallback_reason = training.fallback_reason
         end
 
         model = extract_model(train_result, objects.scenario_generator)
-        metrics = evaluate_model_on_splits(model, objects.data, cfg)
+        metrics = merge(
+            evaluate_model_on_splits(model, objects.data, cfg),
+            (;
+                training_backend=training_backend,
+                fallback_reason=fallback_reason,
+            ),
+        )
         history = extract_epoch_history(train_result)
 
         return (;
@@ -81,6 +81,114 @@ function train_and_evaluate(config::NamedTuple)
             elapsed_seconds=elapsed_seconds,
         )
     end
+end
+
+function train_with_contextualdfl_or_fallback(objects, config)
+    try
+        result = ContextualDFL.train(
+            objects.scenario_generator,
+            objects.loss,
+            objects.data.train,
+            objects.scenario_decoder,
+            objects.schedules.mu,
+            objects.schedules.rho,
+            objects.schedules.batch_size,
+            objects.schedules.step_size;
+            epochs=config.epochs,
+            validation_data=objects.data.validation,
+            test_data=objects.data.test,
+            config=config,
+        )
+
+        return (;
+            result=result,
+            backend="ContextualDFL.train",
+            fallback_reason="",
+        )
+    catch error
+        message = sprint(showerror, error)
+        package_training_placeholder_error(message) || rethrow()
+
+        fallback = supervised_mse_train!(
+            objects.scenario_generator.neural_net,
+            objects.data,
+            config,
+        )
+        return (;
+            result=fallback,
+            backend="ContextualDFLTraining.supervised_mse_fallback",
+            fallback_reason=first_line(message),
+        )
+    end
+end
+
+function package_training_placeholder_error(message::AbstractString)
+    return any(
+        needle -> occursin(needle, message),
+        (
+            "Training has not been implemented yet",
+            "MSE scenario loss has not been implemented yet",
+            "Scenario generation from context has not been implemented yet",
+            "Data-set scenario decoding has not been implemented yet",
+        ),
+    )
+end
+
+function first_line(message::AbstractString)
+    lines = split(message, '\n'; limit=2)
+    return isempty(lines) ? message : first(lines)
+end
+
+function supervised_mse_train!(model, splits, config)
+    Random.seed!(config.seed)
+
+    optimizer_state = Flux.setup(Adam(config.learning_rate), model)
+    history = NamedTuple[]
+
+    for epoch in 1:config.epochs
+        Flux.trainmode!(model)
+        loader = Flux.DataLoader(
+            (splits.train.x_data, splits.train.xi_h_data);
+            batchsize=config.batch_size,
+            shuffle=true,
+        )
+        minibatch_losses = Float64[]
+
+        for (x_batch, y_batch) in loader
+            loss_value, gradients = Flux.withgradient(model) do trainable_model
+                y_pred = matrix_like(trainable_model(x_batch), y_batch)
+                mean(abs2, y_pred .- y_batch)
+            end
+
+            Flux.update!(optimizer_state, model, gradients[1])
+            push!(minibatch_losses, Float64(loss_value))
+        end
+
+        Flux.testmode!(model)
+        push!(
+            history,
+            (;
+                epoch=epoch,
+                minibatch_mse=isempty(minibatch_losses) ? NaN : mean(minibatch_losses),
+                train_mse=split_mse(model, splits.train),
+                validation_mse=split_mse(model, splits.validation),
+                test_mse=split_mse(model, splits.test),
+            ),
+        )
+    end
+
+    Flux.testmode!(model)
+    return (;
+        model=model,
+        history=history,
+        backend="ContextualDFLTraining.supervised_mse_fallback",
+    )
+end
+
+function split_mse(model, dataset)
+    target = dataset.xi_h_data
+    prediction = matrix_like(model(dataset.x_data), target)
+    return mean(abs2, prediction .- target)
 end
 
 function extract_model(train_result, fallback_generator)
