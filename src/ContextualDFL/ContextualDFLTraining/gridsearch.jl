@@ -43,6 +43,15 @@ function env_int(name, default)
     return parsed
 end
 
+function env_worker_count(name, default)
+    value = lowercase(strip(get(ENV, name, string(default))))
+    value == "auto" && return :auto
+
+    parsed = tryparse(Int, value)
+    parsed === nothing && error("ENV[$name] must be an integer or auto, got: $value")
+    return parsed
+end
+
 function env_flag(name, default=false)
     value = lowercase(get(ENV, name, default ? "1" : "0"))
     return value in ("1", "true", "yes", "y")
@@ -71,12 +80,12 @@ function add_remote_workers!()
     remote_julia = get(ENV, "REMOTE_JULIA", DEFAULT_REMOTE_JULIA)
 
     remote_specs = [
-        ("rwl@gcp-big", env_int("GCP_BIG_WORKERS", 8)),
-        ("rwl@gcp-small", env_int("GCP_SMALL_WORKERS", 4)),
+        ("rwl@gcp-big", env_worker_count("GCP_BIG_WORKERS", :auto)),
+        ("rwl@gcp-small", env_worker_count("GCP_SMALL_WORKERS", :auto)),
     ]
 
     for (host, count) in remote_specs
-        count <= 0 && continue
+        count isa Integer && count <= 0 && continue
         println("Adding $count worker(s) on $host")
         addprocs(
             [(host, count)];
