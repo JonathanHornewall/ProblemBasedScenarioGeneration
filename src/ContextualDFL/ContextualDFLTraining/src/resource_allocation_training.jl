@@ -1,0 +1,437 @@
+using ContextualDFL
+using Distributions
+using Flux
+using LinearAlgebra
+using Random
+
+struct ResourceAllocationProblemData
+    service_rate_parameters::Matrix{Float64}
+    first_stage_costs::Vector{Float64}
+    second_stage_costs::Vector{Float64}
+    yield_parameters::Vector{Float64}
+
+    function ResourceAllocationProblemData(
+        service_rate_parameters::AbstractMatrix,
+        first_stage_costs::AbstractVector,
+        second_stage_costs::AbstractVector,
+        yield_parameters::AbstractVector,
+    )
+        service_rates = Matrix{Float64}(service_rate_parameters)
+        first_costs = Vector{Float64}(first_stage_costs)
+        second_costs = Vector{Float64}(second_stage_costs)
+        yields = Vector{Float64}(yield_parameters)
+
+        resource_count, demand_count = size(service_rates)
+        length(first_costs) == resource_count ||
+            throw(ArgumentError("first-stage costs must have length $resource_count"))
+        length(second_costs) == demand_count ||
+            throw(ArgumentError("second-stage costs must have length $demand_count"))
+        length(yields) == resource_count ||
+            throw(ArgumentError("yield parameters must have length $resource_count"))
+
+        return new(service_rates, first_costs, second_costs, yields)
+    end
+end
+
+struct ResourceAllocationProblem
+    problem_data::ResourceAllocationProblemData
+    s1_constraint_matrix::Matrix{Float64}
+    s1_constraint_vector::Vector{Float64}
+    s1_cost_vector::Vector{Float64}
+    s2_constraint_matrix::Matrix{Float64}
+    s2_coupling_matrix::Matrix{Float64}
+    s2_cost_vector::Vector{Float64}
+end
+
+struct ResourceAllocationDemandDecoder <: ContextualDFL.ComponentDecoder
+    resource_count::Int
+end
+
+ContextualDFL.component_type(::ResourceAllocationDemandDecoder) = :h
+
+function (decoder::ResourceAllocationDemandDecoder)(demand::AbstractVector)
+    return vcat(zeros(eltype(demand), decoder.resource_count), demand)
+end
+
+function (decoder::ResourceAllocationDemandDecoder)(demand::AbstractMatrix)
+    return vcat(zeros(eltype(demand), decoder.resource_count, size(demand, 2)), demand)
+end
+
+struct ConstantSchedule{T}
+    value::T
+end
+
+(schedule::ConstantSchedule)(args...; kwargs...) = schedule.value
+
+function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
+    service_rates = problem_data.service_rate_parameters
+    first_costs = problem_data.first_stage_costs
+    second_costs = problem_data.second_stage_costs
+    yields = problem_data.yield_parameters
+
+    resource_count, demand_count = size(service_rates)
+
+    first_stage_a = zeros(1, length(first_costs))
+    first_stage_b = [0.0]
+    first_stage_c = copy(first_costs)
+
+    recourse_variables = demand_count + resource_count * demand_count + resource_count + demand_count
+    recourse_rows = resource_count + demand_count
+    recourse_w = zeros(recourse_rows, recourse_variables)
+
+    for resource_index in 1:resource_count
+        for demand_index in 1:demand_count
+            recourse_w[resource_index, demand_count + demand_count * (resource_index - 1) + demand_index] = 1.0
+        end
+        recourse_w[resource_index, demand_count + resource_count * demand_count + resource_index] = 1.0
+    end
+
+    for demand_index in 1:demand_count
+        row = resource_count + demand_index
+        recourse_w[row, demand_index] = 1.0
+        for resource_index in 1:resource_count
+            recourse_w[row, demand_count + demand_count * (resource_index - 1) + demand_index] =
+                service_rates[resource_index, demand_index]
+        end
+        recourse_w[row, demand_count + resource_count * demand_count + resource_count + demand_index] = -1.0
+    end
+
+    recourse_t = zeros(recourse_rows, resource_count)
+    for resource_index in 1:resource_count
+        recourse_t[resource_index, resource_index] = -yields[resource_index]
+    end
+
+    recourse_q = zeros(recourse_variables)
+    recourse_q[1:demand_count] .= second_costs
+
+    return ResourceAllocationProblem(
+        problem_data,
+        first_stage_a,
+        first_stage_b,
+        first_stage_c,
+        recourse_w,
+        recourse_t,
+        recourse_q,
+    )
+end
+
+function resource_count(problem::ResourceAllocationProblem)
+    return size(problem.problem_data.service_rate_parameters, 1)
+end
+
+function demand_count(problem::ResourceAllocationProblem)
+    return size(problem.problem_data.service_rate_parameters, 2)
+end
+
+function scenario_h(problem::ResourceAllocationProblem, demand::AbstractVector)
+    return vcat(zeros(eltype(demand), resource_count(problem)), demand)
+end
+
+function stochastic_program(problem::ResourceAllocationProblem)
+    return ContextualDFL.StochasticProgram(
+        A_eq=zeros(0, length(problem.s1_cost_vector)),
+        A_in=problem.s1_constraint_matrix,
+        b=problem.s1_constraint_vector,
+        c=problem.s1_cost_vector,
+    )
+end
+
+function base_scenario(problem::ResourceAllocationProblem)
+    return ContextualDFL.BaseScenario(
+        W_ineq=problem.s2_constraint_matrix,
+        T_ineq=problem.s2_coupling_matrix,
+        q=problem.s2_cost_vector,
+    )
+end
+
+function scenario_decoder(problem::ResourceAllocationProblem)
+    decoder_strategy = ContextualDFL.DecoderStrategy(
+        h_decoder=ResourceAllocationDemandDecoder(resource_count(problem)),
+    )
+    return ContextualDFL.DataSetScenarioDecoder(
+        decoder_strategy,
+        base_scenario(problem),
+        (:h,),
+    )
+end
+
+function resource_parameter_path()
+    return normpath(
+        joinpath(
+            @__DIR__,
+            "..",
+            "..",
+            "..",
+            "ProblemBasedScenarioGeneration",
+            "src",
+            "problem_instances",
+            "resource_allocation",
+            "parameters.jl",
+        ),
+    )
+end
+
+function parse_number_vector(text)
+    matches = eachmatch(r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?", text)
+    return [parse(Float64, match.match) for match in matches]
+end
+
+function parse_assignment_vector(text, variable_name)
+    pattern = Regex("(?m)^\\s*" * variable_name * "\\s*=\\s*\\[([^\\]]+)\\]")
+    match_result = match(pattern, text)
+    match_result === nothing &&
+        throw(ArgumentError("could not parse vector assignment for $variable_name"))
+    return parse_number_vector(match_result.captures[1])
+end
+
+function parse_vector_after_comment(text, comment_text)
+    comment_position = findfirst(comment_text, text)
+    comment_position === nothing &&
+        throw(ArgumentError("could not find comment '$comment_text'"))
+    tail = text[last(comment_position):end]
+    match_result = match(r"(?m)^\s*[^\s=#]+\s*=\s*\[([^\]]+)\]", tail)
+    match_result === nothing &&
+        throw(ArgumentError("could not parse vector after comment '$comment_text'"))
+    return parse_number_vector(match_result.captures[1])
+end
+
+function parse_service_rate_matrix(text)
+    service_position = findfirst("# service rate parameters", text)
+    service_position === nothing &&
+        throw(ArgumentError("could not find service-rate section"))
+    tail = text[last(service_position):end]
+    dims_match = match(r"zeros\(Float64,\s*(\d+)\s*,\s*(\d+)\s*\)", tail)
+    dims_match === nothing &&
+        throw(ArgumentError("could not parse service-rate dimensions"))
+
+    row_count = parse(Int, dims_match.captures[1])
+    column_count = parse(Int, dims_match.captures[2])
+    service_rates = zeros(Float64, row_count, column_count)
+
+    row_pattern = r"(?m)^\s*[^\s\[]+\[(\d+),:\]\s*=\s*\[([^\]]+)\]"
+    for row_match in eachmatch(row_pattern, tail)
+        row_index = parse(Int, row_match.captures[1])
+        row_values = parse_number_vector(row_match.captures[2])
+        length(row_values) == column_count ||
+            throw(ArgumentError("service-rate row $row_index has $(length(row_values)) values"))
+        service_rates[row_index, :] .= row_values
+    end
+
+    all(any(value -> !iszero(value), service_rates[row, :]) for row in 1:row_count) ||
+        throw(ArgumentError("one or more service-rate rows were not parsed"))
+
+    return service_rates
+end
+
+function parse_resource_allocation_parameters(path=resource_parameter_path())
+    text = read(path, String)
+    active_text = split(text, "#="; limit=2)[1]
+    first_costs = parse_assignment_vector(active_text, "cz")
+    second_costs = parse_assignment_vector(active_text, "qw")
+    yields = parse_vector_after_comment(active_text, "# yield parameters")
+    service_rates = parse_service_rate_matrix(active_text)
+    return ResourceAllocationProblemData(service_rates, first_costs, second_costs, yields)
+end
+
+function generated_resource_allocation_parameters(; seed=8675309, resource_count=20, demand_count=30)
+    rng = MersenneTwister(seed)
+    service_rates = rand(rng, Uniform(1.5, 2.5), resource_count, demand_count)
+    service_rates[rand(rng, resource_count, demand_count) .< 0.35] .= 0.0
+    first_costs = rand(rng, Uniform(0.7, 1.3), resource_count)
+    second_costs = rand(rng, Uniform(1.9, 2.4), demand_count)
+    yields = rand(rng, Uniform(0.9, 1.0), resource_count)
+    return ResourceAllocationProblemData(service_rates, first_costs, second_costs, yields)
+end
+
+function default_resource_allocation_parameters()
+    path = resource_parameter_path()
+    if isfile(path)
+        return parse_resource_allocation_parameters(path)
+    end
+    return generated_resource_allocation_parameters()
+end
+
+function generate_random_correlation_matrix(rng::AbstractRNG, dimension::Int)
+    beta_parameter = 2.0
+    partial_correlation = zeros(Float64, dimension, dimension)
+    correlation = Matrix{Float64}(I, dimension, dimension)
+
+    for k in 1:(dimension - 1)
+        for i in (k + 1):dimension
+            partial_correlation[k, i] = (rand(rng, Beta(beta_parameter, beta_parameter)) - 0.5) * 2.0
+            rho = partial_correlation[k, i]
+            for j in (k - 1):-1:1
+                rho =
+                    rho *
+                    sqrt((1 - partial_correlation[j, i]^2) * (1 - partial_correlation[j, k]^2)) +
+                    partial_correlation[j, i] * partial_correlation[j, k]
+            end
+            correlation[k, i] = rho
+            correlation[i, k] = rho
+        end
+    end
+
+    permutation = randperm(rng, dimension)
+    return correlation[permutation, permutation]
+end
+
+function sample_demand_coefficients(rng::AbstractRNG, demand_count::Int, context_terms::Int)
+    intercept = 50 .+ 5 .* randn(rng, demand_count)
+    slopes = zeros(Float64, demand_count, context_terms)
+
+    base_slopes = [10.0, 5.0, 2.0]
+    for term in 1:context_terms
+        center = term <= length(base_slopes) ? base_slopes[term] : base_slopes[end]
+        slopes[:, term] .= center .+ rand(rng, Uniform(-4, 4), demand_count)
+    end
+
+    return intercept, slopes
+end
+
+function generate_resource_allocation_data(
+    problem::ResourceAllocationProblem;
+    n_samples,
+    validation_fraction,
+    test_fraction,
+    sigma,
+    demand_power,
+    context_terms,
+    rng,
+)
+    context_dimension = 3
+    context_terms <= context_dimension ||
+        throw(ArgumentError("context_terms must be <= $context_dimension"))
+
+    correlation = generate_random_correlation_matrix(rng, context_dimension)
+    distribution = MvNormal(zeros(context_dimension), Symmetric(correlation + 1e-8I))
+    contexts = abs.(rand(rng, distribution, n_samples))
+
+    demands = zeros(Float64, demand_count(problem), n_samples)
+    intercept, slopes = sample_demand_coefficients(rng, demand_count(problem), context_terms)
+
+    for demand_index in 1:demand_count(problem)
+        for sample_index in 1:n_samples
+            signal = intercept[demand_index]
+            for term in 1:context_terms
+                signal += slopes[demand_index, term] * contexts[term, sample_index]^demand_power
+            end
+            demands[demand_index, sample_index] = signal + rand(rng, Normal(0, sigma))
+        end
+    end
+
+    return contexts, max.(demands, 0.0)
+end
+
+function dataset_from_indices(contexts, demands, indices)
+    return ContextualDFL.DataSet(
+        contexts[:, indices],
+        nothing,
+        nothing,
+        demands[:, indices],
+        nothing,
+    )
+end
+
+function split_resource_allocation_data(contexts, demands; validation_fraction, test_fraction, rng)
+    sample_count = size(contexts, 2)
+    indices = randperm(rng, sample_count)
+    test_count = floor(Int, test_fraction * sample_count)
+    validation_count = floor(Int, validation_fraction * sample_count)
+    train_count = sample_count - validation_count - test_count
+    train_count > 0 || throw(ArgumentError("split leaves no training samples"))
+
+    train_indices = indices[1:train_count]
+    validation_indices = indices[(train_count + 1):(train_count + validation_count)]
+    test_indices = indices[(train_count + validation_count + 1):end]
+
+    return (;
+        train=dataset_from_indices(contexts, demands, train_indices),
+        validation=dataset_from_indices(contexts, demands, validation_indices),
+        test=dataset_from_indices(contexts, demands, test_indices),
+    )
+end
+
+function build_neural_net(input_dimension, output_dimension; hidden_size, depth, dropout)
+    layers = Any[Dense(input_dimension => hidden_size, relu)]
+
+    for _ in 2:depth
+        dropout > 0 && push!(layers, Dropout(dropout))
+        push!(layers, Dense(hidden_size => hidden_size, relu))
+    end
+
+    dropout > 0 && push!(layers, Dropout(dropout))
+    push!(layers, Dense(hidden_size => output_dimension))
+    push!(layers, x -> Flux.softplus.(x))
+
+    return Chain(layers...) |> f64
+end
+
+function build_solver(config)
+    if config.solver == :highs
+        return ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+    end
+    throw(ArgumentError("unsupported solver $(config.solver)"))
+end
+
+function build_loss(config)
+    if config.loss == :mse_scen
+        return ContextualDFL.MSEScenLoss()
+    end
+    throw(ArgumentError("unsupported loss $(config.loss)"))
+end
+
+function resource_allocation_training_objects(config)
+    rng = MersenneTwister(config.seed)
+    problem = ResourceAllocationProblem(default_resource_allocation_parameters())
+    contexts, demands = generate_resource_allocation_data(
+        problem;
+        n_samples=config.n_samples,
+        validation_fraction=config.validation_fraction,
+        test_fraction=config.test_fraction,
+        sigma=config.sigma,
+        demand_power=config.demand_power,
+        context_terms=config.context_terms,
+        rng=rng,
+    )
+    splits = split_resource_allocation_data(
+        contexts,
+        demands;
+        validation_fraction=config.validation_fraction,
+        test_fraction=config.test_fraction,
+        rng=rng,
+    )
+
+    decoder = scenario_decoder(problem)
+    program = stochastic_program(problem)
+    neural_net = build_neural_net(
+        size(splits.train.x_data, 1),
+        size(splits.train.xi_h_data, 1);
+        hidden_size=config.hidden_size,
+        depth=config.depth,
+        dropout=config.dropout,
+    )
+    solver = build_solver(config)
+    generator = ContextualDFL.DFLScenarioGenerator(
+        NNScenarioDecoder=decoder,
+        Solver=solver,
+        neural_net=neural_net,
+        program=program,
+        learned_components=(:h,),
+    )
+
+    return (;
+        problem=problem,
+        program=program,
+        scenario_decoder=decoder,
+        solver=solver,
+        loss=build_loss(config),
+        scenario_generator=generator,
+        data=splits,
+        schedules=(;
+            mu=ConstantSchedule(config.mu),
+            rho=ConstantSchedule(config.rho),
+            batch_size=ConstantSchedule(config.batch_size),
+            step_size=ConstantSchedule(config.learning_rate),
+        ),
+    )
+end
