@@ -1,129 +1,68 @@
-"""
-ProblemBasedScenarioGeneration
-
-A Julia package for problem-based scenario generation in two-stage stochastic
-linear programming. Trains neural networks to generate scenario sets that
-minimize downstream decision cost (decision-focused learning).
-
-Architecture:
-- `core/`: data structures (Scenario, TwoStageSLP, canonical form)
-- `solvers/`: LP solver (HiGHS) and log-barrier Newton solver
-- `diff/`: implicit differentiation and ChainRules rrules
-- `problems/`: concrete problem instances
-- `loss/`: decision regret loss
-- `models/`: neural network builders
-- `training/`: training loops and continuation schedule
-"""
 module ProblemBasedScenarioGeneration
-
+using Random, Distributions, Statistics
 using LinearAlgebra
+using Einsum
+using JuMP, Ipopt  # Optimization tools 
+using Flux, ChainRulesCore
+using DataLoaders: DataLoader
 using SparseArrays
 using Statistics
-using Random
-using Distributions
-using Flux
-using ChainRulesCore
-using JuMP
-using HiGHS
+using Serialization
+using Plots
+# Here we add the "include" statements in appropriate order.
 
-# -----------------------------------------------------------------------
-# Core data structures
-# -----------------------------------------------------------------------
-include("core/scenario.jl")
-include("core/two_stage_lp.jl")
-include("core/canonical_form.jl")
+# include("lp_structs.jl")
+include("differentitation/differentials_logbar_lp.jl")
+include("solvers/can_lp_solver.jl")
+include("solvers/log_bar_linprog_solvers.jl")
+include("differentitation/2sp_differentials.jl")
 
-# -----------------------------------------------------------------------
-# Solvers
-# -----------------------------------------------------------------------
-include("solvers/lp_solver.jl")
-include("solvers/barrier_solver.jl")
+include("problem_instances/problem_instances.jl")
+include("neural_net/loss.jl")
+include("neural_net/training.jl")
+include("neural_net/load_parameters.jl")
 
-# -----------------------------------------------------------------------
-# Implicit differentiation
-# -----------------------------------------------------------------------
-include("diff/implicit_diff.jl")
-include("diff/barrier_rrule.jl")
-include("diff/subgradient_rrule.jl")
+include("utils.jl")
 
-# -----------------------------------------------------------------------
-# Problem instances
-# -----------------------------------------------------------------------
-include("problems/interface.jl")
-include("problems/resource_allocation.jl")
-include("problems/shipment_planning.jl")
-include("problems/newsvendor.jl")
+# Inclusions for specific problem instances
+include("problem_instances/resource_allocation/resource_allocation_problem.jl")
+include("problem_instances/resource_allocation/data_generation.jl")
+include("problem_instances/shipment_planning/shipment_planning_problem.jl")
+include("problem_instances/shipment_planning/data_generation.jl")
+include("problem_instances/shipment_planning/parameters.jl")
 
-# -----------------------------------------------------------------------
-# Loss
-# -----------------------------------------------------------------------
-include("loss/decision_regret.jl")
+include("problem_instances/unreliable_newsvendor/unreliable_newsvendor_problem.jl")
+include("problem_instances/unreliable_newsvendor/data_generation.jl")
 
-# -----------------------------------------------------------------------
-# Models
-# -----------------------------------------------------------------------
-include("models/scenario_generator.jl")
-include("models/output_heads.jl")
+export ProblemInstanceC2SCanLP
+export manual_C2SCanLP
+export Scenario
 
-# -----------------------------------------------------------------------
-# Training
-# -----------------------------------------------------------------------
-include("training/trainer.jl")
-include("training/continuation.jl")
-
-# -----------------------------------------------------------------------
-# Evaluation
-# -----------------------------------------------------------------------
-include("evaluation/evaluate.jl")
-
-# -----------------------------------------------------------------------
-# Persistence and CLI
-# -----------------------------------------------------------------------
-include("persistence.jl")
-include("cli.jl")
-
-# -----------------------------------------------------------------------
-# Exports
-# -----------------------------------------------------------------------
-
-# Core types
-export Scenario, scenario_from_tuple
-export TwoStageSLP
-export to_canonical, extensive_form, to_canonical_decision
-
-# Solvers
-export solve_lp, solve_lp_primal
-export BarrierCache, solve_barrier, kkt_residual
-
-# Implicit diff
-export implicit_diff_h, implicit_diff_q, recourse_multiplier
-
-# Problems
-export ProblemInstance, NoisePattern
-export H_ONLY, Q_ONLY, W_ONLY, WH, WQ, WHQ
-export first_stage_data, scenario_realization, generate_dataset, noise_pattern
 export ResourceAllocationProblem
+export ResourceAllocationProblemData
 export ShipmentPlanningProblem
+export ShipmentPlanningProblemData
+export shipment_planning_problem_data
+
 export UnreliableNewsvendorProblem
+export UnreliableNewsvendorProblemData
 
-# Loss
-export surrogate_first_stage, decision_regret, relative_decision_regret
-export evaluate_cost, recourse_cost
+export construct_neural_network
+export train!
+export loss  # To compare with out of sample data
+export relative_loss
 
-# Models
-export build_generator, build_output_head, build_full_model
-export _scenario_param_dim, _context_dim
+export save_trained_model, load_trained_model, save_training_data, load_training_data, save_experiment_state, 
+load_experiment_state, load_and_continue_experiment, continue_training, compare_models
 
-# Training
-export train!, continuation_train!
+export solve_canonical_lp
+export convert_standard_to_canonical_form_regular
 
-# Evaluation
-export compute_evaluation_metrics, print_evaluation_summary, save_evaluation_csv
-export plot_loss_curve, plot_regret_histogram, plot_regret_boxplot
-export plot_regret_cdf, plot_scenario_scatter
+# Export types and functions needed for neural network differentiation
+export TwoStageSLP, LogBarCanLP, CanLP
+export LogBarCanLP_standard_solver, LogBarCanLP_standard_solver_primal
+export s1_cost, diff_s1_cost
+export diff_cache_computation, diff_opt, diff_opt_b
+export scenario_collection_realization, surrogate_solution, scenario_realization, optimal_value
 
-# Persistence
-export save_checkpoint, load_checkpoint, restore_model, print_checkpoint_info
-export resolve_problem
-
-end  # module ProblemBasedScenarioGeneration
+end # module ProblemBasedScenarioGeneration
