@@ -4,8 +4,8 @@ import ChainRulesCore
 
 export
     ContextSampler,
+    ContextualDataPoint,
     ContextualDataSet,
-    DataSet,
     DFLScenarioGenerator,
     DflCLoss,
     DflScenLoss,
@@ -65,6 +65,7 @@ include("stochastic_programming/cost_function.jl")
 include("stochastic_programming/cost_function_rrule.jl")
 
 include("scenario_decoders/ScenarioDecoder.jl")
+include("learning/dataset.jl")
 include("scenario_decoders/VectorDecoder.jl")
 include("scenario_decoders/ParametricDecoder.jl")
 
@@ -73,7 +74,6 @@ include("data_generation/scenario_sampling/ScenarioSampler.jl")
 
 include("DFLScenarioGenerator.jl")
 
-include("learning/DataSet.jl")
 include("learning/loss_functions/Loss.jl")
 include("learning/loss_functions/DflScenLoss.jl")
 include("learning/loss_functions/dfl_c_loss.jl")

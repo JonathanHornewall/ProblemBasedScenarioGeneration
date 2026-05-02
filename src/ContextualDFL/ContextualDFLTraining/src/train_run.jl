@@ -2,6 +2,7 @@ using Dates
 using Distributed
 using Flux
 using Random
+using SHA
 using Sockets
 using Statistics
 
@@ -132,9 +133,12 @@ function train_with_contextualdfl_or_fallback(objects, config)
 end
 
 function train_with_contextualdfl_mlflow(objects, config)
-    mlf, experiment_id = mlflow_client_for_config(config)
+    mlflow_config = add_worker_mlflow_tags(config)
+    mlf, experiment_id = mlflow_client_for_config(mlflow_config)
     data = ContextualDFL._contextual_training_samples(objects.data.train, objects.scenario_decoder)
     loss = contextual_dfl_loss(objects, config)
+    upload_model_artifact = Bool(config_value(config, :mlflow_upload_model_artifact, false))
+    model_save_path = mlflow_model_save_path(config)
 
     return ContextualDFL.train_with_mlflow!(
         mlf,
@@ -150,7 +154,76 @@ function train_with_contextualdfl_mlflow(objects, config)
         reset_optimizer_each_epoch=Bool(
             config_value(config, :reset_optimizer_each_epoch, false),
         ),
+        source_name=string(
+            config_value(
+                config,
+                :mlflow_source_name,
+                "ContextualDFLTraining/gridsearch.jl",
+            ),
+        ),
+        source_type=string(config_value(config, :mlflow_source_type, "LOCAL")),
+        dataset_name=mlflow_dataset_name(config),
+        dataset_digest=mlflow_dataset_digest(objects, config),
+        dataset_source_type="generated",
+        dataset_source=mlflow_dataset_source(config),
+        dataset_context="training",
+        save_model=upload_model_artifact,
+        model_save_path=model_save_path,
+        upload_model_artifact=upload_model_artifact,
+        model_artifact_path="models/" * basename(model_save_path),
     )
+end
+
+function add_worker_mlflow_tags(config)
+    tags = string_dict(config_value(config, :mlflow_tags, nothing))
+    tags["worker_id"] = string(Distributed.myid())
+    tags["worker_hostname"] = Sockets.gethostname()
+    tags["worker_pid"] = string(getpid())
+    return merge(config, (; mlflow_tags=tags))
+end
+
+function mlflow_dataset_name(config)
+    return string(config_value(config, :mlflow_dataset_name, "resource_allocation_generated"))
+end
+
+function mlflow_dataset_source(config)
+    parameter_path = resource_parameter_path()
+    parameter_source = isfile(parameter_path) ? parameter_path : "generated-default-parameters"
+    return join(
+        (
+            "resource_allocation",
+            "parameter_source=$(parameter_source)",
+            "seed=$(config.seed)",
+            "n_samples=$(config.n_samples)",
+            "validation_fraction=$(config.validation_fraction)",
+            "test_fraction=$(config.test_fraction)",
+        ),
+        ";",
+    )
+end
+
+function mlflow_dataset_digest(objects, config)
+    split_summary = (
+        "dataset=$(mlflow_dataset_name(config))",
+        "seed=$(config.seed)",
+        "n_samples=$(config.n_samples)",
+        "sigma=$(config.sigma)",
+        "demand_power=$(config.demand_power)",
+        "context_terms=$(config.context_terms)",
+        "train_x=$(size(objects.data.train.x_data))",
+        "train_y=$(size(objects.data.train.xi_h_data))",
+        "validation_x=$(size(objects.data.validation.x_data))",
+        "validation_y=$(size(objects.data.validation.xi_h_data))",
+        "test_x=$(size(objects.data.test.x_data))",
+        "test_y=$(size(objects.data.test.xi_h_data))",
+    )
+    return "sha256:" * bytes2hex(sha256(join(split_summary, "\n")))
+end
+
+function mlflow_model_save_path(config)
+    run_id = string(config_value(config, :run_id, "training-run"))
+    safe_run_id = replace(run_id, r"[^A-Za-z0-9_.=-]" => "_")
+    return joinpath(tempdir(), safe_run_id * ".jls")
 end
 
 function contextual_dfl_loss(objects, config)

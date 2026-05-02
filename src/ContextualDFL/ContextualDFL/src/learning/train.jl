@@ -259,7 +259,7 @@ end
 function train(
     scenario_generator::DFLScenarioGenerator,
     loss::LossFunction,
-    data_set::DataSet,
+    data_set::ContextualDataSet,
     scenario_decoder::ScenarioDecoder,
     mu_schedule,
     rho_schedule,
@@ -379,9 +379,6 @@ _sample_count(data::AbstractVector) = length(data)
 _sample(data::AbstractMatrix, index) = view(data, :, index:index)
 _sample(data::AbstractVector, index) = data[index]
 
-_sample_column(data::AbstractMatrix, index) = view(data, :, index:index)
-_sample_column(data::AbstractVector, index) = view(data, index:index)
-
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
 
@@ -500,27 +497,9 @@ function _schedule_value(schedule, epoch)
     end
 end
 
-function _contextual_training_samples(data_set::DataSet, scenario_decoder::ScenarioDecoder)
-    x_samples = _column_samples(data_set.x_data)
-    references = [
-        scenario_decoder(_dataset_scenario_parameter(data_set, i))
-        for i in eachindex(x_samples)
+function _contextual_training_samples(data_set::ContextualDataSet, _scenario_decoder::ScenarioDecoder)
+    return [
+        (data_point.context, data_point.scenario_parameters)
+        for data_point in data_set
     ]
-    return collect(zip(x_samples, references))
-end
-
-function _dataset_scenario_parameter(data_set::DataSet, index)
-    pairs = Pair{Symbol,Any}[]
-    _push_sample!(pairs, :W, data_set.xi_W_data, index)
-    _push_sample!(pairs, :T, data_set.xi_T_data, index)
-    _push_sample!(pairs, :h, data_set.xi_h_data, index)
-    _push_sample!(pairs, :q, data_set.xi_q_data, index)
-    return (; pairs...)
-end
-
-_push_sample!(pairs, name, data::Nothing, index) = pairs
-
-function _push_sample!(pairs, name, data, index)
-    push!(pairs, name => _sample_column(data, index))
-    return pairs
 end

@@ -1,2 +1,2 @@
-test(z_policy, data_set::DataSet; kwargs...) =
+test(z_policy, data_set::ContextualDataSet; kwargs...) =
     error("Policy testing has not been implemented yet.")

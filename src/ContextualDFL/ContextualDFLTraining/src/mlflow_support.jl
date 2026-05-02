@@ -72,8 +72,16 @@ const Dataset = MLFlowClient.Dataset
 const DatasetInput = MLFlowClient.DatasetInput
 const Tag = MLFlowClient.Tag
 
-function uploadartifact(mlf::NamedMLFlowClient, run, path; artifact_path=basename(path))
+function uploadartifact(mlf::NamedMLFlowClient, run, path)
+    return uploadartifact(mlf, run, path, basename(path))
+end
+
+function uploadartifact(mlf::NamedMLFlowClient, run, path, artifact_path)
     return MLFlowClient.uploadartifact(mlf.client, string(artifact_path), read(path))
+end
+
+function uploadartifact(mlf::NamedMLFlowClient, artifact_path::AbstractString, data::Vector{UInt8})
+    return MLFlowClient.uploadartifact(mlf.client, string(artifact_path), data)
 end
 
 function updaterun(mlf::NamedMLFlowClient, run; status, end_time=missing)
@@ -111,9 +119,12 @@ function mlflow_tags_for_config(config)
     tags = Dict{String,String}(
         "source" => "ContextualDFLTraining.gridsearch",
         "run_id" => string(config_value(config, :run_id, "")),
+        "base_run_id" => string(config_value(config, :base_run_id, "")),
         "candidate_name" => string(config_value(config, :candidate_name, "")),
         "gridsearch_id" => string(config_value(config, :gridsearch_id, "")),
+        "gridsearch_timestamp" => string(config_value(config, :gridsearch_timestamp, "")),
         "candidate_index" => string(config_value(config, :candidate_index, "")),
+        "training_project" => "ContextualDFLTraining",
     )
 
     extra_tags = config_value(config, :mlflow_tags, nothing)
