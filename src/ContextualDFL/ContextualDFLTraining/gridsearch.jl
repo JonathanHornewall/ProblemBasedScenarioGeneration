@@ -387,6 +387,7 @@ function close_mlflow_grid_parent_run(parent, results)
     parent === nothing && return nothing
 
     success = all(result -> getproperty(result, :status) == "ok", results)
+    mark_failed_mlflow_candidates!(results)
     log_grid_aggregate_metrics!(parent.client, parent.run, results)
     MLFlowClient.updaterun(
         parent.client,
@@ -394,6 +395,15 @@ function close_mlflow_grid_parent_run(parent, results)
         status=success ? MLFlowClient.RunStatus.FINISHED : MLFlowClient.RunStatus.FAILED,
         end_time=unix_milliseconds(),
     )
+    return nothing
+end
+
+function mark_failed_mlflow_candidates!(results)
+    for result in results
+        getproperty(result, :status) == "ok" && continue
+        config = getproperty(result, :config)
+        mark_mlflow_run_failed(config, string(getproperty(result, :status)))
+    end
     return nothing
 end
 

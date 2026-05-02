@@ -140,6 +140,14 @@ function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
 
     recourse_q = zeros(recourse_variables)
     recourse_q[1:demand_count] .= second_costs
+    recourse_w = [
+        recourse_w
+        -Matrix{Float64}(I, recourse_variables, recourse_variables)
+    ]
+    recourse_t = [
+        recourse_t
+        zeros(Float64, recourse_variables, resource_count)
+    ]
 
     return ResourceAllocationProblem(
         problem_data,
@@ -161,7 +169,11 @@ function demand_count(problem::ResourceAllocationProblem)
 end
 
 function scenario_h(problem::ResourceAllocationProblem, demand::AbstractVector)
-    return vcat(zeros(eltype(demand), resource_count(problem)), demand)
+    return vcat(
+        zeros(eltype(demand), resource_count(problem)),
+        demand,
+        zeros(eltype(demand), length(problem.s2_cost_vector)),
+    )
 end
 
 function scenario_from_demand(problem::ResourceAllocationProblem, demand::AbstractVector)
@@ -180,7 +192,22 @@ end
 
 function demand_from_scenario_parameter(scenario::ContextualDFL.ParametricScenario)
     resource_count = size(scenario.T_ineq_xi, 2)
-    return scenario.h_ineq_xi[(resource_count + 1):end]
+    demand_count = demand_count_from_scenario(scenario, resource_count)
+    return scenario.h_ineq_xi[(resource_count + 1):(resource_count + demand_count)]
+end
+
+function demand_count_from_scenario(
+    scenario::ContextualDFL.ParametricScenario,
+    resource_count::Integer,
+)
+    recourse_variable_count = length(scenario.q_xi)
+    demand_count, remainder = divrem(
+        recourse_variable_count - resource_count,
+        resource_count + 2,
+    )
+    remainder == 0 && demand_count > 0 ||
+        throw(ArgumentError("could not infer resource-allocation demand count"))
+    return demand_count
 end
 
 function stochastic_program(problem::ResourceAllocationProblem)
@@ -419,9 +446,20 @@ function build_solver(config)
     throw(ArgumentError("unsupported solver $(config.solver)"))
 end
 
-function build_loss(config)
+function build_loss(config, decoder, solver, program)
     if config.loss == :mse_scen
         return ResourceAllocationMSEScenLoss()
+    elseif config.loss == :dfl_scen
+        nr_scenarios = config isa NamedTuple && :nr_scenarios in keys(config) ?
+            Int(config.nr_scenarios) :
+            1
+        return ContextualDFL.DflScenLoss(
+            decoder,
+            decoder,
+            solver,
+            program;
+            nr_scenarios=nr_scenarios,
+        )
     end
     throw(ArgumentError("unsupported loss $(config.loss)"))
 end
@@ -471,7 +509,7 @@ function resource_allocation_training_objects(config)
         program=program,
         scenario_decoder=decoder,
         solver=solver,
-        loss=build_loss(config),
+        loss=build_loss(config, decoder, solver, program),
         scenario_generator=generator,
         data=splits,
         schedules=(;

@@ -119,7 +119,7 @@ function train_with_contextualdfl_or_fallback(objects, config)
         result = ContextualDFL.train!(
             objects.loss,
             objects.program,
-            fill(config.mu, Int(config.epochs)),
+            mu_schedule_for_config(config),
             Int(config_value(config, :nr_scenarios, 1)),
             objects.scenario_generator.neural_net,
             objects.data.train;
@@ -163,7 +163,7 @@ function train_with_contextualdfl_mlflow(objects, config)
     final_metrics = Ref{Any}(nothing)
     model = objects.scenario_generator.neural_net
     nr_scenarios = Int(config_value(config, :nr_scenarios, 1))
-    mu_schedule = fill(config.mu, Int(config.epochs))
+    mu_schedule = mu_schedule_for_config(config)
 
     result = ContextualDFL.train_with_mlflow!(
         mlf,
@@ -276,7 +276,11 @@ function mlflow_dataset_digest(objects, config)
         "test_x=$(size(dataset_context_matrix(objects.data.test)))",
         "test_y=$(size(dataset_demand_matrix(objects.data.test)))",
     )
-    return "sha256:" * bytes2hex(sha256(join(split_summary, "\n")))
+    return short_mlflow_digest(split_summary)
+end
+
+function short_mlflow_digest(values)
+    return bytes2hex(sha256(join(values, "\n")))[1:32]
 end
 
 function mlflow_model_save_path(config)
@@ -287,6 +291,30 @@ end
 
 function contextual_dfl_loss(objects, config)
     return objects.loss
+end
+
+function mu_schedule_for_config(config)
+    epochs = Int(config.epochs)
+    epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
+    epochs == 0 && return Float64[]
+
+    schedule = Symbol(config_value(config, :mu_schedule, :constant))
+    mu_start = Float64(config_value(config, :mu_start, config.mu))
+    mu_end = Float64(config_value(config, :mu_end, config.mu))
+
+    if schedule == :constant
+        return fill(Float64(config.mu), epochs)
+    elseif schedule == :linear
+        epochs == 1 && return [mu_start]
+        return collect(range(mu_start, mu_end; length=epochs))
+    elseif schedule == :geometric || schedule == :exponential
+        mu_start > 0 && mu_end > 0 ||
+            throw(ArgumentError("$schedule mu annealing requires positive mu_start and mu_end."))
+        epochs == 1 && return [mu_start]
+        return exp.(range(log(mu_start), log(mu_end); length=epochs))
+    end
+
+    throw(ArgumentError("unsupported mu_schedule $(schedule)"))
 end
 
 function mlflow_experiment_spec(objects, config)
@@ -350,6 +378,7 @@ function mlflow_model_spec(model, objects, config)
 end
 
 function mlflow_method_spec(objects, config)
+    mu_schedule = mu_schedule_for_config(config)
     return (;
         loss=string(config.loss),
         solver=string(config.solver),
@@ -357,10 +386,13 @@ function mlflow_method_spec(objects, config)
         learned_components="h",
         nr_scenarios=Int(config_value(config, :nr_scenarios, 1)),
         mu=config.mu,
+        mu_start=isempty(mu_schedule) ? missing : first(mu_schedule),
+        mu_end=isempty(mu_schedule) ? missing : last(mu_schedule),
+        mu_schedule=string(config_value(config, :mu_schedule, :constant)),
         rho=config.rho,
-        homotopy_schedule="constant",
-        log_barrier_training=config.mu != 0,
-        log_barrier_inference=Bool(config_value(config, :log_barrier_inference, config.mu != 0)),
+        homotopy_schedule=string(config_value(config, :mu_schedule, :constant)),
+        log_barrier_training=any(!iszero, mu_schedule),
+        log_barrier_inference=Bool(config_value(config, :log_barrier_inference, any(!iszero, mu_schedule))),
         fine_tuning=Bool(config_value(config, :fine_tuning, false)),
         annealing=Bool(config_value(config, :annealing, false)),
         knn_homogenization=Bool(config_value(config, :knn_homogenization, false)),

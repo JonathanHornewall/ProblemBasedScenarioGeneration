@@ -6,12 +6,16 @@ const DEFAULT_RUN_SETTINGS = (;
     sigma=5.0,
     demand_power=1.0,
     context_terms=3,
-    mu=0.0,
+    mu=1e-1,
+    mu_start=1e-1,
+    mu_end=1e-3,
+    mu_schedule=:geometric,
+    nr_scenarios=1,
     rho=0.0,
     tolerance_relative=0.10,
     tolerance_absolute_floor=1.0,
     solver=:highs,
-    loss=:mse_scen,
+    loss=:dfl_scen,
 )
 
 const DEFAULT_GRID_VALUES = (;
@@ -62,14 +66,14 @@ function default_grid(; overrides...)
 end
 
 function smoke_grid(; overrides...)
-    settings = _merge_settings((; epochs=1, n_samples=64, overrides...))
+    settings = _merge_settings((; epochs=2, n_samples=16, overrides...))
     cfg = merge(
         settings,
         (;
             learning_rate=1e-3,
             hidden_size=16,
             depth=1,
-            batch_size=16,
+            batch_size=4,
             dropout=0.0,
             seed=1,
         ),
