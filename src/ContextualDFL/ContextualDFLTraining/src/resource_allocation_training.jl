@@ -3,6 +3,7 @@ using Distributions
 using Flux
 using LinearAlgebra
 using Random
+using Statistics
 
 struct ResourceAllocationProblemData
     service_rate_parameters::Matrix{Float64}
@@ -43,19 +44,32 @@ struct ResourceAllocationProblem
     s2_cost_vector::Vector{Float64}
 end
 
-struct ResourceAllocationDemandDecoder <: ContextualDFL.ComponentDecoder
-    resource_count::Int
+struct ResourceAllocationDemandDecoder <: ContextualDFL.ScenarioDecoder end
+
+struct ResourceAllocationMSEScenLoss <: ContextualDFL.LossFunction end
+
+function (::ResourceAllocationDemandDecoder)(scenario_parameter)
+    hasproperty(scenario_parameter, :h) ||
+        throw(ArgumentError("resource-allocation scenario parameter must have field `h`."))
+    return _demand_matrix(getproperty(scenario_parameter, :h))
 end
 
-ContextualDFL.component_type(::ResourceAllocationDemandDecoder) = :h
-
-function (decoder::ResourceAllocationDemandDecoder)(demand::AbstractVector)
-    return vcat(zeros(eltype(demand), decoder.resource_count), demand)
+function (::ResourceAllocationMSEScenLoss)(
+    program::ContextualDFL.StochasticProgram,
+    predicted_demand,
+    reference_demand,
+    mu;
+    kwargs...,
+)
+    prediction = _demand_matrix(predicted_demand)
+    target = _demand_matrix(reference_demand)
+    size(prediction) == size(target) ||
+        throw(DimensionMismatch("predicted and reference demand matrices have different sizes."))
+    return Statistics.mean(abs2, prediction .- target)
 end
 
-function (decoder::ResourceAllocationDemandDecoder)(demand::AbstractMatrix)
-    return vcat(zeros(eltype(demand), decoder.resource_count, size(demand, 2)), demand)
-end
+_demand_matrix(value::AbstractMatrix) = value
+_demand_matrix(value::AbstractVector) = reshape(value, :, 1)
 
 struct ConstantSchedule{T}
     value::T
@@ -71,8 +85,8 @@ function ResourceAllocationProblem(problem_data::ResourceAllocationProblemData)
 
     resource_count, demand_count = size(service_rates)
 
-    first_stage_a = zeros(1, length(first_costs))
-    first_stage_b = [0.0]
+    first_stage_a = -Matrix{Float64}(I, length(first_costs), length(first_costs))
+    first_stage_b = zeros(length(first_costs))
     first_stage_c = copy(first_costs)
 
     recourse_variables = demand_count + resource_count * demand_count + resource_count + demand_count
@@ -130,30 +144,14 @@ end
 function stochastic_program(problem::ResourceAllocationProblem)
     return ContextualDFL.StochasticProgram(
         A_eq=zeros(0, length(problem.s1_cost_vector)),
-        A_in=problem.s1_constraint_matrix,
-        b=problem.s1_constraint_vector,
+        A_ineq=problem.s1_constraint_matrix,
+        b_eq=Float64[],
+        b_ineq=problem.s1_constraint_vector,
         c=problem.s1_cost_vector,
     )
 end
 
-function base_scenario(problem::ResourceAllocationProblem)
-    return ContextualDFL.BaseScenario(
-        W_ineq=problem.s2_constraint_matrix,
-        T_ineq=problem.s2_coupling_matrix,
-        q=problem.s2_cost_vector,
-    )
-end
-
-function scenario_decoder(problem::ResourceAllocationProblem)
-    decoder_strategy = ContextualDFL.DecoderStrategy(
-        h_decoder=ResourceAllocationDemandDecoder(resource_count(problem)),
-    )
-    return ContextualDFL.DataSetScenarioDecoder(
-        decoder_strategy,
-        base_scenario(problem),
-        (:h,),
-    )
-end
+scenario_decoder(problem::ResourceAllocationProblem) = ResourceAllocationDemandDecoder()
 
 function resource_parameter_path()
     return normpath(
@@ -375,7 +373,7 @@ end
 
 function build_loss(config)
     if config.loss == :mse_scen
-        return ContextualDFL.MSEScenLoss()
+        return ResourceAllocationMSEScenLoss()
     end
     throw(ArgumentError("unsupported loss $(config.loss)"))
 end

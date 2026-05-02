@@ -190,6 +190,53 @@ function selected_grid()
     return default_grid()
 end
 
+function gridsearch_id(timestamp::AbstractString)
+    return "gridsearch_" * timestamp
+end
+
+function candidate_tag(index::Integer)
+    return "candidate_" * lpad(string(index), 4, "0")
+end
+
+function base_run_id(config, index::Integer)
+    if config isa NamedTuple && :run_id in keys(config)
+        return string(config.run_id)
+    end
+    return candidate_tag(index)
+end
+
+function annotate_grid_config(config, index::Integer, timestamp::AbstractString)
+    grid_id = gridsearch_id(timestamp)
+    candidate = candidate_tag(index)
+    previous_run_id = base_run_id(config, index)
+    candidate_name = grid_id * "__" * candidate * "__" * previous_run_id
+
+    return merge(
+        config,
+        (;
+            run_id=candidate_name,
+            base_run_id=previous_run_id,
+            gridsearch_id=grid_id,
+            gridsearch_timestamp=timestamp,
+            candidate_index=Int(index),
+            candidate_name=candidate_name,
+            mlflow_run_name=candidate_name,
+            mlflow_tags=(;
+                gridsearch_id=grid_id,
+                candidate_index=Int(index),
+                base_run_id=previous_run_id,
+            ),
+        ),
+    )
+end
+
+function annotate_grid_configs(configs, timestamp::AbstractString)
+    return [
+        annotate_grid_config(config, index, timestamp) for
+        (index, config) in enumerate(configs)
+    ]
+end
+
 function main()
     ensure_clean_worker_start!()
     sync_code!()
@@ -199,7 +246,10 @@ function main()
     load_training_project_on_workers!(remote_worker_ids)
     define_remote_eval!()
 
-    configs = selected_grid()
+    timestamp = result_timestamp()
+    grid_id = gridsearch_id(timestamp)
+    configs = annotate_grid_configs(selected_grid(), timestamp)
+    println("Grid search id: $grid_id")
     println(
         "Running $(length(configs)) configuration(s) on $(length(remote_worker_ids)) remote worker(s)",
     )
@@ -216,6 +266,7 @@ function main()
         results;
         configs=configs,
         output_root=joinpath(@__DIR__, "results"),
+        timestamp=timestamp,
     )
     println("Wrote grid-search CSV results to $output_dir")
 
