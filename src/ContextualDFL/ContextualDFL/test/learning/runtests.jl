@@ -6,10 +6,34 @@ const RunStatus = (; FINISHED=:FINISHED, FAILED=:FAILED)
 
 mutable struct FakeRun
     experiment_id
+    start_time
+    end_time
     params::Vector{Tuple{String,String}}
     metrics::Vector{Tuple{String,Float64,Int}}
+    tags::Vector{Tuple{String,String}}
+    inputs::Vector
+    artifacts::Vector{Tuple{String,Vector{UInt8}}}
     events::Vector{Symbol}
     status
+end
+
+struct Tag
+    key::String
+    value::String
+end
+
+struct Dataset
+    name::String
+    digest::String
+    source_type::String
+    source::String
+    schema
+    profile
+end
+
+struct DatasetInput
+    tags::Vector{Tag}
+    dataset::Dataset
 end
 
 mutable struct FakeMLFlow
@@ -18,11 +42,16 @@ end
 
 FakeMLFlow() = FakeMLFlow(FakeRun[])
 
-function createrun(mlf::FakeMLFlow, experiment_id)
+function createrun(mlf::FakeMLFlow, experiment_id; start_time=missing)
     run = FakeRun(
         experiment_id,
+        start_time,
+        missing,
         Tuple{String,String}[],
         Tuple{String,Float64,Int}[],
+        Tuple{String,String}[],
+        Any[],
+        Tuple{String,Vector{UInt8}}[],
         Symbol[],
         nothing,
     )
@@ -44,8 +73,34 @@ function logmetric(::FakeMLFlow, run::FakeRun, key, value; step)
     return nothing
 end
 
-function updaterun(::FakeMLFlow, run::FakeRun; status)
+function setruntag(::FakeMLFlow, run::FakeRun, key, value)
+    push!(run.tags, (string(key), string(value)))
+    push!(run.events, :tag)
+    return nothing
+end
+
+function loginputs(::FakeMLFlow, run::FakeRun; datasets)
+    append!(run.inputs, datasets)
+    push!(run.events, :input)
+    return nothing
+end
+
+function loginputs(::FakeMLFlow, run::FakeRun, datasets)
+    append!(run.inputs, datasets)
+    push!(run.events, :input)
+    return nothing
+end
+
+function uploadartifact(mlf::FakeMLFlow, artifact_path, data::Vector{UInt8})
+    run = only(mlf.runs)
+    push!(run.artifacts, (string(artifact_path), data))
+    push!(run.events, :artifact)
+    return nothing
+end
+
+function updaterun(::FakeMLFlow, run::FakeRun; status, end_time=missing)
     run.status = status
+    run.end_time = end_time
     push!(run.events, :status)
     return run
 end
@@ -93,32 +148,50 @@ end
         loss(prediction, target) = sum(abs2, prediction .- target)
         live_metric_counts = Int[]
 
-        result = train_with_mlflow!(
-            mlf,
-            "experiment-1",
-            loss,
-            model,
-            data;
-            learning_rate=1e-4,
-            optimizer_type=Flux.Descent,
-            epochs=2,
-            batchsize=2,
-            shuffle=false,
-            reset_optimizer_each_epoch=true,
-            on_epoch_end=(epoch, loss_value, display_loss) ->
-                push!(live_metric_counts, length(only(mlf.runs).metrics)),
-        )
+        result = mktempdir() do dir
+            model_path = joinpath(dir, "trained_model.jls")
+            train_with_mlflow!(
+                mlf,
+                "experiment-1",
+                loss,
+                model,
+                data;
+                learning_rate=1e-4,
+                optimizer_type=Flux.Descent,
+                epochs=2,
+                batchsize=2,
+                shuffle=false,
+                reset_optimizer_each_epoch=true,
+                source_name="train_test.jl",
+                source_git_commit="abc123",
+                dataset_name="training-data",
+                dataset_digest="sha256:test",
+                dataset_source="/tmp/train.csv",
+                save_model=true,
+                model_save_path=model_path,
+                model_artifact_path="models/trained_model.jls",
+                on_epoch_end=(epoch, loss_value, display_loss) ->
+                    push!(live_metric_counts, length(only(mlf.runs).metrics)),
+            )
+        end
 
         run = only(mlf.runs)
         params = Dict(run.params)
+        tags = Dict(run.tags)
 
         @test run.experiment_id == "experiment-1"
+        @test run.start_time isa Int64
+        @test run.end_time isa Int64
+        @test run.end_time >= run.start_time
         @test params["learning_rate"] == string(1e-4)
         @test params["optimizer_type"] == string(Flux.Descent)
         @test params["epochs"] == "2"
         @test params["batchsize"] == "2"
         @test params["shuffle"] == "false"
         @test params["reset_optimizer_each_epoch"] == "true"
+        @test tags["mlflow.source.name"] == "train_test.jl"
+        @test tags["mlflow.source.type"] == "LOCAL"
+        @test tags["mlflow.source.git.commit"] == "abc123"
 
         @test length(result.history) == 2
         @test run.status === FakeMLFlowClient.RunStatus.FINISHED
@@ -129,6 +202,14 @@ end
         @test live_metric_counts == [2, 4]
         @test run.events[end] === :status
         @test count(==(:metric), run.events) == 4
+        @test length(run.inputs) == 1
+        @test only(run.inputs).dataset.name == "training-data"
+        @test only(run.inputs).dataset.digest == "sha256:test"
+        @test only(run.inputs).tags[1].key == "context"
+        @test only(run.inputs).tags[1].value == "training"
+        @test length(run.artifacts) == 1
+        @test run.artifacts[1][1] == "models/trained_model.jls"
+        @test !isempty(run.artifacts[1][2])
     end
 
     @testset "train_with_mlflow! marks failed runs" begin
@@ -150,6 +231,7 @@ end
 
         run = only(mlf.runs)
         @test run.status === FakeMLFlowClient.RunStatus.FAILED
+        @test run.end_time isa Int64
         @test run.events[end] === :status
     end
 end

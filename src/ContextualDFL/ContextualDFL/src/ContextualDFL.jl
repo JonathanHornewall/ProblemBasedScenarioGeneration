@@ -3,8 +3,8 @@ module ContextualDFL
 import ChainRulesCore
 
 export
-    ComponentWiseDecoder,
     ContextSampler,
+    ContextualDataSet,
     DataSet,
     DFLScenarioGenerator,
     DflCLoss,
@@ -18,6 +18,8 @@ export
     LogBarSolver,
     LossFunction,
     MSEScenLoss,
+    ParametricDecoder,
+    ParametricScenario,
     ProjectedZLoss,
     ScenarioDecoder,
     ScenarioSampler,
@@ -42,7 +44,8 @@ export
     step_size_schedule,
     train,
     train_with_mlflow!,
-    train!
+    train!,
+    VectorDecoder
 
 include("linear_programming/LP.jl")
 include("linear_programming/Solvers/solvers/LPSolvers/LPSolver.jl")
@@ -62,7 +65,8 @@ include("stochastic_programming/cost_function.jl")
 include("stochastic_programming/cost_function_rrule.jl")
 
 include("scenario_decoders/ScenarioDecoder.jl")
-include("scenario_decoders/ComponentWiseDecoder.jl")
+include("scenario_decoders/VectorDecoder.jl")
+include("scenario_decoders/ParametricDecoder.jl")
 
 include("data_generation/context_sampling/ContextSampler.jl")
 include("data_generation/scenario_sampling/ScenarioSampler.jl")

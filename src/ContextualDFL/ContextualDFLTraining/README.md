@@ -21,6 +21,9 @@ Useful environment variables:
 - `PMAP_BATCH_SIZE=1`: pmap batch size.
 - `REMOTE_JULIA=/home/rwl/.juliaup/bin/julia`: remote Julia executable.
 - `REMOTE_CONTEXTUAL_DFL_TRAINING_PROJECT=/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining`: remote project path.
+- `MLFLOW_EXPERIMENT_ID=<id>`: enable MLflow logging for every candidate.
+- `MLFLOW_TRACKING_URI=http://...`: tracking server URI passed to remote workers.
+- `MLFLOW_ENABLED=0`: disable MLflow even if `MLFLOW_EXPERIMENT_ID` is set.
 
 The training wrapper assumes the relevant `ContextualDFL.train`, loss,
 decoder, and stochastic-programming methods are implemented before the real

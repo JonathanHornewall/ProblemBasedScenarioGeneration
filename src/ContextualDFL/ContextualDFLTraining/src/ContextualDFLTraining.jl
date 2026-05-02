@@ -2,6 +2,7 @@ module ContextualDFLTraining
 
 include("grid_config.jl")
 include("resource_allocation_training.jl")
+include("mlflow_support.jl")
 include("train_run.jl")
 include("profile_run.jl")
 include("csv_results.jl")

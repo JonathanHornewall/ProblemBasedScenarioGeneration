@@ -84,6 +84,15 @@ function train_and_evaluate(config::NamedTuple)
 end
 
 function train_with_contextualdfl_or_fallback(objects, config)
+    if mlflow_enabled(config)
+        result = train_with_contextualdfl_mlflow(objects, config)
+        return (;
+            result=result,
+            backend="ContextualDFL.train_with_mlflow!",
+            fallback_reason="",
+        )
+    end
+
     try
         result = ContextualDFL.train(
             objects.scenario_generator,
@@ -120,6 +129,44 @@ function train_with_contextualdfl_or_fallback(objects, config)
             fallback_reason=first_line(message),
         )
     end
+end
+
+function train_with_contextualdfl_mlflow(objects, config)
+    mlf, experiment_id = mlflow_client_for_config(config)
+    data = ContextualDFL._contextual_training_samples(objects.data.train, objects.scenario_decoder)
+    loss = contextual_dfl_loss(objects, config)
+
+    return ContextualDFL.train_with_mlflow!(
+        mlf,
+        experiment_id,
+        loss,
+        objects.scenario_generator.neural_net,
+        data;
+        learning_rate=config.learning_rate,
+        optimizer_type=Flux.Adam,
+        epochs=config.epochs,
+        batchsize=config.batch_size,
+        shuffle=Bool(config_value(config, :shuffle, false)),
+        reset_optimizer_each_epoch=Bool(
+            config_value(config, :reset_optimizer_each_epoch, false),
+        ),
+    )
+end
+
+function contextual_dfl_loss(objects, config)
+    mu = objects.schedules.mu(1)
+    rho = objects.schedules.rho(1)
+
+    return (predicted, reference) -> objects.loss(
+        objects.program,
+        predicted,
+        reference,
+        mu;
+        rho=rho,
+        config=config,
+        validation_data=objects.data.validation,
+        test_data=objects.data.test,
+    )
 end
 
 function package_training_placeholder_error(message::AbstractString)
@@ -165,16 +212,15 @@ function supervised_mse_train!(model, splits, config)
         end
 
         Flux.testmode!(model)
-        push!(
-            history,
-            (;
-                epoch=epoch,
-                minibatch_mse=isempty(minibatch_losses) ? NaN : mean(minibatch_losses),
-                train_mse=split_mse(model, splits.train),
-                validation_mse=split_mse(model, splits.validation),
-                test_mse=split_mse(model, splits.test),
-            ),
+        epoch_row = (;
+            epoch=epoch,
+            minibatch_mse=isempty(minibatch_losses) ? NaN : mean(minibatch_losses),
+            train_mse=split_mse(model, splits.train),
+            validation_mse=split_mse(model, splits.validation),
+            test_mse=split_mse(model, splits.test),
         )
+
+        push!(history, epoch_row)
     end
 
     Flux.testmode!(model)

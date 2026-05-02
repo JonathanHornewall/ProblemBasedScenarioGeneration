@@ -57,6 +57,22 @@ function env_flag(name, default=false)
     return value in ("1", "true", "yes", "y")
 end
 
+function grid_mlflow_settings()
+    enabled = env_flag("MLFLOW_ENABLED", haskey(ENV, "MLFLOW_EXPERIMENT_ID"))
+    return (;
+        enabled=enabled,
+        experiment_id=get(ENV, "MLFLOW_EXPERIMENT_ID", ""),
+        tracking_uri=get(ENV, "MLFLOW_TRACKING_URI", ""),
+    )
+end
+
+function validate_mlflow_settings(settings)
+    if settings.enabled && isempty(settings.experiment_id)
+        error("MLFLOW_ENABLED=true requires MLFLOW_EXPERIMENT_ID.")
+    end
+    return nothing
+end
+
 function ensure_clean_worker_start!()
     nprocs() == 1 ||
         error("Refusing to run with pre-existing workers. Start Julia without -p or --machine-file.")
@@ -205,7 +221,12 @@ function base_run_id(config, index::Integer)
     return candidate_tag(index)
 end
 
-function annotate_grid_config(config, index::Integer, timestamp::AbstractString)
+function annotate_grid_config(
+    config,
+    index::Integer,
+    timestamp::AbstractString,
+    mlflow_settings=grid_mlflow_settings(),
+)
     grid_id = gridsearch_id(timestamp)
     candidate = candidate_tag(index)
     previous_run_id = base_run_id(config, index)
@@ -220,19 +241,27 @@ function annotate_grid_config(config, index::Integer, timestamp::AbstractString)
             gridsearch_timestamp=timestamp,
             candidate_index=Int(index),
             candidate_name=candidate_name,
+            mlflow_enabled=mlflow_settings.enabled,
+            mlflow_experiment_id=mlflow_settings.experiment_id,
+            mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_run_name=candidate_name,
             mlflow_tags=(;
                 gridsearch_id=grid_id,
                 candidate_index=Int(index),
                 base_run_id=previous_run_id,
+                candidate_name=candidate_name,
             ),
         ),
     )
 end
 
-function annotate_grid_configs(configs, timestamp::AbstractString)
+function annotate_grid_configs(
+    configs,
+    timestamp::AbstractString,
+    mlflow_settings=grid_mlflow_settings(),
+)
     return [
-        annotate_grid_config(config, index, timestamp) for
+        annotate_grid_config(config, index, timestamp, mlflow_settings) for
         (index, config) in enumerate(configs)
     ]
 end
@@ -248,8 +277,13 @@ function main()
 
     timestamp = result_timestamp()
     grid_id = gridsearch_id(timestamp)
-    configs = annotate_grid_configs(selected_grid(), timestamp)
+    mlflow_settings = grid_mlflow_settings()
+    validate_mlflow_settings(mlflow_settings)
+    configs = annotate_grid_configs(selected_grid(), timestamp, mlflow_settings)
     println("Grid search id: $grid_id")
+    if mlflow_settings.enabled
+        println("MLflow experiment id: $(mlflow_settings.experiment_id)")
+    end
     println(
         "Running $(length(configs)) configuration(s) on $(length(remote_worker_ids)) remote worker(s)",
     )

@@ -1,4 +1,5 @@
 import Flux
+import Dates
 import Plots
 import Random
 import Serialization
@@ -145,10 +146,28 @@ function train_with_mlflow!(
     shuffle::Bool=false,
     reset_optimizer_each_epoch::Bool=false,
     on_epoch_end=nothing,
+    source_name=nothing,
+    source_type="LOCAL",
+    source_git_commit=_git_commit_or_nothing(),
+    log_source_tags::Bool=true,
+    dataset_inputs=nothing,
+    dataset_name=nothing,
+    dataset_digest=nothing,
+    dataset_source_type="local",
+    dataset_source=nothing,
+    dataset_context="training",
+    save_model::Bool=false,
+    model_save_path::AbstractString="trained_model.jls",
+    upload_model_artifact::Bool=save_model,
+    model_artifact_path::AbstractString=basename(model_save_path),
     kwargs...,
 )
     mlflow = parentmodule(typeof(mlf))
-    run = getproperty(mlflow, :createrun)(mlf, experiment_id)
+    run = getproperty(mlflow, :createrun)(
+        mlf,
+        experiment_id;
+        start_time=_unix_milliseconds(),
+    )
 
     logparam = getproperty(mlflow, :logparam)
     logparam(mlf, run, "learning_rate", string(learning_rate))
@@ -157,6 +176,29 @@ function train_with_mlflow!(
     logparam(mlf, run, "batchsize", string(batchsize))
     logparam(mlf, run, "shuffle", string(shuffle))
     logparam(mlf, run, "reset_optimizer_each_epoch", string(reset_optimizer_each_epoch))
+
+    if log_source_tags
+        _log_mlflow_source_tags!(
+            mlflow,
+            mlf,
+            run;
+            source_name=source_name,
+            source_type=source_type,
+            source_git_commit=source_git_commit,
+        )
+    end
+
+    _log_mlflow_dataset!(
+        mlflow,
+        mlf,
+        run;
+        dataset_inputs=dataset_inputs,
+        dataset_name=dataset_name,
+        dataset_digest=dataset_digest,
+        dataset_source_type=dataset_source_type,
+        dataset_source=dataset_source,
+        dataset_context=dataset_context,
+    )
 
     logmetric = getproperty(mlflow, :logmetric)
     training_succeeded = false
@@ -173,6 +215,8 @@ function train_with_mlflow!(
             batchsize=batchsize,
             shuffle=shuffle,
             reset_optimizer_each_epoch=reset_optimizer_each_epoch,
+            save_model=save_model,
+            model_save_path=model_save_path,
             on_epoch_end=(epoch, loss_value, display_loss) -> begin
                 logmetric(mlf, run, "loss", Float64(loss_value); step=epoch)
                 logmetric(mlf, run, "display_loss", Float64(display_loss); step=epoch)
@@ -182,6 +226,17 @@ function train_with_mlflow!(
             end,
             kwargs...,
         )
+
+        if upload_model_artifact && isfile(model_save_path)
+            _upload_mlflow_artifact!(
+                mlflow,
+                mlf,
+                run,
+                model_save_path;
+                artifact_path=model_artifact_path,
+            )
+        end
+
         training_succeeded = true
         return result
     finally
@@ -193,6 +248,7 @@ function train_with_mlflow!(
                 mlf,
                 run;
                 status=status,
+                end_time=_unix_milliseconds(),
             )
         catch
             training_succeeded && rethrow()
@@ -307,7 +363,8 @@ function _batch_data(samples, idxs)
     return hcat((samples[i] for i in idxs)...)
 end
 
-_batchable_sample(sample) = sample isa Number || sample isa AbstractArray
+_batchable_sample(sample) =
+    sample isa Number || (sample isa AbstractArray && eltype(sample) <: Number)
 
 function _mean_sample_loss(loss, model, x_batch, y_batch)
     return Statistics.mean(
@@ -327,6 +384,97 @@ _sample_column(data::AbstractVector, index) = view(data, index:index)
 
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
+
+_unix_milliseconds() = round(Int64, Dates.datetime2unix(Dates.now()) * 1000)
+
+function _log_mlflow_source_tags!(
+    mlflow,
+    mlf,
+    run;
+    source_name,
+    source_type,
+    source_git_commit,
+)
+    isdefined(mlflow, :setruntag) || return nothing
+    setruntag = getproperty(mlflow, :setruntag)
+
+    actual_source_name = if isnothing(source_name)
+        isempty(PROGRAM_FILE) ? "ContextualDFL.train_with_mlflow!" : PROGRAM_FILE
+    else
+        source_name
+    end
+
+    setruntag(mlf, run, "mlflow.source.name", string(actual_source_name))
+    setruntag(mlf, run, "mlflow.source.type", string(source_type))
+    isnothing(source_git_commit) ||
+        setruntag(mlf, run, "mlflow.source.git.commit", string(source_git_commit))
+
+    return nothing
+end
+
+function _log_mlflow_dataset!(
+    mlflow,
+    mlf,
+    run;
+    dataset_inputs,
+    dataset_name,
+    dataset_digest,
+    dataset_source_type,
+    dataset_source,
+    dataset_context,
+)
+    isdefined(mlflow, :loginputs) || return nothing
+
+    inputs = if !isnothing(dataset_inputs)
+        dataset_inputs
+    elseif !any(isnothing, (dataset_name, dataset_digest, dataset_source))
+        dataset = getproperty(mlflow, :Dataset)(
+            string(dataset_name),
+            string(dataset_digest),
+            string(dataset_source_type),
+            string(dataset_source),
+            nothing,
+            nothing,
+        )
+        tag = getproperty(mlflow, :Tag)("context", string(dataset_context))
+        [getproperty(mlflow, :DatasetInput)([tag], dataset)]
+    else
+        return nothing
+    end
+
+    loginputs = getproperty(mlflow, :loginputs)
+    try
+        loginputs(mlf, run; datasets=inputs)
+    catch error
+        error isa MethodError || rethrow()
+        loginputs(mlf, run, inputs)
+    end
+
+    return nothing
+end
+
+function _upload_mlflow_artifact!(mlflow, mlf, run, path; artifact_path)
+    isdefined(mlflow, :uploadartifact) || return nothing
+    uploadartifact = getproperty(mlflow, :uploadartifact)
+
+    if applicable(uploadartifact, mlf, run, path)
+        uploadartifact(mlf, run, path)
+    elseif applicable(uploadartifact, mlf, run, path, artifact_path)
+        uploadartifact(mlf, run, path, artifact_path)
+    else
+        uploadartifact(mlf, string(artifact_path), read(path))
+    end
+
+    return nothing
+end
+
+function _git_commit_or_nothing()
+    try
+        return strip(read(pipeline(`git rev-parse HEAD`; stderr=devnull), String))
+    catch
+        return nothing
+    end
+end
 
 function _make_optimizer(optimizer_type::Symbol, learning_rate)
     if optimizer_type === :adam
