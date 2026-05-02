@@ -260,10 +260,13 @@ end
             probabilities=probabilities,
         )
         tangents = pullback(1.0)
+        zero_tangents = pullback(ChainRulesCore.ZeroTangent())
 
         @test value ≈ 23.0 atol = 1e-8
         @test length(tangents) == 11
         @test tangents[4] ≈ [-4.75] atol = 1e-8
+        @test zero_tangents[4] == zeros(size(z))
+        @test_throws ArgumentError pullback([1.0])
 
         ϵ = 1e-5
         finite_difference_gradient = (
@@ -612,12 +615,16 @@ end
             zeros(0, 1),
         )
         tangents = pullback(output_tangent)
+        structured_tangents = pullback(ChainRulesCore.Tangent{typeof(output)}(output_tangent...))
 
         @test output[1] ≈ [1.0] atol = 1e-8
         @test output[2] ≈ reshape([1.0], 1, 1) atol = 1e-8
         @test tangents[8] ≈ reshape([1.0], 1, 1) atol = 1e-8
         @test tangents[9] == zeros(0, 1)
         @test tangents[10] ≈ reshape([0.0], 1, 1) atol = 1e-8
+        @test structured_tangents[8] ≈ tangents[8] atol = 1e-8
+        @test structured_tangents[9] == tangents[9]
+        @test structured_tangents[10] ≈ tangents[10] atol = 1e-8
 
         ϵ = 1e-5
         h_fd = (
@@ -676,6 +683,55 @@ end
 
         @test tangents[8][1, 1] ≈ h_fd atol = 1e-5
         @test tangents[10][1, 1] ≈ q_fd atol = 1e-5
+    end
+
+    @testset "solve rrule rejects dual output cotangents" begin
+        program = StochasticProgram(
+            A_eq=reshape([1.0], 1, 1),
+            A_ineq=reshape([1.0], 1, 1),
+            b_eq=[1.0],
+            b_ineq=[2.0],
+            c=[0.0],
+        )
+
+        W_eq_array = reshape([1.0], 1, 1, 1)
+        W_ineq_array = reshape([1.0], 1, 1, 1)
+        T_eq_array = reshape([1.0], 1, 1, 1)
+        T_ineq_array = reshape([0.0], 1, 1, 1)
+        h_eq_array = reshape([2.0], 1, 1)
+        h_ineq_array = reshape([3.0], 1, 1)
+        q_array = reshape([1.0], 1, 1)
+
+        output, pullback = ChainRulesCore.rrule(
+            solve,
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=0,
+        )
+        zero_output_tangent = map(x -> zeros(size(x)), output)
+        zero_tangents = pullback(zero_output_tangent)
+
+        @test zero_tangents[8] == zeros(size(h_eq_array))
+        @test zero_tangents[9] == zeros(size(h_ineq_array))
+        @test zero_tangents[10] == zeros(size(q_array))
+
+        for index in 3:6
+            component_tangent = copy(zero_output_tangent[index])
+            component_tangent[firstindex(component_tangent)] = 1.0
+            output_tangent = ntuple(
+                i -> i == index ? component_tangent : zero_output_tangent[i],
+                length(zero_output_tangent),
+            )
+
+            @test_throws ArgumentError pullback(output_tangent)
+        end
     end
 
     @testset "log-barrier solve rrule q sensitivity" begin

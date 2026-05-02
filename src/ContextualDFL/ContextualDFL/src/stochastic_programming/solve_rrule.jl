@@ -41,8 +41,14 @@ function ChainRulesCore.rrule(
 
     function stochastic_solve_pullback(output_tangent)
         z, y, _, _, _, _ = output
-        dz = _array_tangent(output_tangent, 1, z)
-        dy = _array_tangent(output_tangent, 2, y)
+        dz = _array_cotangent(output_tangent, 1, z; name=:z)
+        dy = _array_cotangent(output_tangent, 2, y; name=:y)
+
+        _assert_zero_cotangent_component(output_tangent, 3; name=:λ_b_eq)
+        _assert_zero_cotangent_component(output_tangent, 4; name=:λ_b_ineq)
+        _assert_zero_cotangent_component(output_tangent, 5; name=:λ_h_eq_array)
+        _assert_zero_cotangent_component(output_tangent, 6; name=:λ_h_ineq_array)
+
         primal_tangent = vcat(dz, vec(dy))
 
         dc, db_eq, db_ineq = _lp_reverse_from_primal_tangent(
@@ -221,12 +227,39 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
     return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
 end
 
-function _array_tangent(output_tangent, index, template)
+function _array_cotangent(output_tangent, index, template; name)
+    component = _cotangent_component(output_tangent, index)
+    if component isa AbstractArray
+        return component
+    end
+    _is_zero_cotangent(component) && return zeros(eltype(template), size(template))
+
+    throw(ArgumentError("Expected array or zero cotangent for $(name), got $(typeof(component))."))
+end
+
+function _assert_zero_cotangent_component(output_tangent, index; name)
+    component = _cotangent_component(output_tangent, index)
+    _is_zero_cotangent(component) && return nothing
+
+    throw(ArgumentError("The solve rrule does not support nonzero cotangents for $(name)."))
+end
+
+function _cotangent_component(output_tangent, index)
     tangent = ChainRulesCore.unthunk(output_tangent)
-    if tangent isa Tuple && length(tangent) >= index
-        component = ChainRulesCore.unthunk(tangent[index])
-        component isa AbstractArray && return component
+    if tangent isa ChainRulesCore.AbstractZero
+        return ChainRulesCore.ZeroTangent()
+    elseif tangent isa Tuple
+        index > length(tangent) && return ChainRulesCore.ZeroTangent()
+        return ChainRulesCore.unthunk(tangent[index])
+    elseif tangent isa ChainRulesCore.Tangent
+        index in propertynames(tangent) || return ChainRulesCore.ZeroTangent()
+        return ChainRulesCore.unthunk(getproperty(tangent, index))
     end
 
-    return zeros(eltype(template), size(template))
+    throw(ArgumentError("Expected tuple-like cotangent for solve output, got $(typeof(tangent))."))
 end
+
+_is_zero_cotangent(component::AbstractArray) = all(iszero, component)
+_is_zero_cotangent(component::ChainRulesCore.AbstractZero) = true
+_is_zero_cotangent(component::Number) = iszero(component)
+_is_zero_cotangent(component) = false
