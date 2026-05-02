@@ -123,7 +123,7 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
     @testset "train! calls epoch callback" begin
         model = Flux.Chain(Flux.Dense(1 => 1))
         data = supervised_dataset(1:4, 2:2:8)
-        loss(prediction, scenario_parameters, mu; kwargs...) =
+        loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
             sum(abs2, prediction .- target_vector(scenario_parameters))
         callbacks = NamedTuple[]
 
@@ -150,10 +150,34 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test all(callback -> callback.display_loss isa Float64, callbacks)
     end
 
+    @testset "train! defaults mu_ref_schedule to mu_in_schedule" begin
+        model = Flux.Chain(Flux.Dense(1 => 1))
+        data = supervised_dataset(1:4, 2:2:8)
+        mu_schedule = [0.1, 0.2]
+        loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
+            sum(abs2, prediction .- target_vector(scenario_parameters))
+
+        result = train!(
+            model,
+            loss,
+            nothing,
+            mu_schedule,
+            data;
+            optimizer_type=Flux.Descent,
+            learning_rate=1e-4,
+            epochs=length(mu_schedule),
+            batchsize=2,
+        )
+
+        @test [row.mu_in for row in result.history] == mu_schedule
+        @test [row.mu_ref for row in result.history] == mu_schedule
+        @test [row.mu for row in result.history] == mu_schedule
+    end
+
     @testset "train! rejects non-finite training loss" begin
         model = Flux.Chain(Flux.Dense(1 => 1))
         data = supervised_dataset(1:1, 2:2)
-        nan_loss(prediction, scenario_parameters, mu; kwargs...) =
+        nan_loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
             sum(prediction) * Float32(NaN)
         callback_count = Ref(0)
 
@@ -178,8 +202,9 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))
         data = supervised_dataset(1:4, 2:2:8)
-        loss(prediction, scenario_parameters, mu; kwargs...) =
+        loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
             sum(abs2, prediction .- target_vector(scenario_parameters))
+        mu_schedule = [0.1, 0.2]
         live_metric_counts = Int[]
 
         result = mktempdir() do dir
@@ -189,7 +214,7 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
                 "experiment-1",
                 model,
                 loss,
-                fill(0.0, 2),
+                mu_schedule,
                 data;
                 learning_rate=1e-4,
                 optimizer_type=Flux.Descent,
@@ -222,6 +247,8 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test params["optimizer_type"] == string(Flux.Descent)
         @test params["epochs"] == "2"
         @test params["batchsize"] == "2"
+        @test params["mu_in_schedule"] == string(mu_schedule)
+        @test params["mu_ref_schedule"] == string(mu_schedule)
         @test params["shuffle"] == "false"
         @test params["reset_optimizer_each_epoch"] == "true"
         @test tags["mlflow.source.name"] == "train_test.jl"
@@ -229,14 +256,15 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test tags["mlflow.source.git.commit"] == "abc123"
 
         @test length(result.history) == 2
+        @test [row.mu_ref for row in result.history] == mu_schedule
         @test run.status === FakeMLFlowClient.RunStatus.FINISHED
         @test count(metric -> metric[1] == "loss", run.metrics) == 2
         @test count(metric -> metric[1] == "display_loss", run.metrics) == 2
         @test all(metric -> metric[2] isa Float64, run.metrics)
         @test sort(unique(metric[3] for metric in run.metrics)) == [1, 2]
-        @test live_metric_counts == [5, 10]
+        @test live_metric_counts == [7, 14]
         @test run.events[end] === :status
-        @test count(==(:metric), run.events) == 10
+        @test count(==(:metric), run.events) == 14
         @test length(run.inputs) == 1
         @test only(run.inputs).dataset.name == "training-data"
         @test only(run.inputs).dataset.digest == "sha256:test"
@@ -251,7 +279,7 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))
         data = supervised_dataset(1:1, 2:2)
-        failing_loss(prediction, scenario_parameters, mu; kwargs...) =
+        failing_loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
             error("intentional training failure")
 
         @test_throws ErrorException train_with_mlflow!(

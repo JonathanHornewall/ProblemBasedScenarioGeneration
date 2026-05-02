@@ -1,6 +1,23 @@
 import MLFlowClient
 
 const RunStatus = MLFlowClient.RunStatus
+const MLFLOW_RETRY_ATTEMPTS = 8
+const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
+const MLFLOW_RETRY_BACKOFF = 1.5
+
+function with_mlflow_retry(callback, operation)
+    delay = MLFLOW_RETRY_INITIAL_DELAY_SECONDS
+    for attempt in 1:MLFLOW_RETRY_ATTEMPTS
+        try
+            return callback()
+        catch error
+            attempt == MLFLOW_RETRY_ATTEMPTS && rethrow()
+            @warn "MLflow $operation failed; retrying" attempt error=sprint(showerror, error)
+            sleep(delay)
+            delay *= MLFLOW_RETRY_BACKOFF
+        end
+    end
+end
 
 mutable struct NamedMLFlowClient
     client::MLFlowClient.MLFlow
@@ -24,24 +41,30 @@ function NamedMLFlowClient(; tracking_uri="", run_name, tags, params)
 end
 
 function createrun(mlf::NamedMLFlowClient, experiment_id; start_time=missing)
-    run = MLFlowClient.createrun(
-        mlf.client,
-        string(experiment_id);
-        run_name=mlf.run_name,
-        start_time=start_time,
-        tags=mlf.tags,
-    )
+    run = with_mlflow_retry("create run") do
+        MLFlowClient.createrun(
+            mlf.client,
+            string(experiment_id);
+            run_name=mlf.run_name,
+            start_time=start_time,
+            tags=mlf.tags,
+        )
+    end
     mlf.run = run
 
     for key in sort!(collect(keys(mlf.params)))
-        MLFlowClient.logparam(mlf.client, run, key, mlf.params[key])
+        with_mlflow_retry("log param $key") do
+            MLFlowClient.logparam(mlf.client, run, key, mlf.params[key])
+        end
     end
 
     return run
 end
 
 function logparam(mlf::NamedMLFlowClient, run, key, value)
-    return MLFlowClient.logparam(mlf.client, run, string(key), string(value))
+    return with_mlflow_retry("log param $key") do
+        MLFlowClient.logparam(mlf.client, run, string(key), string(value))
+    end
 end
 
 function logmetric(
@@ -52,26 +75,34 @@ function logmetric(
     step,
     timestamp=round(Int64, time() * 1000),
 )
-    return MLFlowClient.logmetric(
-        mlf.client,
-        run,
-        string(key),
-        Float64(value);
-        timestamp=Int64(timestamp),
-        step=Int(step),
-    )
+    return with_mlflow_retry("log metric $key") do
+        MLFlowClient.logmetric(
+            mlf.client,
+            run,
+            string(key),
+            Float64(value);
+            timestamp=Int64(timestamp),
+            step=Int(step),
+        )
+    end
 end
 
 function setruntag(mlf::NamedMLFlowClient, run, key, value)
-    return MLFlowClient.setruntag(mlf.client, run, string(key), string(value))
+    return with_mlflow_retry("set tag $key") do
+        MLFlowClient.setruntag(mlf.client, run, string(key), string(value))
+    end
 end
 
 function loginputs(mlf::NamedMLFlowClient, run; datasets)
-    return MLFlowClient.loginputs(mlf.client, run, datasets)
+    return with_mlflow_retry("log inputs") do
+        MLFlowClient.loginputs(mlf.client, run, datasets)
+    end
 end
 
 function loginputs(mlf::NamedMLFlowClient, run, datasets)
-    return MLFlowClient.loginputs(mlf.client, run, datasets)
+    return with_mlflow_retry("log inputs") do
+        MLFlowClient.loginputs(mlf.client, run, datasets)
+    end
 end
 
 const Dataset = MLFlowClient.Dataset
@@ -83,15 +114,21 @@ function uploadartifact(mlf::NamedMLFlowClient, run, path)
 end
 
 function uploadartifact(mlf::NamedMLFlowClient, run, path, artifact_path)
-    return MLFlowClient.uploadartifact(mlf.client, string(artifact_path), read(path))
+    return with_mlflow_retry("upload artifact $artifact_path") do
+        MLFlowClient.uploadartifact(mlf.client, string(artifact_path), read(path))
+    end
 end
 
 function uploadartifact(mlf::NamedMLFlowClient, artifact_path::AbstractString, data::Vector{UInt8})
-    return MLFlowClient.uploadartifact(mlf.client, string(artifact_path), data)
+    return with_mlflow_retry("upload artifact $artifact_path") do
+        MLFlowClient.uploadartifact(mlf.client, string(artifact_path), data)
+    end
 end
 
 function updaterun(mlf::NamedMLFlowClient, run; status, end_time=missing)
-    return MLFlowClient.updaterun(mlf.client, run; status=status, end_time=end_time)
+    return with_mlflow_retry("update run") do
+        MLFlowClient.updaterun(mlf.client, run; status=status, end_time=end_time)
+    end
 end
 
 function mlflow_enabled(config)

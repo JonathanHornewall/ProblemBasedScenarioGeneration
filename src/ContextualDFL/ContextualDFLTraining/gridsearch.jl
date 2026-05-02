@@ -14,6 +14,10 @@ const DEFAULT_REMOTE_PROJECT =
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
 const DEFAULT_MLFLOW_EXPERIMENT_ID = "2"
 const DEFAULT_MLFLOW_EXPERIMENT_NAME = "ContextualDFLTraining"
+const MLFLOW_RETRY_ATTEMPTS = 8
+const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
+const MLFLOW_RETRY_BACKOFF = 1.5
+const GRID_CANDIDATE_START_STAGGER_SECONDS = 0.25
 
 function _contextualdfltraining_remote_eval(config)
     started_at = unix_milliseconds()
@@ -76,9 +80,8 @@ function env_flag(name, default=false)
 end
 
 function grid_mlflow_settings()
-    enabled = env_flag("MLFLOW_ENABLED", true)
     return (;
-        enabled=enabled,
+        enabled=true,
         experiment_id=get(ENV, "MLFLOW_EXPERIMENT_ID", DEFAULT_MLFLOW_EXPERIMENT_ID),
         experiment_name=get(ENV, "MLFLOW_EXPERIMENT_NAME", DEFAULT_MLFLOW_EXPERIMENT_NAME),
         tracking_uri=get(ENV, "MLFLOW_TRACKING_URI", ""),
@@ -270,6 +273,12 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
                 index, config = item
                 started = time()
                 try
+                    if length(remote_worker_ids) > 1
+                        sleep(
+                            GRID_CANDIDATE_START_STAGGER_SECONDS *
+                            mod(index - 1, length(remote_worker_ids)),
+                        )
+                    end
                     results[index] = remotecall_fetch(
                         _contextualdfltraining_remote_eval,
                         worker,
@@ -342,21 +351,32 @@ function mark_mlflow_run_failed(config, reason)
             MLFlowClient.MLFlow(; headers=mlflow_http_headers()) :
             MLFlowClient.MLFlow(uri; headers=mlflow_http_headers())
         filter = "tags.candidate_name = \"$(mlflow_filter_escape(run_name))\" and attributes.status = \"RUNNING\""
-        runs, _ = MLFlowClient.searchruns(
-            mlf;
-            experiment_ids=[experiment_id],
-            filter=filter,
-            max_results=100,
-        )
+        runs, _ = with_mlflow_retry("search failed candidate runs") do
+            MLFlowClient.searchruns(
+                mlf;
+                experiment_ids=[experiment_id],
+                filter=filter,
+                max_results=100,
+            )
+        end
 
         for run in runs
-            MLFlowClient.setruntag(mlf, run, "ContextualDFLTraining.coordinator_status", reason)
-            MLFlowClient.updaterun(
-                mlf,
-                run;
-                status=MLFlowClient.RunStatus.FAILED,
-                end_time=unix_milliseconds(),
-            )
+            with_mlflow_retry("set failed candidate tag") do
+                MLFlowClient.setruntag(
+                    mlf,
+                    run,
+                    "ContextualDFLTraining.coordinator_status",
+                    reason,
+                )
+            end
+            with_mlflow_retry("update failed candidate run") do
+                MLFlowClient.updaterun(
+                    mlf,
+                    run;
+                    status=MLFlowClient.RunStatus.FAILED,
+                    end_time=unix_milliseconds(),
+                )
+            end
         end
     catch error
         println("Could not mark MLflow run failed for $(config.run_id): ", sprint(showerror, error))
@@ -383,16 +403,20 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
 
     parent_params = grid_parent_params(grid_id, timestamp, configs, worker_hosts)
 
-    run = MLFlowClient.createrun(
-        mlf,
-        string(settings.experiment_id);
-        run_name=grid_id,
-        start_time=unix_milliseconds(),
-        tags=tags,
-    )
+    run = with_mlflow_retry("create grid parent run") do
+        MLFlowClient.createrun(
+            mlf,
+            string(settings.experiment_id);
+            run_name=grid_id,
+            start_time=unix_milliseconds(),
+            tags=tags,
+        )
+    end
 
     for (key, value) in parent_params
-        MLFlowClient.logparam(mlf, run, key, value)
+        with_mlflow_retry("log grid parent param $key") do
+            MLFlowClient.logparam(mlf, run, key, value)
+        end
     end
 
     return (; client=mlf, run=run)
@@ -404,12 +428,14 @@ function close_mlflow_grid_parent_run(parent, results)
     success = all(result -> getproperty(result, :status) == "ok", results)
     mark_failed_mlflow_candidates!(results)
     log_grid_aggregate_metrics!(parent.client, parent.run, results)
-    MLFlowClient.updaterun(
-        parent.client,
-        parent.run;
-        status=success ? MLFlowClient.RunStatus.FINISHED : MLFlowClient.RunStatus.FAILED,
-        end_time=unix_milliseconds(),
-    )
+    with_mlflow_retry("update grid parent run") do
+        MLFlowClient.updaterun(
+            parent.client,
+            parent.run;
+            status=success ? MLFlowClient.RunStatus.FINISHED : MLFlowClient.RunStatus.FAILED,
+            end_time=unix_milliseconds(),
+        )
+    end
     return nothing
 end
 
@@ -425,12 +451,14 @@ end
 function fail_mlflow_grid_parent_run(parent)
     parent === nothing && return nothing
     try
-        MLFlowClient.updaterun(
-            parent.client,
-            parent.run;
-            status=MLFlowClient.RunStatus.FAILED,
-            end_time=unix_milliseconds(),
-        )
+        with_mlflow_retry("fail grid parent run") do
+            MLFlowClient.updaterun(
+                parent.client,
+                parent.run;
+                status=MLFlowClient.RunStatus.FAILED,
+                end_time=unix_milliseconds(),
+            )
+        end
     catch error
         println("Could not mark parent MLflow run failed: ", sprint(showerror, error))
     end
@@ -518,49 +546,73 @@ function log_grid_aggregate_metrics!(mlf, run, results)
 
         prefix = "grid_" * string(key)
         timestamp = unix_milliseconds()
-        MLFlowClient.logmetric(
-            mlf,
-            run,
-            prefix * "_mean",
-            mean(values);
-            timestamp=timestamp,
-            step=0,
-        )
-        MLFlowClient.logmetric(
-            mlf,
-            run,
-            prefix * "_median",
-            median(values);
-            timestamp=timestamp,
-            step=0,
-        )
-        MLFlowClient.logmetric(
-            mlf,
-            run,
-            prefix * "_min",
-            minimum(values);
-            timestamp=timestamp,
-            step=0,
-        )
-        MLFlowClient.logmetric(
-            mlf,
-            run,
-            prefix * "_max",
-            maximum(values);
-            timestamp=timestamp,
-            step=0,
-        )
-        MLFlowClient.logmetric(
-            mlf,
-            run,
-            prefix * "_std",
-            length(values) > 1 ? std(values) : 0.0;
-            timestamp=timestamp,
-            step=0,
-        )
+        with_mlflow_retry("log aggregate metric $(prefix)_mean") do
+            MLFlowClient.logmetric(
+                mlf,
+                run,
+                prefix * "_mean",
+                mean(values);
+                timestamp=timestamp,
+                step=0,
+            )
+        end
+        with_mlflow_retry("log aggregate metric $(prefix)_median") do
+            MLFlowClient.logmetric(
+                mlf,
+                run,
+                prefix * "_median",
+                median(values);
+                timestamp=timestamp,
+                step=0,
+            )
+        end
+        with_mlflow_retry("log aggregate metric $(prefix)_min") do
+            MLFlowClient.logmetric(
+                mlf,
+                run,
+                prefix * "_min",
+                minimum(values);
+                timestamp=timestamp,
+                step=0,
+            )
+        end
+        with_mlflow_retry("log aggregate metric $(prefix)_max") do
+            MLFlowClient.logmetric(
+                mlf,
+                run,
+                prefix * "_max",
+                maximum(values);
+                timestamp=timestamp,
+                step=0,
+            )
+        end
+        with_mlflow_retry("log aggregate metric $(prefix)_std") do
+            MLFlowClient.logmetric(
+                mlf,
+                run,
+                prefix * "_std",
+                length(values) > 1 ? std(values) : 0.0;
+                timestamp=timestamp,
+                step=0,
+            )
+        end
     end
 
     return nothing
+end
+
+function with_mlflow_retry(callback, operation)
+    delay = MLFLOW_RETRY_INITIAL_DELAY_SECONDS
+    for attempt in 1:MLFLOW_RETRY_ATTEMPTS
+        try
+            return callback()
+        catch error
+            attempt == MLFLOW_RETRY_ATTEMPTS && rethrow()
+            @warn "MLflow $operation failed; retrying" attempt error=sprint(showerror, error)
+            sleep(delay)
+            delay *= MLFLOW_RETRY_BACKOFF
+        end
+    end
 end
 
 function mlflow_parent_run_id(parent)

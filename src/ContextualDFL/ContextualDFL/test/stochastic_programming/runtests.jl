@@ -1,5 +1,36 @@
 import ChainRulesCore
+import Serialization
 import SparseArrays
+
+function _captured_failure(f)
+    try
+        f()
+    catch error
+        return error
+    end
+
+    error("Expected stochastic program failure.")
+end
+
+function _crash_payload_from_failure(error)
+    message = sprint(showerror, error)
+    matched = match(r"Crash data serialized at (.+stochastic_program_failure\.jls)$", message)
+    @test matched !== nothing
+    crash_file = matched.captures[1]
+    @test isfile(crash_file)
+    return Serialization.deserialize(crash_file), crash_file, message
+end
+
+function _with_stochastic_crash_root(f)
+    crash_root = mktempdir()
+    previous_root = ContextualDFL._set_stochastic_crash_root!(crash_root)
+    try
+        return f(crash_root)
+    finally
+        ContextualDFL._set_stochastic_crash_root!(previous_root)
+        rm(crash_root; recursive=true, force=true)
+    end
+end
 
 @testset "stochastic_programming" begin
     solver = Solver(IpoptSolver(), HiGHSSolver())
@@ -20,6 +51,127 @@ import SparseArrays
         @test program.b_eq == first_stage_lp.b_eq
         @test program.b_ineq == first_stage_lp.b_ineq
         @test program.c == first_stage_lp.c
+    end
+
+    @testset "single-scenario solve crash serialization" begin
+        _with_stochastic_crash_root() do crash_root
+            program = StochasticProgram(
+                A_eq=zeros(0, 0),
+                A_ineq=zeros(0, 0),
+                b_eq=Float64[],
+                b_ineq=Float64[],
+                c=Float64[],
+            )
+            W_eq_array = zeros(0, 1, 1)
+            W_ineq_array = reshape([1.0, -1.0], 2, 1, 1)
+            T_eq_array = zeros(0, 0, 1)
+            T_ineq_array = zeros(2, 0, 1)
+            h_eq_array = zeros(0, 1)
+            h_ineq_array = reshape([0.0, -1.0], 2, 1)
+            q_array = reshape([0.0], 1, 1)
+            probabilities = [1.0]
+
+            failure = _captured_failure() do
+                solve(
+                    solver,
+                    program,
+                    W_eq_array,
+                    W_ineq_array,
+                    T_eq_array,
+                    T_ineq_array,
+                    h_eq_array,
+                    h_ineq_array,
+                    q_array;
+                    probabilities=probabilities,
+                    μ=0,
+                    constraint_tolerance=1e-7,
+                )
+            end
+
+            payload, crash_file, message = _crash_payload_from_failure(failure)
+            @test failure isa ContextualDFL.StochasticProgramFailure
+            @test startswith(crash_file, crash_root)
+            @test occursin("single-scenario problem failed.", message)
+            @test payload.location === :single_scenario_solve
+            @test payload.first_stage.A_eq == program.A_eq
+            @test payload.first_stage.A_ineq == program.A_ineq
+            @test payload.first_stage.b_eq == program.b_eq
+            @test payload.first_stage.b_ineq == program.b_ineq
+            @test payload.first_stage.c == program.c
+            @test payload.scenario_data.W_eq_array == W_eq_array
+            @test payload.scenario_data.W_ineq_array == W_ineq_array
+            @test payload.scenario_data.T_eq_array == T_eq_array
+            @test payload.scenario_data.T_ineq_array == T_ineq_array
+            @test payload.scenario_data.h_eq_array == h_eq_array
+            @test payload.scenario_data.h_ineq_array == h_ineq_array
+            @test payload.scenario_data.q_array == q_array
+            @test isempty(payload.scenario_data.W_eq_array)
+            @test isempty(payload.scenario_data.h_eq_array)
+            @test payload.μ == 0
+            @test payload.effective_μ == zeros(2)
+            @test payload.probabilities == probabilities
+            @test payload.kwargs.constraint_tolerance == 1e-7
+            @test payload.original_error_text != ""
+        end
+    end
+
+    @testset "second-stage cost crash serialization" begin
+        _with_stochastic_crash_root() do crash_root
+            program = StochasticProgram(
+                A_eq=zeros(0, 1),
+                A_ineq=zeros(0, 1),
+                b_eq=Float64[],
+                b_ineq=Float64[],
+                c=[0.0],
+            )
+            z = [0.0]
+            W_eq_array = zeros(0, 1, 1)
+            W_ineq_array = zeros(0, 1, 1)
+            T_eq_array = zeros(0, 1, 1)
+            T_ineq_array = zeros(0, 1, 1)
+            h_eq_array = zeros(0, 1)
+            h_ineq_array = zeros(0, 1)
+            q_array = reshape([-1.0], 1, 1)
+
+            failure = _captured_failure() do
+                cost_function(
+                    program,
+                    solver,
+                    z,
+                    W_eq_array,
+                    W_ineq_array,
+                    T_eq_array,
+                    T_ineq_array,
+                    h_eq_array,
+                    h_ineq_array,
+                    q_array;
+                    μ=0,
+                    constraint_tolerance=1e-8,
+                )
+            end
+
+            payload, crash_file, message = _crash_payload_from_failure(failure)
+            @test failure isa ContextualDFL.StochasticProgramFailure
+            @test startswith(crash_file, crash_root)
+            @test occursin("second-stage problem failed in scenario 1.", message)
+            @test payload.location === :second_stage_cost
+            @test payload.scenario_index == 1
+            @test payload.z == z
+            @test payload.first_stage.c == program.c
+            @test payload.scenario_data.W_eq_array == W_eq_array
+            @test payload.scenario_data.W_ineq_array == W_ineq_array
+            @test payload.scenario_data.T_eq_array == T_eq_array
+            @test payload.scenario_data.T_ineq_array == T_ineq_array
+            @test payload.scenario_data.h_eq_array == h_eq_array
+            @test payload.scenario_data.h_ineq_array == h_ineq_array
+            @test payload.scenario_data.q_array == q_array
+            @test isempty(payload.scenario_data.W_ineq_array)
+            @test isempty(payload.scenario_data.h_ineq_array)
+            @test payload.μ == 0
+            @test payload.scenario_μ == 0
+            @test payload.kwargs.constraint_tolerance == 1e-8
+            @test payload.original_error_text != ""
+        end
     end
 
     @testset "two-scenario equality recourse" begin

@@ -11,7 +11,8 @@ import Statistics
         neural_net,
         loss,
         relative_loss,
-        mu_schedule,
+        mu_in_schedule,
+        mu_ref_schedule,
         data_set;
         kwargs...,
     )
@@ -21,18 +22,19 @@ Flux training loop for a contextual scenario dataset.
 Each data point must have a context vector and a scenario-parameter collection.
 At epoch `k`, `loss` is called as:
 
-    loss(neural_net(context), scenario_parameters, mu_schedule[k])
+    loss(neural_net(context), scenario_parameters, mu_in_schedule[k], mu_ref_schedule[k])
 """
 function train!(
     neural_net,
     loss,
     relative_loss,
-    mu_schedule::AbstractVector,
+    mu_in_schedule::AbstractVector,
+    mu_ref_schedule::AbstractVector,
     data_set;
     opt=nothing,
     optimizer_type=Flux.Adam,
     learning_rate=1e-3,
-    epochs::Integer=length(mu_schedule),
+    epochs::Integer=length(mu_in_schedule),
     batchsize::Integer=1,
     display_iterations::Bool=false,
     verbose::Bool=display_iterations,
@@ -48,8 +50,10 @@ function train!(
 )
     epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
     batchsize > 0 || throw(ArgumentError("batchsize must be positive."))
-    length(mu_schedule) == epochs ||
-        throw(ArgumentError("mu_schedule must have one value per epoch."))
+    length(mu_in_schedule) == epochs ||
+        throw(ArgumentError("mu_in_schedule must have one value per epoch."))
+    length(mu_ref_schedule) == epochs ||
+        throw(ArgumentError("mu_ref_schedule must have one value per epoch."))
     isempty(data_set) && throw(ArgumentError("training data must not be empty."))
     _validate_nr_scenarios(nr_scenarios)
 
@@ -63,7 +67,8 @@ function train!(
 
     for epoch_number in 1:epochs
         epoch_started = time()
-        mu = mu_schedule[epoch_number]
+        mu_in = mu_in_schedule[epoch_number]
+        mu_ref = mu_ref_schedule[epoch_number]
 
         if reset_optimizer_each_epoch
             state = Flux.setup(optimizer, neural_net)
@@ -82,7 +87,8 @@ function train!(
                     loss(
                         trainable_neural_net(_context(data_set[index])),
                         _scenario_parameters(data_set[index]),
-                        mu;
+                        mu_in,
+                        mu_ref;
                         loss_kwargs...,
                     )
                     for index in idxs
@@ -94,7 +100,8 @@ function train!(
                 "training loss";
                 epoch=epoch_number,
                 iteration=iteration_number,
-                mu=mu,
+                mu_in=mu_in,
+                mu_ref=mu_ref,
             )
             Flux.update!(state, neural_net, gradients[1])
             push!(epoch_losses, loss_float)
@@ -105,7 +112,8 @@ function train!(
                     display_loss_function(
                         neural_net(_context(data_set[index])),
                         _scenario_parameters(data_set[index]),
-                        mu;
+                        mu_in,
+                        mu_ref;
                         loss_kwargs...,
                     )
                     for index in idxs
@@ -117,7 +125,8 @@ function train!(
                         "display loss";
                         epoch=epoch_number,
                         iteration=iteration_number,
-                        mu=mu,
+                        mu_in=mu_in,
+                        mu_ref=mu_ref,
                     ),
                 )
             end
@@ -130,7 +139,9 @@ function train!(
         epoch_seconds = time() - epoch_started
         epoch_metadata = (;
             epoch=Int(epoch_number),
-            mu=mu,
+            mu=mu_in,
+            mu_in=mu_in,
+            mu_ref=mu_ref,
             iterations=length(epoch_losses),
             epoch_seconds=epoch_seconds,
         )
@@ -160,7 +171,9 @@ function train!(
             history,
             (;
                 epoch=Int(epoch_number),
-                mu=mu,
+                mu=mu_in,
+                mu_in=mu_in,
+                mu_ref=mu_ref,
                 loss=average_loss,
                 display_loss=average_display_loss,
                 iterations=length(epoch_losses),
@@ -193,6 +206,25 @@ end
 train!(
     neural_net,
     loss,
+    relative_loss,
+    mu_in_schedule::AbstractVector,
+    data_set;
+    mu_ref_schedule=nothing,
+    kwargs...,
+) =
+    train!(
+        neural_net,
+        loss,
+        relative_loss,
+        mu_in_schedule,
+        _default_mu_ref_schedule(mu_in_schedule, mu_ref_schedule),
+        data_set;
+        kwargs...,
+    )
+
+train!(
+    neural_net,
+    loss,
     mu_schedule::AbstractVector,
     data_set;
     kwargs...,
@@ -206,6 +238,24 @@ train!(
         kwargs...,
     )
 
+train!(
+    neural_net,
+    loss,
+    mu_in_schedule::AbstractVector,
+    mu_ref_schedule::AbstractVector,
+    data_set;
+    kwargs...,
+) =
+    train!(
+        neural_net,
+        loss,
+        nothing,
+        mu_in_schedule,
+        mu_ref_schedule,
+        data_set;
+        kwargs...,
+    )
+
 # %%% MLflow logging, model artifacts, and git metadata
 
 function train_with_mlflow!(
@@ -213,12 +263,35 @@ function train_with_mlflow!(
     experiment_id,
     neural_net,
     loss,
-    mu_schedule::AbstractVector,
+    mu_in_schedule::AbstractVector,
+    mu_ref_schedule::AbstractVector,
     data_set;
+    kwargs...,
+)
+    return train_with_mlflow!(
+        mlf,
+        experiment_id,
+        neural_net,
+        loss,
+        mu_in_schedule,
+        data_set;
+        mu_ref_schedule=mu_ref_schedule,
+        kwargs...,
+    )
+end
+
+function train_with_mlflow!(
+    mlf,
+    experiment_id,
+    neural_net,
+    loss,
+    mu_in_schedule::AbstractVector,
+    data_set;
+    mu_ref_schedule=nothing,
     relative_loss=nothing,
     learning_rate=1e-3,
     optimizer_type=Flux.Adam,
-    epochs::Integer=length(mu_schedule),
+    epochs::Integer=length(mu_in_schedule),
     batchsize::Integer=32,
     shuffle::Bool=false,
     reset_optimizer_each_epoch::Bool=false,
@@ -246,6 +319,7 @@ function train_with_mlflow!(
     nr_scenarios=nothing,
     kwargs...,
 )
+    mu_ref_schedule = _default_mu_ref_schedule(mu_in_schedule, mu_ref_schedule)
     mlflow = parentmodule(typeof(mlf))
     run = getproperty(mlflow, :createrun)(
         mlf,
@@ -261,7 +335,8 @@ function train_with_mlflow!(
     logged_nr_scenarios = _logged_nr_scenarios(loss, nr_scenarios)
     isnothing(logged_nr_scenarios) ||
         logparam(mlf, run, "nr_scenarios", string(logged_nr_scenarios))
-    logparam(mlf, run, "mu_schedule", string(collect(mu_schedule)))
+    logparam(mlf, run, "mu_in_schedule", string(collect(mu_in_schedule)))
+    logparam(mlf, run, "mu_ref_schedule", string(collect(mu_ref_schedule)))
     logparam(mlf, run, "shuffle", string(shuffle))
     logparam(mlf, run, "reset_optimizer_each_epoch", string(reset_optimizer_each_epoch))
     _log_mlflow_params!(mlflow, mlf, run, "experiment", experiment_spec)
@@ -300,7 +375,8 @@ function train_with_mlflow!(
             neural_net,
             loss,
             relative_loss,
-            mu_schedule,
+            mu_in_schedule,
+            mu_ref_schedule,
             data_set;
             learning_rate=learning_rate,
             optimizer_type=optimizer_type,
@@ -416,6 +492,9 @@ end
 _training_loss_kwargs(nr_scenarios) =
     isnothing(nr_scenarios) ? NamedTuple() : (; nr_scenarios=Int(nr_scenarios))
 
+_default_mu_ref_schedule(mu_in_schedule, mu_ref_schedule) =
+    isnothing(mu_ref_schedule) ? mu_in_schedule : mu_ref_schedule
+
 function _logged_nr_scenarios(loss, nr_scenarios)
     isnothing(nr_scenarios) || return Int(nr_scenarios)
     hasproperty(loss, :nr_scenarios) || return nothing
@@ -425,12 +504,12 @@ end
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
 
-function _checked_loss_float(value, label; epoch, iteration, mu)
+function _checked_loss_float(value, label; epoch, iteration, mu=nothing, mu_in=mu, mu_ref=0)
     float_value = _float(value)
     isfinite(float_value) || throw(
         DomainError(
             float_value,
-            "$label became non-finite at epoch=$(epoch) iteration=$(iteration) mu=$(mu)",
+            "$label became non-finite at epoch=$(epoch) iteration=$(iteration) mu_in=$(mu_in) mu_ref=$(mu_ref)",
         ),
     )
     return float_value
@@ -506,6 +585,8 @@ function _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; timestamp, s
     for (metric_name, field_name) in (
         ("epoch_seconds", :epoch_seconds),
         ("epoch_mu", :mu),
+        ("epoch_mu_in", :mu_in),
+        ("epoch_mu_ref", :mu_ref),
         ("epoch_iterations", :iterations),
     )
         haskey(metadata, field_name) || continue

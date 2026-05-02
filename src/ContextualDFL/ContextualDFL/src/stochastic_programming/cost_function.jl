@@ -76,31 +76,57 @@ function G(
 
     for k in 1:K
         scenario_μ = _scenario_barrier_parameter(size(W_ineq_array, 1), K, μ, k)
-        scenario_value_or_dual = G_hat(
-            solver,
-            z,
-            view(W_eq_array, :, :, k),
-            view(W_ineq_array, :, :, k),
-            view(T_eq_array, :, :, k),
-            view(T_ineq_array, :, :, k),
-            view(h_eq_array, :, k),
-            view(h_ineq_array, :, k),
-            view(q_array, :, k),
-            ;
-            μ=scenario_μ,
-            return_dual=return_dual,
-            kwargs...,
-        )
+        scenario_value_or_dual = try
+            G_hat(
+                solver,
+                z,
+                view(W_eq_array, :, :, k),
+                view(W_ineq_array, :, :, k),
+                view(T_eq_array, :, :, k),
+                view(T_ineq_array, :, :, k),
+                view(h_eq_array, :, k),
+                view(h_ineq_array, :, k),
+                view(q_array, :, k),
+                ;
+                μ=scenario_μ,
+                return_dual=return_dual,
+                kwargs...,
+            )
+        catch error
+            _throw_stochastic_program_failure(
+                error,
+                :second_stage_cost,
+                solver,
+                program,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                μ=μ,
+                probabilities=probabilities,
+                kwargs=(; kwargs...),
+                z=z,
+                scenario_index=k,
+                scenario_μ=scenario_μ,
+            )
+        end
 
         if return_dual
             y, λ_h_eq, λ_h_ineq = scenario_value_or_dual
             scenario_value = sum(view(q_array, :, k) .* y)
             scenario_μ_vector = _barrier_parameter_vector(size(W_ineq_array, 1), scenario_μ)
-            if !_is_zero_barrier_parameter(scenario_μ_vector)
+            positive_barrier_indices = findall(!iszero, scenario_μ_vector)
+            if !isempty(positive_barrier_indices)
                 slack =
                     view(h_ineq_array, :, k) - view(T_ineq_array, :, :, k) * z -
                     view(W_ineq_array, :, :, k) * y
-                scenario_value -= sum(scenario_μ_vector .* log.(slack))
+                scenario_value -= sum(
+                    scenario_μ_vector[i] * log(slack[i])
+                    for i in positive_barrier_indices
+                )
             end
 
             second_stage_value += p_vector[k] * scenario_value

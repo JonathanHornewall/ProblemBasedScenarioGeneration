@@ -10,6 +10,7 @@ const DEFAULT_RUN_SETTINGS = (;
     mu_start=1.0,
     mu_end=1e-2,
     mu_schedule=:geometric,
+    mu_ref_schedule=:match_input,
     nr_scenarios=1,
     rho=0.0,
     tolerance_relative=0.10,
@@ -24,10 +25,10 @@ const DEFAULT_RUN_SETTINGS = (;
 )
 
 const DEFAULT_GRID_VALUES = (;
-    learning_rate=[1e-3, 3e-4],
+    learning_rate=[1e-3, 5e-4, 3e-4],
     hidden_size=[64, 128],
-    depth=[2],
-    batch_size=[16],
+    depth=[2, 3],
+    batch_size=[8, 16],
     dropout=[0.0],
     seed=[143],
 )

@@ -58,6 +58,7 @@ include("linear_programming/diff_lp.jl")
 
 include("stochastic_programming/StochasticProgram.jl")
 include("stochastic_programming/construct_lp.jl")
+include("stochastic_programming/crash_recorder.jl")
 include("stochastic_programming/solve.jl")
 include("stochastic_programming/solve_rrule.jl")
 include("stochastic_programming/cost_function.jl")

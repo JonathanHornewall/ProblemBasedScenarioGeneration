@@ -28,7 +28,8 @@ cz, qw, ρᵢ, = vec(cz), vec(qw), vec(ρᵢ)
 #include("../outdated/neural_net.jl")
 #include("../outdated/training.jl")
 #include("../outdated/test_function.jl")
-include("tests_SAA/test_function_SAA.jl")
+# Testing is skipped for now; this script only runs the annealing training flow.
+# include("tests_SAA/test_function_SAA.jl")
 
 function main()
         problem_data = ResourceAllocationProblemData(μᵢⱼ, cz, qw, ρᵢ)
@@ -92,11 +93,6 @@ function main()
         run_training_stage(final_reg_param_surr, final_reg_param_prim, final_stage_epochs)
 
         println("Training completed!")
-
-        # Test the trained model
-        println("Testing the trained model...")
-        test_result = testing_SAA(problem_instance, model, data_set_testing, final_reg_param_surr, reg_param_ref, N_xi_per_x)
-        println("Test result: ", test_result)
 
         println("Experiment completed and saved!")
 end

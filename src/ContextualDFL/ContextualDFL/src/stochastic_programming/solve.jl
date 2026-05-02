@@ -12,6 +12,37 @@ function solve(
     μ=0,
     kwargs...,
 )
+    _, _, result = _solve_stochastic_extensive(
+        solver,
+        sp,
+        W_eq_array,
+        W_ineq_array,
+        T_eq_array,
+        T_ineq_array,
+        h_eq_array,
+        h_ineq_array,
+        q_array;
+        probabilities=probabilities,
+        μ=μ,
+        kwargs...,
+    )
+    return _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
+end
+
+function _solve_stochastic_extensive(
+    solver::Solver,
+    sp::StochasticProgram,
+    W_eq_array,
+    W_ineq_array,
+    T_eq_array,
+    T_ineq_array,
+    h_eq_array,
+    h_ineq_array,
+    q_array;
+    probabilities=nothing,
+    μ=0,
+    kwargs...,
+)
     lp = construct_lp(
         sp,
         W_eq_array,
@@ -23,13 +54,32 @@ function solve(
         q_array;
         probabilities=probabilities,
     )
-    result = solve(
-        solver,
-        lp;
-        μ=_stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities),
-        kwargs...,
-    )
-    return _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
+    μ_vector =
+        _stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities)
+
+    result = try
+        solve(solver, lp; μ=μ_vector, kwargs...)
+    catch error
+        _throw_stochastic_program_failure(
+            error,
+            _stochastic_failure_location(W_eq_array),
+            solver,
+            sp,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=μ,
+            effective_μ=μ_vector,
+            probabilities=probabilities,
+            kwargs=(; kwargs...),
+        )
+    end
+
+    return lp, μ_vector, result
 end
 
 function _stochastic_barrier_parameter_vector(

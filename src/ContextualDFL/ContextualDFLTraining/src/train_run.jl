@@ -118,6 +118,7 @@ function train_with_contextualdfl(objects, config)
         objects.scenario_generator.neural_net,
         objects.loss,
         mu_schedule_for_config(config),
+        mu_ref_schedule_for_config(config),
         objects.data.train;
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,
@@ -143,6 +144,7 @@ function train_with_contextualdfl_mlflow(objects, config)
     final_metrics = Ref{Any}(nothing)
     model = objects.scenario_generator.neural_net
     mu_schedule = mu_schedule_for_config(config)
+    mu_ref_schedule = mu_ref_schedule_for_config(config, mu_schedule)
 
     result = ContextualDFL.train_with_mlflow!(
         mlf,
@@ -150,6 +152,7 @@ function train_with_contextualdfl_mlflow(objects, config)
         model,
         loss,
         mu_schedule,
+        mu_ref_schedule,
         objects.data.train;
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,
@@ -296,6 +299,46 @@ function mu_schedule_for_config(config)
     throw(ArgumentError("unsupported mu_schedule $(schedule)"))
 end
 
+function mu_ref_schedule_for_config(config, mu_schedule=mu_schedule_for_config(config))
+    epochs = Int(config.epochs)
+    raw_schedule = config_value(config, :mu_ref_schedule, :match_input)
+
+    if raw_schedule isa AbstractVector
+        length(raw_schedule) == epochs ||
+            throw(ArgumentError("mu_ref_schedule vector must have one value per epoch."))
+        return Float64.(raw_schedule)
+    end
+
+    schedule = Symbol(raw_schedule)
+    if schedule in (:match_input, :same, :input)
+        length(mu_schedule) == epochs ||
+            throw(ArgumentError("mu_schedule must have one value per epoch."))
+        return Float64.(mu_schedule)
+    elseif schedule in (:zero, :zeros, :none)
+        return zeros(Float64, epochs)
+    elseif schedule == :constant
+        return fill(Float64(config_value(config, :mu_ref, config.mu)), epochs)
+    elseif schedule == :linear
+        epochs == 1 && return [Float64(config_value(config, :mu_ref_start, config_value(config, :mu_start, config.mu)))]
+        return collect(
+            range(
+                Float64(config_value(config, :mu_ref_start, config_value(config, :mu_start, config.mu))),
+                Float64(config_value(config, :mu_ref_end, config_value(config, :mu_end, config.mu)));
+                length=epochs,
+            ),
+        )
+    elseif schedule == :geometric || schedule == :exponential
+        mu_ref_start = Float64(config_value(config, :mu_ref_start, config_value(config, :mu_start, config.mu)))
+        mu_ref_end = Float64(config_value(config, :mu_ref_end, config_value(config, :mu_end, config.mu)))
+        mu_ref_start > 0 && mu_ref_end > 0 ||
+            throw(ArgumentError("$schedule mu_ref annealing requires positive mu_ref_start and mu_ref_end."))
+        epochs == 1 && return [mu_ref_start]
+        return exp.(range(log(mu_ref_start), log(mu_ref_end); length=epochs))
+    end
+
+    throw(ArgumentError("unsupported mu_ref_schedule $(schedule)"))
+end
+
 function mlflow_experiment_spec(objects, config)
     return (;
         problem=string(config_value(config, :problem, :resource_allocation)),
@@ -358,6 +401,7 @@ end
 
 function mlflow_method_spec(objects, config)
     mu_schedule = mu_schedule_for_config(config)
+    mu_ref_schedule = mu_ref_schedule_for_config(config, mu_schedule)
     return (;
         loss=string(config.loss),
         solver=string(config.solver),
@@ -369,9 +413,14 @@ function mlflow_method_spec(objects, config)
         mu_start=isempty(mu_schedule) ? missing : first(mu_schedule),
         mu_end=isempty(mu_schedule) ? missing : last(mu_schedule),
         mu_schedule=string(config_value(config, :mu_schedule, :constant)),
+        mu_ref=Float64(config_value(config, :mu_ref, config.mu)),
+        mu_ref_start=isempty(mu_ref_schedule) ? missing : first(mu_ref_schedule),
+        mu_ref_end=isempty(mu_ref_schedule) ? missing : last(mu_ref_schedule),
+        mu_ref_schedule=string(config_value(config, :mu_ref_schedule, :match_input)),
         rho=config.rho,
         homotopy_schedule=string(config_value(config, :mu_schedule, :constant)),
         log_barrier_training=any(!iszero, mu_schedule),
+        reference_log_barrier_training=any(!iszero, mu_ref_schedule),
         log_barrier_inference=Bool(config_value(config, :log_barrier_inference, any(!iszero, mu_schedule))),
         optimality_evaluation=Bool(config_value(config, :optimality_evaluation, false)),
         optimality_test_sample_count=Int(config_value(config, :optimality_test_sample_count, 0)),

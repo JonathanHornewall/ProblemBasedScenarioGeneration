@@ -48,11 +48,11 @@ end
     reference_scenario_parameter_collection = [
         ParametricScenario(;
             W_eq_xi=reshape([1.0], 1, 1),
-            W_ineq_xi=zeros(0, 1),
+            W_ineq_xi=reshape([1.0], 1, 1),
             T_eq_xi=reshape([1.0], 1, 1),
-            T_ineq_xi=zeros(0, 1),
+            T_ineq_xi=reshape([0.0], 1, 1),
             h_eq_xi=[20.0],
-            h_ineq_xi=Float64[],
+            h_ineq_xi=[30.0],
             q_xi=[2.0],
         ),
     ]
@@ -62,4 +62,26 @@ end
         reference_scenario_parameter_collection,
         0.0,
     ) ≈ 20.0
+
+    positive_mu = 0.1
+    default_reference_mu_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        positive_mu,
+    )
+    explicit_reference_mu_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        positive_mu,
+        positive_mu,
+    )
+    zero_reference_mu_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        positive_mu,
+        0.0,
+    )
+
+    @test default_reference_mu_loss ≈ explicit_reference_mu_loss atol = 1e-7 rtol = 1e-7
+    @test !isapprox(default_reference_mu_loss, zero_reference_mu_loss; atol=1e-4, rtol=1e-4)
 end

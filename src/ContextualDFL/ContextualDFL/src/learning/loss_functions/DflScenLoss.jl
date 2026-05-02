@@ -36,7 +36,8 @@ end
 function (loss::DflScenLoss)(
     input_scenario_parameter_collection,
     reference_scenario_parameter_collection,
-    mu;
+    mu_in=0,
+    mu_ref=mu_in;
     probabilities=nothing,
     nr_scenarios=loss.nr_scenarios,
     kwargs...,
@@ -58,7 +59,7 @@ function (loss::DflScenLoss)(
         h_ineq,
         q;
         probabilities=probabilities,
-        μ=mu,
+        μ=mu_in,
         kwargs...,
     )
 
@@ -79,7 +80,7 @@ function (loss::DflScenLoss)(
         h_ineq,
         q;
         probabilities=probabilities,
-        μ=mu,
+        μ=mu_ref,
         kwargs...,
     )
 end

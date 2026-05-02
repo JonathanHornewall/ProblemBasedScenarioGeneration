@@ -17,7 +17,8 @@ function ChainRulesCore.rrule(
     μ=0,
     kwargs...,
 )
-    lp = construct_lp(
+    lp, μ_vector, result = _solve_stochastic_extensive(
+        solver,
         sp,
         W_eq_array,
         W_ineq_array,
@@ -27,10 +28,9 @@ function ChainRulesCore.rrule(
         h_ineq_array,
         q_array;
         probabilities=probabilities,
+        μ=μ,
+        kwargs...,
     )
-    μ_vector =
-        _stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities)
-    result = solve(solver, lp; μ=μ_vector, kwargs...)
     output = _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
 
     p_vector = if isnothing(probabilities)
