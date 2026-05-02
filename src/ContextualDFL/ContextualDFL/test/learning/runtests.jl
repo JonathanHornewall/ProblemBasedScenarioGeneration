@@ -148,6 +148,30 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test all(callback -> callback.display_loss isa Float64, callbacks)
     end
 
+    @testset "train! rejects non-finite training loss" begin
+        model = Flux.Chain(Flux.Dense(1 => 1))
+        data = supervised_dataset(1:1, 2:2)
+        nan_loss(prediction, scenario_parameters, mu; kwargs...) =
+            sum(prediction) * Float32(NaN)
+        callback_count = Ref(0)
+
+        @test_throws DomainError train!(
+            model,
+            nan_loss,
+            nothing,
+            fill(0.0, 1),
+            data;
+            optimizer_type=Flux.Descent,
+            learning_rate=1.0,
+            epochs=1,
+            batchsize=1,
+            on_epoch_end=(args...) -> (callback_count[] += 1),
+        )
+
+        @test callback_count[] == 0
+        @test all(parameter -> all(isfinite, parameter), Flux.trainables(model))
+    end
+
     @testset "train_with_mlflow! logs live params and metrics" begin
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))

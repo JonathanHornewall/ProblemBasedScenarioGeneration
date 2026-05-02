@@ -88,8 +88,16 @@ function train!(
                     for index in idxs
                 )
             end
+            iteration_number = length(epoch_losses) + 1
+            loss_float = _checked_loss_float(
+                loss_value,
+                "training loss";
+                epoch=epoch_number,
+                iteration=iteration_number,
+                mu=mu,
+            )
             Flux.update!(state, neural_net, gradients[1])
-            push!(epoch_losses, _float(loss_value))
+            push!(epoch_losses, loss_float)
 
             if show_progress || !isnothing(relative_loss)
                 display_loss_function = isnothing(relative_loss) ? loss : relative_loss
@@ -102,7 +110,16 @@ function train!(
                     )
                     for index in idxs
                 )
-                push!(epoch_display_losses, _float(display_loss))
+                push!(
+                    epoch_display_losses,
+                    _checked_loss_float(
+                        display_loss,
+                        "display loss";
+                        epoch=epoch_number,
+                        iteration=iteration_number,
+                        mu=mu,
+                    ),
+                )
             end
         end
 
@@ -383,6 +400,17 @@ end
 
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
+
+function _checked_loss_float(value, label; epoch, iteration, mu)
+    float_value = _float(value)
+    isfinite(float_value) || throw(
+        DomainError(
+            float_value,
+            "$label became non-finite at epoch=$(epoch) iteration=$(iteration) mu=$(mu)",
+        ),
+    )
+    return float_value
+end
 
 function _call_epoch_callback(callback, epoch, loss_value, display_loss, metadata)
     if applicable(callback, epoch, loss_value, display_loss, metadata)
