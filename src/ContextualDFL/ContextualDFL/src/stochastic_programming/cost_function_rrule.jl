@@ -60,7 +60,15 @@ function ChainRulesCore.rrule(
 
     function cost_function_pullback(value_tangent)
         value_tangent = ChainRulesCore.unthunk(value_tangent)
-        tangent = value_tangent isa Number ? value_tangent : zero(T)
+        tangent = if _is_zero_cotangent(value_tangent)
+            zero(T)
+        elseif value_tangent isa Number
+            value_tangent
+        else
+            throw(ArgumentError(
+                "Expected scalar cotangent for scalar cost_function output; got $(typeof(value_tangent)).",
+            ))
+        end
 
         return (
             ChainRulesCore.NoTangent(),
