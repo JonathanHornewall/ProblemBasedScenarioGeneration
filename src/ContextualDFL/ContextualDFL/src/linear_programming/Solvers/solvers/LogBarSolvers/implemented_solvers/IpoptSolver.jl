@@ -64,7 +64,9 @@ function solve(
         z=z_value,
         slack=JuMP.value.(s),
         dual_eq=JuMP.dual.(eq_constraints),
-        dual_ineq=JuMP.dual.(slack_constraints),
+        # Match the LP solver convention for A_ineq * z <= b_ineq:
+        # stored inequality duals are nonnegative and enter stationarity as A_ineq' * dual_ineq.
+        dual_ineq=-JuMP.dual.(slack_constraints),
         objective_value=JuMP.objective_value(model),
         status=status,
         metadata=(;

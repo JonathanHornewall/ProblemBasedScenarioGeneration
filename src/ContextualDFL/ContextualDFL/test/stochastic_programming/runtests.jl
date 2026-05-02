@@ -206,6 +206,96 @@ import SparseArrays
         @test vcat(stochastic_result[1], vec(stochastic_result[2])) ≈ manual_result.z atol = 1e-8
     end
 
+    @testset "log-barrier inequality dual convention" begin
+        μ = 0.1
+        lp = LP(
+            A_eq=zeros(0, 1),
+            A_ineq=reshape([-1.0, -1.0], 2, 1),
+            b_eq=Float64[],
+            b_ineq=[-8.0, 0.0],
+            c=[1.0],
+        )
+
+        result = solve(solver, lp; μ=μ, tol=1e-10)
+        slack = lp.b_ineq - lp.A_ineq * result.z
+
+        @test minimum(result.dual_ineq) >= -1e-8
+        @test result.dual_ineq ≈ fill(μ, length(slack)) ./ slack atol = 2e-4 rtol = 2e-4
+    end
+
+    @testset "log-barrier cost rrule inequality sign" begin
+        program = StochasticProgram(
+            A_eq=zeros(0, 1),
+            A_ineq=zeros(0, 1),
+            b_eq=Float64[],
+            b_ineq=Float64[],
+            c=[0.0],
+        )
+
+        W_eq_array = zeros(0, 1, 1)
+        W_ineq_array = reshape([-1.0, -1.0], 2, 1, 1)
+        T_eq_array = zeros(0, 1, 1)
+        T_ineq_array = reshape([-1.0, 0.0], 2, 1, 1)
+        h_eq_array = zeros(0, 1)
+        h_ineq_array = reshape([-10.0, 0.0], 2, 1)
+        q_array = reshape([1.0], 1, 1)
+        z = [2.0]
+        μ = 0.1
+
+        value, pullback = ChainRulesCore.rrule(
+            cost_function,
+            program,
+            solver,
+            z,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=μ,
+            tol=1e-10,
+        )
+        dz = pullback(1.0)[4]
+
+        direction = [0.2]
+        ϵ = 1e-5
+        finite_difference_gradient = (
+            cost_function(
+                program,
+                solver,
+                z .+ ϵ .* direction,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                μ=μ,
+                tol=1e-10,
+            ) -
+            cost_function(
+                program,
+                solver,
+                z .- ϵ .* direction,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                μ=μ,
+                tol=1e-10,
+            )
+        ) / (2ϵ)
+
+        @test value isa Number
+        @test sum(dz .* direction) ≈ finite_difference_gradient atol = 2e-4 rtol = 2e-4
+    end
+
     @testset "single-scenario equality and inequality recourse" begin
         z = [1.0]
         W_eq = [1.0 0.0]
