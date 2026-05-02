@@ -202,26 +202,14 @@ function ChainRulesCore.rrule(
     output = decode_scenario_collection(decoder, scenario_parameter_collection)
 
     function resource_allocation_decode_pullback(output_tangent)
-        output_tangent = ChainRulesCore.unthunk(output_tangent)
-        dh_eq_array = try
-            ChainRulesCore.unthunk(output_tangent[5])
-        catch
-            return (
-                ChainRulesCore.NoTangent(),
-                ChainRulesCore.NoTangent(),
-                ChainRulesCore.NoTangent(),
-            )
-        end
-
-        dh_eq_array isa AbstractArray ||
-            return (
-                ChainRulesCore.NoTangent(),
-                ChainRulesCore.NoTangent(),
-                ChainRulesCore.NoTangent(),
-            )
+        dh_eq_array = ContextualDFL._array_cotangent(
+            output_tangent,
+            5,
+            output[5];
+            name=:h_eq_array,
+        )
 
         scenario_parameter_tangents = map(enumerate(scenario_parameter_collection)) do (k, scenario_parameter)
-            names = propertynames(scenario_parameter)
             raw = _resource_allocation_demand_or_rhs(decoder, scenario_parameter)
             h_tangent = if length(raw) == decoder.demand_count
                 view(dh_eq_array, (decoder.resource_count + 1):(decoder.resource_count + decoder.demand_count), k)
@@ -229,10 +217,15 @@ function ChainRulesCore.rrule(
                 view(dh_eq_array, :, k)
             end
 
+            if scenario_parameter isa AbstractVector
+                return ChainRulesCore.ProjectTo(scenario_parameter)(h_tangent)
+            end
+
+            names = propertynames(scenario_parameter)
             values = map(names) do name
                 name in (:h_eq, :h) ? h_tangent : ChainRulesCore.NoTangent()
             end
-            NamedTuple{names}(values)
+            return NamedTuple{names}(values)
         end
 
         return (

@@ -98,6 +98,45 @@ include("resource_allocation_instance.jl")
         ))
         @test tangents[3][1].h_eq == ones(demand_count)
         @test tangents[3][2].h_eq == ones(demand_count)
+
+        vector_collection = [collect(scenario.h_eq) for scenario in generated.scenario_collections[1]]
+        vector_arrays = decoded_resource_allocation_arrays(decoder, vector_collection)
+        _, vector_pullback = ChainRulesCore.rrule(
+            decode_scenario_collection,
+            decoder,
+            vector_collection,
+        )
+        vector_dh_eq = reshape(collect(1.0:(recourse_rows * 3)), recourse_rows, 3)
+        vector_tangents = vector_pullback(ntuple(
+            index -> index == 5 ? vector_dh_eq : zeros(size(vector_arrays[index])),
+            length(vector_arrays),
+        ))
+        @test vector_tangents[3][1] == vector_dh_eq[(resource_count + 1):end, 1]
+        @test vector_tangents[3][3] == vector_dh_eq[(resource_count + 1):end, 3]
+
+        full_rhs_collection = [
+            vcat(fill(-Float64(k), resource_count), collect(scenario.h_eq))
+            for (k, scenario) in enumerate(generated.scenario_collections[1])
+        ]
+        full_rhs_arrays = decoded_resource_allocation_arrays(decoder, full_rhs_collection)
+        _, full_rhs_pullback = ChainRulesCore.rrule(
+            decode_scenario_collection,
+            decoder,
+            full_rhs_collection,
+        )
+        full_rhs_dh_eq = reshape(collect(101.0:(100.0 + recourse_rows * 3)), recourse_rows, 3)
+        full_rhs_tangents = full_rhs_pullback(ntuple(
+            index -> index == 5 ? full_rhs_dh_eq : zeros(size(full_rhs_arrays[index])),
+            length(full_rhs_arrays),
+        ))
+        @test full_rhs_tangents[3][1] == full_rhs_dh_eq[:, 1]
+        @test full_rhs_tangents[3][2] == full_rhs_dh_eq[:, 2]
+
+        malformed_cotangent = ntuple(
+            index -> index == 5 ? "not an array cotangent" : zeros(size(arrays[index])),
+            length(arrays),
+        )
+        @test_throws ArgumentError pullback(malformed_cotangent)
     end
 
     @testset "resource allocation LP, stochastic solve, and cost" begin
@@ -305,6 +344,10 @@ include("resource_allocation_instance.jl")
 
         finite_difference_solve =
             (solve_scalar(h_eq + ϵ .* h_direction) - solve_scalar(h_eq - ϵ .* h_direction)) / (2ϵ)
+        ad_dh_eq = only(Flux.gradient(solve_scalar, h_eq))
+        @test abs(finite_difference_solve) > 1e-8
+        @test size(ad_dh_eq) == size(h_eq)
+        @test sum(ad_dh_eq .* h_direction) ≈ finite_difference_solve atol = 3e-3 rtol = 3e-2
         @test sum(dh_eq_tangent .* h_direction) ≈ finite_difference_solve atol = 3e-3 rtol = 3e-2
     end
 
