@@ -21,10 +21,11 @@ function diff_solve(
     length(db_eq) == m_eq || throw(DimensionMismatch("db_eq must have length $m_eq."))
     length(db_ineq) == m_ineq || throw(DimensionMismatch("db_ineq must have length $m_ineq."))
 
-    T = promote_type(eltype(cache.z), eltype(lp.c), typeof(μ))
+    μ_vector = cache.μ
+    T = promote_type(eltype(cache.z), eltype(lp.c), eltype(μ_vector))
     rhs_x = zeros(T, n)
 
-    if iszero(μ)
+    if _is_zero_barrier_parameter(μ_vector)
         all(iszero, db_ineq) ||
             (rhs_x .+= transpose(lp.A_ineq[cache.loose, :]) * (cache.d .* db_ineq[cache.loose]))
         rhs = vcat(rhs_x, db_eq, db_ineq[cache.tight])
@@ -33,7 +34,7 @@ function diff_solve(
         all(iszero, dc) || (rhs_x .-= dc)
         all(iszero, db_eq) || (rhs_eq .= db_eq)
         all(iszero, db_ineq) ||
-            (rhs_x .+= μ .* (transpose(lp.A_ineq) * (cache.d .* db_ineq)))
+            (rhs_x .+= transpose(lp.A_ineq) * ((μ_vector .* cache.d) .* db_ineq))
         rhs = vcat(rhs_x, rhs_eq)
     end
 
@@ -42,16 +43,20 @@ function diff_solve(
 end
 
 function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...)
-    μ < zero(μ) && throw(ArgumentError("Differentiation requires μ >= 0."))
+    μ_vector = _barrier_parameter_vector(lp, μ)
 
     if !isnothing(pre_computed) && hasproperty(pre_computed, :K_factorization)
-        pre_computed.μ == μ ||
+        pre_computed.μ == μ_vector ||
             throw(ArgumentError("pre_computed was built with a different μ."))
         return pre_computed
     end
 
     solve_result = if isnothing(pre_computed)
-        iszero(μ) ? solve(solver, lp; kwargs...) : solve(solver, lp; μ=μ, kwargs...)
+        if _is_zero_barrier_parameter(μ_vector)
+            solve(solver, lp; kwargs...)
+        else
+            solve(solver, lp; μ=μ_vector, kwargs...)
+        end
     else
         pre_computed
     end
@@ -65,7 +70,7 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
     any(<(-tight_tol), slack) &&
         throw(DomainError(slack, "The solution violates inequality constraints."))
 
-    if iszero(μ)
+    if _is_zero_barrier_parameter(μ_vector)
         tight = findall(abs.(slack) .<= tight_tol)
         loose = findall(slack .> tight_tol)
         rank(Matrix(lp.A_eq)) == size(lp.A_eq, 1) ||
@@ -89,7 +94,7 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         d = one(eltype(slack)) ./ (slack[loose] .^ 2)
 
         H = transpose(A_loose) * (Diagonal(d) * A_loose)
-        T = promote_type(eltype(H), eltype(F), typeof(μ))
+        T = promote_type(eltype(H), eltype(F), eltype(μ_vector))
         K = if issparse(H) || issparse(F)
             [
                 sparse(H) sparse(transpose(F))
@@ -103,7 +108,7 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         end
 
         K_factorization = issparse(K) ? factorize(K) : bunchkaufman(Symmetric(K))
-        return (; z=z, d=d, K_factorization=K_factorization, μ=μ, tight=tight, loose=loose)
+        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=tight, loose=loose)
     end
 
     all(>(zero(eltype(slack))), slack) ||
@@ -112,8 +117,8 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         throw(ArgumentError("Log-barrier differentiation requires A_eq to have full row rank."))
 
     d = one(eltype(slack)) ./ (slack .^ 2)
-    H = μ .* (transpose(lp.A_ineq) * (Diagonal(d) * lp.A_ineq))
-    T = promote_type(eltype(H), eltype(lp.A_eq), typeof(μ))
+    H = transpose(lp.A_ineq) * (Diagonal(μ_vector .* d) * lp.A_ineq)
+    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector))
     K = if issparse(H) || issparse(lp.A_eq)
         [
             sparse(H) sparse(transpose(lp.A_eq))
@@ -127,5 +132,5 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
     end
 
     K_factorization = issparse(K) ? factorize(K) : bunchkaufman(Symmetric(K))
-    return (; z=z, d=d, K_factorization=K_factorization, μ=μ, tight=Int[], loose=collect(1:length(lp.b_ineq)))
+    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
 end

@@ -66,8 +66,10 @@ function logparam(::FakeMLFlow, run::FakeRun, key, value)
     return nothing
 end
 
-function logmetric(::FakeMLFlow, run::FakeRun, key, value; step)
+function logmetric(::FakeMLFlow, run::FakeRun, key, value; step, timestamp=missing)
     value isa Float64 || throw(ArgumentError("MLflow metrics must be Float64."))
+    timestamp === missing || timestamp isa Int64 ||
+        throw(ArgumentError("MLflow metric timestamps must be Int64."))
     push!(run.metrics, (key, value, Int(step)))
     push!(run.events, :metric)
     return nothing

@@ -28,7 +28,9 @@ function ChainRulesCore.rrule(
         q_array;
         probabilities=probabilities,
     )
-    result = solve(solver, lp; μ=μ, kwargs...)
+    μ_vector =
+        _stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities)
+    result = solve(solver, lp; μ=μ_vector, kwargs...)
     output = _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
 
     p_vector = if isnothing(probabilities)
@@ -46,7 +48,7 @@ function ChainRulesCore.rrule(
         dc, db_eq, db_ineq = _lp_reverse_from_primal_tangent(
             solver,
             lp,
-            μ,
+            μ_vector,
             result,
             primal_tangent;
             kwargs...,
@@ -109,7 +111,8 @@ function _lp_reverse_from_primal_tangent(
     m_ineq = length(lp.b_ineq)
     T = promote_type(eltype(lp.c), eltype(lp.b_eq), eltype(lp.b_ineq), eltype(primal_tangent))
 
-    kkt_size = iszero(μ) ? n + m_eq + length(cache.tight) : n + m_eq
+    μ_vector = cache.μ
+    kkt_size = _is_zero_barrier_parameter(μ_vector) ? n + m_eq + length(cache.tight) : n + m_eq
     rhs = zeros(T, kkt_size)
     rhs[1:n] = primal_tangent
     adjoint_solution = cache.K_factorization \ rhs
@@ -119,7 +122,7 @@ function _lp_reverse_from_primal_tangent(
     db_eq = zeros(T, m_eq)
     db_ineq = zeros(T, m_ineq)
 
-    if iszero(μ)
+    if _is_zero_barrier_parameter(μ_vector)
         adjoint_constraints = adjoint_solution[(n + 1):end]
         db_eq .= view(adjoint_constraints, 1:m_eq)
         db_ineq[cache.tight] .= view(adjoint_constraints, (m_eq + 1):length(adjoint_constraints))
@@ -135,14 +138,14 @@ function _lp_reverse_from_primal_tangent(
     dc .= .-adjoint_primal
     db_eq .= view(adjoint_solution, (n + 1):(n + m_eq))
     if m_ineq > 0
-        db_ineq .= μ .* cache.d .* (lp.A_ineq * adjoint_primal)
+        db_ineq .= μ_vector .* cache.d .* (lp.A_ineq * adjoint_primal)
     end
 
     return dc, db_eq, db_ineq
 end
 
 function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
-    μ < zero(μ) && throw(ArgumentError("Differentiation requires μ >= 0."))
+    μ_vector = _barrier_parameter_vector(lp, μ)
 
     z = result isa AbstractVector ? result : result.z
     n = length(lp.c)
@@ -153,7 +156,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
     any(<(-tight_tol), slack) &&
         throw(DomainError(slack, "The solution violates inequality constraints."))
 
-    if iszero(μ)
+    if _is_zero_barrier_parameter(μ_vector)
         tight = findall(abs.(slack) .<= tight_tol)
         loose = findall(slack .> tight_tol)
         rank(Matrix(lp.A_eq)) == size(lp.A_eq, 1) ||
@@ -177,7 +180,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
         d = one(eltype(slack)) ./ (slack[loose] .^ 2)
 
         H = transpose(A_loose) * (Diagonal(d) * A_loose)
-        T = promote_type(eltype(H), eltype(F), typeof(μ))
+        T = promote_type(eltype(H), eltype(F), eltype(μ_vector))
         K = if issparse(H) || issparse(F)
             [
                 sparse(H) sparse(transpose(F))
@@ -191,7 +194,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
         end
 
         K_factorization = issparse(K) ? lu(K) : bunchkaufman(Symmetric(K))
-        return (; z=z, d=d, K_factorization=K_factorization, μ=μ, tight=tight, loose=loose)
+        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=tight, loose=loose)
     end
 
     all(>(zero(eltype(slack))), slack) ||
@@ -200,8 +203,8 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
         throw(ArgumentError("Log-barrier differentiation requires A_eq to have full row rank."))
 
     d = one(eltype(slack)) ./ (slack .^ 2)
-    H = μ .* (transpose(lp.A_ineq) * (Diagonal(d) * lp.A_ineq))
-    T = promote_type(eltype(H), eltype(lp.A_eq), typeof(μ))
+    H = transpose(lp.A_ineq) * (Diagonal(μ_vector .* d) * lp.A_ineq)
+    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector))
     K = if issparse(H) || issparse(lp.A_eq)
         [
             sparse(H) sparse(transpose(lp.A_eq))
@@ -215,7 +218,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
     end
 
     K_factorization = issparse(K) ? lu(K) : bunchkaufman(Symmetric(K))
-    return (; z=z, d=d, K_factorization=K_factorization, μ=μ, tight=Int[], loose=collect(1:length(lp.b_ineq)))
+    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
 end
 
 function _array_tangent(output_tangent, index, template)

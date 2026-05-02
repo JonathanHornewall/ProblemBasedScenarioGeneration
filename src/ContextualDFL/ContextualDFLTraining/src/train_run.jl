@@ -45,7 +45,7 @@ function train_and_evaluate(config::NamedTuple)
             objects = resource_allocation_training_objects(cfg)
         end
         training_seconds = @elapsed begin
-            training = train_with_contextualdfl_or_fallback(objects, cfg)
+            training = train_with_contextualdfl(objects, cfg)
             train_result = training.result
             training_backend = training.backend
             fallback_reason = training.fallback_reason
@@ -57,7 +57,7 @@ function train_and_evaluate(config::NamedTuple)
         else
             measured_metrics = nothing
             evaluation_seconds = @elapsed begin
-                measured_metrics = evaluate_model_on_splits(model, objects.data, cfg)
+                measured_metrics = evaluate_model_for_reporting(model, objects, cfg)
             end
             measured_metrics
         end
@@ -103,7 +103,7 @@ function train_and_evaluate(config::NamedTuple)
     end
 end
 
-function train_with_contextualdfl_or_fallback(objects, config)
+function train_with_contextualdfl(objects, config)
     if mlflow_enabled(config)
         mlflow_result = train_with_contextualdfl_mlflow(objects, config)
         return (;
@@ -114,41 +114,24 @@ function train_with_contextualdfl_or_fallback(objects, config)
         )
     end
 
-    try
-        result = ContextualDFL.train!(
-            objects.scenario_generator.neural_net,
-            objects.loss,
-            mu_schedule_for_config(config),
-            objects.data.train;
-            learning_rate=config.learning_rate,
-            optimizer_type=Flux.Adam,
-            epochs=config.epochs,
-            batchsize=config.batch_size,
-            shuffle=Bool(config_value(config, :shuffle, false)),
-        )
+    result = ContextualDFL.train!(
+        objects.scenario_generator.neural_net,
+        objects.loss,
+        mu_schedule_for_config(config),
+        objects.data.train;
+        learning_rate=config.learning_rate,
+        optimizer_type=Flux.Adam,
+        epochs=config.epochs,
+        batchsize=config.batch_size,
+        shuffle=Bool(config_value(config, :shuffle, false)),
+    )
 
-        return (;
-            result=result,
-            backend="ContextualDFL.train",
-            fallback_reason="",
-            final_metrics=nothing,
-        )
-    catch error
-        message = sprint(showerror, error)
-        package_training_placeholder_error(message) || rethrow()
-
-        fallback = supervised_mse_train!(
-            objects.scenario_generator.neural_net,
-            objects.data,
-            config,
-        )
-        return (;
-            result=fallback,
-            backend="ContextualDFLTraining.supervised_mse_fallback",
-            fallback_reason=first_line(message),
-            final_metrics=nothing,
-        )
-    end
+    return (;
+        result=result,
+        backend="ContextualDFL.train",
+        fallback_reason="",
+        final_metrics=nothing,
+    )
 end
 
 function train_with_contextualdfl_mlflow(objects, config)
@@ -199,7 +182,7 @@ function train_with_contextualdfl_mlflow(objects, config)
         method_spec=mlflow_method_spec(objects, config),
         evaluation_callbacks=(final=(train_result) -> begin
             trained_model = extract_model(train_result, objects.scenario_generator)
-            metrics = evaluate_model_on_splits(trained_model, objects.data, config)
+            metrics = evaluate_model_for_reporting(trained_model, objects, config)
             final_metrics[] = metrics
             return metrics
         end,),
@@ -240,12 +223,12 @@ function mlflow_dataset_name(config)
 end
 
 function mlflow_dataset_source(config)
-    parameter_path = resource_parameter_path()
-    parameter_source = isfile(parameter_path) ? parameter_path : "generated-default-parameters"
     return join(
         (
-            "resource_allocation",
-            "parameter_source=$(parameter_source)",
+            "ContextualDFLExperiments.resource_allocation",
+            "problem_data=default_resource_allocation_problem_data",
+            "context_generator=ResourceAllocationContextDataGenerator",
+            "scenario_generator=ResourceAllocationScenarioDataGenerator",
             "seed=$(config.seed)",
             "n_samples=$(config.n_samples)",
             "validation_fraction=$(config.validation_fraction)",
@@ -332,7 +315,7 @@ function mlflow_data_spec(objects, config)
     scenario_count = isempty(objects.data.train) ? 0 : length(first(objects.data.train).scenario_parameters)
 
     return (;
-        generator="resource_allocation",
+        generator="ContextualDFLExperiments.resource_allocation",
         dataset_name=mlflow_dataset_name(config),
         dataset_digest=mlflow_dataset_digest(objects, config),
         train_size=train_size,
@@ -367,7 +350,7 @@ function mlflow_model_spec(model, objects, config)
         parameter_count=model_parameter_count(model),
         initialization_seed=string(config_value(config, :model_initialization_seed, "global_rng")),
         input_dimension=isempty(objects.data.train) ? 0 : length(first(objects.data.train).context),
-        output_dimension=demand_count(objects.problem),
+        output_dimension=resource_allocation_demand_count(objects.problem),
     )
 end
 
@@ -377,6 +360,7 @@ function mlflow_method_spec(objects, config)
         loss=string(config.loss),
         solver=string(config.solver),
         decoder=string(typeof(objects.scenario_decoder)),
+        reference_decoder=string(typeof(objects.reference_scenario_decoder)),
         learned_components="h",
         nr_scenarios=Int(config_value(config, :nr_scenarios, 1)),
         mu=config.mu,
@@ -416,70 +400,6 @@ function model_parameter_count(model)
     end
 end
 
-function package_training_placeholder_error(message::AbstractString)
-    return any(
-        needle -> occursin(needle, message),
-        (
-            "Training has not been implemented yet",
-            "MSE scenario loss has not been implemented yet",
-            "Scenario generation from context has not been implemented yet",
-            "Data-set scenario decoding has not been implemented yet",
-        ),
-    )
-end
-
-function first_line(message::AbstractString)
-    lines = split(message, '\n'; limit=2)
-    return isempty(lines) ? message : first(lines)
-end
-
-function supervised_mse_train!(model, splits, config)
-    Random.seed!(config.seed)
-
-    optimizer_state = Flux.setup(Adam(config.learning_rate), model)
-    history = NamedTuple[]
-    train_x = dataset_context_matrix(splits.train)
-    train_y = dataset_demand_matrix(splits.train)
-
-    for epoch in 1:config.epochs
-        Flux.trainmode!(model)
-        loader = Flux.DataLoader(
-            (train_x, train_y);
-            batchsize=config.batch_size,
-            shuffle=true,
-        )
-        minibatch_losses = Float64[]
-
-        for (x_batch, y_batch) in loader
-            loss_value, gradients = Flux.withgradient(model) do trainable_model
-                y_pred = matrix_like(trainable_model(x_batch), y_batch)
-                mean(abs2, y_pred .- y_batch)
-            end
-
-            Flux.update!(optimizer_state, model, gradients[1])
-            push!(minibatch_losses, Float64(loss_value))
-        end
-
-        Flux.testmode!(model)
-        epoch_row = (;
-            epoch=epoch,
-            minibatch_mse=isempty(minibatch_losses) ? NaN : mean(minibatch_losses),
-            train_mse=split_mse(model, splits.train),
-            validation_mse=split_mse(model, splits.validation),
-            test_mse=split_mse(model, splits.test),
-        )
-
-        push!(history, epoch_row)
-    end
-
-    Flux.testmode!(model)
-    return (;
-        model=model,
-        history=history,
-        backend="ContextualDFLTraining.supervised_mse_fallback",
-    )
-end
-
 function split_mse(model, dataset)
     target = dataset_demand_matrix(dataset)
     prediction = matrix_like(model(dataset_context_matrix(dataset)), target)
@@ -500,7 +420,7 @@ function demand_from_contextual_point(point)
     scenario_parameters = point.scenario_parameters
     length(scenario_parameters) == 1 ||
         throw(ArgumentError("expected exactly one scenario per contextual data point"))
-    return demand_from_scenario_parameter(only(scenario_parameters))
+    return resource_allocation_demand_from_scenario(only(scenario_parameters))
 end
 
 function extract_model(train_result, fallback_generator)
@@ -630,6 +550,78 @@ function evaluate_model_on_splits(model, splits, config)
     validation_metrics = evaluate_split(model, splits.validation, config, "validation")
     test_metrics = evaluate_split(model, splits.test, config, "test")
     return merge(train_metrics, validation_metrics, test_metrics)
+end
+
+function evaluate_model_for_reporting(model, objects, config)
+    metrics = evaluate_model_on_splits(model, objects.data, config)
+    Bool(config_value(config, :optimality_evaluation, false)) || return metrics
+    return merge(metrics, evaluate_optimality_on_splits(model, objects, config))
+end
+
+function evaluate_optimality_on_splits(model, objects, config)
+    policy = optimality_policy(model, objects, config)
+    metrics = NamedTuple()
+
+    for (split_name, dataset) in optimality_evaluation_datasets(objects, config)
+        isempty(dataset) && continue
+        result = ContextualDFLExperiments.evaluate_policy_against_optimum(
+            policy,
+            dataset,
+            objects.program,
+            objects.reference_scenario_decoder,
+            objects.solver;
+            split_name=split_name,
+            mu=Float64(config_value(config, :optimality_mu, 0.0)),
+        )
+        metrics = merge(metrics, result.metrics)
+    end
+
+    return metrics
+end
+
+function optimality_policy(model, objects, config)
+    scenario_generator = ContextualDFL.ScenarioGenerator(
+        neural_net=model,
+        scenario_decoder=objects.scenario_decoder,
+    )
+    policy_mu = Float64(config_value(config, :policy_inference_mu, config.mu))
+    return ContextualDFLExperiments.ScenarioGenerationPolicy(
+        scenario_generator,
+        objects.solver,
+        objects.program;
+        mu=policy_mu,
+    )
+end
+
+function optimality_evaluation_datasets(objects, config)
+    datasets = Pair{Symbol,Any}[]
+
+    push!(
+        datasets,
+        :test => limited_dataset(
+            objects.data.test,
+            Int(config_value(config, :optimality_test_sample_count, 0)),
+        ),
+    )
+
+    train_count = Int(config_value(config, :optimality_train_sample_count, 0))
+    train_count > 0 && push!(
+        datasets,
+        :train_subset => limited_dataset(objects.data.train, train_count),
+    )
+
+    validation_count = Int(config_value(config, :optimality_validation_sample_count, 0))
+    validation_count > 0 && push!(
+        datasets,
+        :validation_subset => limited_dataset(objects.data.validation, validation_count),
+    )
+
+    return datasets
+end
+
+function limited_dataset(dataset, limit::Integer)
+    limit <= 0 && return dataset
+    return dataset[1:min(Int(limit), length(dataset))]
 end
 
 function evaluate_split(model, dataset, config, prefix)

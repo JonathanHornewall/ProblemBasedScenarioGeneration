@@ -3,7 +3,7 @@ import JuMP
 
 struct HiGHSSolver <: LPSolver end
 
-function solve(solver::HiGHSSolver, lp::LP; kwargs...)
+function solve(solver::HiGHSSolver, lp::LP; constraint_tolerance=1e-6, kwargs...)
     model = JuMP.Model(HiGHS.Optimizer)
     JuMP.set_silent(model)
     _set_optimizer_attributes(model, kwargs)
@@ -31,12 +31,16 @@ function solve(solver::HiGHSSolver, lp::LP; kwargs...)
     JuMP.@objective(model, Min, sum(lp.c[j] * z[j] for j in 1:n_variables))
     JuMP.optimize!(model)
 
+    status = _assert_successful_solve(model, solver; accepted_statuses=("OPTIMAL",))
+    z_value = JuMP.value.(z)
+    _assert_lp_solution_feasible(lp, z_value; atol=constraint_tolerance)
+
     return (;
-        z=JuMP.value.(z),
+        z=z_value,
         dual_eq=JuMP.dual.(eq_constraints),
         dual_ineq=-JuMP.dual.(ineq_constraints),
         objective_value=JuMP.objective_value(model),
-        status=JuMP.termination_status(model),
+        status=status,
         metadata=(;
             primal_status=JuMP.primal_status(model),
             dual_status=JuMP.dual_status(model),

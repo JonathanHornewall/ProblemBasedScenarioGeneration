@@ -14,6 +14,11 @@ const DEFAULT_RUN_SETTINGS = (;
     rho=0.0,
     tolerance_relative=0.10,
     tolerance_absolute_floor=1.0,
+    optimality_evaluation=false,
+    optimality_test_sample_count=0,
+    optimality_train_sample_count=0,
+    optimality_validation_sample_count=0,
+    optimality_mu=0.0,
     solver=:highs,
     loss=:dfl_scen,
 )

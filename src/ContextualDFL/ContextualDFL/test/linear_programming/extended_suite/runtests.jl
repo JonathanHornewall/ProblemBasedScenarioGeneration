@@ -27,12 +27,12 @@
         )
         assert_lp_case_with_highs(redundant_case)
 
-        unbounded_case = (;
-            name="E3 equality-only unbounded LP",
-            lp=LP(A_eq=[1.0 1.0], b_eq=[1.0], c=[1.0, 0.0]),
-            expected_status="DUAL_INFEASIBLE",
-        )
-        assert_lp_case_with_highs(unbounded_case)
+        @testset "E3 equality-only unbounded LP" begin
+            unbounded_lp = LP(A_eq=[1.0 1.0], b_eq=[1.0], c=[1.0, 0.0])
+
+            @test_throws ErrorException solve(TEST_SOLVER, unbounded_lp)
+            @test_throws ErrorException solve(TEST_HIGHS_SOLVER, unbounded_lp)
+        end
 
         degenerate_case = (;
             name="E4 equality-only degenerate optimal face",
@@ -43,6 +43,34 @@
     end
 
     @testset "equality and inequality barrier cases" begin
+        @testset "vector barrier parameters" begin
+            vector_barrier_lp = LP(
+                A_eq=ones(1, 2),
+                b_eq=[1.0],
+                A_ineq=[1.0 0.0; -1.0 0.0; 0.0 1.0; 0.0 -1.0],
+                b_ineq=[0.9, -0.1, 0.9, -0.1],
+                c=[1.0, 2.0],
+            )
+
+            scalar_result = solve(TEST_SOLVER, vector_barrier_lp; μ=0.2, tol=1e-10)
+            vector_result = solve(
+                TEST_SOLVER,
+                vector_barrier_lp;
+                μ=fill(0.2, length(vector_barrier_lp.b_ineq)),
+                tol=1e-10,
+            )
+            custom_vector_result = solve(
+                TEST_SOLVER,
+                vector_barrier_lp;
+                μ=[0.1, 0.2, 0.3, 0.4],
+                tol=1e-10,
+            )
+
+            @test scalar_result.z ≈ vector_result.z atol = 1e-8
+            @test is_optimal_status(custom_vector_result.status)
+            @test_throws DimensionMismatch solve(TEST_SOLVER, vector_barrier_lp; μ=[0.1])
+        end
+
         slice_A, slice_b = box_constraints(fill(0.1, 3), fill(0.8, 3))
         tilted_A, tilted_b = box_constraints(fill(-1.0, 3), fill(1.0, 3))
         simplex_3_A, simplex_3_b = nonnegative_orthant(3)

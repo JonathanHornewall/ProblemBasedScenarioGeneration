@@ -78,6 +78,23 @@ function profile_config_from_env()
                 "PROFILE_TOLERANCE_ABSOLUTE_FLOOR",
                 DEFAULT_RUN_SETTINGS.tolerance_absolute_floor,
             ),
+            optimality_evaluation=env_flag(
+                "PROFILE_OPTIMALITY_EVALUATION",
+                DEFAULT_RUN_SETTINGS.optimality_evaluation,
+            ),
+            optimality_test_sample_count=env_int(
+                "PROFILE_OPTIMALITY_TEST_SAMPLE_COUNT",
+                DEFAULT_RUN_SETTINGS.optimality_test_sample_count,
+            ),
+            optimality_train_sample_count=env_int(
+                "PROFILE_OPTIMALITY_TRAIN_SAMPLE_COUNT",
+                DEFAULT_RUN_SETTINGS.optimality_train_sample_count,
+            ),
+            optimality_validation_sample_count=env_int(
+                "PROFILE_OPTIMALITY_VALIDATION_SAMPLE_COUNT",
+                DEFAULT_RUN_SETTINGS.optimality_validation_sample_count,
+            ),
+            optimality_mu=env_float("PROFILE_OPTIMALITY_MU", DEFAULT_RUN_SETTINGS.optimality_mu),
             loss=env_symbol("PROFILE_LOSS", :dfl_scen),
             learning_rate=env_float("PROFILE_LEARNING_RATE", 1e-3),
             hidden_size=env_int("PROFILE_HIDDEN_SIZE", 128),

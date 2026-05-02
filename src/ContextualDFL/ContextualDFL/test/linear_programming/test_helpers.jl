@@ -23,7 +23,8 @@ end
 
 function assert_barrier_stationarity(lp, z, μ; atol=5e-4)
     slack = lp.b_ineq - lp.A_ineq * z
-    stationarity = lp.c + μ .* (transpose(lp.A_ineq) * (1.0 ./ slack))
+    μ_vector = ContextualDFL._barrier_parameter_vector(length(slack), μ)
+    stationarity = lp.c + transpose(lp.A_ineq) * (μ_vector ./ slack)
 
     if !isempty(lp.A_eq)
         λ = -(transpose(lp.A_eq) \ stationarity)
@@ -75,9 +76,10 @@ function assert_lp_case_with_highs(case)
 end
 
 function solve_reference_z(lp, μ)
-    result = iszero(μ) ?
+    μ_vector = ContextualDFL._barrier_parameter_vector(lp, μ)
+    result = ContextualDFL._is_zero_barrier_parameter(μ_vector) ?
         solve(TEST_SOLVER, lp) :
-        solve(TEST_SOLVER, lp; μ=μ, tol=1e-10, max_iter=1_000)
+        solve(TEST_SOLVER, lp; μ=μ_vector, tol=1e-10, max_iter=1_000)
     @test is_optimal_status(result.status)
     return result.z
 end
@@ -182,13 +184,14 @@ function construct_jacobian(
     n = length(lp.c)
     m_eq = length(lp.b_eq)
     m_ineq = length(lp.b_ineq)
-    T = promote_type(eltype(cache.z), eltype(lp.c), typeof(μ))
+    μ_vector = cache.μ
+    T = promote_type(eltype(cache.z), eltype(lp.c), eltype(μ_vector))
 
     J_c = nothing
     J_b_eq = nothing
     J_b_ineq = nothing
 
-    if iszero(μ)
+    if ContextualDFL._is_zero_barrier_parameter(μ_vector)
         if compute_J_c
             J_c = zeros(T, n, n)
         end
@@ -228,7 +231,7 @@ function construct_jacobian(
         end
 
         if compute_J_b_ineq
-            C = μ .* (transpose(lp.A_ineq) * Diagonal(cache.d))
+            C = transpose(lp.A_ineq) * Diagonal(μ_vector .* cache.d)
             rhs_b_ineq = vcat(Matrix{T}(C), zeros(T, m_eq, m_ineq))
             J_b_ineq = (cache.K_factorization \ rhs_b_ineq)[1:n, :]
         end

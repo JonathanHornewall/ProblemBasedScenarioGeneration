@@ -4,9 +4,11 @@ struct Solver{TLogBarSolver<:LogBarSolver,TLPSolver<:LPSolver}
 end
 
 function solve(solver::Solver, lp::LP; μ=0, kwargs...)
-    if iszero(μ)
+    μ_vector = _barrier_parameter_vector(lp, μ)
+
+    if _is_zero_barrier_parameter(μ_vector)
         return solve(solver.lp_solver, lp; kwargs...)
     end
 
-    return solve(solver.log_bar_solver, lp; μ=μ, kwargs...)
+    return solve(solver.log_bar_solver, lp; μ=μ_vector, kwargs...)
 end

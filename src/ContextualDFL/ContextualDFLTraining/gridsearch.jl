@@ -54,6 +54,13 @@ function env_worker_count(name, default)
     return parsed
 end
 
+function env_float(name, default)
+    value = get(ENV, name, string(default))
+    parsed = tryparse(Float64, value)
+    parsed === nothing && error("ENV[$name] must be a number, got: $value")
+    return parsed
+end
+
 function remote_worker_specs()
     return [
         ("rwl@gcp-big", env_worker_count("GCP_BIG_WORKERS", :auto)),
@@ -506,11 +513,47 @@ function log_grid_aggregate_metrics!(mlf, run, results)
         isempty(values) && continue
 
         prefix = "grid_" * string(key)
-        MLFlowClient.logmetric(mlf, run, prefix * "_mean", mean(values); step=0)
-        MLFlowClient.logmetric(mlf, run, prefix * "_median", median(values); step=0)
-        MLFlowClient.logmetric(mlf, run, prefix * "_min", minimum(values); step=0)
-        MLFlowClient.logmetric(mlf, run, prefix * "_max", maximum(values); step=0)
-        MLFlowClient.logmetric(mlf, run, prefix * "_std", length(values) > 1 ? std(values) : 0.0; step=0)
+        timestamp = unix_milliseconds()
+        MLFlowClient.logmetric(
+            mlf,
+            run,
+            prefix * "_mean",
+            mean(values);
+            timestamp=timestamp,
+            step=0,
+        )
+        MLFlowClient.logmetric(
+            mlf,
+            run,
+            prefix * "_median",
+            median(values);
+            timestamp=timestamp,
+            step=0,
+        )
+        MLFlowClient.logmetric(
+            mlf,
+            run,
+            prefix * "_min",
+            minimum(values);
+            timestamp=timestamp,
+            step=0,
+        )
+        MLFlowClient.logmetric(
+            mlf,
+            run,
+            prefix * "_max",
+            maximum(values);
+            timestamp=timestamp,
+            step=0,
+        )
+        MLFlowClient.logmetric(
+            mlf,
+            run,
+            prefix * "_std",
+            length(values) > 1 ? std(values) : 0.0;
+            timestamp=timestamp,
+            step=0,
+        )
     end
 
     return nothing
@@ -559,10 +602,33 @@ function mlflow_filter_escape(value)
 end
 
 function selected_grid()
+    overrides = grid_overrides_from_env()
     if env_flag("GRIDSEARCH_SMOKE", false)
-        return smoke_grid()
+        return smoke_grid(; overrides...)
     end
-    return default_grid()
+    return default_grid(; overrides...)
+end
+
+function grid_overrides_from_env()
+    return (;
+        optimality_evaluation=env_flag(
+            "GRID_OPTIMALITY_EVALUATION",
+            DEFAULT_RUN_SETTINGS.optimality_evaluation,
+        ),
+        optimality_test_sample_count=env_int(
+            "GRID_OPTIMALITY_TEST_SAMPLE_COUNT",
+            DEFAULT_RUN_SETTINGS.optimality_test_sample_count,
+        ),
+        optimality_train_sample_count=env_int(
+            "GRID_OPTIMALITY_TRAIN_SAMPLE_COUNT",
+            DEFAULT_RUN_SETTINGS.optimality_train_sample_count,
+        ),
+        optimality_validation_sample_count=env_int(
+            "GRID_OPTIMALITY_VALIDATION_SAMPLE_COUNT",
+            DEFAULT_RUN_SETTINGS.optimality_validation_sample_count,
+        ),
+        optimality_mu=env_float("GRID_OPTIMALITY_MU", DEFAULT_RUN_SETTINGS.optimality_mu),
+    )
 end
 
 function gridsearch_id(timestamp::AbstractString)

@@ -146,6 +146,66 @@ import SparseArrays
         @test tangents[4][1] ≈ finite_difference_gradient atol = 1e-5
     end
 
+    @testset "probability-scaled log barrier" begin
+        program = StochasticProgram(
+            A_eq=zeros(0, 1),
+            A_ineq=reshape([-1.0, 1.0], 2, 1),
+            b_eq=Float64[],
+            b_ineq=[0.0, 10.0],
+            c=[1.0],
+        )
+
+        W_eq_array = zeros(0, 1, 2)
+        W_ineq_array = zeros(2, 1, 2)
+        W_ineq_array[:, :, 1] = reshape([-1.0, 1.0], 2, 1)
+        W_ineq_array[:, :, 2] = reshape([-1.0, 1.0], 2, 1)
+        T_eq_array = zeros(0, 1, 2)
+        T_ineq_array = zeros(2, 1, 2)
+        h_eq_array = zeros(0, 2)
+        h_ineq_array = [0.0 0.0; 5.0 7.0]
+        q_array = reshape([2.0, 3.0], 1, 2)
+        probabilities = [0.25, 0.75]
+        μ = 0.4
+
+        stochastic_result = solve(
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            probabilities=probabilities,
+            μ=μ,
+            tol=1e-10,
+        )
+
+        extensive_lp = construct_lp(
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            probabilities=probabilities,
+        )
+        manual_barrier = [
+            μ,
+            μ,
+            μ * probabilities[1],
+            μ * probabilities[1],
+            μ * probabilities[2],
+            μ * probabilities[2],
+        ]
+        manual_result = solve(solver, extensive_lp; μ=manual_barrier, tol=1e-10)
+
+        @test vcat(stochastic_result[1], vec(stochastic_result[2])) ≈ manual_result.z atol = 1e-8
+    end
+
     @testset "single-scenario equality and inequality recourse" begin
         z = [1.0]
         W_eq = [1.0 0.0]

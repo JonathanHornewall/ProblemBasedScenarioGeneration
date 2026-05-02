@@ -311,9 +311,33 @@ function train_with_mlflow!(
             save_model=save_model,
             model_save_path=model_save_path,
             on_epoch_end=(epoch, loss_value, display_loss, metadata) -> begin
-                logmetric(mlf, run, "loss", Float64(loss_value); step=epoch)
-                logmetric(mlf, run, "display_loss", Float64(display_loss); step=epoch)
-                _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; step=epoch)
+                timestamp = _unix_milliseconds()
+                _log_mlflow_metric!(
+                    logmetric,
+                    mlf,
+                    run,
+                    "loss",
+                    loss_value;
+                    timestamp=timestamp,
+                    step=epoch,
+                )
+                _log_mlflow_metric!(
+                    logmetric,
+                    mlf,
+                    run,
+                    "display_loss",
+                    display_loss;
+                    timestamp=timestamp,
+                    step=epoch,
+                )
+                _log_mlflow_epoch_metadata!(
+                    logmetric,
+                    mlf,
+                    run,
+                    metadata;
+                    timestamp=timestamp,
+                    step=epoch,
+                )
                 if !isnothing(on_epoch_end)
                     _call_epoch_callback(
                         on_epoch_end,
@@ -425,6 +449,17 @@ end
 # timezone-local DateTime values; MLflow expects epoch milliseconds.
 _unix_milliseconds() = round(Int64, time() * 1000)
 
+function _log_mlflow_metric!(logmetric, mlf, run, key, value; timestamp, step)
+    return logmetric(
+        mlf,
+        run,
+        key,
+        Float64(value);
+        timestamp=Int64(timestamp),
+        step=Int(step),
+    )
+end
+
 function _log_mlflow_params!(mlflow, mlf, run, prefix::AbstractString, values)
     isdefined(mlflow, :logparam) || return nothing
     params = Dict{String,String}()
@@ -465,7 +500,7 @@ _mlflow_param_value(value) =
     value isa Symbol ||
     value isa AbstractString
 
-function _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; step)
+function _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; timestamp, step)
     metadata isa NamedTuple || return nothing
 
     for (metric_name, field_name) in (
@@ -476,7 +511,15 @@ function _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; step)
         haskey(metadata, field_name) || continue
         value = getproperty(metadata, field_name)
         _mlflow_metric_value(value) || continue
-        logmetric(mlf, run, metric_name, Float64(value); step=step)
+        _log_mlflow_metric!(
+            logmetric,
+            mlf,
+            run,
+            metric_name,
+            value;
+            timestamp=timestamp,
+            step=step,
+        )
     end
 
     return nothing
@@ -542,8 +585,17 @@ function _log_mlflow_metrics!(mlflow, mlf, run, prefix::AbstractString, values; 
     _flatten_mlflow_metrics!(metrics, prefix, values)
 
     logmetric = getproperty(mlflow, :logmetric)
+    timestamp = _unix_milliseconds()
     for key in sort!(collect(keys(metrics)))
-        logmetric(mlf, run, key, metrics[key]; step=step)
+        _log_mlflow_metric!(
+            logmetric,
+            mlf,
+            run,
+            key,
+            metrics[key];
+            timestamp=timestamp,
+            step=step,
+        )
     end
 
     return nothing

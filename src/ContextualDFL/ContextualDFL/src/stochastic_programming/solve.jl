@@ -23,8 +23,53 @@ function solve(
         q_array;
         probabilities=probabilities,
     )
-    result = solve(solver, lp; μ=μ, kwargs...)
+    result = solve(
+        solver,
+        lp;
+        μ=_stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities),
+        kwargs...,
+    )
     return _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
+end
+
+function _stochastic_barrier_parameter_vector(
+    lp::LP,
+    sp::StochasticProgram,
+    W_ineq_array,
+    μ;
+    probabilities=nothing,
+)
+    μ isa AbstractVector && return _barrier_parameter_vector(lp, μ)
+
+    K = size(W_ineq_array, 3)
+    first_stage_inequalities = length(sp.first_stage_lp.b_ineq)
+    second_stage_inequalities = size(W_ineq_array, 1)
+
+    T = promote_type(
+        typeof(μ),
+        isnothing(probabilities) ? Float64 : eltype(probabilities),
+    )
+    μ_vector = zeros(T, length(lp.b_ineq))
+
+    μ >= zero(μ) || throw(ArgumentError("μ must be non-negative."))
+    μ_vector[1:first_stage_inequalities] .= μ
+
+    probability_vector = if isnothing(probabilities)
+        fill(one(T) / K, K)
+    else
+        length(probabilities) == K ||
+            throw(DimensionMismatch("probabilities must have one entry per scenario."))
+        probabilities
+    end
+
+    for k in 1:K
+        first_row = first_stage_inequalities + (k - 1) * second_stage_inequalities + 1
+        last_row = first_stage_inequalities + k * second_stage_inequalities
+        rows = first_row:last_row
+        μ_vector[rows] .= μ .* probability_vector[k]
+    end
+
+    return μ_vector
 end
 
 function _split_stochastic_solution(sp::StochasticProgram, result, W_eq_array, W_ineq_array, q_array)

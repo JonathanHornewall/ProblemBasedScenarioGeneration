@@ -44,12 +44,20 @@ function logparam(mlf::NamedMLFlowClient, run, key, value)
     return MLFlowClient.logparam(mlf.client, run, string(key), string(value))
 end
 
-function logmetric(mlf::NamedMLFlowClient, run, key, value; step)
+function logmetric(
+    mlf::NamedMLFlowClient,
+    run,
+    key,
+    value;
+    step,
+    timestamp=round(Int64, time() * 1000),
+)
     return MLFlowClient.logmetric(
         mlf.client,
         run,
         string(key),
         Float64(value);
+        timestamp=Int64(timestamp),
         step=Int(step),
     )
 end

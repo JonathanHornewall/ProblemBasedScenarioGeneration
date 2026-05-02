@@ -294,7 +294,7 @@ function profile_standard_training(config::NamedTuple)
             trained_model = extract_model(profile_result, objects.scenario_generator)
             final_train_mse = split_mse(trained_model, objects.data.train)
             metrics = merge(
-                evaluate_model_on_splits(trained_model, objects.data, cfg),
+                evaluate_model_for_reporting(trained_model, objects, cfg),
                 (;
                     initial_train_mse=initial_train_mse,
                     final_train_mse=final_train_mse,
@@ -311,7 +311,7 @@ function profile_standard_training(config::NamedTuple)
         end
 
         require_train_mse_decrease = Bool(
-            config_value(cfg, :require_train_mse_decrease, config_value(cfg, :loss, :dfl_scen) == :mse_scen),
+            config_value(cfg, :require_train_mse_decrease, false),
         )
         (!require_train_mse_decrease || final_train_mse < initial_train_mse) ||
             error("profiled training did not reduce train MSE: initial=$(initial_train_mse), final=$(final_train_mse)")

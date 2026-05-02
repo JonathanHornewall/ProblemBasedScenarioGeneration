@@ -72,6 +72,38 @@ end
     policy_values = evaluate_policy(decision_set, data_set, program, decoder, solver)
     @test policy_values ≈ [14.0, 17.0]
 
+    value_summary = summarize_values([1.0, 2.0, 3.0]; prefix=:toy)
+    @test value_summary.toy_count == 3
+    @test value_summary.toy_mean ≈ 2.0
+    @test value_summary.toy_median ≈ 2.0
+    @test value_summary.toy_std ≈ 1.0
+    @test value_summary.toy_min ≈ 1.0
+    @test value_summary.toy_max ≈ 3.0
+    @test value_summary.toy_p95 ≈ 3.0
+
+    regret_summary = summarize_regret([15.0, 19.0], [14.0, 17.0]; prefix=:test)
+    @test regret_summary.test_regret_mean ≈ 1.5
+    @test regret_summary.test_relative_regret_mean ≈ ((1.0 / 14.0) + (2.0 / 17.0)) / 2
+
+    comparison = evaluate_policy_against_optimum(
+        decision_set,
+        data_set,
+        program,
+        decoder,
+        solver;
+        optimal_results=optimal_results,
+        split_name=:test,
+    )
+    @test comparison.optimal_results === optimal_results
+    @test length(comparison.per_sample) == 2
+    @test comparison.metrics.test_sample_count == 2
+    @test comparison.metrics.test_policy_value_mean ≈ 15.5
+    @test comparison.metrics.test_optimal_value_mean ≈ 15.5
+    @test comparison.metrics.test_regret_mean ≈ 0.0
+    @test comparison.metrics.test_relative_regret_mean ≈ 0.0
+    @test comparison.metrics.test_optimal_solve_seconds == 0.0
+    @test comparison.metrics.test_policy_eval_seconds >= 0.0
+
     generator = ContextualDFL.ScenarioGenerator(
         neural_net=context -> [context[1] + 4.0],
         scenario_decoder=TinyVectorDecoder(),
@@ -119,8 +151,13 @@ end
     @test isempty(resource_scenario.W_eq_xi)
     @test isempty(resource_scenario.h_ineq_xi)
 
-    resource_decoder = ResourceAllocationDemandDecoder(resource_problem)
-    _, _, _, _, h_eq, h_ineq, q = resource_decoder(resource_scenario)
+    resource_vector_decoder = ResourceAllocationDemandVectorDecoder(resource_problem)
+    _, _, _, _, vector_h_eq, _, _ = resource_vector_decoder(resource_scenario.h_eq_xi)
+    @test vector_h_eq[1:2] == zeros(2)
+    @test vector_h_eq[3:5] == resource_scenario.h_eq_xi
+
+    resource_parametric_decoder = ResourceAllocationDemandParametricDecoder(resource_problem)
+    _, _, _, _, h_eq, h_ineq, q = resource_parametric_decoder(resource_scenario)
     @test h_eq[1:2] == zeros(2)
     @test h_eq[3:5] == resource_scenario.h_eq_xi
     @test h_ineq == zeros(14)
@@ -133,7 +170,7 @@ end
     resource_results = solve_dataset_to_optimality(
         resource_data_set,
         stochastic_program(resource_problem),
-        resource_decoder,
+        resource_parametric_decoder,
         solver,
     )
     @test length(resource_results) == 1

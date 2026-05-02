@@ -51,8 +51,28 @@ ContextualDFL.solve(::TestLogBarSolver, lp::LP; μ=nothing, kwargs...) =
 
         @test log_barrier_solution.method == :log_barrier
         @test log_barrier_solution.lp === log_barrier_lp
-        @test log_barrier_solution.μ == 0.5
+        @test log_barrier_solution.μ == [0.5]
         @test log_barrier_solution.kwargs[:max_iter] == 100
+
+        vector_barrier_solution = solve(solver, log_barrier_lp; μ=[0.25])
+        zero_vector_solution = solve(solver, log_barrier_lp; μ=zeros(1))
+
+        @test vector_barrier_solution.method == :log_barrier
+        @test vector_barrier_solution.μ == [0.25]
+        @test zero_vector_solution.method == :lp
+        @test_throws DimensionMismatch solve(solver, log_barrier_lp; μ=[0.25, 0.5])
+    end
+
+    @testset "infeasible solves throw" begin
+        infeasible_lp = LP(
+            A_ineq=reshape([1.0, -1.0], 2, 1),
+            b_ineq=[0.0, -1.0],
+            c=[0.0],
+        )
+
+        @test_throws ErrorException solve(TEST_HIGHS_SOLVER, infeasible_lp)
+        @test_throws ErrorException solve(TEST_SOLVER, infeasible_lp)
+        @test_throws ErrorException solve(TEST_SOLVER, infeasible_lp; μ=1.0, max_iter=50)
     end
 
     @testset "geometric LP cases" begin

@@ -3,9 +3,20 @@ import JuMP
 
 struct IpoptSolver <: LogBarSolver end
 
-function solve(::IpoptSolver, lp::LP; μ=nothing, slack_lower_bound=1e-9, kwargs...)
-    isnothing(μ) && throw(ArgumentError("IpoptSolver requires a positive log-barrier parameter μ."))
-    μ > zero(μ) || throw(ArgumentError("IpoptSolver requires μ > 0."))
+function solve(
+    solver::IpoptSolver,
+    lp::LP;
+    μ=nothing,
+    slack_lower_bound=1e-9,
+    constraint_tolerance=1e-6,
+    kwargs...,
+)
+    μ_vector = _barrier_parameter_vector(lp, μ)
+    positive_barrier_indices = findall(!iszero, μ_vector)
+    isempty(positive_barrier_indices) &&
+        throw(ArgumentError("IpoptSolver requires at least one positive log-barrier weight."))
+    slack_lower_bound > zero(slack_lower_bound) ||
+        throw(ArgumentError("slack_lower_bound must be positive."))
 
     model = JuMP.Model(Ipopt.Optimizer)
     JuMP.set_optimizer_attribute(model, "print_level", 0)
@@ -17,7 +28,10 @@ function solve(::IpoptSolver, lp::LP; μ=nothing, slack_lower_bound=1e-9, kwargs
     n_inequalities = length(lp.b_ineq)
 
     JuMP.@variable(model, z[1:n_variables])
-    JuMP.@variable(model, s[1:n_inequalities] >= slack_lower_bound)
+    JuMP.@variable(model, s[1:n_inequalities] >= 0)
+    for i in positive_barrier_indices
+        JuMP.set_lower_bound(s[i], slack_lower_bound)
+    end
 
     eq_constraints = Vector{JuMP.ConstraintRef}(undef, n_equalities)
     for i in 1:n_equalities
@@ -37,30 +51,17 @@ function solve(::IpoptSolver, lp::LP; μ=nothing, slack_lower_bound=1e-9, kwargs
         model,
         Min,
         sum(lp.c[j] * z[j] for j in 1:n_variables) -
-        μ * sum(log(s[i]) for i in 1:n_inequalities),
+        sum(μ_vector[i] * log(s[i]) for i in positive_barrier_indices),
     )
     JuMP.optimize!(model)
 
-    status = JuMP.termination_status(model)
-    if string(status) != "LOCALLY_SOLVED" && string(status) != "OPTIMAL"
-        return (;
-            z=fill(NaN, n_variables),
-            slack=fill(NaN, n_inequalities),
-            dual_eq=fill(NaN, n_equalities),
-            dual_ineq=fill(NaN, n_inequalities),
-            objective_value=NaN,
-            status=status,
-            metadata=(;
-                primal_status=JuMP.primal_status(model),
-                dual_status=JuMP.dual_status(model),
-                raw_status=JuMP.raw_status(model),
-                solver=IpoptSolver(),
-            ),
-        )
-    end
+    status =
+        _assert_successful_solve(model, solver; accepted_statuses=("OPTIMAL", "LOCALLY_SOLVED"))
+    z_value = JuMP.value.(z)
+    _assert_lp_solution_feasible(lp, z_value; atol=constraint_tolerance)
 
     return (;
-        z=JuMP.value.(z),
+        z=z_value,
         slack=JuMP.value.(s),
         dual_eq=JuMP.dual.(eq_constraints),
         dual_ineq=JuMP.dual.(slack_constraints),
@@ -70,7 +71,7 @@ function solve(::IpoptSolver, lp::LP; μ=nothing, slack_lower_bound=1e-9, kwargs
             primal_status=JuMP.primal_status(model),
             dual_status=JuMP.dual_status(model),
             raw_status=JuMP.raw_status(model),
-            solver=IpoptSolver(),
+            solver=solver,
         ),
     )
 end

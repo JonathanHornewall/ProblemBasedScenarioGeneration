@@ -75,6 +75,7 @@ function G(
     λ_h_ineq_array = zeros(T, size(h_ineq_array))
 
     for k in 1:K
+        scenario_μ = _scenario_barrier_parameter(size(W_ineq_array, 1), K, μ, k)
         scenario_value_or_dual = G_hat(
             solver,
             z,
@@ -86,7 +87,7 @@ function G(
             view(h_ineq_array, :, k),
             view(q_array, :, k),
             ;
-            μ=μ,
+            μ=scenario_μ,
             return_dual=return_dual,
             kwargs...,
         )
@@ -94,11 +95,12 @@ function G(
         if return_dual
             y, λ_h_eq, λ_h_ineq = scenario_value_or_dual
             scenario_value = sum(view(q_array, :, k) .* y)
-            if !iszero(μ)
+            scenario_μ_vector = _barrier_parameter_vector(size(W_ineq_array, 1), scenario_μ)
+            if !_is_zero_barrier_parameter(scenario_μ_vector)
                 slack =
                     view(h_ineq_array, :, k) - view(T_ineq_array, :, :, k) * z -
                     view(W_ineq_array, :, :, k) * y
-                scenario_value -= μ * sum(log.(slack))
+                scenario_value -= sum(scenario_μ_vector .* log.(slack))
             end
 
             second_stage_value += p_vector[k] * scenario_value
@@ -149,4 +151,15 @@ function G_hat(
     end
 
     return result.objective_value
+end
+
+function _scenario_barrier_parameter(n_inequalities, n_scenarios, μ, scenario_index)
+    μ isa Number && return μ
+
+    length(μ) == n_inequalities && return μ
+    length(μ) == n_inequalities * n_scenarios ||
+        throw(DimensionMismatch("μ must have one entry per scenario inequality or per stacked scenario inequality."))
+
+    rows = ((scenario_index - 1) * n_inequalities + 1):(scenario_index * n_inequalities)
+    return view(μ, rows)
 end
