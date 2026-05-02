@@ -1,5 +1,6 @@
 module ContextualDFLExperiments
 
+import ChainRulesCore
 import ContextualDFL
 
 export ContextDataGenerator,

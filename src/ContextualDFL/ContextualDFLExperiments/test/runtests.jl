@@ -3,6 +3,7 @@ using ContextualDFLExperiments
 using Random
 using Test
 
+import ChainRulesCore
 import ContextualDFLExperiments: infer
 
 struct ConstantPolicy <: Policy
@@ -162,6 +163,44 @@ end
     @test h_eq[3:5] == resource_scenario.h_eq_xi
     @test h_ineq == zeros(14)
     @test length(q) == 14
+
+    second_resource_scenario = ContextualDFL.ParametricScenario(;
+        W_eq_xi=Float64[],
+        W_ineq_xi=Float64[],
+        T_eq_xi=Float64[],
+        T_ineq_xi=Float64[],
+        h_eq_xi=2 .* resource_scenario.h_eq_xi,
+        h_ineq_xi=Float64[],
+        q_xi=Float64[],
+    )
+    resource_scenario_collection = [resource_scenario, second_resource_scenario]
+    parametric_decoded = ContextualDFL.decode_scenario_collection(
+        resource_parametric_decoder,
+        resource_scenario_collection,
+    )
+    _, parametric_pullback = ChainRulesCore.rrule(
+        ContextualDFL.decode_scenario_collection,
+        resource_parametric_decoder,
+        resource_scenario_collection,
+    )
+    parametric_dh_eq_cotangent = zeros(size(parametric_decoded[5]))
+    parametric_dh_eq_cotangent[3:5, :] = [10.0 40.0; 20.0 50.0; 30.0 60.0]
+    parametric_output_cotangent = ntuple(
+        index -> index == 5 ? parametric_dh_eq_cotangent : zeros(size(parametric_decoded[index])),
+        length(parametric_decoded),
+    )
+    parametric_tangents = parametric_pullback(parametric_output_cotangent)
+    parametric_scenario_tangents = parametric_tangents[3]
+    @test parametric_scenario_tangents[1].h_eq_xi == parametric_dh_eq_cotangent[3:5, 1]
+    @test parametric_scenario_tangents[2].h_eq_xi == parametric_dh_eq_cotangent[3:5, 2]
+    for scenario_tangent in parametric_scenario_tangents
+        @test scenario_tangent.W_eq_xi isa ChainRulesCore.NoTangent
+        @test scenario_tangent.W_ineq_xi isa ChainRulesCore.NoTangent
+        @test scenario_tangent.T_eq_xi isa ChainRulesCore.NoTangent
+        @test scenario_tangent.T_ineq_xi isa ChainRulesCore.NoTangent
+        @test scenario_tangent.h_ineq_xi isa ChainRulesCore.NoTangent
+        @test scenario_tangent.q_xi isa ChainRulesCore.NoTangent
+    end
 
     resource_data_set = generate_contextual_data_set(
         [resource_context],

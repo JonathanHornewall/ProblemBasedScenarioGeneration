@@ -51,3 +51,50 @@ function (decoder::ResourceAllocationDemandParametricDecoder)(
         scenario.q,
     )
 end
+
+function ChainRulesCore.rrule(
+    ::typeof(ContextualDFL.decode_scenario_collection),
+    decoder::ResourceAllocationDemandParametricDecoder,
+    scenario_parameter_collection::AbstractVector{<:ContextualDFL.ParametricScenario},
+)
+    output = ContextualDFL.decode_scenario_collection(decoder, scenario_parameter_collection)
+    demand_rows = _resource_allocation_demand_rows(decoder)
+
+    function resource_allocation_parametric_decode_pullback(output_tangent)
+        dh_eq_array = ContextualDFL._array_cotangent(
+            output_tangent,
+            5,
+            output[5];
+            name=:h_eq_array,
+        )
+
+        scenario_tangents = map(enumerate(scenario_parameter_collection)) do (k, scenario_parameters)
+            ChainRulesCore.Tangent{typeof(scenario_parameters)}(
+                W_eq_xi=ChainRulesCore.NoTangent(),
+                W_ineq_xi=ChainRulesCore.NoTangent(),
+                T_eq_xi=ChainRulesCore.NoTangent(),
+                T_ineq_xi=ChainRulesCore.NoTangent(),
+                h_eq_xi=ChainRulesCore.ProjectTo(scenario_parameters.h_eq_xi)(
+                    view(dh_eq_array, demand_rows, k),
+                ),
+                h_ineq_xi=ChainRulesCore.NoTangent(),
+                q_xi=ChainRulesCore.NoTangent(),
+            )
+        end
+
+        return (
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            scenario_tangents,
+        )
+    end
+
+    return output, resource_allocation_parametric_decode_pullback
+end
+
+function _resource_allocation_demand_rows(decoder::ResourceAllocationDemandParametricDecoder)
+    scenario = decoder.base_scenario
+    resource_count = size(scenario.T_eq, 2)
+    demand_count = length(scenario.h_eq) - resource_count
+    return (resource_count + 1):(resource_count + demand_count)
+end
