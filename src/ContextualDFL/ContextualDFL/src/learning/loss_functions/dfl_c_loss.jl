@@ -9,7 +9,6 @@ struct DflCLoss{
 end
 
 (loss::DflCLoss)(
-    program::StochasticProgram,
     input_scenario_parameter,
     reference_scenario_parameters,
     mu;

@@ -345,7 +345,7 @@ function construct_resource_allocation_neural_net(
     ) |> Flux.f64
 end
 
-function resource_allocation_training_loss(predicted_demands, reference_collection)
+function resource_allocation_training_loss(predicted_demands, reference_collection, mu=0.0; kwargs...)
     target = ChainRulesCore.ignore_derivatives() do
         demand_matrix(reference_collection)
     end
@@ -354,7 +354,7 @@ function resource_allocation_training_loss(predicted_demands, reference_collecti
     return Statistics.mean(abs2, predicted_demands .- target)
 end
 
-function relative_resource_allocation_training_loss(predicted_demands, reference_collection)
+function relative_resource_allocation_training_loss(predicted_demands, reference_collection, mu=0.0; kwargs...)
     target = ChainRulesCore.ignore_derivatives() do
         demand_matrix(reference_collection)
     end

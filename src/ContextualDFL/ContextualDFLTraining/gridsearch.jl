@@ -14,7 +14,7 @@ const DEFAULT_REMOTE_PROJECT =
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
 
 function _contextualdfltraining_remote_eval(config)
-    started_at = string(Dates.now(Dates.UTC))
+    started_at = unix_milliseconds()
     try
         return Main.ContextualDFLTraining.train_and_evaluate(config)
     catch error
@@ -32,7 +32,7 @@ function _contextualdfltraining_remote_eval(config)
             epoch_history=Dict{Symbol,Any}[],
             error=sprint(showerror, error, catch_backtrace()),
             started_at=started_at,
-            finished_at=string(Dates.now(Dates.UTC)),
+            finished_at=unix_milliseconds(),
             elapsed_seconds=0.0,
         )
     end
@@ -52,6 +52,13 @@ function env_worker_count(name, default)
     parsed = tryparse(Int, value)
     parsed === nothing && error("ENV[$name] must be an integer or auto, got: $value")
     return parsed
+end
+
+function remote_worker_specs()
+    return [
+        ("rwl@gcp-big", env_worker_count("GCP_BIG_WORKERS", :auto)),
+        ("rwl@gcp-small", env_worker_count("GCP_SMALL_WORKERS", :auto)),
+    ]
 end
 
 function env_flag(name, default=false)
@@ -104,12 +111,7 @@ function add_remote_workers!()
     remote_project = get(ENV, "REMOTE_CONTEXTUAL_DFL_TRAINING_PROJECT", DEFAULT_REMOTE_PROJECT)
     remote_julia = get(ENV, "REMOTE_JULIA", DEFAULT_REMOTE_JULIA)
 
-    remote_specs = [
-        ("rwl@gcp-big", env_worker_count("GCP_BIG_WORKERS", :auto)),
-        ("rwl@gcp-small", env_worker_count("GCP_SMALL_WORKERS", :auto)),
-    ]
-
-    for (host, count) in remote_specs
+    for (host, count) in remote_worker_specs()
         count isa Integer && count <= 0 && continue
         println("Adding $count worker(s) on $host")
         addprocs(
@@ -178,7 +180,7 @@ end
 function define_remote_eval!()
     definition = quote
         function _contextualdfltraining_remote_eval(config)
-            started_at = string(Dates.now(Dates.UTC))
+            started_at = round(Int64, time() * 1000)
             try
                 return Main.ContextualDFLTraining.train_and_evaluate(config)
             catch error
@@ -196,7 +198,7 @@ function define_remote_eval!()
                     epoch_history=Dict{Symbol,Any}[],
                     error=sprint(showerror, error, catch_backtrace()),
                     started_at=started_at,
-                    finished_at=string(Dates.now(Dates.UTC)),
+                    finished_at=round(Int64, time() * 1000),
                     elapsed_seconds=0.0,
                 )
             end
@@ -222,8 +224,8 @@ function coordinator_error_result(config, worker, worker_hosts, status, error, b
         final_metrics=NamedTuple(),
         epoch_history=Dict{Symbol,Any}[],
         error=sprint(showerror, error, backtrace),
-        started_at=string(Dates.now(Dates.UTC)),
-        finished_at=string(Dates.now(Dates.UTC)),
+        started_at=unix_milliseconds(),
+        finished_at=unix_milliseconds(),
         elapsed_seconds=elapsed_seconds,
     )
 end
@@ -308,8 +310,8 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
                 final_metrics=NamedTuple(),
                 epoch_history=Dict{Symbol,Any}[],
                 error="No remote worker remained available for this configuration.",
-                started_at=string(Dates.now(Dates.UTC)),
-                finished_at=string(Dates.now(Dates.UTC)),
+                started_at=unix_milliseconds(),
+                finished_at=unix_milliseconds(),
                 elapsed_seconds=0.0,
             )
         end
@@ -368,6 +370,8 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
     git_commit = git_commit_or_empty()
     isempty(git_commit) || (tags["mlflow.source.git.commit"] = git_commit)
 
+    parent_params = grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+
     run = MLFlowClient.createrun(
         mlf,
         string(settings.experiment_id);
@@ -376,7 +380,7 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
         tags=tags,
     )
 
-    for (key, value) in grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+    for (key, value) in parent_params
         MLFlowClient.logparam(mlf, run, key, value)
     end
 
@@ -552,10 +556,6 @@ end
 
 function mlflow_filter_escape(value)
     return replace(string(value), "\\" => "\\\\", "\"" => "\\\"")
-end
-
-function unix_milliseconds()
-    return round(Int64, Dates.datetime2unix(Dates.now()) * 1000)
 end
 
 function selected_grid()

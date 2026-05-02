@@ -1,7 +1,10 @@
-using Dates
+if !isdefined(@__MODULE__, :unix_milliseconds)
+    # Explicit Unix epoch milliseconds, independent of the local timezone.
+    unix_milliseconds() = round(Int64, time() * 1000)
+end
 
 function result_timestamp()
-    return Dates.format(Dates.now(), dateformat"yyyymmdd_HHMMSS")
+    return string(unix_milliseconds())
 end
 
 function write_grid_results(
@@ -72,7 +75,7 @@ end
 
 function grid_config_summary_rows(configs, results)
     rows = Dict{Symbol,Any}[
-        Dict(:key => "created_at", :value => string(Dates.now())),
+        Dict(:key => "created_at_unix_ms", :value => unix_milliseconds()),
         Dict(:key => "result_count", :value => length(results)),
         Dict(:key => "successful_count", :value => count(result -> result.status == "ok", results)),
         Dict(:key => "failed_count", :value => count(result -> result.status != "ok", results)),

@@ -10,9 +10,8 @@ function normalize_config(config::NamedTuple)
     return merge(DEFAULT_RUN_SETTINGS, config)
 end
 
-function utc_timestamp()
-    return string(Dates.now(Dates.UTC))
-end
+# Explicit Unix epoch milliseconds, independent of the worker timezone.
+unix_milliseconds() = round(Int64, time() * 1000)
 
 function worker_metadata()
     return (;
@@ -30,7 +29,7 @@ end
 function train_and_evaluate(config::NamedTuple)
     cfg = normalize_config(config)
     assert_remote_training_worker!(cfg)
-    started_at = utc_timestamp()
+    started_at = unix_milliseconds()
     elapsed_seconds = 0.0
 
     try
@@ -85,7 +84,7 @@ function train_and_evaluate(config::NamedTuple)
             epoch_history=history,
             error="",
             started_at=started_at,
-            finished_at=utc_timestamp(),
+            finished_at=unix_milliseconds(),
             elapsed_seconds=elapsed_seconds,
         )
     catch error
@@ -98,7 +97,7 @@ function train_and_evaluate(config::NamedTuple)
             epoch_history=Dict{Symbol,Any}[],
             error=exception_text(error, catch_backtrace()),
             started_at=started_at,
-            finished_at=utc_timestamp(),
+            finished_at=unix_milliseconds(),
             elapsed_seconds=elapsed_seconds,
         )
     end
@@ -117,11 +116,9 @@ function train_with_contextualdfl_or_fallback(objects, config)
 
     try
         result = ContextualDFL.train!(
-            objects.loss,
-            objects.program,
-            mu_schedule_for_config(config),
-            Int(config_value(config, :nr_scenarios, 1)),
             objects.scenario_generator.neural_net,
+            objects.loss,
+            mu_schedule_for_config(config),
             objects.data.train;
             learning_rate=config.learning_rate,
             optimizer_type=Flux.Adam,
@@ -162,17 +159,14 @@ function train_with_contextualdfl_mlflow(objects, config)
     model_save_path = mlflow_model_save_path(config)
     final_metrics = Ref{Any}(nothing)
     model = objects.scenario_generator.neural_net
-    nr_scenarios = Int(config_value(config, :nr_scenarios, 1))
     mu_schedule = mu_schedule_for_config(config)
 
     result = ContextualDFL.train_with_mlflow!(
         mlf,
         experiment_id,
-        loss,
-        objects.program,
-        mu_schedule,
-        nr_scenarios,
         model,
+        loss,
+        mu_schedule,
         objects.data.train;
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,

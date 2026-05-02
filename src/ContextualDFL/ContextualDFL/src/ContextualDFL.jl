@@ -6,7 +6,6 @@ export
     ContextSampler,
     ContextualDataPoint,
     ContextualDataSet,
-    DFLScenarioGenerator,
     DflCLoss,
     DflScenLoss,
     GLPKSolver,
@@ -22,6 +21,7 @@ export
     ParametricScenario,
     ProjectedZLoss,
     ScenarioDecoder,
+    ScenarioGenerator,
     ScenarioSampler,
     Solver,
     StochasticProgram,
@@ -35,7 +35,6 @@ export
     expected_cost,
     generate_context_set,
     generate_scenario_set,
-    learned_components,
     mu_schedule,
     rho_schedule,
     scenario_cost,
@@ -71,7 +70,7 @@ include("scenario_decoders/ParametricDecoder.jl")
 include("data_generation/context_sampling/ContextSampler.jl")
 include("data_generation/scenario_sampling/ScenarioSampler.jl")
 
-include("DFLScenarioGenerator.jl")
+include("ScenarioGenerator.jl")
 
 include("learning/loss_functions/Loss.jl")
 include("learning/loss_functions/DflScenLoss.jl")

@@ -62,7 +62,6 @@ function (::ResourceAllocationDemandDecoder)(
 end
 
 function (::ResourceAllocationMSEScenLoss)(
-    program::ContextualDFL.StochasticProgram,
     predicted_demand,
     reference_demand,
     mu;
@@ -496,12 +495,9 @@ function resource_allocation_training_objects(config)
         dropout=config.dropout,
     )
     solver = build_solver(config)
-    generator = ContextualDFL.DFLScenarioGenerator(
-        NNScenarioDecoder=decoder,
-        Solver=solver,
+    generator = ContextualDFL.ScenarioGenerator(
         neural_net=neural_net,
-        program=program,
-        learned_components=(:h,),
+        scenario_decoder=decoder,
     )
 
     return (;

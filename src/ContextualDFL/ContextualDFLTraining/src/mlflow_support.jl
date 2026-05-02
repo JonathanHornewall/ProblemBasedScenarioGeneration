@@ -45,15 +45,13 @@ function logparam(mlf::NamedMLFlowClient, run, key, value)
 end
 
 function logmetric(mlf::NamedMLFlowClient, run, key, value; step)
-    return retry_metric_log() do
-        MLFlowClient.logmetric(
-            mlf.client,
-            run,
-            string(key),
-            Float64(value);
-            step=Int(step),
-        )
-    end
+    return MLFlowClient.logmetric(
+        mlf.client,
+        run,
+        string(key),
+        Float64(value);
+        step=Int(step),
+    )
 end
 
 function setruntag(mlf::NamedMLFlowClient, run, key, value)
@@ -191,15 +189,4 @@ mlflow_param_value(value) =
 
 function mlflow_http_headers()
     return Dict("Connection" => "close")
-end
-
-function retry_metric_log(f)
-    for attempt in 1:3
-        try
-            return f()
-        catch
-            attempt == 3 && rethrow()
-            sleep(0.25 * attempt)
-        end
-    end
 end

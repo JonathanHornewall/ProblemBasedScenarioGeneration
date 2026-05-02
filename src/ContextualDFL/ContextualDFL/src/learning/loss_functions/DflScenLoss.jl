@@ -34,7 +34,6 @@ function DflScenLoss(
 end
 
 function (loss::DflScenLoss)(
-    program::StochasticProgram,
     input_scenario_parameter_collection,
     reference_scenario_parameter_collection,
     mu;
@@ -50,7 +49,7 @@ function (loss::DflScenLoss)(
         )
     z, _, _, _, _, _ = solve(
         loss.solver,
-        program,
+        loss.program,
         W_eq,
         W_ineq,
         T_eq,
@@ -69,7 +68,7 @@ function (loss::DflScenLoss)(
             reference_scenario_parameter_collection,
         )
     return cost_function(
-        program,
+        loss.program,
         loss.solver,
         z,
         W_eq,
@@ -84,17 +83,3 @@ function (loss::DflScenLoss)(
         kwargs...,
     )
 end
-
-(loss::DflScenLoss)(
-    input_scenario_parameter_collection,
-    reference_scenario_parameter_collection,
-    mu;
-    kwargs...,
-) =
-    loss(
-        loss.program,
-        input_scenario_parameter_collection,
-        reference_scenario_parameter_collection,
-        mu;
-        kwargs...,
-    )

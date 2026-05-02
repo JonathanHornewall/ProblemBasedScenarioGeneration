@@ -1,7 +1,6 @@
 struct MSEScenLoss <: LossFunction end
 
 (loss::MSEScenLoss)(
-    program::StochasticProgram,
     input_scenario_parameter,
     reference_scenario_parameters,
     mu;

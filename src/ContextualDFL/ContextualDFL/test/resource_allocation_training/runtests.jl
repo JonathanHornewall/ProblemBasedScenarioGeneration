@@ -325,9 +325,10 @@ include("resource_allocation_instance.jl")
         initial_loss = mean_resource_allocation_training_loss(model, generated.data)
 
         result = train!(
+            model,
             resource_allocation_training_loss,
             relative_resource_allocation_training_loss,
-            model,
+            fill(0.0, 12),
             generated.data;
             opt=Flux.Adam(1e-3),
             epochs=12,

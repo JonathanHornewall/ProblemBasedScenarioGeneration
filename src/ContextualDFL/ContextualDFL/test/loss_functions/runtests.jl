@@ -58,12 +58,6 @@ end
     ]
 
     @test dfl_loss(
-        bounded_program,
-        input_scenario_parameter_collection,
-        reference_scenario_parameter_collection,
-        0.0,
-    ) ≈ 20.0
-    @test dfl_loss(
         input_scenario_parameter_collection,
         reference_scenario_parameter_collection,
         0.0,

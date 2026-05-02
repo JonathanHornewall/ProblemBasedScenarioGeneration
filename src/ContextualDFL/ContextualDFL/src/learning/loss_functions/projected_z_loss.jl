@@ -7,7 +7,6 @@ struct ProjectedZLoss{
 end
 
 (loss::ProjectedZLoss)(
-    program::StochasticProgram,
     input_scenario_parameter,
     reference_scenario_parameters,
     mu;

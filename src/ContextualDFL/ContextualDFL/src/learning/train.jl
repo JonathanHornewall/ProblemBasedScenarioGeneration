@@ -1,5 +1,4 @@
 import Flux
-import Dates
 import Plots
 import Random
 import Serialization
@@ -9,12 +8,10 @@ import Statistics
 
 """
     train!(
+        neural_net,
         loss,
         relative_loss,
-        stochastic_program,
         mu_schedule,
-        nr_scenarios,
-        model,
         data_set;
         kwargs...,
     )
@@ -24,20 +21,18 @@ Flux training loop for a contextual scenario dataset.
 Each data point must have a context vector and a scenario-parameter collection.
 At epoch `k`, `loss` is called as:
 
-    loss(stochastic_program, model(context), scenario_parameters, mu_schedule[k]; nr_scenarios=nr_scenarios)
+    loss(neural_net(context), scenario_parameters, mu_schedule[k])
 """
 function train!(
+    neural_net,
     loss,
     relative_loss,
-    stochastic_program::StochasticProgram,
     mu_schedule::AbstractVector,
-    nr_scenarios::Integer,
-    model,
-    data_set::ContextualDataSet;
+    data_set;
     opt=nothing,
     optimizer_type=Flux.Adam,
     learning_rate=1e-3,
-    epochs::Integer=1,
+    epochs::Integer=length(mu_schedule),
     batchsize::Integer=1,
     display_iterations::Bool=false,
     verbose::Bool=display_iterations,
@@ -49,18 +44,19 @@ function train!(
     opt_state=nothing,
     reset_optimizer_each_epoch::Bool=false,
     on_epoch_end=nothing,
+    nr_scenarios=nothing,
 )
     epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
     batchsize > 0 || throw(ArgumentError("batchsize must be positive."))
-    nr_scenarios > 0 || throw(ArgumentError("nr_scenarios must be positive."))
     length(mu_schedule) == epochs ||
         throw(ArgumentError("mu_schedule must have one value per epoch."))
     isempty(data_set) && throw(ArgumentError("training data must not be empty."))
+    _validate_nr_scenarios(nr_scenarios)
 
     optimizer = isnothing(opt) ? _make_optimizer(optimizer_type, learning_rate) : opt
-    state = isnothing(opt_state) ? Flux.setup(optimizer, model) : opt_state
+    state = isnothing(opt_state) ? Flux.setup(optimizer, neural_net) : opt_state
     show_progress = display_iterations || verbose
-    nr_scenarios = Int(nr_scenarios)
+    loss_kwargs = _training_loss_kwargs(nr_scenarios)
 
     history = NamedTuple[]
     displayed_epoch_losses = Float64[]
@@ -70,7 +66,7 @@ function train!(
         mu = mu_schedule[epoch_number]
 
         if reset_optimizer_each_epoch
-            state = Flux.setup(optimizer, model)
+            state = Flux.setup(optimizer, neural_net)
         end
 
         show_progress && print("Epoch ", epoch_number)
@@ -81,30 +77,28 @@ function train!(
         for idxs_iter in Iterators.partition(indices, batchsize)
             idxs = collect(idxs_iter)
 
-            loss_value, gradients = Flux.withgradient(model) do trainable_model
+            loss_value, gradients = Flux.withgradient(neural_net) do trainable_neural_net
                 Statistics.mean(
                     loss(
-                        stochastic_program,
-                        trainable_model(data_set[index].context),
-                        data_set[index].scenario_parameters,
+                        trainable_neural_net(_context(data_set[index])),
+                        _scenario_parameters(data_set[index]),
                         mu;
-                        nr_scenarios=nr_scenarios,
+                        loss_kwargs...,
                     )
                     for index in idxs
                 )
             end
-            Flux.update!(state, model, gradients[1])
+            Flux.update!(state, neural_net, gradients[1])
             push!(epoch_losses, _float(loss_value))
 
             if show_progress || !isnothing(relative_loss)
                 display_loss_function = isnothing(relative_loss) ? loss : relative_loss
                 display_loss = Statistics.mean(
                     display_loss_function(
-                        stochastic_program,
-                        model(data_set[index].context),
-                        data_set[index].scenario_parameters,
+                        neural_net(_context(data_set[index])),
+                        _scenario_parameters(data_set[index]),
                         mu;
-                        nr_scenarios=nr_scenarios,
+                        loss_kwargs...,
                     )
                     for index in idxs
                 )
@@ -160,7 +154,7 @@ function train!(
 
     # %%% Optional model storage
     if save_model
-        Serialization.serialize(model_save_path, model)
+        Serialization.serialize(model_save_path, neural_net)
         println("Model saved to: $model_save_path")
     end
 
@@ -176,25 +170,21 @@ function train!(
         display(plt)
     end
 
-    return (; model=model, history=history, opt_state=state)
+    return (; model=neural_net, history=history, opt_state=state)
 end
 
 train!(
+    neural_net,
     loss,
-    stochastic_program::StochasticProgram,
     mu_schedule::AbstractVector,
-    nr_scenarios::Integer,
-    model,
-    data_set::ContextualDataSet;
+    data_set;
     kwargs...,
 ) =
     train!(
+        neural_net,
         loss,
         nothing,
-        stochastic_program,
         mu_schedule,
-        nr_scenarios,
-        model,
         data_set;
         kwargs...,
     )
@@ -204,16 +194,14 @@ train!(
 function train_with_mlflow!(
     mlf,
     experiment_id,
+    neural_net,
     loss,
-    stochastic_program::StochasticProgram,
     mu_schedule::AbstractVector,
-    nr_scenarios::Integer,
-    model,
-    data_set::ContextualDataSet;
+    data_set;
     relative_loss=nothing,
     learning_rate=1e-3,
     optimizer_type=Flux.Adam,
-    epochs::Integer=10,
+    epochs::Integer=length(mu_schedule),
     batchsize::Integer=32,
     shuffle::Bool=false,
     reset_optimizer_each_epoch::Bool=false,
@@ -238,6 +226,7 @@ function train_with_mlflow!(
     method_spec=NamedTuple(),
     evaluation_callbacks=NamedTuple(),
     optional_evaluation_callbacks=NamedTuple(),
+    nr_scenarios=nothing,
     kwargs...,
 )
     mlflow = parentmodule(typeof(mlf))
@@ -252,7 +241,9 @@ function train_with_mlflow!(
     logparam(mlf, run, "optimizer_type", string(optimizer_type))
     logparam(mlf, run, "epochs", string(epochs))
     logparam(mlf, run, "batchsize", string(batchsize))
-    logparam(mlf, run, "nr_scenarios", string(nr_scenarios))
+    logged_nr_scenarios = _logged_nr_scenarios(loss, nr_scenarios)
+    isnothing(logged_nr_scenarios) ||
+        logparam(mlf, run, "nr_scenarios", string(logged_nr_scenarios))
     logparam(mlf, run, "mu_schedule", string(collect(mu_schedule)))
     logparam(mlf, run, "shuffle", string(shuffle))
     logparam(mlf, run, "reset_optimizer_each_epoch", string(reset_optimizer_each_epoch))
@@ -289,12 +280,10 @@ function train_with_mlflow!(
 
     try
         result = train!(
+            neural_net,
             loss,
             relative_loss,
-            stochastic_program,
             mu_schedule,
-            nr_scenarios,
-            model,
             data_set;
             learning_rate=learning_rate,
             optimizer_type=optimizer_type,
@@ -318,6 +307,7 @@ function train_with_mlflow!(
                     )
                 end
             end,
+            nr_scenarios=nr_scenarios,
             kwargs...,
         )
 
@@ -369,6 +359,28 @@ end
 
 # %%% Small core helpers
 
+_context(data_point::ContextualDataPoint) = data_point.context
+_context(data_point::Tuple) = data_point[1]
+
+_scenario_parameters(data_point::ContextualDataPoint) = data_point.scenario_parameters
+_scenario_parameters(data_point::Tuple) = data_point[2]
+
+function _validate_nr_scenarios(nr_scenarios)
+    isnothing(nr_scenarios) && return nothing
+    nr_scenarios isa Integer && nr_scenarios > 0 ||
+        throw(ArgumentError("nr_scenarios must be a positive integer."))
+    return nothing
+end
+
+_training_loss_kwargs(nr_scenarios) =
+    isnothing(nr_scenarios) ? NamedTuple() : (; nr_scenarios=Int(nr_scenarios))
+
+function _logged_nr_scenarios(loss, nr_scenarios)
+    isnothing(nr_scenarios) || return Int(nr_scenarios)
+    hasproperty(loss, :nr_scenarios) || return nothing
+    return getproperty(loss, :nr_scenarios)
+end
+
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
 
@@ -381,7 +393,9 @@ end
 
 # %%% MLflow helper functions
 
-_unix_milliseconds() = round(Int64, Dates.datetime2unix(Dates.now()) * 1000)
+# Explicit Unix epoch milliseconds. Do not derive MLflow timestamps from
+# timezone-local DateTime values; MLflow expects epoch milliseconds.
+_unix_milliseconds() = round(Int64, time() * 1000)
 
 function _log_mlflow_params!(mlflow, mlf, run, prefix::AbstractString, values)
     isdefined(mlflow, :logparam) || return nothing
