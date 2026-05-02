@@ -4,19 +4,18 @@ using Profile
 using ProfileSVG
 
 function strict_contextualdfl_training(objects, config)
-    return ContextualDFL.train(
-        objects.scenario_generator,
+    assert_remote_training_worker!(config)
+    return ContextualDFL.train!(
         objects.loss,
-        objects.data.train,
-        objects.scenario_decoder,
-        objects.schedules.mu,
-        objects.schedules.rho,
-        objects.schedules.batch_size,
-        objects.schedules.step_size;
+        objects.program,
+        fill(config.mu, Int(config.epochs)),
+        Int(config_value(config, :nr_scenarios, 1)),
+        objects.scenario_generator.neural_net,
+        objects.data.train;
+        learning_rate=config.learning_rate,
+        optimizer_type=Flux.Adam,
         epochs=config.epochs,
-        validation_data=objects.data.validation,
-        test_data=objects.data.test,
-        config=config,
+        batchsize=config.batch_size,
         shuffle=true,
         rng=MersenneTwister(config.seed + 10_000),
         display_plot=false,
@@ -45,6 +44,7 @@ end
 
 function profile_standard_training(config::NamedTuple)
     cfg = normalize_config(config)
+    assert_remote_training_worker!(cfg)
     started_at = utc_timestamp()
     elapsed_seconds = 0.0
     remote_output_dir = ""

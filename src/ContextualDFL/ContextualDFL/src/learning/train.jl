@@ -66,6 +66,7 @@ function train!(
     displayed_epoch_losses = Float64[]
 
     for epoch_number in 1:epochs
+        epoch_started = time()
         mu = mu_schedule[epoch_number]
 
         if reset_optimizer_each_epoch
@@ -95,7 +96,7 @@ function train!(
             Flux.update!(state, model, gradients[1])
             push!(epoch_losses, _float(loss_value))
 
-            if show_progress
+            if show_progress || !isnothing(relative_loss)
                 display_loss_function = isnothing(relative_loss) ? loss : relative_loss
                 display_loss = Statistics.mean(
                     display_loss_function(
@@ -115,6 +116,13 @@ function train!(
         average_display_loss = isempty(epoch_display_losses) ?
             average_loss :
             Statistics.mean(epoch_display_losses)
+        epoch_seconds = time() - epoch_started
+        epoch_metadata = (;
+            epoch=Int(epoch_number),
+            mu=mu,
+            iterations=length(epoch_losses),
+            epoch_seconds=epoch_seconds,
+        )
 
         if show_progress
             println(
@@ -128,7 +136,13 @@ function train!(
         end
 
         if !isnothing(on_epoch_end)
-            on_epoch_end(Int(epoch_number), average_loss, average_display_loss)
+            _call_epoch_callback(
+                on_epoch_end,
+                Int(epoch_number),
+                average_loss,
+                average_display_loss,
+                epoch_metadata,
+            )
         end
 
         push!(
@@ -139,6 +153,7 @@ function train!(
                 loss=average_loss,
                 display_loss=average_display_loss,
                 iterations=length(epoch_losses),
+                epoch_seconds=epoch_seconds,
             ),
         )
     end
@@ -217,6 +232,12 @@ function train_with_mlflow!(
     model_save_path::AbstractString="trained_model.jls",
     upload_model_artifact::Bool=save_model,
     model_artifact_path::AbstractString=basename(model_save_path),
+    experiment_spec=NamedTuple(),
+    data_spec=NamedTuple(),
+    model_spec=NamedTuple(),
+    method_spec=NamedTuple(),
+    evaluation_callbacks=NamedTuple(),
+    optional_evaluation_callbacks=NamedTuple(),
     kwargs...,
 )
     mlflow = parentmodule(typeof(mlf))
@@ -235,6 +256,10 @@ function train_with_mlflow!(
     logparam(mlf, run, "mu_schedule", string(collect(mu_schedule)))
     logparam(mlf, run, "shuffle", string(shuffle))
     logparam(mlf, run, "reset_optimizer_each_epoch", string(reset_optimizer_each_epoch))
+    _log_mlflow_params!(mlflow, mlf, run, "experiment", experiment_spec)
+    _log_mlflow_params!(mlflow, mlf, run, "data", data_spec)
+    _log_mlflow_params!(mlflow, mlf, run, "model", model_spec)
+    _log_mlflow_params!(mlflow, mlf, run, "method", method_spec)
 
     if log_source_tags
         _log_mlflow_source_tags!(
@@ -279,11 +304,18 @@ function train_with_mlflow!(
             reset_optimizer_each_epoch=reset_optimizer_each_epoch,
             save_model=save_model,
             model_save_path=model_save_path,
-            on_epoch_end=(epoch, loss_value, display_loss) -> begin
+            on_epoch_end=(epoch, loss_value, display_loss, metadata) -> begin
                 logmetric(mlf, run, "loss", Float64(loss_value); step=epoch)
                 logmetric(mlf, run, "display_loss", Float64(display_loss); step=epoch)
+                _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; step=epoch)
                 if !isnothing(on_epoch_end)
-                    on_epoch_end(epoch, loss_value, display_loss)
+                    _call_epoch_callback(
+                        on_epoch_end,
+                        epoch,
+                        loss_value,
+                        display_loss,
+                        metadata,
+                    )
                 end
             end,
             kwargs...,
@@ -298,6 +330,23 @@ function train_with_mlflow!(
                 artifact_path=model_artifact_path,
             )
         end
+
+        _run_mlflow_evaluation_callbacks!(
+            mlflow,
+            mlf,
+            run,
+            evaluation_callbacks,
+            result;
+            optional=false,
+        )
+        _run_mlflow_evaluation_callbacks!(
+            mlflow,
+            mlf,
+            run,
+            optional_evaluation_callbacks,
+            result;
+            optional=true,
+        )
 
         training_succeeded = true
         return result
@@ -323,9 +372,214 @@ end
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))
 
+function _call_epoch_callback(callback, epoch, loss_value, display_loss, metadata)
+    if applicable(callback, epoch, loss_value, display_loss, metadata)
+        return callback(epoch, loss_value, display_loss, metadata)
+    end
+    return callback(epoch, loss_value, display_loss)
+end
+
 # %%% MLflow helper functions
 
 _unix_milliseconds() = round(Int64, Dates.datetime2unix(Dates.now()) * 1000)
+
+function _log_mlflow_params!(mlflow, mlf, run, prefix::AbstractString, values)
+    isdefined(mlflow, :logparam) || return nothing
+    params = Dict{String,String}()
+    _flatten_mlflow_params!(params, prefix, values)
+
+    logparam = getproperty(mlflow, :logparam)
+    for key in sort!(collect(keys(params)))
+        logparam(mlf, run, key, params[key])
+    end
+
+    return nothing
+end
+
+function _flatten_mlflow_params!(params::Dict{String,String}, prefix::AbstractString, values::NamedTuple)
+    for key in keys(values)
+        _flatten_mlflow_params!(params, _join_mlflow_key(prefix, key), getproperty(values, key))
+    end
+    return params
+end
+
+function _flatten_mlflow_params!(params::Dict{String,String}, prefix::AbstractString, values::AbstractDict)
+    for (key, value) in values
+        _flatten_mlflow_params!(params, _join_mlflow_key(prefix, key), value)
+    end
+    return params
+end
+
+function _flatten_mlflow_params!(params::Dict{String,String}, prefix::AbstractString, value)
+    isempty(prefix) && return params
+    _mlflow_param_value(value) || return params
+    params[prefix] = string(value)
+    return params
+end
+
+_mlflow_param_value(value) =
+    value isa Number ||
+    value isa Bool ||
+    value isa Symbol ||
+    value isa AbstractString
+
+function _log_mlflow_epoch_metadata!(logmetric, mlf, run, metadata; step)
+    metadata isa NamedTuple || return nothing
+
+    for (metric_name, field_name) in (
+        ("epoch_seconds", :epoch_seconds),
+        ("epoch_mu", :mu),
+        ("epoch_iterations", :iterations),
+    )
+        haskey(metadata, field_name) || continue
+        value = getproperty(metadata, field_name)
+        _mlflow_metric_value(value) || continue
+        logmetric(mlf, run, metric_name, Float64(value); step=step)
+    end
+
+    return nothing
+end
+
+function _run_mlflow_evaluation_callbacks!(
+    mlflow,
+    mlf,
+    run,
+    callbacks,
+    train_result;
+    optional::Bool,
+)
+    isempty(_mlflow_callback_pairs(callbacks)) && return nothing
+
+    for (name, callback) in _mlflow_callback_pairs(callbacks)
+        try
+            result = if applicable(callback, train_result)
+                callback(train_result)
+            else
+                callback()
+            end
+            _log_mlflow_evaluation_result!(mlflow, mlf, run, string(name), result)
+        catch error
+            optional || rethrow()
+            _tag_optional_evaluation_error!(mlflow, mlf, run, name, error)
+        end
+    end
+
+    return nothing
+end
+
+_mlflow_callback_pairs(callbacks::NamedTuple) = collect(pairs(callbacks))
+_mlflow_callback_pairs(callbacks::AbstractDict) = collect(pairs(callbacks))
+_mlflow_callback_pairs(callbacks::Tuple) = collect(pairs(callbacks))
+_mlflow_callback_pairs(callbacks::AbstractVector) = collect(pairs(callbacks))
+_mlflow_callback_pairs(::Nothing) = Pair{Symbol,Any}[]
+
+function _log_mlflow_evaluation_result!(mlflow, mlf, run, name::AbstractString, result)
+    if result isa NamedTuple || result isa AbstractDict
+        metrics = _evaluation_field(result, :metrics, result)
+        artifacts = _evaluation_field(result, :artifacts, nothing)
+        _log_mlflow_metrics!(mlflow, mlf, run, name, metrics; step=0)
+        _log_mlflow_artifacts!(mlflow, mlf, run, artifacts)
+    elseif _mlflow_metric_value(result)
+        _log_mlflow_metrics!(mlflow, mlf, run, "", Dict(name => result); step=0)
+    end
+
+    return nothing
+end
+
+function _evaluation_field(values::NamedTuple, key::Symbol, default)
+    return haskey(values, key) ? getproperty(values, key) : default
+end
+
+function _evaluation_field(values::AbstractDict, key::Symbol, default)
+    return haskey(values, key) ? values[key] : get(values, string(key), default)
+end
+
+function _log_mlflow_metrics!(mlflow, mlf, run, prefix::AbstractString, values; step::Integer)
+    isdefined(mlflow, :logmetric) || return nothing
+    metrics = Dict{String,Float64}()
+    _flatten_mlflow_metrics!(metrics, prefix, values)
+
+    logmetric = getproperty(mlflow, :logmetric)
+    for key in sort!(collect(keys(metrics)))
+        logmetric(mlf, run, key, metrics[key]; step=step)
+    end
+
+    return nothing
+end
+
+function _flatten_mlflow_metrics!(metrics::Dict{String,Float64}, prefix::AbstractString, values::NamedTuple)
+    for key in keys(values)
+        _flatten_mlflow_metrics!(metrics, _join_mlflow_key(prefix, key), getproperty(values, key))
+    end
+    return metrics
+end
+
+function _flatten_mlflow_metrics!(metrics::Dict{String,Float64}, prefix::AbstractString, values::AbstractDict)
+    for (key, value) in values
+        _flatten_mlflow_metrics!(metrics, _join_mlflow_key(prefix, key), value)
+    end
+    return metrics
+end
+
+function _flatten_mlflow_metrics!(metrics::Dict{String,Float64}, prefix::AbstractString, value)
+    isempty(prefix) && return metrics
+    _mlflow_metric_value(value) || return metrics
+    metrics[prefix] = Float64(value)
+    return metrics
+end
+
+function _mlflow_metric_value(value)
+    value isa Bool && return false
+    value isa Number || return false
+    float_value = try
+        Float64(value)
+    catch
+        return false
+    end
+    return isfinite(float_value)
+end
+
+function _log_mlflow_artifacts!(mlflow, mlf, run, artifacts)
+    artifacts === nothing && return nothing
+
+    if artifacts isa AbstractString
+        isfile(artifacts) && _upload_mlflow_artifact!(mlflow, mlf, run, artifacts; artifact_path=basename(artifacts))
+        return nothing
+    elseif artifacts isa Pair
+        path = last(artifacts)
+        path isa AbstractString && isfile(path) &&
+            _upload_mlflow_artifact!(mlflow, mlf, run, path; artifact_path=string(first(artifacts)))
+        return nothing
+    elseif artifacts isa NamedTuple || artifacts isa AbstractDict
+        for (name, path) in pairs(artifacts)
+            path isa AbstractString && isfile(path) &&
+                _upload_mlflow_artifact!(mlflow, mlf, run, path; artifact_path=string(name))
+        end
+        return nothing
+    elseif artifacts isa AbstractVector || artifacts isa Tuple
+        for artifact in artifacts
+            _log_mlflow_artifacts!(mlflow, mlf, run, artifact)
+        end
+    end
+
+    return nothing
+end
+
+function _tag_optional_evaluation_error!(mlflow, mlf, run, name, error)
+    isdefined(mlflow, :setruntag) || return nothing
+    getproperty(mlflow, :setruntag)(
+        mlf,
+        run,
+        "mlflow.optional_evaluation.$(name).error",
+        sprint(showerror, error),
+    )
+    return nothing
+end
+
+function _join_mlflow_key(prefix::AbstractString, key)
+    key_text = string(key)
+    return isempty(prefix) ? key_text : prefix * "_" * key_text
+end
 
 function _log_mlflow_source_tags!(
     mlflow,

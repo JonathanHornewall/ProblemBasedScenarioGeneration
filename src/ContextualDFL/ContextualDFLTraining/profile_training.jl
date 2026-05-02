@@ -179,7 +179,7 @@ function main()
         metadata = load_worker!(worker)
         assert_remote_profile_worker!(worker, metadata)
 
-        config = profile_config_from_env()
+        config = merge(profile_config_from_env(), (; coordinator_hostname=Sockets.gethostname()))
         output_dir = profile_output_dir()
         println("Running remote profile $(config.run_id) with $(config.epochs) profiled epoch(s)")
 

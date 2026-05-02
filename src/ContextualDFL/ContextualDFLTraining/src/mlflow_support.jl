@@ -124,6 +124,8 @@ function mlflow_tags_for_config(config)
         "gridsearch_id" => string(config_value(config, :gridsearch_id, "")),
         "gridsearch_timestamp" => string(config_value(config, :gridsearch_timestamp, "")),
         "candidate_index" => string(config_value(config, :candidate_index, "")),
+        "gridsearch_parent_run_id" => string(config_value(config, :mlflow_parent_run_id, "")),
+        "mlflow.parentRunId" => string(config_value(config, :mlflow_parent_run_id, "")),
         "training_project" => "ContextualDFLTraining",
     )
 

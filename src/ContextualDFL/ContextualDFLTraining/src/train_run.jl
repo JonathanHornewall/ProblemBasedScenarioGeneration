@@ -29,6 +29,7 @@ end
 
 function train_and_evaluate(config::NamedTuple)
     cfg = normalize_config(config)
+    assert_remote_training_worker!(cfg)
     started_at = utc_timestamp()
     elapsed_seconds = 0.0
 
@@ -37,9 +38,14 @@ function train_and_evaluate(config::NamedTuple)
         training_backend = ""
         fallback_reason = ""
         objects = nothing
+        object_build_seconds = 0.0
+        training_seconds = 0.0
+        evaluation_seconds = 0.0
 
-        elapsed_seconds = @elapsed begin
+        object_build_seconds = @elapsed begin
             objects = resource_allocation_training_objects(cfg)
+        end
+        training_seconds = @elapsed begin
             training = train_with_contextualdfl_or_fallback(objects, cfg)
             train_result = training.result
             training_backend = training.backend
@@ -47,11 +53,25 @@ function train_and_evaluate(config::NamedTuple)
         end
 
         model = extract_model(train_result, objects.scenario_generator)
+        split_metrics = if hasproperty(training, :final_metrics) && !isnothing(training.final_metrics)
+            training.final_metrics
+        else
+            measured_metrics = nothing
+            evaluation_seconds = @elapsed begin
+                measured_metrics = evaluate_model_on_splits(model, objects.data, cfg)
+            end
+            measured_metrics
+        end
+        elapsed_seconds = object_build_seconds + training_seconds + evaluation_seconds
         metrics = merge(
-            evaluate_model_on_splits(model, objects.data, cfg),
+            split_metrics,
             (;
                 training_backend=training_backend,
                 fallback_reason=fallback_reason,
+                object_build_seconds=object_build_seconds,
+                training_seconds=training_seconds,
+                evaluation_seconds=evaluation_seconds,
+                total_elapsed_seconds=elapsed_seconds,
             ),
         )
         history = extract_epoch_history(train_result)
@@ -86,34 +106,35 @@ end
 
 function train_with_contextualdfl_or_fallback(objects, config)
     if mlflow_enabled(config)
-        result = train_with_contextualdfl_mlflow(objects, config)
+        mlflow_result = train_with_contextualdfl_mlflow(objects, config)
         return (;
-            result=result,
+            result=mlflow_result.result,
             backend="ContextualDFL.train_with_mlflow!",
             fallback_reason="",
+            final_metrics=mlflow_result.final_metrics,
         )
     end
 
     try
-        result = ContextualDFL.train(
-            objects.scenario_generator,
+        result = ContextualDFL.train!(
             objects.loss,
-            objects.data.train,
-            objects.scenario_decoder,
-            objects.schedules.mu,
-            objects.schedules.rho,
-            objects.schedules.batch_size,
-            objects.schedules.step_size;
+            objects.program,
+            fill(config.mu, Int(config.epochs)),
+            Int(config_value(config, :nr_scenarios, 1)),
+            objects.scenario_generator.neural_net,
+            objects.data.train;
+            learning_rate=config.learning_rate,
+            optimizer_type=Flux.Adam,
             epochs=config.epochs,
-            validation_data=objects.data.validation,
-            test_data=objects.data.test,
-            config=config,
+            batchsize=config.batch_size,
+            shuffle=Bool(config_value(config, :shuffle, false)),
         )
 
         return (;
             result=result,
             backend="ContextualDFL.train",
             fallback_reason="",
+            final_metrics=nothing,
         )
     catch error
         message = sprint(showerror, error)
@@ -128,6 +149,7 @@ function train_with_contextualdfl_or_fallback(objects, config)
             result=fallback,
             backend="ContextualDFLTraining.supervised_mse_fallback",
             fallback_reason=first_line(message),
+            final_metrics=nothing,
         )
     end
 end
@@ -138,12 +160,19 @@ function train_with_contextualdfl_mlflow(objects, config)
     loss = contextual_dfl_loss(objects, config)
     upload_model_artifact = Bool(config_value(config, :mlflow_upload_model_artifact, false))
     model_save_path = mlflow_model_save_path(config)
+    final_metrics = Ref{Any}(nothing)
+    model = objects.scenario_generator.neural_net
+    nr_scenarios = Int(config_value(config, :nr_scenarios, 1))
+    mu_schedule = fill(config.mu, Int(config.epochs))
 
-    return ContextualDFL.train_with_mlflow!(
+    result = ContextualDFL.train_with_mlflow!(
         mlf,
         experiment_id,
         loss,
-        objects.scenario_generator.neural_net,
+        objects.program,
+        mu_schedule,
+        nr_scenarios,
+        model,
         objects.data.train;
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,
@@ -170,7 +199,19 @@ function train_with_contextualdfl_mlflow(objects, config)
         model_save_path=model_save_path,
         upload_model_artifact=upload_model_artifact,
         model_artifact_path="models/" * basename(model_save_path),
+        experiment_spec=mlflow_experiment_spec(objects, config),
+        data_spec=mlflow_data_spec(objects, config),
+        model_spec=mlflow_model_spec(model, objects, config),
+        method_spec=mlflow_method_spec(objects, config),
+        evaluation_callbacks=(final=(train_result) -> begin
+            trained_model = extract_model(train_result, objects.scenario_generator)
+            metrics = evaluate_model_on_splits(trained_model, objects.data, config)
+            final_metrics[] = metrics
+            return metrics
+        end,),
     )
+
+    return (; result=result, final_metrics=final_metrics[])
 end
 
 function add_worker_mlflow_tags(config)
@@ -178,7 +219,26 @@ function add_worker_mlflow_tags(config)
     tags["worker_id"] = string(Distributed.myid())
     tags["worker_hostname"] = Sockets.gethostname()
     tags["worker_pid"] = string(getpid())
+    parent_run_id = string(config_value(config, :mlflow_parent_run_id, ""))
+    if !isempty(parent_run_id)
+        tags["gridsearch_parent_run_id"] = parent_run_id
+        tags["mlflow.parentRunId"] = parent_run_id
+    end
     return merge(config, (; mlflow_tags=tags))
+end
+
+function assert_remote_training_worker!(config)
+    Bool(config_value(config, :allow_local_training, false)) && return nothing
+
+    Distributed.myid() == 1 &&
+        error("Refusing to run training on Distributed worker 1. Use the remote gridsearch/profile entry points.")
+
+    coordinator_hostname = string(config_value(config, :coordinator_hostname, ""))
+    if !isempty(coordinator_hostname) && Sockets.gethostname() == coordinator_hostname
+        error("Refusing to run training on coordinator host $(coordinator_hostname).")
+    end
+
+    return nothing
 end
 
 function mlflow_dataset_name(config)
@@ -226,19 +286,108 @@ function mlflow_model_save_path(config)
 end
 
 function contextual_dfl_loss(objects, config)
-    mu = objects.schedules.mu(1)
-    rho = objects.schedules.rho(1)
+    return objects.loss
+end
 
-    return (predicted, reference) -> objects.loss(
-        objects.program,
-        predicted,
-        reference,
-        mu;
-        rho=rho,
-        config=config,
-        validation_data=objects.data.validation,
-        test_data=objects.data.test,
+function mlflow_experiment_spec(objects, config)
+    return (;
+        problem=string(config_value(config, :problem, :resource_allocation)),
+        instance_id=resource_problem_digest(objects.problem),
+        method=string(config_value(config, :method, config.loss)),
+        variant=string(config_value(config, :method_variant, "default")),
+        run_group=string(config_value(config, :gridsearch_id, "")),
+        candidate_index=config_value(config, :candidate_index, ""),
+        replicate_index=config_value(config, :replicate_index, config.seed),
+        base_run_id=string(config_value(config, :base_run_id, "")),
     )
+end
+
+function mlflow_data_spec(objects, config)
+    train_size = length(objects.data.train)
+    validation_size = length(objects.data.validation)
+    test_size = length(objects.data.test)
+    context_dimension = isempty(objects.data.train) ? 0 : length(first(objects.data.train).context)
+    scenario_count = isempty(objects.data.train) ? 0 : length(first(objects.data.train).scenario_parameters)
+
+    return (;
+        generator="resource_allocation",
+        dataset_name=mlflow_dataset_name(config),
+        dataset_digest=mlflow_dataset_digest(objects, config),
+        train_size=train_size,
+        validation_size=validation_size,
+        test_size=test_size,
+        context_dimension=context_dimension,
+        scenario_count=scenario_count,
+        n_samples=config.n_samples,
+        validation_fraction=config.validation_fraction,
+        test_fraction=config.test_fraction,
+        noise_generator="normal",
+        sigma=config.sigma,
+        demand_power=config.demand_power,
+        context_terms=config.context_terms,
+        train_context_seed=config.seed,
+        test_context_seed=config.seed,
+        train_scenario_seed=config.seed,
+        test_scenario_seed=config.seed,
+        split_seed=config.seed,
+        optimization_seed=config_value(config, :optimization_seed, config.seed),
+    )
+end
+
+function mlflow_model_spec(model, objects, config)
+    return (;
+        architecture="Flux.Chain",
+        depth=config.depth,
+        width=config.hidden_size,
+        activation=string(config_value(config, :activation, "relu")),
+        output_activation="softplus",
+        dropout=config.dropout,
+        parameter_count=model_parameter_count(model),
+        initialization_seed=string(config_value(config, :model_initialization_seed, "global_rng")),
+        input_dimension=isempty(objects.data.train) ? 0 : length(first(objects.data.train).context),
+        output_dimension=demand_count(objects.problem),
+    )
+end
+
+function mlflow_method_spec(objects, config)
+    return (;
+        loss=string(config.loss),
+        solver=string(config.solver),
+        decoder=string(typeof(objects.scenario_decoder)),
+        learned_components="h",
+        nr_scenarios=Int(config_value(config, :nr_scenarios, 1)),
+        mu=config.mu,
+        rho=config.rho,
+        homotopy_schedule="constant",
+        log_barrier_training=config.mu != 0,
+        log_barrier_inference=Bool(config_value(config, :log_barrier_inference, config.mu != 0)),
+        fine_tuning=Bool(config_value(config, :fine_tuning, false)),
+        annealing=Bool(config_value(config, :annealing, false)),
+        knn_homogenization=Bool(config_value(config, :knn_homogenization, false)),
+        rrule_variant=string(config_value(config, :rrule_variant, "default")),
+    )
+end
+
+function resource_problem_digest(problem)
+    values = (
+        "service_rate=$(vec(problem.problem_data.service_rate_parameters))",
+        "first_stage=$(problem.problem_data.first_stage_costs)",
+        "second_stage=$(problem.problem_data.second_stage_costs)",
+        "yield=$(problem.problem_data.yield_parameters)",
+    )
+    return "sha256:" * bytes2hex(sha256(join(values, "\n")))
+end
+
+function model_parameter_count(model)
+    try
+        return sum(length, Flux.trainables(model))
+    catch
+        try
+            return sum(length, Flux.params(model))
+        catch
+            return missing
+        end
+    end
 end
 
 function package_training_placeholder_error(message::AbstractString)
@@ -460,7 +609,7 @@ end
 function evaluate_split(model, dataset, config, prefix)
     x_data = dataset_context_matrix(dataset)
     target = dataset_demand_matrix(dataset)
-    predictions = model(x_data)
+    predictions, inference_timings = timed_model_prediction(model, x_data, config)
     prediction_matrix = matrix_like(predictions, target)
 
     errors = prediction_matrix .- target
@@ -475,9 +624,34 @@ function evaluate_split(model, dataset, config, prefix)
         relative_mae=mean(absolute_errors ./ denominator),
         tolerance_accuracy=mean(absolute_errors .<= tolerance),
         sample_count=size(target, 2),
+        inference_seconds_mean=mean(inference_timings),
+        inference_seconds_p95=percentile_95(inference_timings),
+        inference_seconds_total=sum(inference_timings),
     )
 
     return prefix_named_tuple(Symbol(prefix), metrics)
+end
+
+function timed_model_prediction(model, x_data, config)
+    repetitions = max(Int(config_value(config, :inference_repetitions, 1)), 1)
+    timings = Float64[]
+    predictions = nothing
+
+    for _ in 1:repetitions
+        elapsed = @elapsed begin
+            predictions = model(x_data)
+        end
+        push!(timings, elapsed)
+    end
+
+    return predictions, timings
+end
+
+function percentile_95(values::AbstractVector{<:Real})
+    isempty(values) && return NaN
+    sorted = sort!(collect(Float64.(values)))
+    index = clamp(ceil(Int, 0.95 * length(sorted)), 1, length(sorted))
+    return sorted[index]
 end
 
 function matrix_like(value, target)

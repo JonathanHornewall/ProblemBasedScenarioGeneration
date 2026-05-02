@@ -4,6 +4,7 @@ using Dates
 using Distributed
 import MLFlowClient
 using Sockets
+using Statistics
 
 include(joinpath(@__DIR__, "src", "grid_config.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
@@ -73,6 +74,12 @@ function validate_mlflow_settings(settings)
         error("MLFLOW_ENABLED=true requires MLFLOW_EXPERIMENT_ID.")
     end
     return nothing
+end
+
+function mlflow_client(settings)
+    return isempty(string(settings.tracking_uri)) ?
+        MLFlowClient.MLFlow(; headers=mlflow_http_headers()) :
+        MLFlowClient.MLFlow(string(settings.tracking_uri); headers=mlflow_http_headers())
 end
 
 function ensure_clean_worker_start!()
@@ -346,6 +353,189 @@ function mark_mlflow_run_failed(config, reason)
     return nothing
 end
 
+function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, worker_hosts)
+    settings.enabled || return nothing
+
+    mlf = mlflow_client(settings)
+    tags = Dict(
+        "gridsearch_id" => grid_id,
+        "gridsearch_timestamp" => timestamp,
+        "gridsearch_role" => "parent",
+        "training_project" => "ContextualDFLTraining",
+        "mlflow.source.name" => "ContextualDFLTraining/gridsearch.jl",
+        "mlflow.source.type" => "LOCAL",
+    )
+    git_commit = git_commit_or_empty()
+    isempty(git_commit) || (tags["mlflow.source.git.commit"] = git_commit)
+
+    run = MLFlowClient.createrun(
+        mlf,
+        string(settings.experiment_id);
+        run_name=grid_id,
+        start_time=unix_milliseconds(),
+        tags=tags,
+    )
+
+    for (key, value) in grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+        MLFlowClient.logparam(mlf, run, key, value)
+    end
+
+    return (; client=mlf, run=run)
+end
+
+function close_mlflow_grid_parent_run(parent, results)
+    parent === nothing && return nothing
+
+    success = all(result -> getproperty(result, :status) == "ok", results)
+    log_grid_aggregate_metrics!(parent.client, parent.run, results)
+    MLFlowClient.updaterun(
+        parent.client,
+        parent.run;
+        status=success ? MLFlowClient.RunStatus.FINISHED : MLFlowClient.RunStatus.FAILED,
+        end_time=unix_milliseconds(),
+    )
+    return nothing
+end
+
+function fail_mlflow_grid_parent_run(parent)
+    parent === nothing && return nothing
+    try
+        MLFlowClient.updaterun(
+            parent.client,
+            parent.run;
+            status=MLFlowClient.RunStatus.FAILED,
+            end_time=unix_milliseconds(),
+        )
+    catch error
+        println("Could not mark parent MLflow run failed: ", sprint(showerror, error))
+    end
+    return nothing
+end
+
+function grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+    params = Dict{String,String}(
+        "gridsearch_id" => grid_id,
+        "gridsearch_timestamp" => timestamp,
+        "grid_candidate_count" => string(length(configs)),
+        "grid_selected_grid" => env_flag("GRIDSEARCH_SMOKE", false) ? "smoke" : "default",
+        "grid_worker_count" => string(length(worker_hosts)),
+        "grid_worker_hosts" => join(sort!(unique(collect(values(worker_hosts)))), ","),
+    )
+
+    for (key, value) in grid_constant_config_values(configs)
+        params["grid_constant_" * string(key)] = string(value)
+    end
+
+    variable_keys = grid_variable_config_keys(configs)
+    params["grid_variable_keys"] = join(string.(variable_keys), ",")
+    for key in variable_keys
+        values = sort!(unique([string(getproperty(config, key)) for config in configs]))
+        params["grid_variable_" * string(key) * "_count"] = string(length(values))
+        length(values) <= 20 && (params["grid_variable_" * string(key) * "_values"] = join(values, ","))
+    end
+
+    return params
+end
+
+function grid_constant_config_values(configs)
+    isempty(configs) && return Pair{Symbol,Any}[]
+    constants = Pair{Symbol,Any}[]
+    first_config = first(configs)
+
+    for key in keys(first_config)
+        value = getproperty(first_config, key)
+        mlflow_scalar_value(value) || continue
+        all(config -> hasproperty(config, key) && getproperty(config, key) == value, configs) ||
+            continue
+        push!(constants, key => value)
+    end
+
+    return constants
+end
+
+function grid_variable_config_keys(configs)
+    isempty(configs) && return Symbol[]
+    variable_keys = Symbol[]
+    first_config = first(configs)
+
+    for key in keys(first_config)
+        value = getproperty(first_config, key)
+        mlflow_scalar_value(value) || continue
+        all(config -> hasproperty(config, key) && getproperty(config, key) == value, configs) &&
+            continue
+        push!(variable_keys, key)
+    end
+
+    return sort!(variable_keys; by=String)
+end
+
+function log_grid_aggregate_metrics!(mlf, run, results)
+    metric_keys = Set{Symbol}()
+    for result in results
+        getproperty(result, :status) == "ok" || continue
+        metrics = getproperty(result, :final_metrics)
+        metrics isa NamedTuple || continue
+        for key in keys(metrics)
+            value = getproperty(metrics, key)
+            mlflow_numeric_metric(value) && push!(metric_keys, key)
+        end
+    end
+
+    for key in sort!(collect(metric_keys); by=String)
+        values = Float64[
+            Float64(getproperty(getproperty(result, :final_metrics), key)) for result in results if
+            getproperty(result, :status) == "ok" &&
+            getproperty(result, :final_metrics) isa NamedTuple &&
+            hasproperty(getproperty(result, :final_metrics), key) &&
+            mlflow_numeric_metric(getproperty(getproperty(result, :final_metrics), key))
+        ]
+        isempty(values) && continue
+
+        prefix = "grid_" * string(key)
+        MLFlowClient.logmetric(mlf, run, prefix * "_mean", mean(values); step=0)
+        MLFlowClient.logmetric(mlf, run, prefix * "_median", median(values); step=0)
+        MLFlowClient.logmetric(mlf, run, prefix * "_min", minimum(values); step=0)
+        MLFlowClient.logmetric(mlf, run, prefix * "_max", maximum(values); step=0)
+        MLFlowClient.logmetric(mlf, run, prefix * "_std", length(values) > 1 ? std(values) : 0.0; step=0)
+    end
+
+    return nothing
+end
+
+function mlflow_parent_run_id(parent)
+    parent === nothing && return ""
+    try
+        return string(parent.run.info.run_id)
+    catch
+        return ""
+    end
+end
+
+mlflow_scalar_value(value) =
+    value isa Number ||
+    value isa Bool ||
+    value isa Symbol ||
+    value isa AbstractString
+
+function mlflow_numeric_metric(value)
+    value isa Bool && return false
+    value isa Number || return false
+    float_value = try
+        Float64(value)
+    catch
+        return false
+    end
+    return isfinite(float_value)
+end
+
+function git_commit_or_empty()
+    try
+        return strip(read(pipeline(`git rev-parse HEAD`; stderr=devnull), String))
+    catch
+        return ""
+    end
+end
+
 function mlflow_http_headers()
     return Dict("Connection" => "close")
 end
@@ -385,6 +575,8 @@ function annotate_grid_config(
     index::Integer,
     timestamp::AbstractString,
     mlflow_settings=grid_mlflow_settings(),
+    parent_run_id::AbstractString="",
+    coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
     grid_id = gridsearch_id(timestamp)
     candidate = candidate_tag(index)
@@ -404,13 +596,17 @@ function annotate_grid_config(
             mlflow_experiment_id=mlflow_settings.experiment_id,
             mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
+            mlflow_parent_run_id=parent_run_id,
             mlflow_run_name=candidate_name,
+            coordinator_hostname=coordinator_hostname,
             mlflow_tags=(;
                 gridsearch_id=grid_id,
                 gridsearch_timestamp=timestamp,
                 candidate_index=Int(index),
                 base_run_id=previous_run_id,
                 candidate_name=candidate_name,
+                gridsearch_parent_run_id=parent_run_id,
+                mlflow_parentRunId=parent_run_id,
                 gridsearch_role="candidate",
             ),
         ),
@@ -421,9 +617,18 @@ function annotate_grid_configs(
     configs,
     timestamp::AbstractString,
     mlflow_settings=grid_mlflow_settings(),
+    parent_run_id::AbstractString="",
+    coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
     return [
-        annotate_grid_config(config, index, timestamp, mlflow_settings) for
+        annotate_grid_config(
+            config,
+            index,
+            timestamp,
+            mlflow_settings,
+            parent_run_id,
+            coordinator_hostname,
+        ) for
         (index, config) in enumerate(configs)
     ]
 end
@@ -441,7 +646,22 @@ function main()
     grid_id = gridsearch_id(timestamp)
     mlflow_settings = grid_mlflow_settings()
     validate_mlflow_settings(mlflow_settings)
-    configs = annotate_grid_configs(selected_grid(), timestamp, mlflow_settings)
+    base_configs = selected_grid()
+    parent_run = create_mlflow_grid_parent_run(
+        mlflow_settings,
+        grid_id,
+        timestamp,
+        base_configs,
+        worker_hosts,
+    )
+    parent_run_id = mlflow_parent_run_id(parent_run)
+    configs = annotate_grid_configs(
+        base_configs,
+        timestamp,
+        mlflow_settings,
+        parent_run_id,
+        Sockets.gethostname(),
+    )
     println("Grid search id: $grid_id")
     if mlflow_settings.enabled
         println("MLflow experiment id: $(mlflow_settings.experiment_id)")
@@ -450,7 +670,13 @@ function main()
         "Running $(length(configs)) configuration(s) on $(length(remote_worker_ids)) remote worker(s)",
     )
 
-    results = run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
+    results = try
+        run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
+    catch error
+        fail_mlflow_grid_parent_run(parent_run)
+        rethrow()
+    end
+    close_mlflow_grid_parent_run(parent_run, results)
 
     output_dir = write_grid_results(
         results;
