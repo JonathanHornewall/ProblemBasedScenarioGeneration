@@ -129,6 +129,50 @@ end
     @test collection_tangent[2].h_ineq_xi == fill(6.0, size(scenario_collection[2].h_ineq_xi))
     @test collection_tangent[1].q_xi == fill(7.0, size(scenario_collection[1].q_xi))
 
+    zero_component_tangent = pullback((
+        ChainRulesCore.ZeroTangent(),
+        ChainRulesCore.ZeroTangent(),
+        ChainRulesCore.ZeroTangent(),
+        ChainRulesCore.ZeroTangent(),
+        ChainRulesCore.ZeroTangent(),
+        ChainRulesCore.ZeroTangent(),
+        fill(7.0, size(q_array)),
+    ))[3]
+
+    @test zero_component_tangent[1].W_eq_xi isa ChainRulesCore.NoTangent
+    @test zero_component_tangent[1].q_xi == fill(7.0, size(scenario_collection[1].q_xi))
+
+    @test_throws ArgumentError pullback((1.0,))
+    @test_throws DimensionMismatch pullback((fill(1.0, size(W_eq_array, 1), size(W_eq_array, 2)),))
+
+    float32_collection = [
+        ParametricScenario(;
+            W_eq_xi=Float32[1.0 2.0; 3.0 4.0],
+            W_ineq_xi=reshape(Float32[5.0, 6.0], 1, 2),
+            T_eq_xi=reshape(Float32[7.0, 8.0], 2, 1),
+            T_ineq_xi=reshape(Float32[9.0], 1, 1),
+            h_eq_xi=Float32[10.0, 11.0],
+            h_ineq_xi=Float32[12.0],
+            q_xi=Float32[13.0, 14.0],
+        ),
+    ]
+    float32_output, float32_pullback =
+        ChainRulesCore.rrule(decode_scenario_collection, collection_decoder, float32_collection)
+    float32_tangent = float32_pullback((
+        fill(1.0, size(float32_output[1])),
+        fill(2.0, size(float32_output[2])),
+        fill(3.0, size(float32_output[3])),
+        fill(4.0, size(float32_output[4])),
+        fill(5.0, size(float32_output[5])),
+        fill(6.0, size(float32_output[6])),
+        fill(7.0, size(float32_output[7])),
+    ))[3][1]
+
+    @test eltype(float32_tangent.W_eq_xi) == Float32
+    @test eltype(float32_tangent.h_eq_xi) == Float32
+    @test float32_tangent.W_eq_xi == fill(Float32(1.0), size(float32_collection[1].W_eq_xi))
+    @test float32_tangent.h_eq_xi == fill(Float32(5.0), size(float32_collection[1].h_eq_xi))
+
     function zygote_collection_sum(x)
         W_eq_array,
         W_ineq_array,

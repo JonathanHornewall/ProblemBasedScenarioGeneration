@@ -51,33 +51,95 @@ function (decoder::ParametricDecoder)(scenario_parameters::ParametricScenario)
     return W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q
 end
 
+function _tuple_cotangent_component(output_tangent, index)
+    output_tangent = ChainRulesCore.unthunk(output_tangent)
+
+    if output_tangent isa ChainRulesCore.AbstractZero
+        return ChainRulesCore.ZeroTangent()
+    elseif output_tangent isa Tuple
+        index > length(output_tangent) && return ChainRulesCore.ZeroTangent()
+        return ChainRulesCore.unthunk(output_tangent[index])
+    elseif output_tangent isa ChainRulesCore.Tangent
+        index > length(output_tangent) && return ChainRulesCore.ZeroTangent()
+        return ChainRulesCore.unthunk(output_tangent[index])
+    end
+
+    throw(
+        ArgumentError(
+            "Expected tuple-like cotangent for decode_scenario_collection output; got $(typeof(output_tangent)).",
+        ),
+    )
+end
+
+function _maybe_array_component(component, template; name)
+    component = ChainRulesCore.unthunk(component)
+
+    if _is_zero_cotangent(component)
+        return ChainRulesCore.NoTangent()
+    end
+
+    component isa AbstractArray ||
+        throw(ArgumentError("Expected array cotangent for $name; got $(typeof(component))."))
+
+    size(component) == size(template) || throw(
+        DimensionMismatch(
+            "Cotangent for $name has size $(size(component)); expected $(size(template)).",
+        ),
+    )
+
+    return component
+end
+
 function ChainRulesCore.rrule(
     ::typeof(decode_scenario_collection),
     decoder::ParametricDecoder,
     scenario_parameter_collection::AbstractVector{<:ParametricScenario},
 )
     output = decode_scenario_collection(decoder, scenario_parameter_collection)
+    W_eq_array,
+    W_ineq_array,
+    T_eq_array,
+    T_ineq_array,
+    h_eq_array,
+    h_ineq_array,
+    q_array = output
 
     function decode_scenario_collection_pullback(output_tangent)
-        output_tangent = ChainRulesCore.unthunk(output_tangent)
-        dW_eq_array, dW_ineq_array, dT_eq_array, dT_ineq_array, dh_eq_array, dh_ineq_array, dq_array =
-            try
-                (
-                    ChainRulesCore.unthunk(output_tangent[1]),
-                    ChainRulesCore.unthunk(output_tangent[2]),
-                    ChainRulesCore.unthunk(output_tangent[3]),
-                    ChainRulesCore.unthunk(output_tangent[4]),
-                    ChainRulesCore.unthunk(output_tangent[5]),
-                    ChainRulesCore.unthunk(output_tangent[6]),
-                    ChainRulesCore.unthunk(output_tangent[7]),
-                )
-            catch
-                return (
-                    ChainRulesCore.NoTangent(),
-                    ChainRulesCore.NoTangent(),
-                    ChainRulesCore.NoTangent(),
-                )
-            end
+        dW_eq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 1),
+            W_eq_array;
+            name=:W_eq,
+        )
+        dW_ineq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 2),
+            W_ineq_array;
+            name=:W_ineq,
+        )
+        dT_eq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 3),
+            T_eq_array;
+            name=:T_eq,
+        )
+        dT_ineq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 4),
+            T_ineq_array;
+            name=:T_ineq,
+        )
+        dh_eq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 5),
+            h_eq_array;
+            name=:h_eq,
+        )
+        dh_ineq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 6),
+            h_ineq_array;
+            name=:h_ineq,
+        )
+        dq_array = _maybe_array_component(
+            _tuple_cotangent_component(output_tangent, 7),
+            q_array;
+            name=:q,
+        )
 
         if all(
             tangent -> !(tangent isa AbstractArray),
@@ -94,43 +156,57 @@ function ChainRulesCore.rrule(
             return ChainRulesCore.Tangent{typeof(scenario_parameters)}(
                 W_eq_xi=
                 if :W_eq in decoder.input_components && dW_eq_array isa AbstractArray
-                    view(dW_eq_array, :, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.W_eq_xi)(
+                        view(dW_eq_array, :, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 W_ineq_xi=
                 if :W_ineq in decoder.input_components && dW_ineq_array isa AbstractArray
-                    view(dW_ineq_array, :, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.W_ineq_xi)(
+                        view(dW_ineq_array, :, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 T_eq_xi=
                 if :T_eq in decoder.input_components && dT_eq_array isa AbstractArray
-                    view(dT_eq_array, :, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.T_eq_xi)(
+                        view(dT_eq_array, :, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 T_ineq_xi=
                 if :T_ineq in decoder.input_components && dT_ineq_array isa AbstractArray
-                    view(dT_ineq_array, :, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.T_ineq_xi)(
+                        view(dT_ineq_array, :, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 h_eq_xi=
                 if :h_eq in decoder.input_components && dh_eq_array isa AbstractArray
-                    view(dh_eq_array, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.h_eq_xi)(
+                        view(dh_eq_array, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 h_ineq_xi=
                 if :h_ineq in decoder.input_components && dh_ineq_array isa AbstractArray
-                    view(dh_ineq_array, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.h_ineq_xi)(
+                        view(dh_ineq_array, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
                 q_xi=
                 if :q in decoder.input_components && dq_array isa AbstractArray
-                    view(dq_array, :, k)
+                    ChainRulesCore.ProjectTo(scenario_parameters.q_xi)(
+                        view(dq_array, :, k),
+                    )
                 else
                     ChainRulesCore.NoTangent()
                 end,
