@@ -32,6 +32,7 @@ function train!(
     rng::Random.AbstractRNG=Random.default_rng(),
     opt_state=nothing,
     reset_optimizer_each_epoch::Bool=false,
+    on_epoch_end=nothing,
 )
     epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
     batchsize > 0 || throw(ArgumentError("batchsize must be positive."))
@@ -93,6 +94,10 @@ function train!(
             push!(displayed_epoch_losses, average_display_loss)
         end
 
+        if !isnothing(on_epoch_end)
+            on_epoch_end(Int(epoch_number), average_loss, average_display_loss)
+        end
+
         push!(
             history,
             (;
@@ -126,6 +131,75 @@ end
 train!(loss, model, data; kwargs...) =
     train!(loss, nothing, model, data; kwargs...)
 
+function train_with_mlflow!(
+    mlf,
+    experiment_id,
+    loss,
+    model,
+    data;
+    relative_loss=nothing,
+    learning_rate=1e-3,
+    optimizer_type=Flux.Adam,
+    epochs::Integer=10,
+    batchsize::Integer=32,
+    shuffle::Bool=false,
+    reset_optimizer_each_epoch::Bool=false,
+    on_epoch_end=nothing,
+    kwargs...,
+)
+    mlflow = parentmodule(typeof(mlf))
+    run = getproperty(mlflow, :createrun)(mlf, experiment_id)
+
+    logparam = getproperty(mlflow, :logparam)
+    logparam(mlf, run, "learning_rate", string(learning_rate))
+    logparam(mlf, run, "optimizer_type", string(optimizer_type))
+    logparam(mlf, run, "epochs", string(epochs))
+    logparam(mlf, run, "batchsize", string(batchsize))
+    logparam(mlf, run, "shuffle", string(shuffle))
+    logparam(mlf, run, "reset_optimizer_each_epoch", string(reset_optimizer_each_epoch))
+
+    logmetric = getproperty(mlflow, :logmetric)
+    training_succeeded = false
+
+    try
+        result = train!(
+            loss,
+            relative_loss,
+            model,
+            data;
+            learning_rate=learning_rate,
+            optimizer_type=optimizer_type,
+            epochs=epochs,
+            batchsize=batchsize,
+            shuffle=shuffle,
+            reset_optimizer_each_epoch=reset_optimizer_each_epoch,
+            on_epoch_end=(epoch, loss_value, display_loss) -> begin
+                logmetric(mlf, run, "loss", Float64(loss_value); step=epoch)
+                logmetric(mlf, run, "display_loss", Float64(display_loss); step=epoch)
+                if !isnothing(on_epoch_end)
+                    on_epoch_end(epoch, loss_value, display_loss)
+                end
+            end,
+            kwargs...,
+        )
+        training_succeeded = true
+        return result
+    finally
+        status = training_succeeded ?
+            getproperty(getproperty(mlflow, :RunStatus), :FINISHED) :
+            getproperty(getproperty(mlflow, :RunStatus), :FAILED)
+        try
+            getproperty(mlflow, :updaterun)(
+                mlf,
+                run;
+                status=status,
+            )
+        catch
+            training_succeeded && rethrow()
+        end
+    end
+end
+
 function train(
     scenario_generator::DFLScenarioGenerator,
     loss::LossFunction,
@@ -148,6 +222,7 @@ function train(
     rng::Random.AbstractRNG=Random.default_rng(),
     opt_state=nothing,
     reset_optimizer_each_epoch::Bool=false,
+    on_epoch_end=nothing,
     kwargs...,
 )
     learning_rate = _schedule_value(step_size_schedule, 1)
@@ -182,6 +257,7 @@ function train(
         rng=rng,
         opt_state=opt_state,
         reset_optimizer_each_epoch=reset_optimizer_each_epoch,
+        on_epoch_end=on_epoch_end,
     )
 end
 

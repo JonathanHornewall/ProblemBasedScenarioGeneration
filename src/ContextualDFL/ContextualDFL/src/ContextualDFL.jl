@@ -41,6 +41,7 @@ export
     solve_rrule,
     step_size_schedule,
     train,
+    train_with_mlflow!,
     train!
 
 include("linear_programming/LP.jl")
