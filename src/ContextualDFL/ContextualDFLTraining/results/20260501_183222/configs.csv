@@ -1,0 +1,2 @@
+config_batch_size,config_context_terms,config_demand_power,config_depth,config_dropout,config_epochs,config_hidden_size,config_learning_rate,config_loss,config_mu,config_n_samples,config_rho,config_run_id,config_seed,config_sigma,config_solver,config_test_fraction,config_tolerance_absolute_floor,config_tolerance_relative,config_validation_fraction
+16,3,1.0,1,0.0,1,16,0.001,mse_scen,0.0,64,0.0,smoke_0001_seed1,1,5.0,highs,0.15,1.0,0.1,0.15

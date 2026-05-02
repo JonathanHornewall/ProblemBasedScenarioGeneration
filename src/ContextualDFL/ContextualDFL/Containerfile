@@ -1,0 +1,17 @@
+FROM docker.io/julia:1.12.6-trixie
+WORKDIR /app
+ENV LOCAL_WORKERS=2
+ENV REMOTE_WORKERS=4
+
+RUN apt-get update && apt-get install -y \
+    openssh-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir /root/.ssh/
+
+COPY *.toml ./
+
+RUN julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+COPY ./src ./test ./
+
+CMD [ "julia", "--project=.", "gridsearch.jl" ]
