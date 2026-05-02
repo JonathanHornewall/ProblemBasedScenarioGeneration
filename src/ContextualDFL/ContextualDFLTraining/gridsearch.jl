@@ -12,6 +12,8 @@ include(joinpath(@__DIR__, "src", "csv_results.jl"))
 const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
+const DEFAULT_MLFLOW_EXPERIMENT_ID = "2"
+const DEFAULT_MLFLOW_EXPERIMENT_NAME = "ContextualDFLTraining"
 
 function _contextualdfltraining_remote_eval(config)
     started_at = unix_milliseconds()
@@ -74,10 +76,11 @@ function env_flag(name, default=false)
 end
 
 function grid_mlflow_settings()
-    enabled = env_flag("MLFLOW_ENABLED", haskey(ENV, "MLFLOW_EXPERIMENT_ID"))
+    enabled = env_flag("MLFLOW_ENABLED", true)
     return (;
         enabled=enabled,
-        experiment_id=get(ENV, "MLFLOW_EXPERIMENT_ID", ""),
+        experiment_id=get(ENV, "MLFLOW_EXPERIMENT_ID", DEFAULT_MLFLOW_EXPERIMENT_ID),
+        experiment_name=get(ENV, "MLFLOW_EXPERIMENT_NAME", DEFAULT_MLFLOW_EXPERIMENT_NAME),
         tracking_uri=get(ENV, "MLFLOW_TRACKING_URI", ""),
         upload_model_artifact=env_flag("MLFLOW_UPLOAD_MODEL_ARTIFACTS", false),
     )
@@ -371,6 +374,7 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
         "gridsearch_timestamp" => timestamp,
         "gridsearch_role" => "parent",
         "training_project" => "ContextualDFLTraining",
+        "mlflow.experiment.name" => string(settings.experiment_name),
         "mlflow.source.name" => "ContextualDFLTraining/gridsearch.jl",
         "mlflow.source.type" => "LOCAL",
     )
@@ -670,6 +674,7 @@ function annotate_grid_config(
             candidate_name=candidate_name,
             mlflow_enabled=mlflow_settings.enabled,
             mlflow_experiment_id=mlflow_settings.experiment_id,
+            mlflow_experiment_name=mlflow_settings.experiment_name,
             mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
             mlflow_parent_run_id=parent_run_id,
@@ -740,7 +745,9 @@ function main()
     )
     println("Grid search id: $grid_id")
     if mlflow_settings.enabled
-        println("MLflow experiment id: $(mlflow_settings.experiment_id)")
+        println(
+            "MLflow experiment id: $(mlflow_settings.experiment_id) ($(mlflow_settings.experiment_name))",
+        )
     end
     println(
         "Running $(length(configs)) configuration(s) on $(length(remote_worker_ids)) remote worker(s)",

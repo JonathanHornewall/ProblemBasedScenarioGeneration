@@ -180,12 +180,14 @@ function train_with_contextualdfl_mlflow(objects, config)
         data_spec=mlflow_data_spec(objects, config),
         model_spec=mlflow_model_spec(model, objects, config),
         method_spec=mlflow_method_spec(objects, config),
-        evaluation_callbacks=(final=(train_result) -> begin
-            trained_model = extract_model(train_result, objects.scenario_generator)
-            metrics = evaluate_model_for_reporting(trained_model, objects, config)
-            final_metrics[] = metrics
-            return metrics
-        end,),
+        evaluation_callbacks=Dict(
+            "" => (train_result) -> begin
+                trained_model = extract_model(train_result, objects.scenario_generator)
+                metrics = evaluate_model_for_reporting(trained_model, objects, config)
+                final_metrics[] = metrics
+                return metrics
+            end,
+        ),
     )
 
     return (; result=result, final_metrics=final_metrics[])
@@ -371,6 +373,12 @@ function mlflow_method_spec(objects, config)
         homotopy_schedule=string(config_value(config, :mu_schedule, :constant)),
         log_barrier_training=any(!iszero, mu_schedule),
         log_barrier_inference=Bool(config_value(config, :log_barrier_inference, any(!iszero, mu_schedule))),
+        optimality_evaluation=Bool(config_value(config, :optimality_evaluation, false)),
+        optimality_test_sample_count=Int(config_value(config, :optimality_test_sample_count, 0)),
+        optimality_train_sample_count=Int(config_value(config, :optimality_train_sample_count, 0)),
+        optimality_validation_sample_count=Int(config_value(config, :optimality_validation_sample_count, 0)),
+        optimality_mu=Float64(config_value(config, :optimality_mu, 0.0)),
+        policy_inference_mu=Float64(config_value(config, :policy_inference_mu, config.mu)),
         fine_tuning=Bool(config_value(config, :fine_tuning, false)),
         annealing=Bool(config_value(config, :annealing, false)),
         knn_homogenization=Bool(config_value(config, :knn_homogenization, false)),
