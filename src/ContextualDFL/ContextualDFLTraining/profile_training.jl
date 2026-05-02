@@ -1,6 +1,5 @@
 #!/usr/bin/env julia
 
-using Dates
 using Distributed
 using Sockets
 
@@ -23,6 +22,10 @@ function env_float(name, default)
     parsed = tryparse(Float64, value)
     parsed === nothing && error("ENV[$name] must be a number, got: $value")
     return parsed
+end
+
+function env_symbol(name, default)
+    return Symbol(get(ENV, name, string(default)))
 end
 
 function env_flag(name, default=false)
@@ -49,6 +52,10 @@ function sync_code!()
 end
 
 function profile_config_from_env()
+    run_id = get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3")
+    mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", false)
+    profile_mlflow_progress = env_flag("PROFILE_MLFLOW_PROGRESS", mlflow_enabled)
+
     cfg = merge(
         DEFAULT_RUN_SETTINGS,
         (;
@@ -61,22 +68,74 @@ function profile_config_from_env()
             demand_power=env_float("PROFILE_DEMAND_POWER", DEFAULT_RUN_SETTINGS.demand_power),
             context_terms=env_int("PROFILE_CONTEXT_TERMS", DEFAULT_RUN_SETTINGS.context_terms),
             mu=env_float("PROFILE_MU", DEFAULT_RUN_SETTINGS.mu),
+            mu_start=env_float("PROFILE_MU_START", DEFAULT_RUN_SETTINGS.mu_start),
+            mu_end=env_float("PROFILE_MU_END", DEFAULT_RUN_SETTINGS.mu_end),
+            mu_schedule=env_symbol("PROFILE_MU_SCHEDULE", DEFAULT_RUN_SETTINGS.mu_schedule),
+            nr_scenarios=env_int("PROFILE_NR_SCENARIOS", DEFAULT_RUN_SETTINGS.nr_scenarios),
             rho=env_float("PROFILE_RHO", DEFAULT_RUN_SETTINGS.rho),
             tolerance_relative=env_float("PROFILE_TOLERANCE_RELATIVE", DEFAULT_RUN_SETTINGS.tolerance_relative),
             tolerance_absolute_floor=env_float(
                 "PROFILE_TOLERANCE_ABSOLUTE_FLOOR",
                 DEFAULT_RUN_SETTINGS.tolerance_absolute_floor,
             ),
+            loss=env_symbol("PROFILE_LOSS", :dfl_scen),
             learning_rate=env_float("PROFILE_LEARNING_RATE", 1e-3),
             hidden_size=env_int("PROFILE_HIDDEN_SIZE", 128),
             depth=env_int("PROFILE_DEPTH", 2),
             batch_size=env_int("PROFILE_BATCH_SIZE", 64),
             dropout=env_float("PROFILE_DROPOUT", 0.0),
             seed=env_int("PROFILE_SEED", 3),
-            run_id=get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3"),
+            run_id=run_id,
+            base_run_id=run_id,
+            candidate_name=run_id,
+            mlflow_enabled=mlflow_enabled,
+            profile_mlflow_progress=profile_mlflow_progress,
+            mlflow_experiment_id=get(
+                ENV,
+                "PROFILE_MLFLOW_EXPERIMENT_ID",
+                get(ENV, "MLFLOW_EXPERIMENT_ID", "0"),
+            ),
+            mlflow_tracking_uri=get(
+                ENV,
+                "PROFILE_MLFLOW_TRACKING_URI",
+                get(ENV, "MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"),
+            ),
+            mlflow_run_name=get(ENV, "PROFILE_MLFLOW_RUN_NAME", run_id),
+            mlflow_upload_model_artifact=false,
+            mlflow_source_name="ContextualDFLTraining/profile_training.jl",
+            mlflow_dataset_context="profiling",
+            method_variant="profiling",
+            mlflow_params=(;
+                profile_target="ContextualDFL.train!",
+                profile_loss="ContextualDFL.DflScenLoss",
+                profile_progress_logged_by="remote_worker",
+            ),
+            mlflow_tags=(;
+                source="ContextualDFLTraining.profile_training",
+                run_kind="profiling",
+                profile_run=true,
+                exclude_from_model_selection=true,
+                exclude_from_gridsearch=true,
+                profile_target="ContextualDFL.train!",
+                profile_loss="ContextualDFL.DflScenLoss",
+                profile_progress_logged_by="remote_worker",
+                profile_artifacts="local_csv_svg_jlprof",
+                coordinator_hostname=Sockets.gethostname(),
+            ),
         ),
     )
     return cfg
+end
+
+function with_profile_output_config(config, output_dir)
+    tags = merge(
+        config.mlflow_tags,
+        (;
+            profile_local_output_dir=output_dir,
+            profile_timestamp=basename(output_dir),
+        ),
+    )
+    return merge(config, (; profile_local_output_dir=output_dir, mlflow_tags=tags))
 end
 
 function add_profile_worker!()
@@ -133,7 +192,7 @@ function assert_remote_profile_worker!(worker, metadata)
 end
 
 function profile_output_dir()
-    stamp = Dates.format(Dates.now(), dateformat"yyyymmdd_HHMMSS")
+    stamp = string(unix_milliseconds())
     output_dir = joinpath(@__DIR__, "results", "profile_" * stamp)
     mkpath(joinpath(output_dir, "assets"))
     return output_dir
@@ -174,14 +233,23 @@ function main()
     worker = nothing
 
     try
+        output_dir = profile_output_dir()
+        config = with_profile_output_config(
+            merge(profile_config_from_env(), (; coordinator_hostname=Sockets.gethostname())),
+            output_dir,
+        )
+        println("Running remote profile $(config.run_id) with $(config.epochs) profiled epoch(s)")
+        if config.mlflow_enabled && config.profile_mlflow_progress
+            println(
+                "Remote MLflow profiling progress enabled: experiment=$(config.mlflow_experiment_id), ",
+                "tracking_uri=$(config.mlflow_tracking_uri), run_name=$(config.mlflow_run_name)",
+            )
+        end
+
         sync_code!()
         worker = add_profile_worker!()
         metadata = load_worker!(worker)
         assert_remote_profile_worker!(worker, metadata)
-
-        config = merge(profile_config_from_env(), (; coordinator_hostname=Sockets.gethostname()))
-        output_dir = profile_output_dir()
-        println("Running remote profile $(config.run_id) with $(config.epochs) profiled epoch(s)")
 
         result = remotecall_fetch(worker) do
             Main.ContextualDFLTraining.profile_standard_training(config)
