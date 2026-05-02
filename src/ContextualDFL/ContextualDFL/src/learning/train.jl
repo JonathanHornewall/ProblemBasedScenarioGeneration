@@ -102,8 +102,6 @@ function train!(
                 iterations=length(epoch_losses),
             ),
         )
-
-        GC.gc()
     end
 
     if save_model
