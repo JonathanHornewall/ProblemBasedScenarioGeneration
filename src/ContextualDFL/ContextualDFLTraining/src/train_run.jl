@@ -135,7 +135,6 @@ end
 function train_with_contextualdfl_mlflow(objects, config)
     mlflow_config = add_worker_mlflow_tags(config)
     mlf, experiment_id = mlflow_client_for_config(mlflow_config)
-    data = ContextualDFL._contextual_training_samples(objects.data.train, objects.scenario_decoder)
     loss = contextual_dfl_loss(objects, config)
     upload_model_artifact = Bool(config_value(config, :mlflow_upload_model_artifact, false))
     model_save_path = mlflow_model_save_path(config)
@@ -145,7 +144,7 @@ function train_with_contextualdfl_mlflow(objects, config)
         experiment_id,
         loss,
         objects.scenario_generator.neural_net,
-        data;
+        objects.data.train;
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,
         epochs=config.epochs,
@@ -210,12 +209,12 @@ function mlflow_dataset_digest(objects, config)
         "sigma=$(config.sigma)",
         "demand_power=$(config.demand_power)",
         "context_terms=$(config.context_terms)",
-        "train_x=$(size(objects.data.train.x_data))",
-        "train_y=$(size(objects.data.train.xi_h_data))",
-        "validation_x=$(size(objects.data.validation.x_data))",
-        "validation_y=$(size(objects.data.validation.xi_h_data))",
-        "test_x=$(size(objects.data.test.x_data))",
-        "test_y=$(size(objects.data.test.xi_h_data))",
+        "train_x=$(size(dataset_context_matrix(objects.data.train)))",
+        "train_y=$(size(dataset_demand_matrix(objects.data.train)))",
+        "validation_x=$(size(dataset_context_matrix(objects.data.validation)))",
+        "validation_y=$(size(dataset_demand_matrix(objects.data.validation)))",
+        "test_x=$(size(dataset_context_matrix(objects.data.test)))",
+        "test_y=$(size(dataset_demand_matrix(objects.data.test)))",
     )
     return "sha256:" * bytes2hex(sha256(join(split_summary, "\n")))
 end
@@ -264,11 +263,13 @@ function supervised_mse_train!(model, splits, config)
 
     optimizer_state = Flux.setup(Adam(config.learning_rate), model)
     history = NamedTuple[]
+    train_x = dataset_context_matrix(splits.train)
+    train_y = dataset_demand_matrix(splits.train)
 
     for epoch in 1:config.epochs
         Flux.trainmode!(model)
         loader = Flux.DataLoader(
-            (splits.train.x_data, splits.train.xi_h_data);
+            (train_x, train_y);
             batchsize=config.batch_size,
             shuffle=true,
         )
@@ -305,9 +306,26 @@ function supervised_mse_train!(model, splits, config)
 end
 
 function split_mse(model, dataset)
-    target = dataset.xi_h_data
-    prediction = matrix_like(model(dataset.x_data), target)
+    target = dataset_demand_matrix(dataset)
+    prediction = matrix_like(model(dataset_context_matrix(dataset)), target)
     return mean(abs2, prediction .- target)
+end
+
+function dataset_context_matrix(dataset)
+    isempty(dataset) && return zeros(Float64, 0, 0)
+    return reduce(hcat, (point.context for point in dataset))
+end
+
+function dataset_demand_matrix(dataset)
+    isempty(dataset) && return zeros(Float64, 0, 0)
+    return reduce(hcat, (demand_from_contextual_point(point) for point in dataset))
+end
+
+function demand_from_contextual_point(point)
+    scenario_parameters = point.scenario_parameters
+    length(scenario_parameters) == 1 ||
+        throw(ArgumentError("expected exactly one scenario per contextual data point"))
+    return demand_from_scenario_parameter(only(scenario_parameters))
 end
 
 function extract_model(train_result, fallback_generator)
@@ -440,8 +458,9 @@ function evaluate_model_on_splits(model, splits, config)
 end
 
 function evaluate_split(model, dataset, config, prefix)
-    predictions = model(dataset.x_data)
-    target = dataset.xi_h_data
+    x_data = dataset_context_matrix(dataset)
+    target = dataset_demand_matrix(dataset)
+    predictions = model(x_data)
     prediction_matrix = matrix_like(predictions, target)
 
     errors = prediction_matrix .- target

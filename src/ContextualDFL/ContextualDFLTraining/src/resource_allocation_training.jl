@@ -44,14 +44,21 @@ struct ResourceAllocationProblem
     s2_cost_vector::Vector{Float64}
 end
 
-struct ResourceAllocationDemandDecoder <: ContextualDFL.ScenarioDecoder end
+struct ResourceAllocationDemandDecoder <: ContextualDFL.VectorDecoder
+    problem::ResourceAllocationProblem
+end
 
 struct ResourceAllocationMSEScenLoss <: ContextualDFL.LossFunction end
 
-function (::ResourceAllocationDemandDecoder)(scenario_parameter)
-    hasproperty(scenario_parameter, :h) ||
-        throw(ArgumentError("resource-allocation scenario parameter must have field `h`."))
-    return _demand_matrix(getproperty(scenario_parameter, :h))
+function (decoder::ResourceAllocationDemandDecoder)(demand::AbstractVector)
+    scenario = scenario_from_demand(decoder.problem, demand)
+    return _scenario_tuple(scenario)
+end
+
+function (::ResourceAllocationDemandDecoder)(
+    scenario_parameter::ContextualDFL.ParametricScenario,
+)
+    return _scenario_tuple(scenario_parameter)
 end
 
 function (::ResourceAllocationMSEScenLoss)(
@@ -70,6 +77,22 @@ end
 
 _demand_matrix(value::AbstractMatrix) = value
 _demand_matrix(value::AbstractVector) = reshape(value, :, 1)
+
+function _demand_matrix(value::AbstractVector{<:ContextualDFL.ParametricScenario})
+    return reduce(hcat, demand_from_scenario_parameter.(value))
+end
+
+function _scenario_tuple(scenario::ContextualDFL.ParametricScenario)
+    return (
+        scenario.W_eq_xi,
+        scenario.W_ineq_xi,
+        scenario.T_eq_xi,
+        scenario.T_ineq_xi,
+        scenario.h_eq_xi,
+        scenario.h_ineq_xi,
+        scenario.q_xi,
+    )
+end
 
 struct ConstantSchedule{T}
     value::T
@@ -141,6 +164,25 @@ function scenario_h(problem::ResourceAllocationProblem, demand::AbstractVector)
     return vcat(zeros(eltype(demand), resource_count(problem)), demand)
 end
 
+function scenario_from_demand(problem::ResourceAllocationProblem, demand::AbstractVector)
+    recourse_variable_count = length(problem.s2_cost_vector)
+    first_stage_variable_count = length(problem.s1_cost_vector)
+    return ContextualDFL.ParametricScenario(
+        W_eq_xi=zeros(Float64, 0, recourse_variable_count),
+        W_ineq_xi=problem.s2_constraint_matrix,
+        T_eq_xi=zeros(Float64, 0, first_stage_variable_count),
+        T_ineq_xi=problem.s2_coupling_matrix,
+        h_eq_xi=Float64[],
+        h_ineq_xi=scenario_h(problem, demand),
+        q_xi=problem.s2_cost_vector,
+    )
+end
+
+function demand_from_scenario_parameter(scenario::ContextualDFL.ParametricScenario)
+    resource_count = size(scenario.T_ineq_xi, 2)
+    return scenario.h_ineq_xi[(resource_count + 1):end]
+end
+
 function stochastic_program(problem::ResourceAllocationProblem)
     return ContextualDFL.StochasticProgram(
         A_eq=zeros(0, length(problem.s1_cost_vector)),
@@ -151,7 +193,7 @@ function stochastic_program(problem::ResourceAllocationProblem)
     )
 end
 
-scenario_decoder(problem::ResourceAllocationProblem) = ResourceAllocationDemandDecoder()
+scenario_decoder(problem::ResourceAllocationProblem) = ResourceAllocationDemandDecoder(problem)
 
 function resource_parameter_path()
     return normpath(
@@ -320,17 +362,23 @@ function generate_resource_allocation_data(
     return contexts, max.(demands, 0.0)
 end
 
-function dataset_from_indices(contexts, demands, indices)
-    return ContextualDFL.DataSet(
-        contexts[:, indices],
-        nothing,
-        nothing,
-        demands[:, indices],
-        nothing,
-    )
+function dataset_from_indices(problem::ResourceAllocationProblem, contexts, demands, indices)
+    return [
+        ContextualDFL.ContextualDataPoint(
+            Vector{Float64}(contexts[:, sample_index]),
+            [scenario_from_demand(problem, demands[:, sample_index])],
+        ) for sample_index in indices
+    ]
 end
 
-function split_resource_allocation_data(contexts, demands; validation_fraction, test_fraction, rng)
+function split_resource_allocation_data(
+    problem::ResourceAllocationProblem,
+    contexts,
+    demands;
+    validation_fraction,
+    test_fraction,
+    rng,
+)
     sample_count = size(contexts, 2)
     indices = randperm(rng, sample_count)
     test_count = floor(Int, test_fraction * sample_count)
@@ -343,9 +391,9 @@ function split_resource_allocation_data(contexts, demands; validation_fraction, 
     test_indices = indices[(train_count + validation_count + 1):end]
 
     return (;
-        train=dataset_from_indices(contexts, demands, train_indices),
-        validation=dataset_from_indices(contexts, demands, validation_indices),
-        test=dataset_from_indices(contexts, demands, test_indices),
+        train=dataset_from_indices(problem, contexts, demands, train_indices),
+        validation=dataset_from_indices(problem, contexts, demands, validation_indices),
+        test=dataset_from_indices(problem, contexts, demands, test_indices),
     )
 end
 
@@ -392,6 +440,7 @@ function resource_allocation_training_objects(config)
         rng=rng,
     )
     splits = split_resource_allocation_data(
+        problem,
         contexts,
         demands;
         validation_fraction=config.validation_fraction,
@@ -402,8 +451,8 @@ function resource_allocation_training_objects(config)
     decoder = scenario_decoder(problem)
     program = stochastic_program(problem)
     neural_net = build_neural_net(
-        size(splits.train.x_data, 1),
-        size(splits.train.xi_h_data, 1);
+        length(first(splits.train).context),
+        demand_count(problem);
         hidden_size=config.hidden_size,
         depth=config.depth,
         dropout=config.dropout,

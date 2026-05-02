@@ -42,7 +42,6 @@ export
     solve,
     solve_rrule,
     step_size_schedule,
-    train,
     train_with_mlflow!,
     train!,
     VectorDecoder

@@ -107,14 +107,22 @@ end
 
 end
 
+function supervised_dataset(inputs, targets)
+    points = [
+        ContextualDataPoint(Float32[input], [ParametricScenario(h_eq_xi=Float32[target])])
+        for (input, target) in zip(inputs, targets)
+    ]
+    return ContextualDataSet{eltype(points)}(points)
+end
+
+target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
+
 @testset "learning" begin
     @testset "train! calls epoch callback" begin
         model = Flux.Chain(Flux.Dense(1 => 1))
-        data = (
-            reshape(Float32[1, 2, 3, 4], 1, 4),
-            reshape(Float32[2, 4, 6, 8], 1, 4),
-        )
-        loss(prediction, target) = sum(abs2, prediction .- target)
+        data = supervised_dataset(1:4, 2:2:8)
+        loss(prediction, scenario_parameters) =
+            sum(abs2, prediction .- target_vector(scenario_parameters))
         callbacks = NamedTuple[]
 
         result = train!(
@@ -141,11 +149,9 @@ end
     @testset "train_with_mlflow! logs live params and metrics" begin
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))
-        data = (
-            reshape(Float32[1, 2, 3, 4], 1, 4),
-            reshape(Float32[2, 4, 6, 8], 1, 4),
-        )
-        loss(prediction, target) = sum(abs2, prediction .- target)
+        data = supervised_dataset(1:4, 2:2:8)
+        loss(prediction, scenario_parameters) =
+            sum(abs2, prediction .- target_vector(scenario_parameters))
         live_metric_counts = Int[]
 
         result = mktempdir() do dir
@@ -215,8 +221,8 @@ end
     @testset "train_with_mlflow! marks failed runs" begin
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))
-        data = (reshape(Float32[1], 1, 1), reshape(Float32[2], 1, 1))
-        failing_loss(prediction, target) = error("intentional training failure")
+        data = supervised_dataset(1:1, 2:2)
+        failing_loss(prediction, scenario_parameters) = error("intentional training failure")
 
         @test_throws ErrorException train_with_mlflow!(
             mlf,
