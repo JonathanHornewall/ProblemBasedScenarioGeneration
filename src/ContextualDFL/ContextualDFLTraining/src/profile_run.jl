@@ -70,7 +70,6 @@ function standard_profile_config(; overrides...)
         DEFAULT_RUN_SETTINGS,
         (;
             epochs=100,
-            n_samples=2000,
             learning_rate=1e-3,
             hidden_size=128,
             depth=2,
@@ -277,7 +276,7 @@ function profile_standard_training(config::NamedTuple)
 
             objects = training_objects_for_config(cfg)
             model = objects.scenario_generator.neural_net
-            initial_train_mse = split_mse(model, objects.data.train)
+            initial_train_mse = split_mse(model, objects.data.train, objects)
 
             Profile.clear()
             profile_result = Profile.@profile strict_contextualdfl_training(
@@ -292,7 +291,7 @@ function profile_standard_training(config::NamedTuple)
             jlprof_bytes = read(jlprof_path)
 
             trained_model = extract_model(profile_result, objects.scenario_generator)
-            final_train_mse = split_mse(trained_model, objects.data.train)
+            final_train_mse = split_mse(trained_model, objects.data.train, objects)
             metrics = merge(
                 evaluate_model_for_reporting(trained_model, objects, cfg),
                 (;

@@ -1,4 +1,6 @@
 using ContextualDFLTraining
+using ContextualDFL
+using ContextualDFLExperiments
 using Test
 
 mutable struct FakeRun
@@ -15,8 +17,41 @@ end
     @test spec.id == "resource_allocation/experiment_1"
     @test spec.name == "resource_allocation_experiment_1"
     @test ContextualDFLTraining.experiment_base_config(spec).experiment_id == spec.id
-    @test length(ContextualDFLTraining.experiment_smoke_configs(spec)) == 1
     @test isabspath(ContextualDFLTraining.optimal_results_path(spec, :test))
+    @test !ContextualDFLTraining.experiment_has_function(spec, :grid_configs)
+    @test !ContextualDFLTraining.experiment_has_function(spec, :smoke_configs)
+    @test !isdefined(ContextualDFLTraining, :experiment_grid_configs)
+    @test !isdefined(ContextualDFLTraining, :experiment_smoke_configs)
+    @test !isdefined(ContextualDFLTraining, :experiment_problem_identity)
+    @test !isdefined(ContextualDFLTraining, :resource_allocation_training_objects)
+    @test !isdefined(ContextualDFLTraining, :resource_allocation_test_data_bundle)
+    @test_throws ArgumentError ContextualDFLTraining.training_objects_for_config((; seed=1))
+
+    config = merge(
+        ContextualDFLTraining.experiment_base_config(spec),
+        (; optimality_evaluation=false, use_generated_test_data_artifact=false),
+    )
+    @test hasproperty(config, :Nr_contexts)
+    @test hasproperty(config, :scenarios_per_context)
+    @test hasproperty(config, :collection_duplicates_per_context)
+    @test !hasproperty(config, :n_samples)
+    @test !hasproperty(config, :sigma)
+    @test !hasproperty(config, :demand_power)
+    @test !hasproperty(config, :context_terms)
+
+    objects = ContextualDFLTraining.training_objects_for_config(config)
+    @test objects.problem isa ResourceAllocationProblem
+    @test objects.program isa ContextualDFL.StochasticProgram
+    @test objects.solver isa ContextualDFL.Solver
+    @test objects.scenario_decoder isa ResourceAllocationDemandVectorDecoder
+    @test objects.reference_scenario_decoder isa ResourceAllocationDemandParametricDecoder
+    @test objects.loss isa ContextualDFL.DflScenLoss
+    @test hasproperty(objects, :target_extractor)
+    @test objects.problem_metadata.problem == "resource_allocation"
+    @test objects.data_metadata.Nr_contexts == config.Nr_contexts
+    @test length(objects.data.train) == 100
+    @test length(objects.data.validation) == 20
+    @test length(objects.data.test) == 30
 
     mktempdir() do dir
         config_dir = joinpath(dir, "toy")
@@ -32,8 +67,6 @@ end
             experiment_module_name() = :ToyExperiment
             artifact_dir() = joinpath(@__DIR__, "artifacts")
             base_config() = (; experiment_id=experiment_id())
-            grid_configs(; kwargs...) = [base_config()]
-            smoke_configs(; kwargs...) = [base_config()]
             training_objects(config) = nothing
             optimality_splits(objects, config) = Pair{Symbol,Any}[]
             optimal_results_path(split_name::Symbol) =
@@ -65,19 +98,128 @@ end
     end
 end
 
+@testset "ContextualDFLTraining generated test data" begin
+    script_module = Module(:GenerateTestDataScriptTest)
+    Base.include(
+        script_module,
+        joinpath(dirname(dirname(pathof(ContextualDFLTraining))), "generate_test_data.jl"),
+    )
+    parsed = getfield(script_module, :parse_commandline)(
+        ["--experiment", "resource_allocation/experiment_1"],
+    )
+    @test parsed["seed"] == 1
+    @test parsed["data-set-size"] == 30
+
+    resource_spec = ContextualDFLTraining.load_experiment("resource_allocation/experiment_1")
+    resource_bundle = ContextualDFLTraining.experiment_test_data_bundle(
+        resource_spec;
+        seed=5,
+        data_set_size=2,
+    )
+    @test length(resource_bundle.dataset) == 2
+    @test resource_bundle.problem isa ResourceAllocationProblem
+    @test resource_bundle.data_metadata.data_set_size == 2
+
+    mktempdir() do dir
+        config_dir = joinpath(dir, "toy_generated")
+        mkpath(config_dir)
+        config_path = joinpath(config_dir, "Config.jl")
+        write(
+            config_path,
+            """
+            experiment_id() = "toy/generated"
+            experiment_name() = "toy_generated"
+            experiment_module_name() = :ToyGeneratedExperiment
+            artifact_dir() = joinpath(@__DIR__, "artifacts")
+            test_data_dir() = joinpath(artifact_dir(), "test_data")
+            test_data_path(seed::Integer) =
+                joinpath(test_data_dir(), "test_data_seed\$(Int(seed)).jls")
+            test_optimal_results_path(seed::Integer) =
+                joinpath(test_data_dir(), "optimal_solutions_seed\$(Int(seed)).jls")
+            base_config() = (; experiment_id=experiment_id())
+            training_objects(config) = nothing
+            optimality_splits(objects, config) = Pair{Symbol,Any}[]
+            optimal_results_path(split_name::Symbol) =
+                joinpath(artifact_dir(), "legacy", string(split_name) * ".jls")
+            """,
+        )
+
+        spec = ContextualDFLTraining.load_experiment(config_path)
+        dataset = [
+            (; context=[Float64(index)], scenario_parameters=[Float64(index + 1)]) for
+            index in 1:3
+        ]
+        results = [(; objective_value=Float64(index)) for index in 1:3]
+
+        data_path = ContextualDFLTraining.save_test_data!(
+            spec,
+            7,
+            dataset;
+            data_set_size=3,
+        )
+        optimal_path = ContextualDFLTraining.save_test_optimal_results!(
+            spec,
+            7,
+            results;
+            dataset=dataset,
+            data_set_size=3,
+        )
+
+        @test basename(data_path) == "test_data_seed7.jls"
+        @test basename(optimal_path) == "optimal_solutions_seed7.jls"
+        artifact = ContextualDFLTraining.load_test_data_artifact(spec)
+        @test artifact.dataset == dataset
+        @test artifact.metadata.seed == 7
+        @test artifact.metadata.data_set_size == 3
+        @test ContextualDFLTraining.load_test_data(spec) == dataset
+        @test ContextualDFLTraining.load_optimal_results(spec, :test; dataset=dataset) ==
+              results
+        @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(
+            spec,
+            :test;
+            dataset=dataset[1:2],
+        )
+
+        cp(data_path, ContextualDFLTraining.test_data_path(spec, 8))
+        @test_throws ArgumentError ContextualDFLTraining.load_test_data(spec)
+    end
+end
+
 @testset "ContextualDFLTraining grid file config" begin
-    experiment = ContextualDFLTraining.load_experiment("resource_allocation/experiment_1")
+    gridsearch_module = Module(:GridSearchScriptTest)
+    Core.eval(gridsearch_module, :(using Base))
+    Core.eval(gridsearch_module, :(include(path) = Base.include($gridsearch_module, path)))
+    Base.include(
+        gridsearch_module,
+        joinpath(dirname(dirname(pathof(ContextualDFLTraining))), "gridsearch.jl"),
+    )
+    grid_load_experiment = getfield(gridsearch_module, :load_experiment)
+    grid_load_grid_config = getfield(gridsearch_module, :load_grid_config)
+    selected_grid = getfield(gridsearch_module, :selected_grid)
+
+    experiment = grid_load_experiment("resource_allocation/experiment_1")
 
     @testset "bundled resource allocation configs" begin
-        default_spec = ContextualDFLTraining.load_grid_config(
+        default_spec = grid_load_grid_config(
             joinpath(experiment.root_dir, "grid_configs", "default.yaml"),
         )
-        smoke_spec = ContextualDFLTraining.load_grid_config(
+        smoke_spec = grid_load_grid_config(
             joinpath(experiment.root_dir, "grid_configs", "smoke.yaml"),
         )
 
-        @test length(ContextualDFLTraining.resolve_grid_configs(experiment, default_spec)) == 24
-        @test length(ContextualDFLTraining.resolve_grid_configs(experiment, smoke_spec)) == 1
+        default_configs = selected_grid(experiment, default_spec)
+        smoke_configs = selected_grid(experiment, smoke_spec)
+        @test length(default_configs) == 24
+        @test length(smoke_configs) == 1
+        for config in vcat(default_configs, smoke_configs)
+            @test !hasproperty(config, :n_samples)
+            @test !hasproperty(config, :sigma)
+            @test !hasproperty(config, :demand_power)
+            @test !hasproperty(config, :context_terms)
+            @test hasproperty(config, :Nr_contexts)
+            @test hasproperty(config, :scenarios_per_context)
+            @test hasproperty(config, :collection_duplicates_per_context)
+        end
     end
 
     mktempdir() do dir
@@ -89,7 +231,6 @@ end
             name: yaml_grid
             base:
               epochs: 3
-              n_samples: 16
               optimality_evaluation: false
             fixed:
               depth: 1
@@ -110,8 +251,8 @@ end
             """,
         )
 
-        spec = ContextualDFLTraining.load_grid_config(yaml_path)
-        configs = ContextualDFLTraining.resolve_grid_configs(experiment, spec)
+        spec = grid_load_grid_config(yaml_path)
+        configs = selected_grid(experiment, spec)
         resolved_json = ContextualDFLTraining.resolved_grid_json(configs)
         digest = ContextualDFLTraining.grid_config_digest(configs)
 
@@ -139,7 +280,6 @@ end
             name: yaml_grid
             base:
               epochs: 3
-              n_samples: 16
               optimality_evaluation: false
             fixed:
               depth: 1
@@ -160,12 +300,47 @@ end
 
             """,
         )
-        blank_line_configs = ContextualDFLTraining.resolve_grid_configs(
+        blank_line_configs = selected_grid(
             experiment,
-            ContextualDFLTraining.load_grid_config(yaml_path),
+            grid_load_grid_config(yaml_path),
         )
         @test ContextualDFLTraining.resolved_grid_json(blank_line_configs) == resolved_json
         @test ContextualDFLTraining.grid_config_digest(blank_line_configs) == digest
+    end
+
+    mktempdir() do dir
+        for problem_key in (
+            "Nr_contexts",
+            "nr_scenarios",
+            "solver",
+            "n_samples",
+            "sigma",
+            "demand_power",
+            "context_terms",
+        )
+            invalid_problem_key_path = joinpath(dir, "problem_key_$(problem_key).yaml")
+            write(
+                invalid_problem_key_path,
+                """
+                version: 1
+                name: invalid_problem_key
+                fixed:
+                  learning_rate: 0.001
+                  hidden_size: 16
+                  depth: 1
+                  batch_size: 4
+                  dropout: 0.0
+                  $(problem_key): 16
+                grid:
+                  seed: [1]
+                """,
+            )
+
+            @test_throws ArgumentError selected_grid(
+                experiment,
+                grid_load_grid_config(invalid_problem_key_path),
+            )
+        end
     end
 
     mktempdir() do dir
@@ -193,8 +368,8 @@ end
             """,
         )
 
-        spec = ContextualDFLTraining.load_grid_config(json_path)
-        configs = ContextualDFLTraining.resolve_grid_configs(experiment, spec)
+        spec = grid_load_grid_config(json_path)
+        configs = selected_grid(experiment, spec)
 
         @test spec.format == :json
         @test length(configs) == 2
@@ -236,8 +411,8 @@ end
             """,
         )
 
-        spec = ContextualDFLTraining.load_grid_config(piecewise_path)
-        config = only(ContextualDFLTraining.resolve_grid_configs(experiment, spec))
+        spec = grid_load_grid_config(piecewise_path)
+        config = only(selected_grid(experiment, spec))
 
         @test config.mu_schedule == [1.0, 1.0, 0.9, 0.9, 0.9, 0.4]
         @test config.mu_ref_schedule == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
@@ -272,9 +447,9 @@ end
         )
 
         config = only(
-            ContextualDFLTraining.resolve_grid_configs(
+            selected_grid(
                 experiment,
-                ContextualDFLTraining.load_grid_config(values_path),
+                grid_load_grid_config(values_path),
             ),
         )
 

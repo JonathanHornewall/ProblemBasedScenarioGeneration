@@ -48,8 +48,6 @@ const GRID_SYMBOL_KEYS = Set(
         :method,
         :mu_ref_schedule,
         :mu_schedule,
-        :problem,
-        :solver,
     ],
 )
 
@@ -57,12 +55,9 @@ const GRID_INT_KEYS = Set(
     [
         :batch_size,
         :candidate_index,
-        :context_terms,
         :depth,
         :epochs,
         :hidden_size,
-        :n_samples,
-        :nr_scenarios,
         :optimality_test_sample_count,
         :optimality_train_sample_count,
         :optimality_validation_sample_count,
@@ -74,7 +69,6 @@ const GRID_INT_KEYS = Set(
 
 const GRID_FLOAT_KEYS = Set(
     [
-        :demand_power,
         :dropout,
         :learning_rate,
         :mu,
@@ -86,11 +80,8 @@ const GRID_FLOAT_KEYS = Set(
         :optimality_mu,
         :policy_inference_mu,
         :rho,
-        :sigma,
-        :test_fraction,
         :tolerance_absolute_floor,
         :tolerance_relative,
-        :validation_fraction,
     ],
 )
 
@@ -359,10 +350,14 @@ function schedule_stop_value(spec::GridScheduleConfig, schedule_name::AbstractSt
     throw(ArgumentError("schedule '$schedule_name' must define 'stop' or 'end'."))
 end
 
-function resolve_grid_configs(experiment, spec::GridSearchSpec)
+function resolve_grid_configs(
+    spec::GridSearchSpec;
+    base_config::NamedTuple=NamedTuple(),
+    defaults::NamedTuple=DEFAULT_RUN_SETTINGS,
+)
     static_config = Dict{Symbol,Any}()
-    merge!(static_config, Dict{Symbol,Any}(pairs(DEFAULT_RUN_SETTINGS)))
-    merge!(static_config, Dict{Symbol,Any}(pairs(experiment_base_config(experiment))))
+    merge!(static_config, Dict{Symbol,Any}(pairs(defaults)))
+    merge!(static_config, Dict{Symbol,Any}(pairs(base_config)))
     merge!(static_config, spec.base)
     merge!(static_config, spec.fixed)
 

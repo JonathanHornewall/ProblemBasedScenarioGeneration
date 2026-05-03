@@ -1,29 +1,3 @@
-const DEFAULT_RUN_SETTINGS = (;
-    epochs=10,
-    n_samples=150,
-    validation_fraction=0.13333333333333333,
-    test_fraction=0.20,
-    sigma=5.0,
-    demand_power=2.0,
-    context_terms=3,
-    mu=1e-2,
-    mu_start=1.0,
-    mu_end=1e-2,
-    mu_schedule=:geometric,
-    mu_ref_schedule=:match_input,
-    nr_scenarios=1,
-    rho=0.0,
-    tolerance_relative=0.10,
-    tolerance_absolute_floor=1.0,
-    optimality_evaluation=true,
-    optimality_test_sample_count=30,
-    optimality_train_sample_count=0,
-    optimality_validation_sample_count=0,
-    optimality_mu=0.0,
-    solver=:highs,
-    loss=:dfl_scen,
-)
-
 const DEFAULT_GRID_VALUES = (;
     learning_rate=[1e-3, 5e-4, 3e-4],
     hidden_size=[64, 128],
@@ -72,7 +46,7 @@ function default_grid(; overrides...)
 end
 
 function smoke_grid(; overrides...)
-    settings = _merge_settings((; epochs=2, n_samples=16, overrides...))
+    settings = _merge_settings((; epochs=2, overrides...))
     cfg = merge(
         settings,
         (;

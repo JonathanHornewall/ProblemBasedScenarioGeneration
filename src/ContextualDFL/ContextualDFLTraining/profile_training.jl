@@ -4,7 +4,7 @@ using ArgParse
 using Distributed
 using Sockets
 
-include(joinpath(@__DIR__, "src", "grid_config.jl"))
+include(joinpath(@__DIR__, "src", "run_defaults.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
 include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
 
@@ -71,23 +71,21 @@ function profile_config_from_env(experiment)
     run_id = get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3")
     mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", false)
     profile_mlflow_progress = env_flag("PROFILE_MLFLOW_PROGRESS", mlflow_enabled)
+    base = if experiment_has_function(experiment, :profile_config)
+        experiment_call(experiment, :profile_config)
+    else
+        experiment_call(experiment, :base_config)
+    end
 
     cfg = merge(
-        DEFAULT_RUN_SETTINGS,
+        base,
         (;
             epochs=env_int("PROFILE_EPOCHS", 100),
             warmup_epochs=env_int("PROFILE_WARMUP_EPOCHS", 2),
-            n_samples=env_int("PROFILE_N_SAMPLES", 2000),
-            validation_fraction=env_float("PROFILE_VALIDATION_FRACTION", DEFAULT_RUN_SETTINGS.validation_fraction),
-            test_fraction=env_float("PROFILE_TEST_FRACTION", DEFAULT_RUN_SETTINGS.test_fraction),
-            sigma=env_float("PROFILE_SIGMA", DEFAULT_RUN_SETTINGS.sigma),
-            demand_power=env_float("PROFILE_DEMAND_POWER", DEFAULT_RUN_SETTINGS.demand_power),
-            context_terms=env_int("PROFILE_CONTEXT_TERMS", DEFAULT_RUN_SETTINGS.context_terms),
             mu=env_float("PROFILE_MU", DEFAULT_RUN_SETTINGS.mu),
             mu_start=env_float("PROFILE_MU_START", DEFAULT_RUN_SETTINGS.mu_start),
             mu_end=env_float("PROFILE_MU_END", DEFAULT_RUN_SETTINGS.mu_end),
             mu_schedule=env_symbol("PROFILE_MU_SCHEDULE", DEFAULT_RUN_SETTINGS.mu_schedule),
-            nr_scenarios=env_int("PROFILE_NR_SCENARIOS", DEFAULT_RUN_SETTINGS.nr_scenarios),
             rho=env_float("PROFILE_RHO", DEFAULT_RUN_SETTINGS.rho),
             tolerance_relative=env_float("PROFILE_TOLERANCE_RELATIVE", DEFAULT_RUN_SETTINGS.tolerance_relative),
             tolerance_absolute_floor=env_float(

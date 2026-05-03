@@ -1,4 +1,5 @@
 using Dates
+using ContextualDFLExperiments
 using Distributed
 using Flux
 using Random
@@ -173,7 +174,7 @@ function train_with_contextualdfl_mlflow(objects, config)
             dataset_name=mlflow_dataset_name(config),
             dataset_digest=mlflow_dataset_digest(objects, config),
             dataset_source_type="generated",
-            dataset_source=mlflow_dataset_source(config),
+            dataset_source=mlflow_dataset_source(objects, config),
             dataset_context="training",
         )
 
@@ -286,60 +287,54 @@ function assert_remote_training_worker!(config)
     return nothing
 end
 
+function object_metadata(objects, field::Symbol)
+    hasproperty(objects, field) || return NamedTuple()
+    value = getproperty(objects, field)
+    return value isa NamedTuple ? value : NamedTuple()
+end
+
+function metadata_value(metadata::NamedTuple, key::Symbol, default)
+    return key in keys(metadata) ? getproperty(metadata, key) : default
+end
+
 function mlflow_dataset_name(config)
     return string(
         config_value(
             config,
             :mlflow_dataset_name,
-            config_value(config, :experiment_name, "resource_allocation_generated"),
+            config_value(config, :experiment_name, "generated_dataset"),
         ),
     )
 end
 
-function mlflow_dataset_source(config)
-    if hasproperty(config, :experiment_id)
-        return join(
-            (
-                "ContextualDFLTraining.experiment",
-                "experiment_id=$(config.experiment_id)",
-                "seed=$(config.seed)",
-                "n_samples=$(config.n_samples)",
-                "validation_fraction=$(config.validation_fraction)",
-                "test_fraction=$(config.test_fraction)",
-            ),
-            ";",
-        )
-    end
+function mlflow_dataset_source(objects, config)
+    data_metadata = object_metadata(objects, :data_metadata)
+    source = metadata_value(data_metadata, :dataset_source, nothing)
+    isnothing(source) || return string(source)
 
-    return join(
-        (
-            "ContextualDFLExperiments.resource_allocation",
-            "problem_data=default_resource_allocation_problem_data",
-            "context_generator=ResourceAllocationContextDataGenerator",
-            "scenario_generator=ResourceAllocationScenarioDataGenerator",
-            "seed=$(config.seed)",
-            "n_samples=$(config.n_samples)",
-            "validation_fraction=$(config.validation_fraction)",
-            "test_fraction=$(config.test_fraction)",
-        ),
-        ";",
-    )
+    parts = String["ContextualDFLTraining.experiment"]
+    hasproperty(config, :experiment_id) && push!(parts, "experiment_id=$(config.experiment_id)")
+    hasproperty(config, :seed) && push!(parts, "seed=$(config.seed)")
+    hasproperty(config, :validation_fraction) &&
+        push!(parts, "validation_fraction=$(config.validation_fraction)")
+    hasproperty(config, :test_fraction) && push!(parts, "test_fraction=$(config.test_fraction)")
+    return join(parts, ";")
 end
 
 function mlflow_dataset_digest(objects, config)
+    data_metadata = object_metadata(objects, :data_metadata)
+    digest = metadata_value(data_metadata, :dataset_digest, nothing)
+    isnothing(digest) || return string(digest)
+
     split_summary = (
         "dataset=$(mlflow_dataset_name(config))",
-        "seed=$(config.seed)",
-        "n_samples=$(config.n_samples)",
-        "sigma=$(config.sigma)",
-        "demand_power=$(config.demand_power)",
-        "context_terms=$(config.context_terms)",
+        "seed=$(config_value(config, :seed, ""))",
         "train_x=$(size(dataset_context_matrix(objects.data.train)))",
-        "train_y=$(size(dataset_demand_matrix(objects.data.train)))",
+        "train_y=$(size(dataset_target_matrix(objects.data.train, objects)))",
         "validation_x=$(size(dataset_context_matrix(objects.data.validation)))",
-        "validation_y=$(size(dataset_demand_matrix(objects.data.validation)))",
+        "validation_y=$(size(dataset_target_matrix(objects.data.validation, objects)))",
         "test_x=$(size(dataset_context_matrix(objects.data.test)))",
-        "test_y=$(size(dataset_demand_matrix(objects.data.test)))",
+        "test_y=$(size(dataset_target_matrix(objects.data.test, objects)))",
     )
     return short_mlflow_digest(split_summary)
 end
@@ -430,9 +425,16 @@ function mu_ref_schedule_for_config(config, mu_schedule=mu_schedule_for_config(c
 end
 
 function mlflow_experiment_spec(objects, config)
+    problem_metadata = object_metadata(objects, :problem_metadata)
     return (;
-        problem=string(config_value(config, :problem, :resource_allocation)),
-        instance_id=resource_problem_digest(objects.problem),
+        problem=string(
+            metadata_value(
+                problem_metadata,
+                :problem,
+                config_value(config, :problem, :experiment),
+            ),
+        ),
+        instance_id=metadata_value(problem_metadata, :instance_id, missing),
         method=string(config_value(config, :method, config.loss)),
         variant=string(config_value(config, :method_variant, "default")),
         run_group=string(config_value(config, :gridsearch_id, "")),
@@ -447,10 +449,14 @@ function mlflow_data_spec(objects, config)
     validation_size = length(objects.data.validation)
     test_size = length(objects.data.test)
     context_dimension = isempty(objects.data.train) ? 0 : length(first(objects.data.train).context)
-    scenario_count = isempty(objects.data.train) ? 0 : length(first(objects.data.train).scenario_parameters)
+    scenario_count =
+        isempty(objects.data.train) ? 0 : length(first(objects.data.train).scenario_parameters)
+    target_dimension = isempty(objects.data.train) ?
+        0 :
+        length(target_from_contextual_point(first(objects.data.train), objects))
 
-    return (;
-        generator="ContextualDFLExperiments.resource_allocation",
+    defaults = (;
+        generator="experiment_config",
         dataset_name=mlflow_dataset_name(config),
         dataset_digest=mlflow_dataset_digest(objects, config),
         train_size=train_size,
@@ -458,35 +464,31 @@ function mlflow_data_spec(objects, config)
         test_size=test_size,
         context_dimension=context_dimension,
         scenario_count=scenario_count,
-        n_samples=config.n_samples,
-        validation_fraction=config.validation_fraction,
-        test_fraction=config.test_fraction,
-        noise_generator="normal",
-        sigma=config.sigma,
-        demand_power=config.demand_power,
-        context_terms=config.context_terms,
-        train_context_seed=config.seed,
-        test_context_seed=config.seed,
-        train_scenario_seed=config.seed,
-        test_scenario_seed=config.seed,
-        split_seed=config.seed,
-        optimization_seed=config_value(config, :optimization_seed, config.seed),
+        target_dimension=target_dimension,
+        validation_fraction=config_value(config, :validation_fraction, missing),
+        test_fraction=config_value(config, :test_fraction, missing),
+        train_context_seed=config_value(config, :seed, missing),
+        train_scenario_seed=config_value(config, :seed, missing),
+        split_seed=config_value(config, :seed, missing),
+        optimization_seed=config_value(config, :optimization_seed, config_value(config, :seed, missing)),
     )
+    return merge(defaults, object_metadata(objects, :data_metadata))
 end
 
 function mlflow_model_spec(model, objects, config)
-    return (;
+    defaults = (;
         architecture="Flux.Chain",
-        depth=config.depth,
-        width=config.hidden_size,
+        depth=config_value(config, :depth, missing),
+        width=config_value(config, :hidden_size, missing),
         activation=string(config_value(config, :activation, "relu")),
         output_activation="softplus",
-        dropout=config.dropout,
+        dropout=config_value(config, :dropout, missing),
         parameter_count=model_parameter_count(model),
         initialization_seed=string(config_value(config, :model_initialization_seed, "global_rng")),
         input_dimension=isempty(objects.data.train) ? 0 : length(first(objects.data.train).context),
-        output_dimension=resource_allocation_demand_count(objects.problem),
+        output_dimension=model_output_dimension(objects),
     )
+    return merge(defaults, object_metadata(objects, :model_metadata))
 end
 
 function mlflow_method_spec(objects, config)
@@ -525,16 +527,6 @@ function mlflow_method_spec(objects, config)
     )
 end
 
-function resource_problem_digest(problem)
-    values = (
-        "service_rate=$(vec(problem.problem_data.service_rate_parameters))",
-        "first_stage=$(problem.problem_data.first_stage_costs)",
-        "second_stage=$(problem.problem_data.second_stage_costs)",
-        "yield=$(problem.problem_data.yield_parameters)",
-    )
-    return "sha256:" * bytes2hex(sha256(join(values, "\n")))
-end
-
 function model_parameter_count(model)
     try
         return sum(length, Flux.trainables(model))
@@ -547,8 +539,8 @@ function model_parameter_count(model)
     end
 end
 
-function split_mse(model, dataset)
-    target = dataset_demand_matrix(dataset)
+function split_mse(model, dataset, objects)
+    target = dataset_target_matrix(dataset, objects)
     prediction = matrix_like(model(dataset_context_matrix(dataset)), target)
     return mean(abs2, prediction .- target)
 end
@@ -558,16 +550,41 @@ function dataset_context_matrix(dataset)
     return reduce(hcat, (point.context for point in dataset))
 end
 
-function dataset_demand_matrix(dataset)
+function dataset_target_matrix(dataset, objects)
     isempty(dataset) && return zeros(Float64, 0, 0)
-    return reduce(hcat, (demand_from_contextual_point(point) for point in dataset))
+    return reduce(hcat, (target_from_contextual_point(point, objects) for point in dataset))
 end
 
-function demand_from_contextual_point(point)
-    scenario_parameters = point.scenario_parameters
-    length(scenario_parameters) == 1 ||
-        throw(ArgumentError("expected exactly one scenario per contextual data point"))
-    return resource_allocation_demand_from_scenario(only(scenario_parameters))
+function target_from_contextual_point(point, objects)
+    extractor = target_extractor(objects)
+    target = extractor(point)
+    target isa AbstractVector ||
+        throw(ArgumentError("training object target_extractor must return an AbstractVector."))
+    return target
+end
+
+function target_extractor(objects)
+    if hasproperty(objects, :target_extractor)
+        extractor = getproperty(objects, :target_extractor)
+        extractor isa Function ||
+            throw(ArgumentError("training object target_extractor must be a function."))
+        return extractor
+    end
+
+    throw(
+        ArgumentError(
+            "training objects must provide target_extractor for reporting and MSE evaluation.",
+        ),
+    )
+end
+
+function model_output_dimension(objects)
+    model_metadata = object_metadata(objects, :model_metadata)
+    output_dimension = metadata_value(model_metadata, :output_dimension, nothing)
+    isnothing(output_dimension) || return output_dimension
+
+    isempty(objects.data.train) && return 0
+    return length(target_from_contextual_point(first(objects.data.train), objects))
 end
 
 function extract_model(train_result, fallback_generator)
@@ -687,20 +704,20 @@ function normalize_history_row(row, index)
     return Dict{Symbol,Any}(:epoch => index, :value => string(row))
 end
 
-function evaluate_model_on_splits(model, splits, config)
+function evaluate_model_on_splits(model, splits, objects, config)
     try
         Flux.testmode!(model)
     catch
     end
 
-    train_metrics = evaluate_split(model, splits.train, config, "train")
-    validation_metrics = evaluate_split(model, splits.validation, config, "validation")
-    test_metrics = evaluate_split(model, splits.test, config, "test")
+    train_metrics = evaluate_split(model, splits.train, objects, config, "train")
+    validation_metrics = evaluate_split(model, splits.validation, objects, config, "validation")
+    test_metrics = evaluate_split(model, splits.test, objects, config, "test")
     return merge(train_metrics, validation_metrics, test_metrics)
 end
 
 function evaluate_model_for_reporting(model, objects, config)
-    metrics = evaluate_model_on_splits(model, objects.data, config)
+    metrics = evaluate_model_on_splits(model, objects.data, objects, config)
     Bool(config_value(config, :optimality_evaluation, false)) || return metrics
     return merge(metrics, evaluate_optimality_on_splits(model, objects, config))
 end
@@ -780,9 +797,9 @@ function limited_dataset(dataset, limit::Integer)
     return dataset[1:min(Int(limit), length(dataset))]
 end
 
-function evaluate_split(model, dataset, config, prefix)
+function evaluate_split(model, dataset, objects, config, prefix)
     x_data = dataset_context_matrix(dataset)
-    target = dataset_demand_matrix(dataset)
+    target = dataset_target_matrix(dataset, objects)
     predictions, inference_timings = timed_model_prediction(model, x_data, config)
     prediction_matrix = matrix_like(predictions, target)
 

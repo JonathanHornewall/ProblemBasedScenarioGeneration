@@ -44,6 +44,12 @@ function main()
         split_name = Symbol(split_name)
         split_filter !== nothing && !(split_name in split_filter) && continue
         isempty(dataset) && continue
+        if split_name == :test && ContextualDFLTraining.uses_generated_test_data(experiment)
+            println(
+                "Skipping test split for experiment=$(experiment.id); generate_test_data.jl owns generated test-data optimal solutions.",
+            )
+            continue
+        end
 
         println(
             "Computing optimal results for experiment=$(experiment.id), split=$(split_name), samples=$(length(dataset))",

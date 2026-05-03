@@ -8,6 +8,7 @@ using SHA
 using Sockets
 using Statistics
 
+include(joinpath(@__DIR__, "src", "run_defaults.jl"))
 include(joinpath(@__DIR__, "src", "grid_config.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
 include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
@@ -751,8 +752,38 @@ function mlflow_filter_escape(value)
     return replace(string(value), "\\" => "\\\\", "\"" => "\\\"")
 end
 
+function experiment_problem_identity_for_grid(experiment)
+    experiment_has_function(experiment, :problem_identity_config) || return NamedTuple()
+    identity = experiment_call(experiment, :problem_identity_config)
+    identity isa NamedTuple ||
+        throw(ArgumentError("experiment problem_identity_config() must return a NamedTuple."))
+    return identity
+end
+
+function validate_grid_does_not_override_problem_identity(experiment, grid_spec::GridSearchSpec)
+    identity = experiment_problem_identity_for_grid(experiment)
+    isempty(keys(identity)) && return nothing
+
+    identity_keys = Set(Symbol.(keys(identity)))
+    provided_keys = Set{Symbol}()
+    union!(provided_keys, keys(grid_spec.base))
+    union!(provided_keys, keys(grid_spec.fixed))
+    union!(provided_keys, keys(grid_spec.grid))
+    union!(provided_keys, keys(grid_spec.schedules))
+
+    overridden = sort!(collect(intersect(identity_keys, provided_keys)); by=string)
+    isempty(overridden) && return nothing
+
+    throw(
+        ArgumentError(
+            "grid config $(grid_spec.path) may not set problem-identity key(s) owned by experiment $(experiment.id): $(join(string.(overridden), ", "))",
+        ),
+    )
+end
+
 function selected_grid(experiment, grid_spec::GridSearchSpec)
-    return resolve_grid_configs(experiment, grid_spec)
+    validate_grid_does_not_override_problem_identity(experiment, grid_spec)
+    return resolve_grid_configs(grid_spec; base_config=experiment_base_config(experiment))
 end
 
 function parse_commandline(args=ARGS)

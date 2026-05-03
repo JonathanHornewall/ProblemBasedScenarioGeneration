@@ -4,7 +4,6 @@ description: Small smoke grid for validating grid-search plumbing.
 
 base:
   epochs: 2
-  n_samples: 16
 
 fixed:
   learning_rate: 0.001
