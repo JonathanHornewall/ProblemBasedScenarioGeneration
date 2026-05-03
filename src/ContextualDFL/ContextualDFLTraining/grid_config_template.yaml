@@ -1,0 +1,227 @@
+# Exhaustive resource-allocation grid-search template.
+#
+# Use with:
+#   julia --project=ContextualDFLTraining ContextualDFLTraining/gridsearch.jl \
+#     --experiment resource_allocation/experiment_1 \
+#     --grid-config ContextualDFLTraining/grid_config_template.yaml
+#
+# Top-level schema:
+#   version: required, currently only 1.
+#   name: optional; defaults to this file's basename when omitted.
+#   description: optional.
+#   base: scalar settings merged after package and experiment defaults.
+#   fixed: scalar settings merged after base.
+#   grid: arrays of candidate values; Cartesian product creates candidates.
+#   schedules: typed shorthand for mu_schedule and mu_ref_schedule.
+#   run_id_template: optional; null uses grid_<name>_<index>_<hash>.
+#
+# run_id_template placeholders:
+#   {name}: safe grid name
+#   {index}: 1-based candidate index, padded to 4 digits
+#   {hash}: first 8 hex chars of a SHA1 of the candidate config
+
+version: 1
+name: resource_allocation_experiment_1_template
+description: Exhaustive template with resource-allocation defaults and common knobs.
+run_id_template: null
+
+# Experiment-owned defaults supplied by --experiment resource_allocation/experiment_1.
+# Do not uncomment these in base/fixed/grid/schedules for this experiment:
+# gridsearch.jl rejects overriding problem-identity keys.
+#
+# problem: resource_allocation
+# Nr_contexts: 150
+# scenarios_per_context: 1
+# collection_duplicates_per_context: 1
+# validation_fraction: 0.13333333333333333
+# test_fraction: 0.20
+# nr_scenarios: 1
+# solver: highs
+# demand_sigma: 5.0
+# sigma: 5.0
+# demand_power: 2.0
+# context_terms: 3
+# n_samples: 150
+#
+# Other experiment metadata supplied by the experiment loader:
+# experiment_id: resource_allocation/experiment_1
+# experiment_name: resource_allocation_experiment_1
+# experiment_module_name: ResourceAllocationExperiment1
+# mlflow_dataset_name: resource_allocation_experiment_1
+
+base:
+  # Core training defaults from src/run_defaults.jl.
+  epochs: 10
+  learning_rate: 0.001
+  hidden_size: 64
+  depth: 2
+  batch_size: 8
+  dropout: 0.0
+  seed: 143
+
+  # Loss and homotopy/barrier defaults.
+  # loss possible values: dfl_scen.
+  loss: dfl_scen
+  mu: 0.01
+  mu_start: 1.0
+  mu_end: 0.01
+  # Prefer the schedules section below over setting mu_schedule directly.
+  # mu_schedule possible scalar values: constant, linear, geometric, exponential.
+  # It may also be an explicit numeric array with exactly epochs entries.
+  mu_schedule: geometric
+  # mu_ref_schedule possible scalar values:
+  #   match_input, same, input, zero, zeros, none, constant, linear, geometric, exponential.
+  # It may also be an explicit numeric array with exactly epochs entries.
+  mu_ref_schedule: match_input
+  # Used only when mu_ref_schedule is constant.
+  mu_ref: 0.01
+  # Used only when mu_ref_schedule is linear/geometric/exponential.
+  mu_ref_start: 1.0
+  mu_ref_end: 0.01
+  rho: 0.0
+
+  # Reporting tolerance defaults.
+  tolerance_relative: 0.10
+  tolerance_absolute_floor: 1.0
+
+  # Optimality-evaluation defaults.
+  optimality_evaluation: true
+  optimality_test_sample_count: 30
+  optimality_train_sample_count: 0
+  optimality_validation_sample_count: 0
+  optimality_mu: 0.0
+  # Defaults to mu when omitted; explicit here for discoverability.
+  policy_inference_mu: 0.01
+
+  # Runtime/training optional booleans.
+  # These default to false unless noted.
+  shuffle: false
+  reset_optimizer_each_epoch: false
+  fine_tuning: false
+  annealing: false
+  knn_homogenization: false
+  # Default is computed as any nonzero mu in the resolved training schedule.
+  # With this template's default geometric mu schedule, the effective default is true.
+  log_barrier_inference: true
+
+  # Miscellaneous optional settings read by reporting/metadata.
+  method: dfl_scen
+  method_variant: default
+  rrule_variant: default
+  inference_repetitions: 1
+  warmup_epochs: 0
+
+  # MLflow defaults for direct train_and_evaluate use.
+  # gridsearch.jl overwrites these with parent/candidate run metadata.
+  mlflow_enabled: false
+  mlflow_experiment_id: ""
+  mlflow_experiment_name: ""
+  mlflow_tracking_uri: ""
+  mlflow_upload_model_artifact: false
+  mlflow_source_name: ContextualDFLTraining/gridsearch.jl
+  mlflow_source_type: LOCAL
+  mlflow_run_name: ""
+  mlflow_parent_run_id: ""
+  mlflow_tags: {}
+
+  # Safety default: direct local train_and_evaluate refuses worker 1 unless true.
+  # Remote gridsearch workers do not need this.
+  allow_local_training: false
+
+# Put one-off scalar overrides in fixed when you want them applied to every candidate.
+# Values in fixed override base and are overridden by grid candidate values.
+#
+# Examples:
+# fixed:
+#   epochs: 20
+#   optimality_evaluation: false
+#   shuffle: true
+#   reset_optimizer_each_epoch: true
+fixed: {}
+
+grid:
+  # Current resource_allocation_experiment_1_default grid.
+  # Candidate count here is 3 * 2 * 2 * 2 * 1 * 1 = 24.
+  learning_rate: [0.001, 0.0005, 0.0003]
+  hidden_size: [64, 128]
+  depth: [2, 3]
+  batch_size: [8, 16]
+  dropout: [0.0]
+  seed: [143]
+
+  # Other typed keys may be gridded too.
+  #
+  # Integer keys:
+  # candidate_index, replicate_index, epochs, warmup_epochs, seed,
+  # hidden_size, depth, batch_size,
+  # optimality_test_sample_count, optimality_train_sample_count,
+  # optimality_validation_sample_count.
+  #
+  # Float keys:
+  # learning_rate, dropout, mu, mu_start, mu_end, mu_ref, mu_ref_start,
+  # mu_ref_end, rho, optimality_mu, policy_inference_mu,
+  # tolerance_relative, tolerance_absolute_floor.
+  #
+  # Boolean keys:
+  # optimality_evaluation, shuffle, reset_optimizer_each_epoch,
+  # mlflow_enabled, mlflow_upload_model_artifact, fine_tuning, annealing,
+  # knn_homogenization, log_barrier_inference.
+  #
+  # Symbol/string-to-symbol keys:
+  # loss, method, mu_schedule, mu_ref_schedule.
+
+schedules:
+  # Supported schedule names: mu, mu_ref.
+  #
+  # Supported mu kinds:
+  #   constant:    value optional; if omitted, uses base.mu.
+  #   linear:      start and stop required.
+  #   geometric:   start and stop required and must be positive.
+  #   exponential: alias-style equivalent to geometric.
+  #   values/manual: values required; length must equal epochs.
+  #   piecewise/step: segments required; sum(segment.epochs) must equal epochs.
+  #
+  # Supported mu_ref kinds:
+  #   match_input/same/input: copy the resolved mu schedule.
+  #   zero/zeros/none: all zeros.
+  #   constant, linear, geometric, exponential, values/manual, piecewise/step:
+  #     same rules as mu, with mu_ref-specific fields.
+
+  mu:
+    kind: geometric
+    start: 1.0
+    stop: 0.01
+    # Alternative examples:
+    # kind: constant
+    # value: 0.01
+    #
+    # kind: linear
+    # start: 1.0
+    # stop: 0.01
+    #
+    # kind: values
+    # values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]
+    #
+    # kind: piecewise
+    # segments:
+    #   - epochs: 3
+    #     value: 1.0
+    #   - epochs: 4
+    #     value: 0.1
+    #   - epochs: 3
+    #     value: 0.01
+
+  mu_ref:
+    kind: match_input
+    # Alternative examples:
+    # kind: zero
+    #
+    # kind: constant
+    # value: 0.01
+    #
+    # kind: linear
+    # start: 1.0
+    # stop: 0.01
+    #
+    # kind: values
+    # values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]

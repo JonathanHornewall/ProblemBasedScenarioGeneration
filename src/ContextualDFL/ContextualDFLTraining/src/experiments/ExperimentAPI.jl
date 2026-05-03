@@ -18,6 +18,27 @@ struct ExperimentSpec
     config_path::String
 end
 
+struct LatestExperimentFunction <: Function
+    module_ref::Module
+    name::Symbol
+end
+
+experiment_binding_isdefined(module_ref::Module, name::Symbol) =
+    Base.invokelatest(isdefined, module_ref, name)
+
+function experiment_binding(module_ref::Module, name::Symbol)
+    experiment_binding_isdefined(module_ref, name) ||
+        throw(ArgumentError("experiment module $(module_ref) does not define $name"))
+    return Base.invokelatest(getfield, module_ref, name)
+end
+
+function (fn::LatestExperimentFunction)(args...; kwargs...)
+    target = experiment_binding(fn.module_ref, fn.name)
+    target isa Function ||
+        throw(ArgumentError("experiment binding $(fn.name) must be a function, got $(typeof(target))"))
+    return Base.invokelatest(target, args...; kwargs...)
+end
+
 const REQUIRED_EXPERIMENT_FUNCTIONS = (
     :experiment_id,
     :experiment_name,
@@ -122,7 +143,7 @@ function load_experiment_config(path::AbstractString)
 
     id = String(experiment_call(module_ref, :experiment_id))
     name = String(experiment_call(module_ref, :experiment_name))
-    declared_module_name = if isdefined(module_ref, :experiment_module_name)
+    declared_module_name = if experiment_binding_isdefined(module_ref, :experiment_module_name)
         Symbol(experiment_call(module_ref, :experiment_module_name))
     else
         module_name
@@ -154,7 +175,7 @@ end
 function validate_experiment_module!(module_ref::Module, path::AbstractString)
     missing = Symbol[]
     for name in REQUIRED_EXPERIMENT_FUNCTIONS
-        isdefined(module_ref, name) || push!(missing, name)
+        experiment_binding_isdefined(module_ref, name) || push!(missing, name)
     end
     isempty(missing) || throw(
         ArgumentError(
@@ -196,17 +217,15 @@ function experiment_call(spec::ExperimentSpec, name::Symbol, args...; kwargs...)
 end
 
 function experiment_call(module_ref::Module, name::Symbol, args...; kwargs...)
-    isdefined(module_ref, name) ||
-        throw(ArgumentError("experiment module $(module_ref) does not define $name"))
-    fn = Base.invokelatest(getfield, module_ref, name)
+    fn = experiment_binding(module_ref, name)
     fn isa Function ||
         throw(ArgumentError("experiment binding $name must be a function, got $(typeof(fn))"))
     return Base.invokelatest(fn, args...; kwargs...)
 end
 
 function experiment_has_function(spec::ExperimentSpec, name::Symbol)
-    return isdefined(spec.module_ref, name) &&
-           Base.invokelatest(getfield, spec.module_ref, name) isa Function
+    return experiment_binding_isdefined(spec.module_ref, name) &&
+           experiment_binding(spec.module_ref, name) isa Function
 end
 
 experiment_artifact_dir(spec::ExperimentSpec) = abspath(String(experiment_call(spec, :artifact_dir)))

@@ -262,8 +262,6 @@ function target_from_contextual_point(point)
     return reduce(vcat, (demand_from_scenario(scenario) for scenario in point.scenario_parameters))
 end
 
-target_extractor(point) = Base.invokelatest(target_from_contextual_point, point)
-
 function problem_instance_id(problem_instance)
     values = (
         "service_rate=$(vec(problem_instance.problem_data.service_rate_parameters))",
@@ -423,7 +421,10 @@ function training_objects(config)
             loss=loss,
             scenario_generator=generator,
             data=data,
-            target_extractor=target_extractor,
+            target_extractor=ContextualDFLTraining.LatestExperimentFunction(
+                @__MODULE__,
+                :target_from_contextual_point,
+            ),
             test_data_artifact=splits.test_data_artifact,
             problem_metadata=problem_metadata(objects.problem),
             data_metadata=data_metadata(data, merge(config, (; test_data_artifact=splits.test_data_artifact))),
