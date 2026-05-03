@@ -12,6 +12,7 @@ Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 FlameGraphs = "08572546-2f56-4bcf-ba4e-bab62c3a3f89"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 MLFlowClient = "64a0f543-368b-4a9a-827a-e71edb2a0b83"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -22,6 +23,7 @@ SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 
 [sources]
 ContextualDFL = {path = "../ContextualDFL"}
@@ -32,8 +34,10 @@ ArgParse = "1.2.0"
 FileIO = "1.19.0"
 FlameGraphs = "1.1.0"
 Flux = "0.16"
+JSON3 = "1.14.3"
 MLFlowClient = "0.9.0"
 ProfileSVG = "0.2.2"
+YAML = "0.4.16"
 julia = "1.11, 1.12"
 
 [extras]

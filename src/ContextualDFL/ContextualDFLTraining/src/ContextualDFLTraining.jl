@@ -3,6 +3,7 @@ module ContextualDFLTraining
 include("grid_config.jl")
 include("resource_allocation_training.jl")
 include(joinpath("experiments", "ExperimentAPI.jl"))
+include("grid_file_config.jl")
 include("mlflow_support.jl")
 include("train_run.jl")
 include("profile_run.jl")
@@ -16,9 +17,14 @@ export default_grid,
     experiment_grid_configs,
     experiment_smoke_configs,
     smoke_grid,
+    GridSearchSpec,
+    grid_config_digest,
     load_experiment,
+    load_grid_config,
     load_optimal_results,
     optimal_results_path,
+    resolve_grid_configs,
+    resolved_grid_json,
     save_optimal_results!,
     train_and_evaluate,
     training_objects_for_config,

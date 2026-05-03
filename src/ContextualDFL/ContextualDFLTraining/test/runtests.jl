@@ -65,6 +65,119 @@ end
     end
 end
 
+@testset "ContextualDFLTraining grid file config" begin
+    experiment = ContextualDFLTraining.load_experiment("resource_allocation/experiment_1")
+
+    @testset "bundled resource allocation configs" begin
+        default_spec = ContextualDFLTraining.load_grid_config(
+            joinpath(experiment.root_dir, "grid_configs", "default.yml"),
+        )
+        smoke_spec = ContextualDFLTraining.load_grid_config(
+            joinpath(experiment.root_dir, "grid_configs", "smoke.yml"),
+        )
+
+        @test length(ContextualDFLTraining.resolve_grid_configs(experiment, default_spec)) == 24
+        @test length(ContextualDFLTraining.resolve_grid_configs(experiment, smoke_spec)) == 1
+    end
+
+    mktempdir() do dir
+        yaml_path = joinpath(dir, "grid.yml")
+        write(
+            yaml_path,
+            """
+            version: 1
+            name: yaml_grid
+            base:
+              epochs: 3
+              n_samples: 16
+              optimality_evaluation: false
+            fixed:
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+            grid:
+              learning_rate: [0.001, 0.0005]
+              hidden_size: [16, 32]
+              seed: [1]
+            schedules:
+              mu:
+                kind: geometric
+                start: 1.0
+                stop: 0.01
+              mu_ref:
+                kind: match_input
+            run_id_template: "{name}_{index}_{hash}"
+            """,
+        )
+
+        spec = ContextualDFLTraining.load_grid_config(yaml_path)
+        configs = ContextualDFLTraining.resolve_grid_configs(experiment, spec)
+
+        @test spec.format == :yaml
+        @test spec.digest == ContextualDFLTraining.grid_config_digest(yaml_path)
+        @test length(configs) == 4
+        @test all(config -> config.experiment_id == experiment.id, configs)
+        @test all(config -> config.optimality_evaluation == false, configs)
+        @test Set(config.learning_rate for config in configs) == Set([0.001, 0.0005])
+        @test Set(config.hidden_size for config in configs) == Set([16, 32])
+        @test all(config -> config.mu_schedule == :geometric, configs)
+        @test all(config -> config.mu_start == 1.0, configs)
+        @test all(config -> config.mu_end == 0.01, configs)
+        @test all(config -> config.mu_ref_schedule == :match_input, configs)
+        @test all(config -> startswith(config.run_id, "yaml_grid_"), configs)
+        @test all(config -> startswith(config.grid_config_digest, "sha256:"), configs)
+        @test occursin("\"grid_config_name\"", ContextualDFLTraining.resolved_grid_json(configs))
+    end
+
+    mktempdir() do dir
+        json_path = joinpath(dir, "grid.json")
+        write(
+            json_path,
+            """
+            {
+              "version": 1,
+              "name": "json_grid",
+              "fixed": {
+                "learning_rate": 0.001,
+                "hidden_size": 16,
+                "depth": 1,
+                "batch_size": 4,
+                "dropout": 0.0
+              },
+              "grid": {
+                "seed": [1, 2]
+              },
+              "schedules": {
+                "mu": {"kind": "constant", "value": 0.25}
+              }
+            }
+            """,
+        )
+
+        spec = ContextualDFLTraining.load_grid_config(json_path)
+        configs = ContextualDFLTraining.resolve_grid_configs(experiment, spec)
+
+        @test spec.format == :json
+        @test length(configs) == 2
+        @test Set(config.seed for config in configs) == Set([1, 2])
+        @test all(config -> config.mu_schedule == :constant, configs)
+        @test all(config -> config.mu == 0.25, configs)
+    end
+
+    mktempdir() do dir
+        invalid_path = joinpath(dir, "invalid.yml")
+        write(
+            invalid_path,
+            """
+            version: 1
+            surprise: true
+            """,
+        )
+
+        @test_throws ArgumentError ContextualDFLTraining.load_grid_config(invalid_path)
+    end
+end
+
 FakeRun() = FakeRun(
     Tuple{String,String}[],
     Tuple{String,Float64,Int}[],

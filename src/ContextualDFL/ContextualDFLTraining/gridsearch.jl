@@ -11,6 +11,7 @@ using Statistics
 include(joinpath(@__DIR__, "src", "grid_config.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
 include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
+include(joinpath(@__DIR__, "src", "grid_file_config.jl"))
 
 const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
@@ -45,26 +46,12 @@ function _contextualdfltraining_remote_eval(config)
     end
 end
 
-function env_int(name, default)
-    value = get(ENV, name, string(default))
-    parsed = tryparse(Int, value)
-    parsed === nothing && error("ENV[$name] must be an integer, got: $value")
-    return parsed
-end
-
 function env_worker_count(name, default)
     value = lowercase(strip(get(ENV, name, string(default))))
     value == "auto" && return :auto
 
     parsed = tryparse(Int, value)
     parsed === nothing && error("ENV[$name] must be an integer or auto, got: $value")
-    return parsed
-end
-
-function env_float(name, default)
-    value = get(ENV, name, string(default))
-    parsed = tryparse(Float64, value)
-    parsed === nothing && error("ENV[$name] must be a number, got: $value")
     return parsed
 end
 
@@ -438,7 +425,14 @@ function mark_mlflow_run_failed(config, reason)
     return nothing
 end
 
-function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, worker_hosts)
+function create_mlflow_grid_parent_run(
+    settings,
+    grid_id,
+    timestamp,
+    configs,
+    worker_hosts,
+    grid_spec::GridSearchSpec,
+)
     settings.enabled || return nothing
 
     mlf = mlflow_client(settings)
@@ -457,7 +451,7 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
     git_commit = git_commit_or_empty()
     isempty(git_commit) || (tags["mlflow.source.git.commit"] = git_commit)
 
-    parent_params = grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+    parent_params = grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec)
 
     run = with_mlflow_retry("create grid parent run") do
         MLFlowClient.createrun(
@@ -475,7 +469,32 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
         end
     end
 
+    upload_mlflow_grid_config_artifacts!(mlf, grid_spec, configs)
+
     return (; client=mlf, run=run)
+end
+
+function upload_mlflow_grid_config_artifacts!(mlf, grid_spec::GridSearchSpec, configs)
+    source_extension = grid_spec.format == :yaml ? ".yaml" : ".json"
+    source_data = read(grid_spec.path)
+    resolved_data = Vector{UInt8}(codeunits(resolved_grid_json(configs)))
+    digest_data = Vector{UInt8}(codeunits(grid_spec.digest * "\n"))
+
+    with_mlflow_retry("upload grid config source artifact") do
+        MLFlowClient.uploadartifact(
+            mlf,
+            "grid_config/source" * source_extension,
+            source_data,
+        )
+    end
+    with_mlflow_retry("upload resolved grid config artifact") do
+        MLFlowClient.uploadartifact(mlf, "grid_config/resolved.json", resolved_data)
+    end
+    with_mlflow_retry("upload grid config digest artifact") do
+        MLFlowClient.uploadartifact(mlf, "grid_config/digest.txt", digest_data)
+    end
+
+    return nothing
 end
 
 function close_mlflow_grid_parent_run(parent, results)
@@ -521,12 +540,16 @@ function fail_mlflow_grid_parent_run(parent)
     return nothing
 end
 
-function grid_parent_params(grid_id, timestamp, configs, worker_hosts)
+function grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec::GridSearchSpec)
     params = Dict{String,String}(
         "gridsearch_id" => grid_id,
         "gridsearch_timestamp" => timestamp,
         "grid_candidate_count" => string(length(configs)),
-        "grid_selected_grid" => env_flag("GRIDSEARCH_SMOKE", false) ? "smoke" : "default",
+        "grid_config_name" => grid_spec.name,
+        "grid_config_path" => grid_spec.path,
+        "grid_config_digest" => grid_spec.digest,
+        "grid_config_version" => string(grid_spec.version),
+        "grid_config_format" => string(grid_spec.format),
         "grid_worker_count" => string(length(worker_hosts)),
         "grid_worker_hosts" => join(sort!(unique(collect(values(worker_hosts)))), ","),
     )
@@ -727,34 +750,8 @@ function mlflow_filter_escape(value)
     return replace(string(value), "\\" => "\\\\", "\"" => "\\\"")
 end
 
-function selected_grid(experiment)
-    overrides = grid_overrides_from_env()
-    if env_flag("GRIDSEARCH_SMOKE", false)
-        return experiment_smoke_configs(experiment; overrides...)
-    end
-    return experiment_grid_configs(experiment; overrides...)
-end
-
-function grid_overrides_from_env()
-    return (;
-        optimality_evaluation=env_flag(
-            "GRID_OPTIMALITY_EVALUATION",
-            DEFAULT_RUN_SETTINGS.optimality_evaluation,
-        ),
-        optimality_test_sample_count=env_int(
-            "GRID_OPTIMALITY_TEST_SAMPLE_COUNT",
-            DEFAULT_RUN_SETTINGS.optimality_test_sample_count,
-        ),
-        optimality_train_sample_count=env_int(
-            "GRID_OPTIMALITY_TRAIN_SAMPLE_COUNT",
-            DEFAULT_RUN_SETTINGS.optimality_train_sample_count,
-        ),
-        optimality_validation_sample_count=env_int(
-            "GRID_OPTIMALITY_VALIDATION_SAMPLE_COUNT",
-            DEFAULT_RUN_SETTINGS.optimality_validation_sample_count,
-        ),
-        optimality_mu=env_float("GRID_OPTIMALITY_MU", DEFAULT_RUN_SETTINGS.optimality_mu),
-    )
+function selected_grid(experiment, grid_spec::GridSearchSpec)
+    return resolve_grid_configs(experiment, grid_spec)
 end
 
 function parse_commandline(args=ARGS)
@@ -765,6 +762,9 @@ function parse_commandline(args=ARGS)
     @add_arg_table! settings begin
         "--experiment"
             help = "Experiment id, module name, or config path to run, e.g. resource_allocation/experiment_1"
+            required = true
+        "--grid-config"
+            help = "Path to a YAML or JSON grid-search config file."
             required = true
     end
 
@@ -856,6 +856,7 @@ end
 function main()
     parsed_args = parse_commandline()
     experiment = load_experiment(parsed_args["experiment"])
+    grid_spec = load_grid_config(parsed_args["grid-config"])
 
     ensure_clean_worker_start!()
     sync_code!()
@@ -870,13 +871,14 @@ function main()
     mlflow_settings = grid_mlflow_settings(experiment)
     validate_mlflow_settings(mlflow_settings)
     mlflow_settings = ensure_mlflow_grid_experiment(mlflow_settings)
-    base_configs = selected_grid(experiment)
+    base_configs = selected_grid(experiment, grid_spec)
     parent_run = create_mlflow_grid_parent_run(
         mlflow_settings,
         grid_id,
         timestamp,
         base_configs,
         worker_hosts,
+        grid_spec,
     )
     parent_run_id = mlflow_parent_run_id(parent_run)
     configs = annotate_grid_configs(
@@ -887,6 +889,9 @@ function main()
         Sockets.gethostname(),
     )
     println("Grid search id: $grid_id")
+    println(
+        "Grid config: $(grid_spec.name) ($(grid_spec.path), $(length(base_configs)) candidate(s))",
+    )
     if mlflow_settings.enabled
         println(
             "MLflow experiment id: $(mlflow_settings.experiment_id) ($(mlflow_settings.experiment_name))",
