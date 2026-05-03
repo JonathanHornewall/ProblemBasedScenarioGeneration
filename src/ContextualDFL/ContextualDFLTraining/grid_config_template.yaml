@@ -25,23 +25,24 @@ name: resource_allocation_experiment_1_template
 description: Exhaustive template with resource-allocation defaults and common knobs.
 run_id_template: null
 
-# Experiment-owned defaults supplied by --experiment resource_allocation/experiment_1.
+# Experiment-owned problem identity supplied by --experiment resource_allocation/experiment_1.
 # Do not uncomment these in base/fixed/grid/schedules for this experiment:
 # gridsearch.jl rejects overriding problem-identity keys.
 #
 # problem: resource_allocation
-# Nr_contexts: 150
-# scenarios_per_context: 1
-# collection_duplicates_per_context: 1
-# validation_fraction: 0.13333333333333333
-# test_fraction: 0.20
-# nr_scenarios: 1
-# solver: highs
 # demand_sigma: 5.0
 # sigma: 5.0
 # demand_power: 2.0
 # context_terms: 3
-# n_samples: 150
+#
+# Training-data defaults are ordinary run settings and may be overridden here:
+# training_context_count: 150
+# training_scenarios_per_context: 1
+# collection_duplicates_per_context: 1
+# validation_fraction: 0.13333333333333333
+# generated_split_test_fraction: 0.20
+# test_scenarios_per_context: 1
+# solver: highs
 #
 # Other experiment metadata supplied by the experiment loader:
 # experiment_id: resource_allocation/experiment_1

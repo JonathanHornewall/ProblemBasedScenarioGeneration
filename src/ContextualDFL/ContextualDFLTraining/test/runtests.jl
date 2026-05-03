@@ -36,9 +36,14 @@ end
             training_data_dir=training_data_dir,
         ),
     )
-    @test hasproperty(config, :Nr_contexts)
-    @test hasproperty(config, :scenarios_per_context)
+    @test hasproperty(config, :training_context_count)
+    @test hasproperty(config, :training_scenarios_per_context)
     @test hasproperty(config, :collection_duplicates_per_context)
+    @test hasproperty(config, :validation_fraction)
+    @test hasproperty(config, :generated_split_test_fraction)
+    @test !hasproperty(config, :Nr_contexts)
+    @test !hasproperty(config, :scenarios_per_context)
+    @test !hasproperty(config, :test_fraction)
     @test !hasproperty(config, :n_samples)
     @test !hasproperty(config, :sigma)
     @test !hasproperty(config, :demand_power)
@@ -56,17 +61,23 @@ end
     @test target isa AbstractVector
     @test length(target) == objects.model_metadata.output_dimension
     @test objects.problem_metadata.problem == "resource_allocation"
-    @test objects.data_metadata.dataset_name == "resource_allocation_experiment_1-$(config.seed)"
+    expected_dataset_name =
+        "resource_allocation_experiment_1-ctx$(config.training_context_count)-scen$(config.training_scenarios_per_context)-dup$(config.collection_duplicates_per_context)-seed$(config.seed)"
+    @test objects.data_metadata.dataset_name == expected_dataset_name
     @test startswith(objects.data_metadata.dataset_path, training_data_dir)
     @test isfile(objects.data_metadata.dataset_path)
     @test objects.data_metadata.training_data_cache_hit == false
-    @test objects.data_metadata.Nr_contexts == config.Nr_contexts
+    @test objects.data_metadata.training_context_count == config.training_context_count
+    @test objects.data_metadata.training_scenarios_per_context ==
+          config.training_scenarios_per_context
+    @test objects.data_metadata.generated_split_test_fraction ==
+          config.generated_split_test_fraction
     @test length(objects.data.train) == 100
     @test length(objects.data.validation) == 20
     @test length(objects.data.test) == 30
     artifact_path = objects.data_metadata.dataset_path
     @test ContextualDFLTraining.mlflow_dataset_name(objects, config) ==
-          "resource_allocation_experiment_1-$(config.seed)"
+          expected_dataset_name
     @test ContextualDFLTraining.mlflow_dataset_source(objects, config) == artifact_path
     @test ContextualDFLTraining.mlflow_dataset_source_type(objects, config) == "local"
     artifact_mtime = stat(artifact_path).mtime
@@ -354,10 +365,43 @@ end
             @test !hasproperty(config, :sigma)
             @test !hasproperty(config, :demand_power)
             @test !hasproperty(config, :context_terms)
-            @test hasproperty(config, :Nr_contexts)
-            @test hasproperty(config, :scenarios_per_context)
+            @test !hasproperty(config, :Nr_contexts)
+            @test !hasproperty(config, :scenarios_per_context)
+            @test !hasproperty(config, :test_fraction)
+            @test hasproperty(config, :training_context_count)
+            @test hasproperty(config, :training_scenarios_per_context)
             @test hasproperty(config, :collection_duplicates_per_context)
         end
+    end
+
+    mktempdir() do dir
+        yaml_path = joinpath(dir, "data_grid.yaml")
+        write(
+            yaml_path,
+            """
+            version: 1
+            name: data_grid
+            fixed:
+              learning_rate: 0.001
+              hidden_size: 16
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+              training_context_count: 12
+              training_scenarios_per_context: 2
+              collection_duplicates_per_context: 1
+              validation_fraction: 0.25
+              generated_split_test_fraction: 0.0
+            grid:
+              seed: [1]
+            """,
+        )
+
+        configs = selected_grid(experiment, grid_load_grid_config(yaml_path))
+        @test length(configs) == 1
+        @test only(configs).training_context_count == 12
+        @test only(configs).training_scenarios_per_context == 2
+        @test only(configs).validation_fraction == 0.25
     end
 
     mktempdir() do dir
@@ -448,10 +492,8 @@ end
 
     mktempdir() do dir
         for problem_key in (
-            "Nr_contexts",
-            "nr_scenarios",
-            "solver",
-            "n_samples",
+            "problem",
+            "demand_sigma",
             "sigma",
             "demand_power",
             "context_terms",

@@ -10,11 +10,12 @@ const EXPERIMENT_NAME = "resource_allocation_experiment_1"
 const DEFAULT_TEST_DATA_SEED = 1
 const DEFAULT_TEST_DATA_SET_SIZE = 30
 
-const Nr_contexts = 150
-const scenarios_per_context = 1
-const collection_duplicates_per_context = 1
-const validation_fraction = 0.13333333333333333
-const test_fraction = 0.20
+const DEFAULT_TRAINING_CONTEXT_COUNT = 150
+const DEFAULT_TRAINING_SCENARIOS_PER_CONTEXT = 1
+const DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT = 1
+const DEFAULT_VALIDATION_FRACTION = 0.13333333333333333
+const DEFAULT_GENERATED_SPLIT_TEST_FRACTION = 0.20
+const DEFAULT_TEST_SCENARIOS_PER_CONTEXT = DEFAULT_TRAINING_SCENARIOS_PER_CONTEXT
 
 const DEMAND_SIGMA = 5.0
 const DEMAND_POWER = 2.0
@@ -45,26 +46,27 @@ end
 function problem_config()
     return (;
         problem=:resource_allocation,
-        Nr_contexts=Nr_contexts,
-        scenarios_per_context=scenarios_per_context,
-        collection_duplicates_per_context=collection_duplicates_per_context,
-        validation_fraction=validation_fraction,
-        test_fraction=test_fraction,
-        nr_scenarios=scenarios_per_context,
         solver=:highs,
     )
 end
 
 function problem_identity_config()
-    return merge(
-        problem_config(),
-        (;
-            demand_sigma=DEMAND_SIGMA,
-            sigma=DEMAND_SIGMA,
-            demand_power=DEMAND_POWER,
-            context_terms=CONTEXT_TERMS,
-            n_samples=Nr_contexts,
-        ),
+    return (;
+        problem=:resource_allocation,
+        demand_sigma=DEMAND_SIGMA,
+        sigma=DEMAND_SIGMA,
+        demand_power=DEMAND_POWER,
+        context_terms=CONTEXT_TERMS,
+    )
+end
+
+function training_data_defaults()
+    return (;
+        training_context_count=DEFAULT_TRAINING_CONTEXT_COUNT,
+        training_scenarios_per_context=DEFAULT_TRAINING_SCENARIOS_PER_CONTEXT,
+        collection_duplicates_per_context=DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT,
+        validation_fraction=DEFAULT_VALIDATION_FRACTION,
+        generated_split_test_fraction=DEFAULT_GENERATED_SPLIT_TEST_FRACTION,
     )
 end
 
@@ -72,6 +74,7 @@ function base_config(; overrides...)
     return merge(
         ContextualDFLTraining.DEFAULT_RUN_SETTINGS,
         problem_config(),
+        training_data_defaults(),
         experiment_overrides(; overrides...),
     )
 end
@@ -175,12 +178,101 @@ function resource_count(problem_instance)
     return size(problem_instance.problem_data.service_rate_parameters, 1)
 end
 
+function training_context_count(config)
+    return Int(
+        ContextualDFLTraining.config_value(
+            config,
+            :training_context_count,
+            ContextualDFLTraining.config_value(
+                config,
+                :Nr_contexts,
+                DEFAULT_TRAINING_CONTEXT_COUNT,
+            ),
+        ),
+    )
+end
+
+function training_scenarios_per_context(config)
+    return Int(
+        ContextualDFLTraining.config_value(
+            config,
+            :training_scenarios_per_context,
+            ContextualDFLTraining.config_value(
+                config,
+                :scenarios_per_context,
+                ContextualDFLTraining.config_value(
+                    config,
+                    :nr_scenarios,
+                    DEFAULT_TRAINING_SCENARIOS_PER_CONTEXT,
+                ),
+            ),
+        ),
+    )
+end
+
+function collection_duplicates_count(config)
+    return Int(
+        ContextualDFLTraining.config_value(
+            config,
+            :collection_duplicates_per_context,
+            DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT,
+        ),
+    )
+end
+
+function validation_split_fraction(config)
+    return Float64(
+        ContextualDFLTraining.config_value(
+            config,
+            :validation_fraction,
+            DEFAULT_VALIDATION_FRACTION,
+        ),
+    )
+end
+
+function generated_split_test_fraction(config)
+    return Float64(
+        ContextualDFLTraining.config_value(
+            config,
+            :generated_split_test_fraction,
+            ContextualDFLTraining.config_value(
+                config,
+                :test_fraction,
+                DEFAULT_GENERATED_SPLIT_TEST_FRACTION,
+            ),
+        ),
+    )
+end
+
+function test_scenarios_per_context(config)
+    return Int(
+        ContextualDFLTraining.config_value(
+            config,
+            :test_scenarios_per_context,
+            ContextualDFLTraining.config_value(
+                config,
+                :scenarios_per_context,
+                ContextualDFLTraining.config_value(
+                    config,
+                    :nr_scenarios,
+                    DEFAULT_TEST_SCENARIOS_PER_CONTEXT,
+                ),
+            ),
+        ),
+    )
+end
+
+function dataset_scenarios_per_context(dataset, config)
+    isempty(dataset) && return training_scenarios_per_context(config)
+    return length(first(dataset).scenario_parameters)
+end
+
 function generate_dataset(
     problem_instance,
     rng::Random.AbstractRNG;
-    context_count::Integer=Nr_contexts,
-    scenario_count::Integer=scenarios_per_context,
-    duplicates_per_context::Integer=collection_duplicates_per_context,
+    context_count::Integer=DEFAULT_TRAINING_CONTEXT_COUNT,
+    scenario_count::Integer=DEFAULT_TRAINING_SCENARIOS_PER_CONTEXT,
+    duplicates_per_context::Integer=DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT,
 )
     context_count > 0 || throw(ArgumentError("context_count must be positive."))
     scenario_count > 0 || throw(ArgumentError("scenario_count must be positive."))
@@ -210,18 +302,23 @@ function generate_dataset(
     )
 end
 
-function generated_training_splits(problem_instance, config, rng::Random.AbstractRNG)
+function generated_training_splits(
+    problem_instance,
+    config,
+    rng::Random.AbstractRNG;
+    test_fraction::Real=0.0,
+)
     dataset = generate_dataset(
         problem_instance,
         rng;
-        context_count=Int(config.Nr_contexts),
-        scenario_count=Int(config.scenarios_per_context),
-        duplicates_per_context=Int(config.collection_duplicates_per_context),
+        context_count=training_context_count(config),
+        scenario_count=training_scenarios_per_context(config),
+        duplicates_per_context=collection_duplicates_count(config),
     )
     return ContextualDFLTraining.split_contextual_dataset(
         dataset;
-        validation_fraction=config.validation_fraction,
-        test_fraction=config.test_fraction,
+        validation_fraction=validation_split_fraction(config),
+        test_fraction=Float64(test_fraction),
         rng=rng,
     )
 end
@@ -241,8 +338,15 @@ function test_data_artifact_metadata(config)
 end
 
 function data_splits(problem_instance, config, rng::Random.AbstractRNG)
-    generated_splits = generated_training_splits(problem_instance, config, rng)
     test_artifact = generated_test_artifact(config)
+    split_test_fraction =
+        test_artifact === nothing ? generated_split_test_fraction(config) : 0.0
+    generated_splits = generated_training_splits(
+        problem_instance,
+        config,
+        rng;
+        test_fraction=split_test_fraction,
+    )
     return (;
         train=generated_splits.train,
         validation=generated_splits.validation,
@@ -255,7 +359,21 @@ function training_data(config)
     return data_splits(problem(), config, rng)
 end
 
-training_dataset_name(config) = EXPERIMENT_NAME * "-" * string(Int(config.seed))
+function training_dataset_name(config)
+    explicit_name =
+        ContextualDFLTraining.config_value(config, :training_dataset_name, nothing)
+    isnothing(explicit_name) || return string(explicit_name)
+    return join(
+        (
+            EXPERIMENT_NAME,
+            "ctx$(training_context_count(config))",
+            "scen$(training_scenarios_per_context(config))",
+            "dup$(collection_duplicates_count(config))",
+            "seed$(Int(config.seed))",
+        ),
+        "-",
+    )
+end
 
 function demand_from_scenario(scenario::ContextualDFL.ParametricScenario)
     isempty(scenario.h_eq_xi) &&
@@ -301,20 +419,26 @@ function test_artifact_identity(config)
 end
 
 function training_data_identity(config)
-    return (;
+    test_artifact = test_artifact_identity(config)
+    identity = (;
         experiment_id=EXPERIMENT_ID,
         problem_instance_id=problem_instance_id(problem()),
         seed=Int(config.seed),
-        Nr_contexts=Int(config.Nr_contexts),
-        scenarios_per_context=Int(config.scenarios_per_context),
-        collection_duplicates_per_context=Int(config.collection_duplicates_per_context),
-        validation_fraction=Float64(config.validation_fraction),
-        test_fraction=Float64(config.test_fraction),
+        training_context_count=training_context_count(config),
+        training_scenarios_per_context=training_scenarios_per_context(config),
+        collection_duplicates_per_context=collection_duplicates_count(config),
+        validation_fraction=validation_split_fraction(config),
         demand_sigma=DEMAND_SIGMA,
         demand_power=DEMAND_POWER,
         context_terms=CONTEXT_TERMS,
-        test_artifact=test_artifact_identity(config),
+        test_artifact=test_artifact,
     )
+    return test_artifact.source == :generated_split ?
+        merge(
+            identity,
+            (; generated_split_test_fraction=generated_split_test_fraction(config)),
+        ) :
+        identity
 end
 
 function problem_metadata(problem_instance)
@@ -331,14 +455,19 @@ function problem_metadata(problem_instance)
 end
 
 function data_metadata(splits, config)
+    test_artifact =
+        ContextualDFLTraining.config_value(config, :test_data_artifact, NamedTuple())
+    test_source = hasproperty(test_artifact, :path) ? :artifact : :generated_split
     dataset_recipe = join(
         (
             "ContextualDFLTraining.experiment",
             "experiment_id=$(EXPERIMENT_ID)",
             "seed=$(config.seed)",
-            "Nr_contexts=$(config.Nr_contexts)",
-            "scenarios_per_context=$(config.scenarios_per_context)",
-            "collection_duplicates_per_context=$(config.collection_duplicates_per_context)",
+            "training_context_count=$(training_context_count(config))",
+            "training_scenarios_per_context=$(training_scenarios_per_context(config))",
+            "collection_duplicates_per_context=$(collection_duplicates_count(config))",
+            "validation_fraction=$(validation_split_fraction(config))",
+            "test_source=$(test_source)",
         ),
         ";",
     )
@@ -351,23 +480,22 @@ function data_metadata(splits, config)
         test_size=length(splits.test),
         context_dimension=isempty(splits.train) ? 0 : length(first(splits.train).context),
         target_dimension=isempty(splits.train) ? 0 : length(target_from_contextual_point(first(splits.train))),
-        Nr_contexts=Int(config.Nr_contexts),
-        scenarios_per_context=Int(config.scenarios_per_context),
-        collection_duplicates_per_context=Int(config.collection_duplicates_per_context),
-        validation_fraction=Float64(config.validation_fraction),
-        test_fraction=Float64(config.test_fraction),
+        training_context_count=training_context_count(config),
+        training_scenarios_per_context=training_scenarios_per_context(config),
+        collection_duplicates_per_context=collection_duplicates_count(config),
+        validation_fraction=validation_split_fraction(config),
+        generated_split_test_fraction=
+            test_source == :generated_split ? generated_split_test_fraction(config) : 0.0,
+        test_source=test_source,
         train_context_seed=Int(config.seed),
         train_scenario_seed=Int(config.seed),
         split_seed=Int(config.seed),
-        test_data_artifact=get(
-            Dict(pairs(ContextualDFLTraining.config_value(config, :test_data_artifact, NamedTuple()))),
-            :path,
-            "",
-        ),
+        test_data_artifact=get(Dict(pairs(test_artifact)), :path, ""),
     )
 end
 
 function model_metadata(model, problem_instance, splits, config)
+    scenario_count = dataset_scenarios_per_context(splits.train, config)
     return (;
         architecture="Flux.Chain",
         depth=Int(config.depth),
@@ -376,7 +504,7 @@ function model_metadata(model, problem_instance, splits, config)
         output_activation="softplus",
         dropout=Float64(config.dropout),
         input_dimension=isempty(splits.train) ? 0 : length(first(splits.train).context),
-        output_dimension=demand_count(problem_instance) * Int(config.nr_scenarios),
+        output_dimension=demand_count(problem_instance) * scenario_count,
     )
 end
 
@@ -392,7 +520,7 @@ function test_data_bundle(
         objects.problem,
         rng;
         context_count=Int(data_set_size),
-        scenario_count=Int(config.scenarios_per_context),
+        scenario_count=test_scenarios_per_context(config),
         duplicates_per_context=1,
     )
     return merge(
@@ -416,7 +544,7 @@ function test_data_bundle(
                 data_set_size=Int(data_set_size),
                 context_dimension=isempty(dataset) ? 0 : length(first(dataset).context),
                 target_dimension=isempty(dataset) ? 0 : length(target_from_contextual_point(first(dataset))),
-                scenarios_per_context=Int(config.scenarios_per_context),
+                scenarios_per_context=test_scenarios_per_context(config),
             ),
         ),
     )
@@ -427,10 +555,12 @@ training_objects(config) = training_objects(config, training_data(config))
 function training_objects(config, data)
     objects = problem_objects(config)
     test_data_artifact = test_data_artifact_metadata(config)
+    scenario_count = dataset_scenarios_per_context(data.train, config)
+    effective_config = merge(config, (; nr_scenarios=scenario_count))
 
     neural_net = ContextualDFLTraining.build_neural_net(
         length(first(data.train).context),
-        demand_count(objects.problem) * Int(config.nr_scenarios);
+        demand_count(objects.problem) * scenario_count;
         hidden_size=Int(config.hidden_size),
         depth=Int(config.depth),
         dropout=Float64(config.dropout),
@@ -440,7 +570,7 @@ function training_objects(config, data)
         scenario_decoder=objects.scenario_decoder,
     )
     loss = ContextualDFLTraining.build_loss(
-        config,
+        effective_config,
         objects.scenario_decoder,
         objects.reference_scenario_decoder,
         objects.solver,
@@ -463,7 +593,7 @@ function training_objects(config, data)
                 data,
                 merge(config, (; test_data_artifact=test_data_artifact)),
             ),
-            model_metadata=model_metadata(neural_net, objects.problem, data, config),
+            model_metadata=model_metadata(neural_net, objects.problem, data, effective_config),
             schedules=(;
                 mu=ContextualDFLTraining.ConstantSchedule(config.mu),
                 rho=ContextualDFLTraining.ConstantSchedule(config.rho),

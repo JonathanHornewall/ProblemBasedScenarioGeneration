@@ -55,15 +55,21 @@ const GRID_INT_KEYS = Set(
     [
         :batch_size,
         :candidate_index,
+        :collection_duplicates_per_context,
         :depth,
         :display_real,
         :epochs,
         :hidden_size,
+        :Nr_contexts,
         :optimality_test_sample_count,
         :optimality_train_sample_count,
         :optimality_validation_sample_count,
         :replicate_index,
+        :scenarios_per_context,
         :seed,
+        :test_scenarios_per_context,
+        :training_context_count,
+        :training_scenarios_per_context,
         :warmup_epochs,
     ],
 )
@@ -71,6 +77,7 @@ const GRID_INT_KEYS = Set(
 const GRID_FLOAT_KEYS = Set(
     [
         :dropout,
+        :generated_split_test_fraction,
         :learning_rate,
         :mu,
         :mu_end,
@@ -81,8 +88,10 @@ const GRID_FLOAT_KEYS = Set(
         :optimality_mu,
         :policy_inference_mu,
         :rho,
+        :test_fraction,
         :tolerance_absolute_floor,
         :tolerance_relative,
+        :validation_fraction,
     ],
 )
 

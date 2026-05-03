@@ -205,7 +205,7 @@ function train_with_contextualdfl_mlflow(objects, config)
                 display_loss,
                 metadata,
             ),
-            nr_scenarios=config_value(config, :nr_scenarios, nothing),
+            nr_scenarios=effective_nr_scenarios(objects, config),
             display_smooth=Bool(config_value(config, :display_smooth, false)),
             display_real=config_value(config, :display_real, nothing),
             display_reference_input=display_reference_input(objects, config),
@@ -281,9 +281,22 @@ function display_reference_input(objects, config)
 end
 
 function logged_nr_scenarios(loss, nr_scenarios)
+    if hasproperty(loss, :nr_scenarios)
+        return Int(getproperty(loss, :nr_scenarios))
+    end
     isnothing(nr_scenarios) || return Int(nr_scenarios)
-    hasproperty(loss, :nr_scenarios) || return nothing
-    return getproperty(loss, :nr_scenarios)
+    return nothing
+end
+
+function effective_nr_scenarios(objects, config)
+    if hasproperty(objects, :loss)
+        value = logged_nr_scenarios(objects.loss, nothing)
+        isnothing(value) || return value
+    end
+
+    value = config_value(config, :nr_scenarios, nothing)
+    isnothing(value) && return nothing
+    return Int(value)
 end
 
 function add_worker_mlflow_tags(config)
@@ -540,7 +553,7 @@ function mlflow_method_spec(objects, config)
         decoder=string(typeof(objects.scenario_decoder)),
         reference_decoder=string(typeof(objects.reference_scenario_decoder)),
         learned_components="h",
-        nr_scenarios=Int(config_value(config, :nr_scenarios, 1)),
+        nr_scenarios=something(effective_nr_scenarios(objects, config), 1),
         mu=config.mu,
         mu_start=isempty(mu_schedule) ? missing : first(mu_schedule),
         mu_end=isempty(mu_schedule) ? missing : last(mu_schedule),
