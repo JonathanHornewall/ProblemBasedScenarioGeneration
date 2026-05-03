@@ -221,4 +221,132 @@
             )
         end
     end
+
+    @testset "bound-aware value preservation" begin
+        @testset "extraction helper keeps provenance" begin
+            lp = LP(
+                A_ineq=[
+                    1.0 0.0
+                    -2.0 0.0
+                    0.0 1.0
+                    1.0 1.0
+                ],
+                b_ineq=[3.0, -2.0, 5.0, 7.0],
+                c=[1.0, 2.0],
+            )
+
+            bound_lp, bound_map = ContextualDFL._extract_variable_bounds(lp)
+
+            @test [row.original_row for row in bound_map.bound_rows] == [1, 2, 3]
+            @test bound_map.general_rows == [4]
+            @test bound_lp.lower_bounds == [1.0, -Inf]
+            @test bound_lp.upper_bounds == [3.0, 5.0]
+            @test bound_map.lower_owner == [2, 0]
+            @test bound_map.upper_owner == [1, 3]
+            @test bound_lp.A_ineq == reshape([1.0, 1.0], 1, 2)
+            @test bound_lp.b_ineq == [7.0]
+
+            sparse_lp = LP(
+                A_ineq=SparseArrays.sparse(lp.A_ineq),
+                b_ineq=lp.b_ineq,
+                c=lp.c,
+            )
+            sparse_bound_lp, sparse_bound_map =
+                ContextualDFL._extract_variable_bounds(sparse_lp)
+
+            @test SparseArrays.issparse(sparse_bound_lp.A_ineq)
+            @test sparse_bound_map.general_rows == [4]
+            @test sparse_bound_lp.lower_bounds == bound_lp.lower_bounds
+            @test sparse_bound_lp.upper_bounds == bound_lp.upper_bounds
+
+            inconsistent_lp = LP(
+                A_ineq=reshape([1.0, -1.0], 2, 1),
+                b_ineq=[0.0, -1.0],
+                c=[0.0],
+            )
+            @test_throws ArgumentError ContextualDFL._extract_variable_bounds(inconsistent_lp)
+        end
+
+        @testset "all singleton bounds" begin
+            lp = LP(
+                A_eq=ones(1, 2),
+                b_eq=[1.0],
+                A_ineq=[
+                    1.0 0.0
+                    -1.0 0.0
+                    0.0 1.0
+                    0.0 -1.0
+                ],
+                b_ineq=[0.8, 0.0, 0.9, 0.0],
+                c=[1.0, 2.0],
+            )
+
+            assert_bound_aware_value_preserving(lp)
+        end
+
+        @testset "mixed bounds and residual rows" begin
+            lp = LP(
+                A_ineq=[
+                    -1.0 0.0
+                    0.0 -1.0
+                    1.0 0.0
+                    0.0 1.0
+                    -1.0 -1.0
+                ],
+                b_ineq=[0.0, 0.0, 2.0, 2.0, -1.0],
+                c=[1.0, 2.0],
+            )
+
+            assert_bound_aware_value_preserving(lp)
+        end
+
+        @testset "duplicate singleton rows" begin
+            lp = LP(
+                A_eq=ones(1, 2),
+                b_eq=[1.0],
+                A_ineq=[
+                    -1.0 0.0
+                    -2.0 0.0
+                    0.0 -1.0
+                    0.0 1.0
+                    1.0 0.0
+                ],
+                b_ineq=[0.0, 0.0, 0.0, 1.0, 1.0],
+                c=[2.0, 1.0],
+            )
+
+            assert_bound_aware_value_preserving(lp)
+        end
+
+        @testset "sparse extensive-form LP" begin
+            program = StochasticProgram(
+                A_eq=zeros(0, 1),
+                A_ineq=reshape([-1.0, 1.0], 2, 1),
+                b_eq=Float64[],
+                b_ineq=[0.0, 2.0],
+                c=[0.5],
+            )
+            W_eq_array = zeros(0, 1, 1)
+            W_ineq_array = reshape([-1.0, 1.0], 2, 1, 1)
+            T_eq_array = zeros(0, 1, 1)
+            T_ineq_array = zeros(2, 1, 1)
+            h_eq_array = zeros(0, 1)
+            h_ineq_array = reshape([0.0, 2.0], 2, 1)
+            q_array = reshape([1.0], 1, 1)
+
+            lp = construct_lp(
+                program,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array,
+            )
+
+            @test SparseArrays.issparse(lp.A_ineq)
+            assert_bound_aware_value_preserving(lp)
+        end
+    end
 end

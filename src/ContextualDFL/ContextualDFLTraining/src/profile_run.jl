@@ -27,6 +27,9 @@ function strict_contextualdfl_training(objects, config; profile_mlflow_state=not
         display_plot=false,
         verbose=false,
         nr_scenarios=config_value(config, :nr_scenarios, nothing),
+        display_smooth=Bool(config_value(config, :display_smooth, false)),
+        display_real=config_value(config, :display_real, nothing),
+        display_reference_input=display_reference_input(objects, config),
     )
 end
 
@@ -47,6 +50,9 @@ function profile_train_with_epoch_progress!(objects, config, mu_schedule, mlflow
         display_plot=false,
         verbose=false,
         nr_scenarios=config_value(config, :nr_scenarios, nothing),
+        display_smooth=Bool(config_value(config, :display_smooth, false)),
+        display_real=config_value(config, :display_real, nothing),
+        display_reference_input=display_reference_input(objects, config),
         on_epoch_end=(epoch, loss_value, display_loss, metadata) -> begin
             elapsed_seconds = time() - run_started
             profile_mlflow_log_epoch!(
@@ -172,6 +178,7 @@ function profile_mlflow_log_epoch!(
                 "epoch_seconds" => :epoch_seconds,
                 "epoch_mu" => :mu,
                 "epoch_iterations" => :iterations,
+                "real_display_loss" => :real_display_loss,
             )
                 haskey(metadata, field_name) || continue
                 value = getproperty(metadata, field_name)

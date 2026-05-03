@@ -95,9 +95,6 @@ base:
 
   # Runtime/training optional booleans.
   # These default to false unless noted.
-  display_smooth: false
-  # null disables the expensive real display loss; a positive integer computes it every N epochs.
-  display_real: null
   shuffle: false
   reset_optimizer_each_epoch: false
   fine_tuning: false
@@ -155,7 +152,7 @@ grid:
   # Other typed keys may be gridded too.
   #
   # Integer keys:
-  # candidate_index, replicate_index, epochs, warmup_epochs, seed, display_real,
+  # candidate_index, replicate_index, epochs, warmup_epochs, seed,
   # hidden_size, depth, batch_size,
   # optimality_test_sample_count, optimality_train_sample_count,
   # optimality_validation_sample_count.
@@ -166,7 +163,7 @@ grid:
   # tolerance_relative, tolerance_absolute_floor.
   #
   # Boolean keys:
-  # optimality_evaluation, display_smooth, shuffle, reset_optimizer_each_epoch,
+  # optimality_evaluation, shuffle, reset_optimizer_each_epoch,
   # mlflow_enabled, mlflow_upload_model_artifact, fine_tuning, annealing,
   # knn_homogenization, log_barrier_inference.
   #

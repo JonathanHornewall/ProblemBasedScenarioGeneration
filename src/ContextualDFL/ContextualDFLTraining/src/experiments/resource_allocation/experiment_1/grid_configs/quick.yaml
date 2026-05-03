@@ -1,0 +1,17 @@
+version: 1
+name: resource_allocation_experiment_1_default
+description: Default resource-allocation grid search.
+
+grid:
+  learning_rate: [0.001, 0.0003]
+  hidden_size: [32, 64]
+  depth: [3]
+  batch_size: [16]
+  seed: [143]
+
+schedules:
+  mu:
+    kind: constant
+    value: 0.9
+  mu_ref:
+    kind: match_input

@@ -20,7 +20,7 @@ function ChainRulesCore.rrule(
     return_dual &&
         throw(ArgumentError("The cost_function rrule is defined for scalar cost output."))
 
-    value, λ_h_eq_array, λ_h_ineq_array = cost_function(
+    value, dz = _cost_and_z_gradient(
         program,
         solver,
         z,
@@ -34,29 +34,9 @@ function ChainRulesCore.rrule(
         ;
         μ=μ,
         probabilities=probabilities,
-        return_dual=true,
         kwargs...,
     )
-
-    K = size(W_eq_array, 3)
-    first_stage_lp = program.first_stage_lp
-    T = _sp_eltype(first_stage_lp.c, T_eq_array, T_ineq_array, λ_h_eq_array, λ_h_ineq_array)
-
-    p_vector = if isnothing(probabilities)
-        fill(one(T) / K, K)
-    else
-        probabilities
-    end
-
-    # The second-stage RHS is h - T*z, so equality recourse contributes
-    # -T_eq'λ. The stored inequality duals use the LP solver's sign convention.
-    dz = T.(first_stage_lp.c)
-    for k in 1:K
-        dz .+= p_vector[k] .* (
-            -transpose(view(T_eq_array, :, :, k)) * view(λ_h_eq_array, :, k) +
-            transpose(view(T_ineq_array, :, :, k)) * view(λ_h_ineq_array, :, k)
-        )
-    end
+    T = eltype(dz)
 
     function cost_function_pullback(value_tangent)
         value_tangent = ChainRulesCore.unthunk(value_tangent)
@@ -86,4 +66,108 @@ function ChainRulesCore.rrule(
     end
 
     return value, cost_function_pullback
+end
+
+function _cost_and_z_gradient(
+    program::StochasticProgram,
+    solver::Solver,
+    z,
+    W_eq_array,
+    W_ineq_array,
+    T_eq_array,
+    T_ineq_array,
+    h_eq_array,
+    h_ineq_array,
+    q_array;
+    μ=0,
+    probabilities=nothing,
+    kwargs...,
+)
+    K = _sp_n_scenarios(
+        W_eq_array,
+        W_ineq_array,
+        T_eq_array,
+        T_ineq_array,
+        h_eq_array,
+        h_ineq_array,
+        q_array,
+    )
+    first_stage_lp = program.first_stage_lp
+    T = _sp_eltype(
+        first_stage_lp.c,
+        z,
+        W_eq_array,
+        W_ineq_array,
+        T_eq_array,
+        T_ineq_array,
+        h_eq_array,
+        h_ineq_array,
+        q_array,
+    )
+
+    p_vector = if isnothing(probabilities)
+        fill(one(T) / K, K)
+    else
+        length(probabilities) == K ||
+            throw(DimensionMismatch("probabilities must have one entry per scenario."))
+        probabilities
+    end
+    first_stage_μ = _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
+    T = promote_type(T, eltype(p_vector), eltype(first_stage_μ))
+
+    value =
+        sum(first_stage_lp.c .* z) -
+        _first_stage_barrier_value(first_stage_lp, z, first_stage_μ)
+    dz = T.(first_stage_lp.c)
+    _add_first_stage_barrier_gradient!(dz, first_stage_lp, z, first_stage_μ)
+
+    for k in 1:K
+        scenario_μ = _scenario_barrier_parameter(
+            size(W_ineq_array, 1),
+            K,
+            μ,
+            k,
+            length(first_stage_lp.b_ineq),
+            p_vector[k],
+        )
+        result = try
+            second_stage_lp = LP(
+                view(W_eq_array, :, :, k),
+                view(W_ineq_array, :, :, k),
+                view(h_eq_array, :, k) - view(T_eq_array, :, :, k) * z,
+                view(h_ineq_array, :, k) - view(T_ineq_array, :, :, k) * z,
+                view(q_array, :, k),
+            )
+
+            solve(solver, second_stage_lp; μ=scenario_μ, kwargs...)
+        catch error
+            _throw_stochastic_program_failure(
+                error,
+                :second_stage_cost,
+                solver,
+                program,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                μ=μ,
+                probabilities=probabilities,
+                kwargs=(; kwargs...),
+                z=z,
+                scenario_index=k,
+                scenario_μ=scenario_μ,
+            )
+        end
+
+        value += p_vector[k] * result.objective_value
+        dz .+= p_vector[k] .* (
+            -transpose(view(T_eq_array, :, :, k)) * result.dual_eq +
+            transpose(view(T_ineq_array, :, :, k)) * result.dual_ineq
+        )
+    end
+
+    return value, dz
 end

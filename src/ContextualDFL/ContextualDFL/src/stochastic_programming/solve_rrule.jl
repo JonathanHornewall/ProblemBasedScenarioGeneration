@@ -41,15 +41,36 @@ function ChainRulesCore.rrule(
 
     function stochastic_solve_pullback(output_tangent)
         z, y, _, _, _, _ = output
-        dz = _array_cotangent(output_tangent, 1, z; name=:z)
-        dy = _array_cotangent(output_tangent, 2, y; name=:y)
+        dz = _maybe_array_cotangent(output_tangent, 1; name=:z)
+        dy = _maybe_array_cotangent(output_tangent, 2; name=:y)
 
         _assert_zero_cotangent_component(output_tangent, 3; name=:λ_b_eq)
         _assert_zero_cotangent_component(output_tangent, 4; name=:λ_b_ineq)
         _assert_zero_cotangent_component(output_tangent, 5; name=:λ_h_eq_array)
         _assert_zero_cotangent_component(output_tangent, 6; name=:λ_h_ineq_array)
 
-        primal_tangent = vcat(dz, vec(dy))
+        T = promote_type(
+            eltype(lp.c),
+            eltype(z),
+            eltype(y),
+            isnothing(dz) ? eltype(z) : eltype(dz),
+            isnothing(dy) ? eltype(y) : eltype(dy),
+        )
+        primal_tangent = zeros(T, length(lp.c))
+        nz = length(z)
+        if !isnothing(dz)
+            length(dz) == nz || throw(DimensionMismatch("z cotangent must have length $(nz)."))
+            primal_tangent[1:nz] .= dz
+        end
+        if !isnothing(dy)
+            length(dy) == length(y) ||
+                throw(DimensionMismatch("y cotangent must have length $(length(y))."))
+            offset = nz
+            @inbounds for value in dy
+                offset += 1
+                primal_tangent[offset] = value
+            end
+        end
 
         dc, db_eq, db_ineq = _lp_reverse_from_primal_tangent(
             solver,
@@ -158,15 +179,13 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
     m_eq = length(lp.b_eq)
     length(z) == n || throw(DimensionMismatch("The solution must have length $(n)."))
 
-    slack = lp.b_ineq - lp.A_ineq * z
+    slack = hasproperty(result, :slack) ? result.slack : lp.b_ineq - lp.A_ineq * z
     any(<(-tight_tol), slack) &&
         throw(DomainError(slack, "The solution violates inequality constraints."))
 
     if _is_zero_barrier_parameter(μ_vector)
         tight = findall(abs.(slack) .<= tight_tol)
         loose = findall(slack .> tight_tol)
-        rank(Matrix(lp.A_eq)) == size(lp.A_eq, 1) ||
-            throw(ArgumentError("Analytic-center differentiation requires A_eq to have full row rank."))
 
         F = Matrix(lp.A_eq)
         selected_tight = Int[]
@@ -205,8 +224,6 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
 
     all(>(zero(eltype(slack))), slack) ||
         throw(DomainError(slack, "The log-barrier solution must have positive inequality slack."))
-    rank(Matrix(lp.A_eq)) == size(lp.A_eq, 1) ||
-        throw(ArgumentError("Log-barrier differentiation requires A_eq to have full row rank."))
 
     d = one(eltype(slack)) ./ (slack .^ 2)
     H = transpose(lp.A_ineq) * (Diagonal(μ_vector .* d) * lp.A_ineq)
@@ -233,6 +250,14 @@ function _array_cotangent(output_tangent, index, template; name)
         return component
     end
     _is_zero_cotangent(component) && return zeros(eltype(template), size(template))
+
+    throw(ArgumentError("Expected array or zero cotangent for $(name), got $(typeof(component))."))
+end
+
+function _maybe_array_cotangent(output_tangent, index; name)
+    component = _cotangent_component(output_tangent, index)
+    _is_zero_cotangent(component) && return nothing
+    component isa AbstractArray && return component
 
     throw(ArgumentError("Expected array or zero cotangent for $(name), got $(typeof(component))."))
 end

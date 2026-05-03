@@ -20,4 +20,6 @@ const DEFAULT_RUN_SETTINGS = (;
     optimality_validation_sample_count=0,
     optimality_mu=0.0,
     loss=:dfl_scen,
+    display_smooth=false,
+    display_real=nothing,
 )

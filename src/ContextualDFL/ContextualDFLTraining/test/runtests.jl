@@ -27,9 +27,14 @@ end
     @test !isdefined(ContextualDFLTraining, :resource_allocation_test_data_bundle)
     @test_throws ArgumentError ContextualDFLTraining.training_objects_for_config((; seed=1))
 
+    training_data_dir = mktempdir()
     config = merge(
         ContextualDFLTraining.experiment_base_config(spec),
-        (; optimality_evaluation=false, use_generated_test_data_artifact=false),
+        (;
+            optimality_evaluation=false,
+            use_generated_test_data_artifact=false,
+            training_data_dir=training_data_dir,
+        ),
     )
     @test hasproperty(config, :Nr_contexts)
     @test hasproperty(config, :scenarios_per_context)
@@ -51,10 +56,24 @@ end
     @test target isa AbstractVector
     @test length(target) == objects.model_metadata.output_dimension
     @test objects.problem_metadata.problem == "resource_allocation"
+    @test objects.data_metadata.dataset_name == "resource_allocation_experiment_1-$(config.seed)"
+    @test startswith(objects.data_metadata.dataset_path, training_data_dir)
+    @test isfile(objects.data_metadata.dataset_path)
+    @test objects.data_metadata.training_data_cache_hit == false
     @test objects.data_metadata.Nr_contexts == config.Nr_contexts
     @test length(objects.data.train) == 100
     @test length(objects.data.validation) == 20
     @test length(objects.data.test) == 30
+    artifact_path = objects.data_metadata.dataset_path
+    @test ContextualDFLTraining.mlflow_dataset_name(objects, config) ==
+          "resource_allocation_experiment_1-$(config.seed)"
+    @test ContextualDFLTraining.mlflow_dataset_source(objects, config) == artifact_path
+    @test ContextualDFLTraining.mlflow_dataset_source_type(objects, config) == "local"
+    artifact_mtime = stat(artifact_path).mtime
+    cached_objects = ContextualDFLTraining.training_objects_for_config(config)
+    @test cached_objects.data_metadata.dataset_path == artifact_path
+    @test cached_objects.data_metadata.training_data_cache_hit == true
+    @test stat(artifact_path).mtime == artifact_mtime
 
     mktempdir() do dir
         config_dir = joinpath(dir, "toy")
@@ -98,6 +117,44 @@ end
             :train;
             dataset=dataset,
         )
+    end
+
+    mktempdir() do dir
+        config_dir = joinpath(dir, "toy_cached")
+        mkpath(config_dir)
+        config_path = joinpath(config_dir, "Config.jl")
+        write(
+            config_path,
+            """
+            experiment_id() = "toy/cached"
+            experiment_name() = "toy_cached"
+            experiment_module_name() = :ToyCachedExperiment
+            artifact_dir() = joinpath(@__DIR__, "artifacts")
+            base_config() = (; experiment_id=experiment_id(), seed=1)
+            training_data(config) = rand()
+            training_data_identity(config) = (; seed=config.seed)
+            training_dataset_name(config) = "toy_cached-\$(config.seed)"
+            training_objects(config) = error("legacy path should not be used")
+            training_objects(config, data) = (; data=data, data_metadata=(; generated_by="toy"))
+            optimality_splits(objects, config) = Pair{Symbol,Any}[]
+            optimal_results_path(split_name::Symbol) =
+                joinpath(artifact_dir(), string(split_name) * ".jls")
+            """,
+        )
+
+        cached_spec = ContextualDFLTraining.load_experiment(config_path)
+        cached_config = merge(
+            ContextualDFLTraining.experiment_base_config(cached_spec),
+            (; seed=7, training_data_dir=joinpath(dir, "cache")),
+        )
+        first_objects = ContextualDFLTraining.training_objects_for_config(cached_config)
+        second_objects = ContextualDFLTraining.training_objects_for_config(cached_config)
+
+        @test first_objects.data == second_objects.data
+        @test first_objects.data_metadata.generated_by == "toy"
+        @test first_objects.data_metadata.dataset_name == "toy_cached-7"
+        @test isfile(first_objects.data_metadata.dataset_path)
+        @test second_objects.data_metadata.training_data_cache_hit
     end
 end
 
@@ -712,7 +769,14 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
             2,
             1.5,
             2.5,
-            (; mu=0.1, mu_in=0.1, mu_ref=0.0, iterations=3, epoch_seconds=0.25),
+            (;
+                mu=0.1,
+                mu_in=0.1,
+                mu_ref=0.0,
+                iterations=3,
+                epoch_seconds=0.25,
+                real_display_loss=0.75,
+            ),
         )
 
         params = Dict(run.params)
@@ -727,7 +791,8 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
         @test metrics["epoch_mu_ref"] == 0.0
         @test metrics["epoch_iterations"] == 3.0
         @test metrics["epoch_seconds"] == 0.25
-        @test !haskey(metrics, "display_loss")
+        @test metrics["display_loss"] == 2.5
+        @test metrics["real_display_loss"] == 0.75
         @test !haskey(metrics, "epoch_mu")
         @test all(metric -> metric[3] == 2, run.metrics)
         @test count(==(:batch), run.events) == 1

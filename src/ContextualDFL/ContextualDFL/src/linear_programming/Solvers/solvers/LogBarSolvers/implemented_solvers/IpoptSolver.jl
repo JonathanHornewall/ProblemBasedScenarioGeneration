@@ -17,41 +17,67 @@ function solve(
         throw(ArgumentError("IpoptSolver requires at least one positive log-barrier weight."))
     slack_lower_bound > zero(slack_lower_bound) ||
         throw(ArgumentError("slack_lower_bound must be positive."))
+    bound_lp, bound_map = _extract_variable_bounds_for_solver(
+        solver,
+        lp;
+        μ_vector=μ_vector,
+        slack_lower_bound=slack_lower_bound,
+    )
 
     model = JuMP.Model(Ipopt.Optimizer)
     JuMP.set_optimizer_attribute(model, "print_level", 0)
     JuMP.set_optimizer_attribute(model, "sb", "yes")
+    JuMP.set_optimizer_attribute(model, "mu_strategy", "monotone")
+    JuMP.set_optimizer_attribute(model, "nlp_scaling_method", "none")
     _set_optimizer_attributes(model, kwargs)
 
-    n_variables = length(lp.c)
-    n_equalities = length(lp.b_eq)
-    n_inequalities = length(lp.b_ineq)
+    n_variables = length(bound_lp.c)
+    n_general_inequalities = length(bound_lp.b_ineq)
 
     JuMP.@variable(model, z[1:n_variables])
-    JuMP.@variable(model, s[1:n_inequalities] >= 0)
-    for i in positive_barrier_indices
-        JuMP.set_lower_bound(s[i], slack_lower_bound)
+    _set_variable_bounds!(z, bound_lp.lower_bounds, bound_lp.upper_bounds)
+
+    s = Vector{JuMP.VariableRef}(undef, n_general_inequalities)
+    slack_constraints = Vector{JuMP.ConstraintRef}(undef, n_general_inequalities)
+    if n_general_inequalities > 0
+        JuMP.@variable(model, general_slack[1:n_general_inequalities] >= 0)
+        s = general_slack
+        for k in 1:n_general_inequalities
+            if !iszero(μ_vector[bound_map.general_rows[k]])
+                JuMP.set_lower_bound(s[k], slack_lower_bound)
+            end
+        end
+        slack_constraints =
+            JuMP.@constraint(model, bound_lp.A_ineq * z .+ s .== bound_lp.b_ineq)
     end
 
-    eq_constraints = Vector{JuMP.ConstraintRef}(undef, n_equalities)
-    for i in 1:n_equalities
-        eq_constraints[i] =
-            JuMP.@constraint(model, sum(lp.A_eq[i, j] * z[j] for j in 1:n_variables) == lp.b_eq[i])
-    end
+    eq_constraints = JuMP.@constraint(model, bound_lp.A_eq * z .== bound_lp.b_eq)
 
-    slack_constraints = Vector{JuMP.ConstraintRef}(undef, n_inequalities)
-    for i in 1:n_inequalities
-        slack_constraints[i] = JuMP.@constraint(
-            model,
-            sum(lp.A_ineq[i, j] * z[j] for j in 1:n_variables) + s[i] == lp.b_ineq[i],
-        )
-    end
+    positive_general_positions = [
+        k for k in eachindex(bound_map.general_rows) if !iszero(μ_vector[bound_map.general_rows[k]])
+    ]
+    positive_bound_rows = [
+        row for row in bound_map.bound_rows if !iszero(μ_vector[row.original_row])
+    ]
+    general_original_rows = bound_map.general_rows
+    bound_original_rows = [row.original_row for row in positive_bound_rows]
+    bound_variables = [row.variable for row in positive_bound_rows]
+    bound_coefficients = [row.coefficient for row in positive_bound_rows]
+    bound_rhs = [row.rhs for row in positive_bound_rows]
 
     JuMP.@NLobjective(
         model,
         Min,
-        sum(lp.c[j] * z[j] for j in 1:n_variables) -
-        sum(μ_vector[i] * log(s[i]) for i in positive_barrier_indices),
+        sum(bound_lp.c[j] * z[j] for j in 1:n_variables) -
+        sum(
+            μ_vector[general_original_rows[k]] * log(s[k]) for
+            k in positive_general_positions
+        ) -
+        sum(
+            μ_vector[bound_original_rows[k]] *
+            log(bound_rhs[k] - bound_coefficients[k] * z[bound_variables[k]]) for
+            k in eachindex(bound_original_rows)
+        ),
     )
     JuMP.optimize!(model)
 
@@ -60,20 +86,30 @@ function solve(
     z_value = JuMP.value.(z)
     _assert_lp_solution_feasible(lp, z_value; atol=constraint_tolerance)
 
-    return (;
-        z=z_value,
-        slack=JuMP.value.(s),
-        dual_eq=JuMP.dual.(eq_constraints),
-        # Match the LP solver convention for A_ineq * z <= b_ineq:
-        # stored inequality duals are nonnegative and enter stationarity as A_ineq' * dual_ineq.
-        dual_ineq=-JuMP.dual.(slack_constraints),
-        objective_value=JuMP.objective_value(model),
-        status=status,
-        metadata=(;
+    lower_bound_dual, upper_bound_dual =
+        _normalized_variable_bound_duals(z, bound_lp.lower_bounds, bound_lp.upper_bounds)
+    raw_result = BoundFormSolveResult(
+        z_value,
+        n_general_inequalities == 0 ? similar(z_value, 0) : JuMP.value.(s),
+        n_general_inequalities == 0 ? similar(z_value, 0) : -JuMP.dual.(slack_constraints),
+        JuMP.dual.(eq_constraints),
+        lower_bound_dual,
+        upper_bound_dual,
+        JuMP.objective_value(model),
+        status,
+        (;
             primal_status=JuMP.primal_status(model),
             dual_status=JuMP.dual_status(model),
             raw_status=JuMP.raw_status(model),
             solver=solver,
         ),
+    )
+
+    return _reconstruct_original_lp_result(
+        lp,
+        bound_map,
+        raw_result;
+        μ_vector=μ_vector,
+        include_slack=true,
     )
 end

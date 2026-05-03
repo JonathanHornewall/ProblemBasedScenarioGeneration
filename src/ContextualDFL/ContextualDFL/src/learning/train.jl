@@ -47,6 +47,9 @@ function train!(
     reset_optimizer_each_epoch::Bool=false,
     on_epoch_end=nothing,
     nr_scenarios=nothing,
+    display_smooth::Bool=false,
+    display_real=nothing,
+    display_reference_input=nothing,
 )
     epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
     batchsize > 0 || throw(ArgumentError("batchsize must be positive."))
@@ -56,11 +59,39 @@ function train!(
         throw(ArgumentError("mu_ref_schedule must have one value per epoch."))
     isempty(data_set) && throw(ArgumentError("training data must not be empty."))
     _validate_nr_scenarios(nr_scenarios)
+    _validate_display_options(display_smooth, display_real, display_reference_input)
 
     optimizer = isnothing(opt) ? _make_optimizer(optimizer_type, learning_rate) : opt
     state = isnothing(opt_state) ? Flux.setup(optimizer, neural_net) : opt_state
     show_progress = display_iterations || verbose
     loss_kwargs = _training_loss_kwargs(nr_scenarios)
+    display_reference_cache = Dict{Any,Vector{Float64}}()
+
+    if display_smooth
+        for mu_ref in unique(mu_ref_schedule)
+            _display_reference_values!(
+                display_reference_cache,
+                loss,
+                data_set,
+                display_reference_input,
+                mu_ref;
+                loss_kwargs=loss_kwargs,
+            )
+        end
+    end
+
+    real_reference_values = if isnothing(display_real)
+        nothing
+    else
+        _display_reference_values!(
+            display_reference_cache,
+            loss,
+            data_set,
+            display_reference_input,
+            0.0;
+            loss_kwargs=loss_kwargs,
+        )
+    end
 
     history = NamedTuple[]
     displayed_epoch_losses = Float64[]
@@ -106,7 +137,23 @@ function train!(
             Flux.update!(state, neural_net, gradients[1])
             push!(epoch_losses, loss_float)
 
-            if show_progress || !isnothing(relative_loss)
+            if display_smooth
+                reference_mean = Statistics.mean(
+                    display_reference_cache[mu_ref][index] for index in idxs
+                )
+                display_loss = _relative_display_loss(loss_float, reference_mean)
+                push!(
+                    epoch_display_losses,
+                    _checked_loss_float(
+                        display_loss,
+                        "smooth display loss";
+                        epoch=epoch_number,
+                        iteration=iteration_number,
+                        mu_in=mu_in,
+                        mu_ref=mu_ref,
+                    ),
+                )
+            elseif show_progress || !isnothing(relative_loss)
                 display_loss_function = isnothing(relative_loss) ? loss : relative_loss
                 display_loss = Statistics.mean(
                     display_loss_function(
@@ -136,6 +183,38 @@ function train!(
         average_display_loss = isempty(epoch_display_losses) ?
             average_loss :
             Statistics.mean(epoch_display_losses)
+        real_display_loss = if isnothing(display_real) ||
+                               epoch_number % Int(display_real) != 0
+            nothing
+        else
+            real_loss = Statistics.mean(
+                loss(
+                    neural_net(_context(data_point)),
+                    _scenario_parameters(data_point),
+                    mu_in,
+                    0.0;
+                    loss_kwargs...,
+                )
+                for data_point in data_set
+            )
+            real_loss_float = _checked_loss_float(
+                real_loss,
+                "real display loss";
+                epoch=epoch_number,
+                iteration=length(epoch_losses),
+                mu_in=mu_in,
+                mu_ref=0.0,
+            )
+            real_reference_mean = Statistics.mean(real_reference_values)
+            _checked_loss_float(
+                _relative_display_loss(real_loss_float, real_reference_mean),
+                "relative real display loss";
+                epoch=epoch_number,
+                iteration=length(epoch_losses),
+                mu_in=mu_in,
+                mu_ref=0.0,
+            )
+        end
         epoch_seconds = time() - epoch_started
         epoch_metadata = (;
             epoch=Int(epoch_number),
@@ -144,16 +223,13 @@ function train!(
             mu_ref=mu_ref,
             iterations=length(epoch_losses),
             epoch_seconds=epoch_seconds,
+            real_display_loss=real_display_loss,
         )
 
         if show_progress
-            println(
-                " with avg loss ",
-                average_display_loss,
-                " (",
-                length(epoch_display_losses),
-                " iterations)",
-            )
+            print(" with avg loss ", average_display_loss)
+            isnothing(real_display_loss) || print(" real loss ", real_display_loss)
+            println(" (", length(epoch_display_losses), " iterations)")
             push!(displayed_epoch_losses, average_display_loss)
         end
 
@@ -176,6 +252,7 @@ function train!(
                 mu_ref=mu_ref,
                 loss=average_loss,
                 display_loss=average_display_loss,
+                real_display_loss=real_display_loss,
                 iterations=length(epoch_losses),
                 epoch_seconds=epoch_seconds,
             ),
@@ -276,6 +353,58 @@ _training_loss_kwargs(nr_scenarios) =
 
 _default_mu_ref_schedule(mu_in_schedule, mu_ref_schedule) =
     isnothing(mu_ref_schedule) ? mu_in_schedule : mu_ref_schedule
+
+function _validate_display_options(display_smooth, display_real, display_reference_input)
+    if !isnothing(display_real)
+        display_real isa Integer && !(display_real isa Bool) && display_real > 0 ||
+            throw(ArgumentError("display_real must be nothing or a positive integer."))
+    end
+
+    if (display_smooth || !isnothing(display_real)) && isnothing(display_reference_input)
+        throw(
+            ArgumentError(
+                "display_smooth/display_real require display_reference_input, " *
+                "a function from data point to exact-scenario decoder input.",
+            ),
+        )
+    end
+
+    return nothing
+end
+
+function _display_reference_values!(
+    cache,
+    loss,
+    data_set,
+    display_reference_input,
+    mu_ref;
+    loss_kwargs,
+)
+    haskey(cache, mu_ref) && return cache[mu_ref]
+
+    # Reference inputs represent the exact scenario, so this is the cached baseline.
+    values = [
+        _checked_loss_float(
+            loss(
+                display_reference_input(data_point),
+                _scenario_parameters(data_point),
+                mu_ref,
+                mu_ref;
+                loss_kwargs...,
+            ),
+            "display reference loss";
+            epoch=0,
+            iteration=index,
+            mu_in=mu_ref,
+            mu_ref=mu_ref,
+        ) for (index, data_point) in enumerate(data_set)
+    ]
+    cache[mu_ref] = values
+    return values
+end
+
+_relative_display_loss(loss_value, reference_value) =
+    (Float64(loss_value) - Float64(reference_value)) / abs(Float64(reference_value))
 
 _float(value::Number) = Float64(value)
 _float(value::AbstractArray) = Float64(only(value))

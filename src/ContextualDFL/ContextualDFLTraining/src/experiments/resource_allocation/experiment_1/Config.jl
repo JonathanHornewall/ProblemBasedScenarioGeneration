@@ -235,20 +235,27 @@ function generated_test_artifact(config)
     return ContextualDFLTraining.load_test_data_artifact(spec)
 end
 
+function test_data_artifact_metadata(config)
+    artifact = generated_test_artifact(config)
+    return artifact === nothing ? (; source=:generated_split) : artifact.metadata
+end
+
 function data_splits(problem_instance, config, rng::Random.AbstractRNG)
     generated_splits = generated_training_splits(problem_instance, config, rng)
     test_artifact = generated_test_artifact(config)
     return (;
-        data=(;
-            train=generated_splits.train,
-            validation=generated_splits.validation,
-            test=test_artifact === nothing ? generated_splits.test : test_artifact.dataset,
-        ),
-        test_data_artifact=test_artifact === nothing ?
-            (; source=:generated_split) :
-            test_artifact.metadata,
+        train=generated_splits.train,
+        validation=generated_splits.validation,
+        test=test_artifact === nothing ? generated_splits.test : test_artifact.dataset,
     )
 end
+
+function training_data(config)
+    rng = Random.MersenneTwister(Int(config.seed))
+    return data_splits(problem(), config, rng)
+end
+
+training_dataset_name(config) = EXPERIMENT_NAME * "-" * string(Int(config.seed))
 
 function demand_from_scenario(scenario::ContextualDFL.ParametricScenario)
     isempty(scenario.h_eq_xi) &&
@@ -281,8 +288,33 @@ function serialized_digest(value)
     return "sha1:" * SHA.bytes2hex(SHA.sha1(take!(io)))
 end
 
-function split_digest(splits)
-    return serialized_digest((; train=splits.train, validation=splits.validation, test=splits.test))
+function test_artifact_identity(config)
+    artifact = generated_test_artifact(config)
+    artifact === nothing && return (; source=:generated_split)
+    return (;
+        source=:artifact,
+        path=artifact.metadata.path,
+        seed=artifact.metadata.seed,
+        data_set_size=artifact.metadata.data_set_size,
+        dataset_digest=artifact.metadata.dataset_digest,
+    )
+end
+
+function training_data_identity(config)
+    return (;
+        experiment_id=EXPERIMENT_ID,
+        problem_instance_id=problem_instance_id(problem()),
+        seed=Int(config.seed),
+        Nr_contexts=Int(config.Nr_contexts),
+        scenarios_per_context=Int(config.scenarios_per_context),
+        collection_duplicates_per_context=Int(config.collection_duplicates_per_context),
+        validation_fraction=Float64(config.validation_fraction),
+        test_fraction=Float64(config.test_fraction),
+        demand_sigma=DEMAND_SIGMA,
+        demand_power=DEMAND_POWER,
+        context_terms=CONTEXT_TERMS,
+        test_artifact=test_artifact_identity(config),
+    )
 end
 
 function problem_metadata(problem_instance)
@@ -299,21 +331,21 @@ function problem_metadata(problem_instance)
 end
 
 function data_metadata(splits, config)
+    dataset_recipe = join(
+        (
+            "ContextualDFLTraining.experiment",
+            "experiment_id=$(EXPERIMENT_ID)",
+            "seed=$(config.seed)",
+            "Nr_contexts=$(config.Nr_contexts)",
+            "scenarios_per_context=$(config.scenarios_per_context)",
+            "collection_duplicates_per_context=$(config.collection_duplicates_per_context)",
+        ),
+        ";",
+    )
+
     return (;
         generator="ContextualDFLExperiments.resource_allocation",
-        dataset_name=EXPERIMENT_NAME,
-        dataset_digest=split_digest(splits),
-        dataset_source=join(
-            (
-                "ContextualDFLTraining.experiment",
-                "experiment_id=$(EXPERIMENT_ID)",
-                "seed=$(config.seed)",
-                "Nr_contexts=$(config.Nr_contexts)",
-                "scenarios_per_context=$(config.scenarios_per_context)",
-                "collection_duplicates_per_context=$(config.collection_duplicates_per_context)",
-            ),
-            ";",
-        ),
+        dataset_recipe=dataset_recipe,
         train_size=length(splits.train),
         validation_size=length(splits.validation),
         test_size=length(splits.test),
@@ -390,11 +422,11 @@ function test_data_bundle(
     )
 end
 
-function training_objects(config)
-    rng = Random.MersenneTwister(Int(config.seed))
+training_objects(config) = training_objects(config, training_data(config))
+
+function training_objects(config, data)
     objects = problem_objects(config)
-    splits = data_splits(objects.problem, config, rng)
-    data = splits.data
+    test_data_artifact = test_data_artifact_metadata(config)
 
     neural_net = ContextualDFLTraining.build_neural_net(
         length(first(data.train).context),
@@ -425,9 +457,12 @@ function training_objects(config)
                 @__MODULE__,
                 :target_from_contextual_point,
             ),
-            test_data_artifact=splits.test_data_artifact,
+            test_data_artifact=test_data_artifact,
             problem_metadata=problem_metadata(objects.problem),
-            data_metadata=data_metadata(data, merge(config, (; test_data_artifact=splits.test_data_artifact))),
+            data_metadata=data_metadata(
+                data,
+                merge(config, (; test_data_artifact=test_data_artifact)),
+            ),
             model_metadata=model_metadata(neural_net, objects.problem, data, config),
             schedules=(;
                 mu=ContextualDFLTraining.ConstantSchedule(config.mu),

@@ -56,6 +56,7 @@ const GRID_INT_KEYS = Set(
         :batch_size,
         :candidate_index,
         :depth,
+        :display_real,
         :epochs,
         :hidden_size,
         :optimality_test_sample_count,
@@ -88,6 +89,7 @@ const GRID_FLOAT_KEYS = Set(
 const GRID_BOOL_KEYS = Set(
     [
         :annealing,
+        :display_smooth,
         :fine_tuning,
         :knn_homogenization,
         :log_barrier_inference,

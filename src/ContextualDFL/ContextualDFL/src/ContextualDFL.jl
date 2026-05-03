@@ -45,6 +45,7 @@ export
     VectorDecoder
 
 include("linear_programming/LP.jl")
+include("linear_programming/bound_form_lp.jl")
 include("linear_programming/Solvers/solver_status.jl")
 include("linear_programming/Solvers/solvers/LPSolvers/LPSolver.jl")
 include("linear_programming/Solvers/solvers/LPSolvers/implemented_solvers/GLPKSolver.jl")

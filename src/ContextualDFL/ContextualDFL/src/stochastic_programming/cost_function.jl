@@ -69,13 +69,21 @@ function G(
             throw(DimensionMismatch("probabilities must have one entry per scenario."))
         probabilities
     end
+    first_stage_μ = _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
 
     second_stage_value = zero(T)
     λ_h_eq_array = zeros(T, size(h_eq_array))
     λ_h_ineq_array = zeros(T, size(h_ineq_array))
 
     for k in 1:K
-        scenario_μ = _scenario_barrier_parameter(size(W_ineq_array, 1), K, μ, k)
+        scenario_μ = _scenario_barrier_parameter(
+            size(W_ineq_array, 1),
+            K,
+            μ,
+            k,
+            length(first_stage_lp.b_ineq),
+            p_vector[k],
+        )
         scenario_value_or_dual = try
             G_hat(
                 solver,
@@ -137,7 +145,10 @@ function G(
         end
     end
 
-    value = sum(first_stage_lp.c .* z) + second_stage_value
+    value =
+        sum(first_stage_lp.c .* z) -
+        _first_stage_barrier_value(first_stage_lp, z, first_stage_μ) +
+        second_stage_value
 
     return_dual && return value, λ_h_eq_array, λ_h_ineq_array
     return value
@@ -179,8 +190,73 @@ function G_hat(
     return result.objective_value
 end
 
-function _scenario_barrier_parameter(n_inequalities, n_scenarios, μ, scenario_index)
+function _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
+    n_first_stage_inequalities = length(first_stage_lp.b_ineq)
+    μ isa Number && return _barrier_parameter_vector(n_first_stage_inequalities, μ)
+    n_first_stage_inequalities == 0 && return view(μ, 1:0)
+
+    n_extensive_inequalities =
+        n_first_stage_inequalities + size(W_ineq_array, 1) * size(W_ineq_array, 3)
+    length(μ) == n_extensive_inequalities ||
+        throw(DimensionMismatch(
+            "μ must be a scalar or have one entry per extensive-form inequality when first-stage inequalities are present.",
+        ))
+
+    return view(μ, 1:n_first_stage_inequalities)
+end
+
+function _first_stage_barrier_value(first_stage_lp, z, μ_vector)
+    positive_barrier_indices = findall(!iszero, μ_vector)
+    isempty(positive_barrier_indices) && return zero(_sp_eltype(first_stage_lp.b_ineq, z, μ_vector))
+
+    slack = first_stage_lp.b_ineq - first_stage_lp.A_ineq * z
+    all(i -> slack[i] > zero(slack[i]), positive_barrier_indices) ||
+        throw(DomainError(slack, "The first-stage log-barrier cost requires positive inequality slack."))
+
+    return sum(μ_vector[i] * log(slack[i]) for i in positive_barrier_indices)
+end
+
+function _add_first_stage_barrier_gradient!(dz, first_stage_lp, z, μ_vector)
+    positive_barrier_indices = findall(!iszero, μ_vector)
+    isempty(positive_barrier_indices) && return dz
+
+    slack = first_stage_lp.b_ineq - first_stage_lp.A_ineq * z
+    all(i -> slack[i] > zero(slack[i]), positive_barrier_indices) ||
+        throw(DomainError(slack, "The first-stage log-barrier cost requires positive inequality slack."))
+
+    weights = zeros(promote_type(eltype(slack), eltype(μ_vector)), length(μ_vector))
+    for i in positive_barrier_indices
+        weights[i] = μ_vector[i] / slack[i]
+    end
+
+    dz .+= transpose(first_stage_lp.A_ineq) * weights
+    return dz
+end
+
+function _scenario_barrier_parameter(
+    n_inequalities,
+    n_scenarios,
+    μ,
+    scenario_index,
+    n_first_stage_inequalities=0,
+    probability=nothing,
+)
     μ isa Number && return μ
+
+    if n_first_stage_inequalities > 0
+        n_extensive_inequalities =
+            n_first_stage_inequalities + n_inequalities * n_scenarios
+        if length(μ) == n_extensive_inequalities
+            rows = (
+                n_first_stage_inequalities + (scenario_index - 1) * n_inequalities + 1
+            ):(n_first_stage_inequalities + scenario_index * n_inequalities)
+            scenario_μ = view(μ, rows)
+            isnothing(probability) && return scenario_μ
+            iszero(probability) &&
+                throw(ArgumentError("probabilities must be nonzero when μ is an extensive-form vector."))
+            return scenario_μ ./ probability
+        end
+    end
 
     length(μ) == n_inequalities && return μ
     length(μ) == n_inequalities * n_scenarios ||

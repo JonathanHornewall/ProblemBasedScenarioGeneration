@@ -6,6 +6,7 @@ const EXPERIMENT_CONFIG_FILENAME = "Config.jl"
 const EXPERIMENTS_ROOT = @__DIR__
 const OPTIMAL_RESULTS_FORMAT_VERSION = 1
 const TEST_DATA_FORMAT_VERSION = 1
+const TRAINING_DATA_FORMAT_VERSION = 1
 const DEFAULT_TEST_DATA_SEED = 1
 const DEFAULT_TEST_DATA_SET_SIZE = 30
 
@@ -273,7 +274,268 @@ function training_objects_for_config(config::NamedTuple)
             "config must declare experiment_id, experiment_module_name, experiment_name, or experiment_config_path to construct training objects.",
         ),
     )
-    return experiment_call(spec, :training_objects, with_experiment_metadata(spec, config))
+    config = with_experiment_metadata(spec, config)
+
+    if experiment_has_function(spec, :training_data)
+        artifact = load_or_generate_training_data(spec, config)
+        objects = experiment_call(spec, :training_objects, config, artifact.dataset)
+        return with_training_data_metadata(objects, artifact)
+    end
+
+    return experiment_call(spec, :training_objects, config)
+end
+
+function experiment_config_value(config, key::Symbol, default)
+    config isa NamedTuple || return default
+    return key in keys(config) ? getproperty(config, key) : default
+end
+
+function training_data_cache_enabled(config)
+    return Bool(experiment_config_value(config, :training_data_cache, true)) &&
+           Bool(experiment_config_value(config, :write_training_data_artifact, true))
+end
+
+function training_data_dir(spec::ExperimentSpec, config::NamedTuple)
+    return abspath(
+        string(
+            experiment_config_value(
+                config,
+                :training_data_dir,
+                joinpath(experiment_artifact_dir(spec), "training_data"),
+            ),
+        ),
+    )
+end
+
+function training_dataset_name(spec::ExperimentSpec, config::NamedTuple)
+    if experiment_has_function(spec, :training_dataset_name)
+        return string(experiment_call(spec, :training_dataset_name, config))
+    end
+
+    seed = experiment_config_value(config, :seed, nothing)
+    return isnothing(seed) ? spec.name : string(spec.name, "-", Int(seed))
+end
+
+function training_data_identity(spec::ExperimentSpec, config::NamedTuple)
+    if experiment_has_function(spec, :training_data_identity)
+        return experiment_call(spec, :training_data_identity, config)
+    end
+
+    return (;
+        experiment_id=spec.id,
+        experiment_name=spec.name,
+        seed=experiment_config_value(config, :seed, missing),
+    )
+end
+
+function training_data_identity_digest(spec::ExperimentSpec, config::NamedTuple)
+    return experiment_dataset_digest(training_data_identity(spec, config))
+end
+
+function training_data_digest_slug(digest)
+    text = replace(string(digest), r"[^A-Za-z0-9]+" => "-")
+    return text[1:min(lastindex(text), 24)]
+end
+
+function safe_training_dataset_name(name)
+    return replace(string(name), r"[^A-Za-z0-9_.=-]+" => "_")
+end
+
+function training_data_path(spec::ExperimentSpec, config::NamedTuple, name, identity_digest)
+    filename = string(
+        safe_training_dataset_name(name),
+        "_",
+        training_data_digest_slug(identity_digest),
+        ".jls",
+    )
+    return joinpath(training_data_dir(spec, config), filename)
+end
+
+function load_or_generate_training_data(spec::ExperimentSpec, config::NamedTuple)
+    name = training_dataset_name(spec, config)
+    identity = training_data_identity(spec, config)
+    identity_digest = experiment_dataset_digest(identity)
+    path = training_data_path(spec, config, name, identity_digest)
+
+    if !training_data_cache_enabled(config)
+        dataset = experiment_call(spec, :training_data, config)
+        return training_data_artifact(
+            dataset;
+            path="",
+            name=name,
+            identity_digest=identity_digest,
+            cache_hit=false,
+        )
+    end
+
+    isfile(path) && return load_training_data_artifact(spec, path, identity_digest; cache_hit=true)
+
+    mkpath(dirname(path))
+    return with_training_data_lock(path, config) do
+        if isfile(path)
+            load_training_data_artifact(spec, path, identity_digest; cache_hit=true)
+        else
+            dataset = experiment_call(spec, :training_data, config)
+            save_training_data_artifact!(
+                spec,
+                path,
+                dataset;
+                name=name,
+                identity=identity,
+                identity_digest=identity_digest,
+            )
+            load_training_data_artifact(spec, path, identity_digest; cache_hit=false)
+        end
+    end
+end
+
+function with_training_data_lock(callback, path::AbstractString, config::NamedTuple)
+    lock_dir = path * ".lock"
+    timeout_seconds = Float64(
+        experiment_config_value(config, :training_data_lock_timeout_seconds, 600.0),
+    )
+    started = time()
+    acquired = false
+
+    while !acquired
+        try
+            mkdir(lock_dir)
+            acquired = true
+        catch error
+            if isdir(lock_dir)
+                time() - started <= timeout_seconds ||
+                    throw(ErrorException("timed out waiting for training data cache lock: $lock_dir"))
+                sleep(0.25)
+            else
+                rethrow()
+            end
+        end
+    end
+
+    try
+        return callback()
+    finally
+        rm(lock_dir; force=true, recursive=true)
+    end
+end
+
+function save_training_data_artifact!(
+    spec::ExperimentSpec,
+    path::AbstractString,
+    dataset;
+    name,
+    identity,
+    identity_digest,
+)
+    mkpath(dirname(path))
+    payload = (;
+        format_version=TRAINING_DATA_FORMAT_VERSION,
+        experiment_id=spec.id,
+        experiment_name=spec.name,
+        dataset_name=string(name),
+        generated_at=Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SS.sZ"),
+        training_data_identity=identity,
+        training_data_identity_digest=string(identity_digest),
+        dataset_digest=experiment_dataset_digest(dataset),
+        dataset=dataset,
+    )
+    atomic_serialize(path, payload)
+    return path
+end
+
+function load_training_data_artifact(
+    spec::ExperimentSpec,
+    path::AbstractString,
+    identity_digest;
+    cache_hit::Bool,
+)
+    payload = open(Serialization.deserialize, path)
+    validate_training_data_payload(spec, payload, path, identity_digest)
+    return training_data_artifact(
+        training_data_from_payload(payload);
+        path=path,
+        name=payload.dataset_name,
+        identity_digest=payload.training_data_identity_digest,
+        dataset_digest=payload.dataset_digest,
+        cache_hit=cache_hit,
+    )
+end
+
+function training_data_from_payload(payload)
+    payload isa NamedTuple && hasproperty(payload, :dataset) && return payload.dataset
+    throw(ArgumentError("training data artifact payload must contain a dataset field."))
+end
+
+function validate_training_data_payload(
+    spec::ExperimentSpec,
+    payload,
+    path::AbstractString,
+    identity_digest,
+)
+    payload isa NamedTuple ||
+        throw(ArgumentError("training data artifact $path must contain a metadata payload."))
+    hasproperty(payload, :format_version) && payload.format_version == TRAINING_DATA_FORMAT_VERSION ||
+        throw(ArgumentError("unsupported training-data format in $path"))
+    String(payload.experiment_id) == spec.id ||
+        throw(ArgumentError("training data artifact $path belongs to experiment $(payload.experiment_id), expected $(spec.id)."))
+    String(payload.training_data_identity_digest) == string(identity_digest) ||
+        throw(ArgumentError("training data artifact $path does not match the current training data identity."))
+
+    dataset = training_data_from_payload(payload)
+    expected = experiment_dataset_digest(dataset)
+    String(payload.dataset_digest) == expected ||
+        throw(ArgumentError("training data artifact $path has an invalid dataset digest."))
+    return nothing
+end
+
+function training_data_artifact(
+    dataset;
+    path,
+    name,
+    identity_digest,
+    dataset_digest=experiment_dataset_digest(dataset),
+    cache_hit,
+)
+    metadata = (;
+        path=string(path),
+        dataset_name=string(name),
+        dataset_digest=string(dataset_digest),
+        training_data_identity_digest=string(identity_digest),
+        cache_hit=Bool(cache_hit),
+    )
+    return (; dataset=dataset, metadata=metadata)
+end
+
+function with_training_data_metadata(objects, artifact)
+    objects isa NamedTuple ||
+        throw(ArgumentError("training objects must be a NamedTuple when using central training_data memoization."))
+
+    existing_metadata = if hasproperty(objects, :data_metadata) &&
+                           getproperty(objects, :data_metadata) isa NamedTuple
+        getproperty(objects, :data_metadata)
+    else
+        NamedTuple()
+    end
+
+    metadata = artifact.metadata
+    path = metadata.path
+    central_metadata = (;
+        dataset_name=metadata.dataset_name,
+        dataset_digest=metadata.dataset_digest,
+        dataset_path=path,
+        dataset_source=isempty(path) ? metadata.training_data_identity_digest : path,
+        dataset_identity_digest=metadata.training_data_identity_digest,
+        training_data_artifact=path,
+        training_data_cache_hit=metadata.cache_hit,
+    )
+
+    return merge(
+        objects,
+        (;
+            data_metadata=merge(existing_metadata, central_metadata),
+            training_data_artifact=metadata,
+        ),
+    )
 end
 
 function optimality_splits_for_config(objects, config::NamedTuple)

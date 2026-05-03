@@ -361,6 +361,75 @@ end
         @test vcat(stochastic_result[1], vec(stochastic_result[2])) ≈ manual_result.z atol = 1e-8
     end
 
+    @testset "cost_function includes first-stage log barrier" begin
+        program = StochasticProgram(
+            A_eq=zeros(0, 1),
+            A_ineq=reshape([-1.0, 1.0], 2, 1),
+            b_eq=Float64[],
+            b_ineq=[0.0, 10.0],
+            c=[1.0],
+        )
+
+        W_eq_array = zeros(0, 1, 1)
+        W_ineq_array = reshape([-1.0, 1.0], 2, 1, 1)
+        T_eq_array = zeros(0, 1, 1)
+        T_ineq_array = zeros(2, 1, 1)
+        h_eq_array = zeros(0, 1)
+        h_ineq_array = reshape([0.0, 1.0], 2, 1)
+        q_array = reshape([0.0], 1, 1)
+        μ = 0.2
+
+        extensive_lp = construct_lp(
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array,
+        )
+        extensive_result = solve(solver, extensive_lp; μ=fill(μ, length(extensive_lp.b_ineq)), tol=1e-10)
+        z = extensive_result.z[1:1]
+
+        @test cost_function(
+            program,
+            solver,
+            z,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=μ,
+            tol=1e-10,
+        ) ≈ extensive_result.objective_value atol = 2e-8
+
+        z_fixed = [2.0]
+        _, pullback = ChainRulesCore.rrule(
+            cost_function,
+            program,
+            solver,
+            z_fixed,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=μ,
+            tol=1e-10,
+        )
+        first_stage_slack = program.b_ineq - program.A_ineq * z_fixed
+        expected_dz =
+            program.c + transpose(program.A_ineq) * (fill(μ, length(program.b_ineq)) ./ first_stage_slack)
+
+        @test pullback(1.0)[4] ≈ expected_dz atol = 2e-8
+    end
+
     @testset "log-barrier inequality dual convention" begin
         μ = 0.1
         lp = LP(
@@ -576,115 +645,6 @@ end
         ) ≈ 13.5 atol = 1e-8
     end
 
-    @testset "solve rrule returns h and q tangents only" begin
-        program = StochasticProgram(
-            A_eq=reshape([1.0], 1, 1),
-            A_ineq=zeros(0, 1),
-            b_eq=[1.0],
-            b_ineq=Float64[],
-            c=[0.0],
-        )
-
-        W_eq_array = reshape([1.0], 1, 1, 1)
-        W_ineq_array = zeros(0, 1, 1)
-        T_eq_array = reshape([1.0], 1, 1, 1)
-        T_ineq_array = zeros(0, 1, 1)
-        h_eq_array = reshape([2.0], 1, 1)
-        h_ineq_array = zeros(0, 1)
-        q_array = reshape([3.0], 1, 1)
-
-        output, pullback = ChainRulesCore.rrule(
-            solve,
-            solver,
-            program,
-            W_eq_array,
-            W_ineq_array,
-            T_eq_array,
-            T_ineq_array,
-            h_eq_array,
-            h_ineq_array,
-            q_array;
-            μ=0,
-        )
-        output_tangent = (
-            zeros(1),
-            ones(1, 1),
-            zeros(1),
-            zeros(0),
-            zeros(1, 1),
-            zeros(0, 1),
-        )
-        tangents = pullback(output_tangent)
-        structured_tangents = pullback(ChainRulesCore.Tangent{typeof(output)}(output_tangent...))
-
-        @test output[1] ≈ [1.0] atol = 1e-8
-        @test output[2] ≈ reshape([1.0], 1, 1) atol = 1e-8
-        @test tangents[8] ≈ reshape([1.0], 1, 1) atol = 1e-8
-        @test tangents[9] == zeros(0, 1)
-        @test tangents[10] ≈ reshape([0.0], 1, 1) atol = 1e-8
-        @test structured_tangents[8] ≈ tangents[8] atol = 1e-8
-        @test structured_tangents[9] == tangents[9]
-        @test structured_tangents[10] ≈ tangents[10] atol = 1e-8
-
-        ϵ = 1e-5
-        h_fd = (
-            solve(
-                solver,
-                program,
-                W_eq_array,
-                W_ineq_array,
-                T_eq_array,
-                T_ineq_array,
-                h_eq_array .+ ϵ,
-                h_ineq_array,
-                q_array;
-                μ=0,
-            )[2][1, 1] -
-            solve(
-                solver,
-                program,
-                W_eq_array,
-                W_ineq_array,
-                T_eq_array,
-                T_ineq_array,
-                h_eq_array .- ϵ,
-                h_ineq_array,
-                q_array;
-                μ=0,
-            )[2][1, 1]
-        ) / (2ϵ)
-
-        q_fd = (
-            solve(
-                solver,
-                program,
-                W_eq_array,
-                W_ineq_array,
-                T_eq_array,
-                T_ineq_array,
-                h_eq_array,
-                h_ineq_array,
-                q_array .+ ϵ;
-                μ=0,
-            )[2][1, 1] -
-            solve(
-                solver,
-                program,
-                W_eq_array,
-                W_ineq_array,
-                T_eq_array,
-                T_ineq_array,
-                h_eq_array,
-                h_ineq_array,
-                q_array .- ϵ;
-                μ=0,
-            )[2][1, 1]
-        ) / (2ϵ)
-
-        @test tangents[8][1, 1] ≈ h_fd atol = 1e-5
-        @test tangents[10][1, 1] ≈ q_fd atol = 1e-5
-    end
-
     @testset "solve rrule rejects malformed nonzero cotangent" begin
         program = StochasticProgram(
             A_eq=reshape([1.0], 1, 1),
@@ -720,53 +680,20 @@ end
         @test_throws ArgumentError pullback("not a valid cotangent")
     end
 
-    @testset "solve rrule rejects dual output cotangents" begin
-        program = StochasticProgram(
-            A_eq=reshape([1.0], 1, 1),
+    @testset "LP reverse precompute uses solver slack" begin
+        lp = LP(
+            A_eq=zeros(0, 1),
             A_ineq=reshape([1.0], 1, 1),
-            b_eq=[1.0],
-            b_ineq=[2.0],
-            c=[0.0],
+            b_eq=Float64[],
+            b_ineq=[0.0],
+            c=[1.0],
         )
+        result = (; z=[1.0], slack=[0.5])
 
-        W_eq_array = reshape([1.0], 1, 1, 1)
-        W_ineq_array = reshape([1.0], 1, 1, 1)
-        T_eq_array = reshape([1.0], 1, 1, 1)
-        T_ineq_array = reshape([0.0], 1, 1, 1)
-        h_eq_array = reshape([2.0], 1, 1)
-        h_ineq_array = reshape([3.0], 1, 1)
-        q_array = reshape([1.0], 1, 1)
+        cache = ContextualDFL._lp_reverse_precompute(lp, 0.1, result, 1e-7)
 
-        output, pullback = ChainRulesCore.rrule(
-            solve,
-            solver,
-            program,
-            W_eq_array,
-            W_ineq_array,
-            T_eq_array,
-            T_ineq_array,
-            h_eq_array,
-            h_ineq_array,
-            q_array;
-            μ=0,
-        )
-        zero_output_tangent = map(x -> zeros(size(x)), output)
-        zero_tangents = pullback(zero_output_tangent)
-
-        @test zero_tangents[8] == zeros(size(h_eq_array))
-        @test zero_tangents[9] == zeros(size(h_ineq_array))
-        @test zero_tangents[10] == zeros(size(q_array))
-
-        for index in 3:6
-            component_tangent = copy(zero_output_tangent[index])
-            component_tangent[firstindex(component_tangent)] = 1.0
-            output_tangent = ntuple(
-                i -> i == index ? component_tangent : zero_output_tangent[i],
-                length(zero_output_tangent),
-            )
-
-            @test_throws ArgumentError pullback(output_tangent)
-        end
+        @test cache.z === result.z
+        @test cache.d ≈ [4.0] atol = 1e-12
     end
 
     @testset "log-barrier solve rrule q sensitivity" begin

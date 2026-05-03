@@ -126,6 +126,9 @@ function train_with_contextualdfl(objects, config)
         epochs=config.epochs,
         batchsize=config.batch_size,
         shuffle=Bool(config_value(config, :shuffle, false)),
+        display_smooth=Bool(config_value(config, :display_smooth, false)),
+        display_real=config_value(config, :display_real, nothing),
+        display_reference_input=display_reference_input(objects, config),
     )
 
     return (;
@@ -171,9 +174,9 @@ function train_with_contextualdfl_mlflow(objects, config)
         log_mlflow_dataset!(
             mlf,
             run;
-            dataset_name=mlflow_dataset_name(config),
+            dataset_name=mlflow_dataset_name(objects, config),
             dataset_digest=mlflow_dataset_digest(objects, config),
-            dataset_source_type="generated",
+            dataset_source_type=mlflow_dataset_source_type(objects, config),
             dataset_source=mlflow_dataset_source(objects, config),
             dataset_context="training",
         )
@@ -203,6 +206,9 @@ function train_with_contextualdfl_mlflow(objects, config)
                 metadata,
             ),
             nr_scenarios=config_value(config, :nr_scenarios, nothing),
+            display_smooth=Bool(config_value(config, :display_smooth, false)),
+            display_real=config_value(config, :display_real, nothing),
+            display_reference_input=display_reference_input(objects, config),
         )
 
         if upload_model_artifact && isfile(model_save_path)
@@ -244,6 +250,18 @@ function log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule,
         logparam(mlf, run, "nr_scenarios", string(logged_scenarios))
     logparam(mlf, run, "mu_in_schedule", string(collect(mu_schedule)))
     logparam(mlf, run, "mu_ref_schedule", string(collect(mu_ref_schedule)))
+    logparam(
+        mlf,
+        run,
+        "display_smooth",
+        string(Bool(config_value(config, :display_smooth, false))),
+    )
+    logparam(
+        mlf,
+        run,
+        "display_real",
+        string(config_value(config, :display_real, nothing)),
+    )
     logparam(mlf, run, "shuffle", string(Bool(config_value(config, :shuffle, false))))
     logparam(
         mlf,
@@ -251,6 +269,14 @@ function log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule,
         "reset_optimizer_each_epoch",
         string(Bool(config_value(config, :reset_optimizer_each_epoch, false))),
     )
+    return nothing
+end
+
+function display_reference_input(objects, config)
+    display_smooth = Bool(config_value(config, :display_smooth, false))
+    display_real = config_value(config, :display_real, nothing)
+    (display_smooth || !isnothing(display_real)) || return nothing
+    hasproperty(objects, :target_extractor) && return objects.target_extractor
     return nothing
 end
 
@@ -307,6 +333,13 @@ function mlflow_dataset_name(config)
     )
 end
 
+function mlflow_dataset_name(objects, config)
+    data_metadata = object_metadata(objects, :data_metadata)
+    name = metadata_value(data_metadata, :dataset_name, nothing)
+    isnothing(name) || return string(name)
+    return mlflow_dataset_name(config)
+end
+
 function mlflow_dataset_source(objects, config)
     data_metadata = object_metadata(objects, :data_metadata)
     source = metadata_value(data_metadata, :dataset_source, nothing)
@@ -321,13 +354,20 @@ function mlflow_dataset_source(objects, config)
     return join(parts, ";")
 end
 
+function mlflow_dataset_source_type(objects, config)
+    data_metadata = object_metadata(objects, :data_metadata)
+    path = metadata_value(data_metadata, :dataset_path, "")
+    (path === nothing || path === missing || isempty(string(path))) || return "local"
+    return string(config_value(config, :mlflow_dataset_source_type, "generated"))
+end
+
 function mlflow_dataset_digest(objects, config)
     data_metadata = object_metadata(objects, :data_metadata)
     digest = metadata_value(data_metadata, :dataset_digest, nothing)
     isnothing(digest) || return string(digest)
 
     split_summary = (
-        "dataset=$(mlflow_dataset_name(config))",
+        "dataset=$(mlflow_dataset_name(objects, config))",
         "seed=$(config_value(config, :seed, ""))",
         "train_x=$(size(dataset_context_matrix(objects.data.train)))",
         "train_y=$(size(dataset_target_matrix(objects.data.train, objects)))",
@@ -457,7 +497,7 @@ function mlflow_data_spec(objects, config)
 
     defaults = (;
         generator="experiment_config",
-        dataset_name=mlflow_dataset_name(config),
+        dataset_name=mlflow_dataset_name(objects, config),
         dataset_digest=mlflow_dataset_digest(objects, config),
         train_size=train_size,
         validation_size=validation_size,
@@ -514,6 +554,8 @@ function mlflow_method_spec(objects, config)
         log_barrier_training=any(!iszero, mu_schedule),
         reference_log_barrier_training=any(!iszero, mu_ref_schedule),
         log_barrier_inference=Bool(config_value(config, :log_barrier_inference, any(!iszero, mu_schedule))),
+        display_smooth=Bool(config_value(config, :display_smooth, false)),
+        display_real=config_value(config, :display_real, nothing),
         optimality_evaluation=Bool(config_value(config, :optimality_evaluation, false)),
         optimality_test_sample_count=Int(config_value(config, :optimality_test_sample_count, 0)),
         optimality_train_sample_count=Int(config_value(config, :optimality_train_sample_count, 0)),

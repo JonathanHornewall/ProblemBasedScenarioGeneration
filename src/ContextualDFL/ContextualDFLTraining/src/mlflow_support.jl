@@ -155,10 +155,12 @@ function log_mlflow_metric!(mlf, run, key, value; timestamp, step)
     )
 end
 
-function log_mlflow_epoch!(mlf, run, epoch, loss_value, _display_loss, metadata)
+function log_mlflow_epoch!(mlf, run, epoch, loss_value, display_loss, metadata)
     timestamp = mlflow_unix_milliseconds()
     step = Int64(epoch)
     metrics = Metric[Metric("loss", Float64(loss_value), timestamp, step)]
+    mlflow_metric_value(display_loss) &&
+        push!(metrics, Metric("display_loss", Float64(display_loss), timestamp, step))
     append!(metrics, mlflow_epoch_metadata_metrics(metadata; timestamp=timestamp, step=step))
     return logbatch(mlf, run; metrics=metrics)
 end
@@ -172,6 +174,7 @@ function mlflow_epoch_metadata_metrics(metadata; timestamp, step)
         ("epoch_mu_in", :mu_in),
         ("epoch_mu_ref", :mu_ref),
         ("epoch_iterations", :iterations),
+        ("real_display_loss", :real_display_loss),
     )
         field_name in keys(metadata) || continue
         value = getproperty(metadata, field_name)
