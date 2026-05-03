@@ -141,6 +141,44 @@ end
     end
 end
 
+@testset "ContextualDFLTraining profile training script" begin
+    profile_module = Module(:ProfileTrainingScriptTest)
+    Core.eval(profile_module, :(using Base))
+    Core.eval(profile_module, :(include(path) = Base.include($profile_module, path)))
+    Base.include(
+        profile_module,
+        joinpath(dirname(dirname(pathof(ContextualDFLTraining))), "profile_training.jl"),
+    )
+    profile_config_from_env = getfield(profile_module, :profile_config_from_env)
+    experiment = getfield(profile_module, :load_experiment)("resource_allocation/experiment_1")
+
+    withenv(
+        "PROFILE_MLFLOW_ENABLED" => nothing,
+        "PROFILE_MLFLOW_PROGRESS" => nothing,
+        "PROFILE_MLFLOW_EXPERIMENT_ID" => "9999",
+        "MLFLOW_EXPERIMENT_ID" => "8888",
+    ) do
+        config = profile_config_from_env(experiment)
+        @test config.mlflow_enabled
+        @test config.profile_mlflow_progress
+        @test config.mlflow_experiment_id == "3"
+        @test config.mlflow_experiment_name == "ContextualDFLProfiling"
+        @test config.mlflow_tags.mlflow_experiment_name == "ContextualDFLProfiling"
+    end
+
+    withenv(
+        "PROFILE_MLFLOW_ENABLED" => "0",
+        "PROFILE_MLFLOW_PROGRESS" => nothing,
+        "PROFILE_MLFLOW_EXPERIMENT_ID" => "9999",
+        "MLFLOW_EXPERIMENT_ID" => "8888",
+    ) do
+        config = profile_config_from_env(experiment)
+        @test !config.mlflow_enabled
+        @test !config.profile_mlflow_progress
+        @test config.mlflow_experiment_id == "3"
+    end
+end
+
 @testset "ContextualDFLTraining generated test data" begin
     script_module = Module(:GenerateTestDataScriptTest)
     Base.include(

@@ -11,6 +11,8 @@ include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
 const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
+const PROFILE_MLFLOW_EXPERIMENT_ID = "3"
+const PROFILE_MLFLOW_EXPERIMENT_NAME = "ContextualDFLProfiling"
 
 function env_int(name, default)
     value = get(ENV, name, string(default))
@@ -69,7 +71,7 @@ end
 
 function profile_config_from_env(experiment)
     run_id = get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3")
-    mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", false)
+    mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", true)
     profile_mlflow_progress = env_flag("PROFILE_MLFLOW_PROGRESS", mlflow_enabled)
     base = if experiment_has_function(experiment, :profile_config)
         experiment_call(experiment, :profile_config)
@@ -121,11 +123,8 @@ function profile_config_from_env(experiment)
             candidate_name=run_id,
             mlflow_enabled=mlflow_enabled,
             profile_mlflow_progress=profile_mlflow_progress,
-            mlflow_experiment_id=get(
-                ENV,
-                "PROFILE_MLFLOW_EXPERIMENT_ID",
-                get(ENV, "MLFLOW_EXPERIMENT_ID", "0"),
-            ),
+            mlflow_experiment_id=PROFILE_MLFLOW_EXPERIMENT_ID,
+            mlflow_experiment_name=PROFILE_MLFLOW_EXPERIMENT_NAME,
             mlflow_tracking_uri=get(
                 ENV,
                 "PROFILE_MLFLOW_TRACKING_URI",
@@ -147,6 +146,7 @@ function profile_config_from_env(experiment)
                 profile_run=true,
                 exclude_from_model_selection=true,
                 exclude_from_gridsearch=true,
+                mlflow_experiment_name=PROFILE_MLFLOW_EXPERIMENT_NAME,
                 profile_target="ContextualDFL.train!",
                 profile_loss="ContextualDFL.DflScenLoss",
                 profile_progress_logged_by="remote_worker",
@@ -274,7 +274,8 @@ function main()
         println("Running remote profile $(config.run_id) with $(config.epochs) profiled epoch(s)")
         if config.mlflow_enabled && config.profile_mlflow_progress
             println(
-                "Remote MLflow profiling progress enabled: experiment=$(config.mlflow_experiment_id), ",
+                "Remote MLflow profiling progress enabled: ",
+                "experiment=$(config.mlflow_experiment_id) ($(config.mlflow_experiment_name)), ",
                 "tracking_uri=$(config.mlflow_tracking_uri), run_name=$(config.mlflow_run_name)",
             )
         end
