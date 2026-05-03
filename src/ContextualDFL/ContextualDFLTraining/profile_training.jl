@@ -82,7 +82,7 @@ function profile_config_from_env(experiment)
     cfg = merge(
         base,
         (;
-            epochs=env_int("PROFILE_EPOCHS", 100),
+            epochs=env_int("PROFILE_EPOCHS", 10),
             warmup_epochs=env_int("PROFILE_WARMUP_EPOCHS", 2),
             mu=env_float("PROFILE_MU", DEFAULT_RUN_SETTINGS.mu),
             mu_start=env_float("PROFILE_MU_START", DEFAULT_RUN_SETTINGS.mu_start),

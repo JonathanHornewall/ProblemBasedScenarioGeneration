@@ -370,7 +370,7 @@ function log_mlflow_dataset!(
     elseif !any(isnothing, (dataset_name, dataset_digest, dataset_source))
         dataset = Dataset(
             string(dataset_name),
-            string(dataset_digest),
+            mlflow_dataset_digest_value(dataset_digest),
             string(dataset_source_type),
             string(dataset_source),
             nothing,
@@ -389,6 +389,12 @@ function log_mlflow_dataset!(
     end
 
     return nothing
+end
+
+function mlflow_dataset_digest_value(digest)
+    value = string(digest)
+    length(value) <= 36 && return value
+    return bytes2hex(sha256(value))[1:32]
 end
 
 function tag_optional_mlflow_evaluation_error!(mlf, run, name, error)

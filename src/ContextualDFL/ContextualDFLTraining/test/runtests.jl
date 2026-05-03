@@ -761,7 +761,7 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
             mlf,
             run;
             dataset_name="resource_allocation_generated",
-            dataset_digest="sha256:test",
+            dataset_digest="sha1:" * repeat("a", 40),
             dataset_source_type="generated",
             dataset_source="generated:test",
             dataset_context="training",
@@ -772,5 +772,6 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
         @test !isempty(only(run.artifacts)[2])
         @test Dict(run.tags)["mlflow.source.name"] == "ContextualDFLTraining/gridsearch.jl"
         @test length(run.inputs) == 1
+        @test length(only(run.inputs).dataset.digest) <= 36
     end
 end
