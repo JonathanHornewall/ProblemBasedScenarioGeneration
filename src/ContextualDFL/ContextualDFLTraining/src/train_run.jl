@@ -363,7 +363,14 @@ function mu_schedule_for_config(config)
     epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
     epochs == 0 && return Float64[]
 
-    schedule = Symbol(config_value(config, :mu_schedule, :constant))
+    raw_schedule = config_value(config, :mu_schedule, :constant)
+    if raw_schedule isa AbstractVector
+        length(raw_schedule) == epochs ||
+            throw(ArgumentError("mu_schedule vector must have one value per epoch."))
+        return Float64.(raw_schedule)
+    end
+
+    schedule = Symbol(raw_schedule)
     mu_start = Float64(config_value(config, :mu_start, config.mu))
     mu_end = Float64(config_value(config, :mu_end, config.mu))
 

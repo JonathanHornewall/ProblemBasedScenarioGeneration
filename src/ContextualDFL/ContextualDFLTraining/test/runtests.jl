@@ -204,6 +204,138 @@ end
     end
 
     mktempdir() do dir
+        piecewise_path = joinpath(dir, "piecewise.yml")
+        write(
+            piecewise_path,
+            """
+            version: 1
+            name: manual_schedule_grid
+            base:
+              epochs: 6
+            fixed:
+              learning_rate: 0.001
+              hidden_size: 16
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+            grid:
+              seed: [1]
+            schedules:
+              mu:
+                kind: piecewise
+                segments:
+                  - epochs: 2
+                    value: 1.0
+                  - epochs: 3
+                    value: 0.9
+                  - epochs: 1
+                    value: 0.4
+              mu_ref:
+                kind: values
+                values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+            """,
+        )
+
+        spec = ContextualDFLTraining.load_grid_config(piecewise_path)
+        config = only(ContextualDFLTraining.resolve_grid_configs(experiment, spec))
+
+        @test config.mu_schedule == [1.0, 1.0, 0.9, 0.9, 0.9, 0.4]
+        @test config.mu_ref_schedule == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        @test ContextualDFLTraining.mu_schedule_for_config(config) ==
+              [1.0, 1.0, 0.9, 0.9, 0.9, 0.4]
+        @test ContextualDFLTraining.mu_ref_schedule_for_config(config) ==
+              [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    end
+
+    mktempdir() do dir
+        values_path = joinpath(dir, "values.yml")
+        write(
+            values_path,
+            """
+            version: 1
+            name: values_schedule_grid
+            base:
+              epochs: 3
+            fixed:
+              learning_rate: 0.001
+              hidden_size: 16
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+            grid:
+              seed: [1]
+            schedules:
+              mu:
+                kind: values
+                values: [1.0, 0.5, 0.25]
+            """,
+        )
+
+        config = only(
+            ContextualDFLTraining.resolve_grid_configs(
+                experiment,
+                ContextualDFLTraining.load_grid_config(values_path),
+            ),
+        )
+
+        @test config.mu_schedule == [1.0, 0.5, 0.25]
+        @test ContextualDFLTraining.mu_schedule_for_config(config) == [1.0, 0.5, 0.25]
+        @test ContextualDFLTraining.mu_ref_schedule_for_config(config) == [1.0, 0.5, 0.25]
+    end
+
+    @testset "manual schedule validation" begin
+        @test ContextualDFLTraining.mu_schedule_for_config(
+            (; epochs=3, mu=0.0, mu_schedule=[1, 2, 3]),
+        ) == [1.0, 2.0, 3.0]
+        @test_throws ArgumentError ContextualDFLTraining.mu_schedule_for_config(
+            (; epochs=3, mu=0.0, mu_schedule=[1, 2]),
+        )
+
+        mktempdir() do dir
+            empty_values_path = joinpath(dir, "empty_values.yml")
+            write(
+                empty_values_path,
+                """
+                version: 1
+                schedules:
+                  mu:
+                    kind: values
+                    values: []
+                """,
+            )
+            @test_throws ArgumentError ContextualDFLTraining.load_grid_config(empty_values_path)
+
+            empty_segments_path = joinpath(dir, "empty_segments.yml")
+            write(
+                empty_segments_path,
+                """
+                version: 1
+                schedules:
+                  mu:
+                    kind: piecewise
+                    segments: []
+                """,
+            )
+            @test_throws ArgumentError ContextualDFLTraining.load_grid_config(empty_segments_path)
+
+            non_positive_path = joinpath(dir, "non_positive.yml")
+            write(
+                non_positive_path,
+                """
+                version: 1
+                schedules:
+                  mu:
+                    kind: piecewise
+                    segments:
+                      - epochs: 0
+                        value: 1.0
+                """,
+            )
+            @test_throws ArgumentError ContextualDFLTraining.load_grid_config(non_positive_path)
+        end
+    end
+
+    mktempdir() do dir
         invalid_path = joinpath(dir, "invalid.yml")
         write(
             invalid_path,

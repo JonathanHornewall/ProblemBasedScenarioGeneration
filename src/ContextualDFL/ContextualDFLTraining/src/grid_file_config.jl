@@ -3,12 +3,19 @@ using JSON3
 using SHA
 using YAML
 
+@option struct GridScheduleSegmentConfig
+    epochs::Int
+    value::Float64
+end
+
 @option struct GridScheduleConfig
     kind::String = ""
     type::String = ""
     start::Union{Nothing,Float64} = nothing
     stop::Union{Nothing,Float64} = nothing
     value::Union{Nothing,Float64} = nothing
+    values::Union{Nothing,Vector{Float64}} = nothing
+    segments::Vector{GridScheduleSegmentConfig} = GridScheduleSegmentConfig[]
 end
 
 @option struct GridFileConfig
@@ -268,6 +275,9 @@ function normalize_schedule(name::Symbol, spec::GridScheduleConfig)
 end
 
 function normalize_mu_schedule(kind::Symbol, spec)
+    manual_values = manual_schedule_values(kind, spec, "mu")
+    manual_values === nothing || return Dict{Symbol,Any}(:mu_schedule => manual_values)
+
     kind in (:constant, :linear, :geometric, :exponential) ||
         throw(ArgumentError("unsupported mu schedule kind '$kind'."))
 
@@ -283,6 +293,9 @@ function normalize_mu_schedule(kind::Symbol, spec)
 end
 
 function normalize_mu_ref_schedule(kind::Symbol, spec)
+    manual_values = manual_schedule_values(kind, spec, "mu_ref")
+    manual_values === nothing || return Dict{Symbol,Any}(:mu_ref_schedule => manual_values)
+
     if kind in (:match_input, :same, :input, :zero, :zeros, :none)
         return Dict{Symbol,Any}(:mu_ref_schedule => kind)
     end
@@ -298,6 +311,36 @@ function normalize_mu_ref_schedule(kind::Symbol, spec)
     output[:mu_ref_start] = Float64(required_schedule_value(spec, :start, "mu_ref"))
     output[:mu_ref_end] = Float64(schedule_stop_value(spec, "mu_ref"))
     return output
+end
+
+function manual_schedule_values(
+    kind::Symbol,
+    spec::GridScheduleConfig,
+    schedule_name::AbstractString,
+)
+    if kind in (:values, :manual)
+        spec.values !== nothing ||
+            throw(ArgumentError("schedule '$schedule_name' must define non-empty values."))
+        isempty(spec.values) &&
+            throw(ArgumentError("schedule '$schedule_name' values must not be empty."))
+        return Float64.(spec.values)
+    elseif kind in (:piecewise, :step)
+        isempty(spec.segments) &&
+            throw(ArgumentError("schedule '$schedule_name' segments must not be empty."))
+
+        values = Float64[]
+        for (index, segment) in enumerate(spec.segments)
+            segment.epochs > 0 || throw(
+                ArgumentError(
+                    "schedule '$schedule_name' segment $index epochs must be positive.",
+                ),
+            )
+            append!(values, fill(Float64(segment.value), segment.epochs))
+        end
+        return values
+    end
+
+    return nothing
 end
 
 function required_schedule_value(
