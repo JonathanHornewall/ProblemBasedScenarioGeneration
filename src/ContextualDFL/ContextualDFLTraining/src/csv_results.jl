@@ -134,8 +134,7 @@ end
 
 function write_csv(path, rows)
     if isempty(rows)
-        open(path, "w") do
-        end
+        write(path, "")
         return path
     end
 

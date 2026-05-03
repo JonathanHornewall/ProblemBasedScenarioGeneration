@@ -47,6 +47,9 @@ end
     @test objects.reference_scenario_decoder isa ResourceAllocationDemandParametricDecoder
     @test objects.loss isa ContextualDFL.DflScenLoss
     @test hasproperty(objects, :target_extractor)
+    target = objects.target_extractor(first(objects.data.train))
+    @test target isa AbstractVector
+    @test length(target) == objects.model_metadata.output_dimension
     @test objects.problem_metadata.problem == "resource_allocation"
     @test objects.data_metadata.Nr_contexts == config.Nr_contexts
     @test length(objects.data.train) == 100
@@ -95,6 +98,46 @@ end
             :train;
             dataset=dataset,
         )
+    end
+end
+
+@testset "ContextualDFLTraining CSV results" begin
+    mktempdir() do dir
+        output_dir = ContextualDFLTraining.write_grid_results(
+            [];
+            output_root=dir,
+            timestamp="empty",
+        )
+
+        @test output_dir == joinpath(dir, "empty")
+        for filename in ("runs.csv", "epochs.csv", "failures.csv", "best.csv", "config.csv")
+            @test isfile(joinpath(output_dir, filename))
+        end
+    end
+
+    mktempdir() do dir
+        result = (;
+            status="ok",
+            run_id="ok_1",
+            started_at=0,
+            finished_at=1,
+            elapsed_seconds=1.0,
+            error="",
+            config=(; seed=1, learning_rate=0.001),
+            worker=(; worker_id=1),
+            final_metrics=(; validation_mse=0.1, train_mse=0.2),
+            epoch_history=NamedTuple[],
+        )
+
+        output_dir = ContextualDFLTraining.write_grid_results(
+            [result];
+            output_root=dir,
+            timestamp="success",
+        )
+
+        failures_path = joinpath(output_dir, "failures.csv")
+        @test isfile(failures_path)
+        @test filesize(failures_path) == 0
     end
 end
 
