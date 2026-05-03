@@ -3,17 +3,17 @@
 using Dates
 using Distributed
 import MLFlowClient
+using SHA
 using Sockets
 using Statistics
 
 include(joinpath(@__DIR__, "src", "grid_config.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
+include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
 
 const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
-const DEFAULT_MLFLOW_EXPERIMENT_ID = "2"
-const DEFAULT_MLFLOW_EXPERIMENT_NAME = "ContextualDFLTraining"
 const MLFLOW_RETRY_ATTEMPTS = 8
 const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
 const MLFLOW_RETRY_BACKOFF = 1.5
@@ -79,11 +79,25 @@ function env_flag(name, default=false)
     return value in ("1", "true", "yes", "y")
 end
 
-function grid_mlflow_settings()
+function deterministic_mlflow_experiment_id(experiment_id)
+    digest = bytes2hex(sha1(string(experiment_id)))
+    value = parse(UInt64, digest[1:15]; base=16)
+    return string(1 + value % UInt64(9_000_000_000))
+end
+
+function deterministic_mlflow_experiment_name(experiment)
+    return "ContextualDFLTraining/" * string(experiment.name)
+end
+
+function grid_mlflow_settings(experiment=load_experiment(default_experiment_selector()))
+    deterministic_id = deterministic_mlflow_experiment_id(experiment.id)
     return (;
         enabled=true,
-        experiment_id=get(ENV, "MLFLOW_EXPERIMENT_ID", DEFAULT_MLFLOW_EXPERIMENT_ID),
-        experiment_name=get(ENV, "MLFLOW_EXPERIMENT_NAME", DEFAULT_MLFLOW_EXPERIMENT_NAME),
+        experiment_id=deterministic_id,
+        deterministic_experiment_id=deterministic_id,
+        experiment_name=deterministic_mlflow_experiment_name(experiment),
+        contextualdfl_experiment_id=experiment.id,
+        contextualdfl_experiment_name=experiment.name,
         tracking_uri=get(ENV, "MLFLOW_TRACKING_URI", ""),
         upload_model_artifact=env_flag("MLFLOW_UPLOAD_MODEL_ARTIFACTS", false),
     )
@@ -100,6 +114,44 @@ function mlflow_client(settings)
     return isempty(string(settings.tracking_uri)) ?
         MLFlowClient.MLFlow(; headers=mlflow_http_headers()) :
         MLFlowClient.MLFlow(string(settings.tracking_uri); headers=mlflow_http_headers())
+end
+
+function missing_mlflow_experiment_error(error)
+    message = lowercase(sprint(showerror, error))
+    return occursin("resource_does_not_exist", message) ||
+           occursin("does not exist", message) ||
+           occursin("not found", message)
+end
+
+function ensure_mlflow_grid_experiment(settings)
+    settings.enabled || return settings
+
+    mlf = mlflow_client(settings)
+    experiment_id = with_mlflow_retry("ensure MLflow experiment $(settings.experiment_name)") do
+        try
+            experiment = MLFlowClient.getexperimentbyname(
+                mlf,
+                string(settings.experiment_name),
+            )
+            string(experiment.experiment_id)
+        catch error
+            missing_mlflow_experiment_error(error) || rethrow()
+            MLFlowClient.createexperiment(mlf, string(settings.experiment_name))
+        end
+    end
+
+    experiment_tags = (
+        "contextualdfl.experiment_id" => string(settings.contextualdfl_experiment_id),
+        "contextualdfl.experiment_name" => string(settings.contextualdfl_experiment_name),
+        "contextualdfl.deterministic_experiment_id" => string(settings.deterministic_experiment_id),
+    )
+    for (key, value) in experiment_tags
+        with_mlflow_retry("set MLflow experiment tag $key") do
+            MLFlowClient.setexperimenttag(mlf, string(experiment_id), key, value)
+        end
+    end
+
+    return merge(settings, (; experiment_id=string(experiment_id)))
 end
 
 function ensure_clean_worker_start!()
@@ -395,6 +447,9 @@ function create_mlflow_grid_parent_run(settings, grid_id, timestamp, configs, wo
         "gridsearch_role" => "parent",
         "training_project" => "ContextualDFLTraining",
         "mlflow.experiment.name" => string(settings.experiment_name),
+        "contextualdfl.experiment_id" => string(settings.contextualdfl_experiment_id),
+        "contextualdfl.experiment_name" => string(settings.contextualdfl_experiment_name),
+        "contextualdfl.deterministic_experiment_id" => string(settings.deterministic_experiment_id),
         "mlflow.source.name" => "ContextualDFLTraining/gridsearch.jl",
         "mlflow.source.type" => "LOCAL",
     )
@@ -474,6 +529,20 @@ function grid_parent_params(grid_id, timestamp, configs, worker_hosts)
         "grid_worker_count" => string(length(worker_hosts)),
         "grid_worker_hosts" => join(sort!(unique(collect(values(worker_hosts)))), ","),
     )
+
+    if !isempty(configs)
+        config = first(configs)
+        if config isa NamedTuple && hasproperty(config, :experiment_id)
+            params["experiment_id"] = string(config.experiment_id)
+        end
+        if config isa NamedTuple && hasproperty(config, :experiment_name)
+            params["experiment_name"] = string(config.experiment_name)
+        end
+        if config isa NamedTuple && hasproperty(config, :mlflow_deterministic_experiment_id)
+            params["mlflow_deterministic_experiment_id"] =
+                string(config.mlflow_deterministic_experiment_id)
+        end
+    end
 
     for (key, value) in grid_constant_config_values(configs)
         params["grid_constant_" * string(key)] = string(value)
@@ -657,12 +726,12 @@ function mlflow_filter_escape(value)
     return replace(string(value), "\\" => "\\\\", "\"" => "\\\"")
 end
 
-function selected_grid()
+function selected_grid(experiment=load_experiment(default_experiment_selector()))
     overrides = grid_overrides_from_env()
     if env_flag("GRIDSEARCH_SMOKE", false)
-        return smoke_grid(; overrides...)
+        return experiment_smoke_configs(experiment; overrides...)
     end
-    return default_grid(; overrides...)
+    return experiment_grid_configs(experiment; overrides...)
 end
 
 function grid_overrides_from_env()
@@ -727,6 +796,7 @@ function annotate_grid_config(
             mlflow_enabled=mlflow_settings.enabled,
             mlflow_experiment_id=mlflow_settings.experiment_id,
             mlflow_experiment_name=mlflow_settings.experiment_name,
+            mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
             mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
             mlflow_parent_run_id=parent_run_id,
@@ -740,6 +810,8 @@ function annotate_grid_config(
                 candidate_name=candidate_name,
                 gridsearch_parent_run_id=parent_run_id,
                 mlflow_parentRunId=parent_run_id,
+                mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
+                mlflow_experiment_name=mlflow_settings.experiment_name,
                 gridsearch_role="candidate",
             ),
         ),
@@ -777,9 +849,11 @@ function main()
 
     timestamp = result_timestamp()
     grid_id = gridsearch_id(timestamp)
-    mlflow_settings = grid_mlflow_settings()
+    experiment = load_experiment(default_experiment_selector())
+    mlflow_settings = grid_mlflow_settings(experiment)
     validate_mlflow_settings(mlflow_settings)
-    base_configs = selected_grid()
+    mlflow_settings = ensure_mlflow_grid_experiment(mlflow_settings)
+    base_configs = selected_grid(experiment)
     parent_run = create_mlflow_grid_parent_run(
         mlflow_settings,
         grid_id,

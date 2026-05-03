@@ -10,6 +10,61 @@ mutable struct FakeRun
     events::Vector{Symbol}
 end
 
+@testset "ContextualDFLTraining experiments" begin
+    spec = ContextualDFLTraining.load_experiment("ResourceAllocationExperiment1")
+    @test spec.id == "resource_allocation/experiment_1"
+    @test spec.name == "resource_allocation_experiment_1"
+    @test ContextualDFLTraining.experiment_base_config(spec).experiment_id == spec.id
+    @test length(ContextualDFLTraining.experiment_smoke_configs(spec)) == 1
+    @test isabspath(ContextualDFLTraining.optimal_results_path(spec, :test))
+
+    mktempdir() do dir
+        config_dir = joinpath(dir, "toy")
+        mkpath(config_dir)
+        config_path = joinpath(config_dir, "Config.jl")
+        write(
+            config_path,
+            """
+            import ContextualDFLTraining
+
+            experiment_id() = "toy/experiment"
+            experiment_name() = "toy_experiment"
+            experiment_module_name() = :ToyExperiment
+            artifact_dir() = joinpath(@__DIR__, "artifacts")
+            base_config() = (; experiment_id=experiment_id())
+            grid_configs(; kwargs...) = [base_config()]
+            smoke_configs(; kwargs...) = [base_config()]
+            training_objects(config) = nothing
+            optimality_splits(objects, config) = Pair{Symbol,Any}[]
+            optimal_results_path(split_name::Symbol) =
+                joinpath(artifact_dir(), string(split_name) * ".jls")
+            """,
+        )
+
+        toy_spec = ContextualDFLTraining.load_experiment(config_path)
+        dataset = [(; context=[1.0], scenario_parameters=[2.0])]
+        results = [(; objective_value=3.0)]
+        path = ContextualDFLTraining.save_optimal_results!(
+            toy_spec,
+            :test,
+            results;
+            dataset=dataset,
+        )
+
+        @test isfile(path)
+        @test ContextualDFLTraining.load_optimal_results(
+            toy_spec,
+            :test;
+            dataset=dataset,
+        ) == results
+        @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(
+            toy_spec,
+            :train;
+            dataset=dataset,
+        )
+    end
+end
+
 FakeRun() = FakeRun(
     Tuple{String,String}[],
     Tuple{String,Float64,Int}[],
