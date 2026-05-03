@@ -198,14 +198,14 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test all(parameter -> all(isfinite, parameter), Flux.trainables(model))
     end
 
-    @testset "train_with_mlflow! logs live params and metrics" begin
+    @testset "train_with_mlflow! logs epoch params and metrics" begin
         mlf = FakeMLFlowClient.FakeMLFlow()
         model = Flux.Chain(Flux.Dense(1 => 1))
         data = supervised_dataset(1:4, 2:2:8)
         loss(prediction, scenario_parameters, mu_in, mu_ref; kwargs...) =
             sum(abs2, prediction .- target_vector(scenario_parameters))
         mu_schedule = [0.1, 0.2]
-        live_metric_counts = Int[]
+        epoch_metric_counts = Int[]
 
         result = mktempdir() do dir
             model_path = joinpath(dir, "trained_model.jls")
@@ -231,7 +231,7 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
                 model_save_path=model_path,
                 model_artifact_path="models/trained_model.jls",
                 on_epoch_end=(epoch, loss_value, display_loss) ->
-                    push!(live_metric_counts, length(only(mlf.runs).metrics)),
+                    push!(epoch_metric_counts, length(only(mlf.runs).metrics)),
             )
         end
 
@@ -258,11 +258,15 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test length(result.history) == 2
         @test [row.mu_ref for row in result.history] == mu_schedule
         @test run.status === FakeMLFlowClient.RunStatus.FINISHED
-        @test count(metric -> metric[1] == "loss", run.metrics) == 2
-        @test count(metric -> metric[1] == "display_loss", run.metrics) == 2
+        loss_metrics = filter(metric -> metric[1] == "loss", run.metrics)
+        display_loss_metrics = filter(metric -> metric[1] == "display_loss", run.metrics)
+        @test length(loss_metrics) == 2
+        @test length(display_loss_metrics) == 2
         @test all(metric -> metric[2] isa Float64, run.metrics)
+        @test [metric[3] for metric in loss_metrics] == [1, 2]
+        @test [metric[3] for metric in display_loss_metrics] == [1, 2]
         @test sort(unique(metric[3] for metric in run.metrics)) == [1, 2]
-        @test live_metric_counts == [7, 14]
+        @test epoch_metric_counts == [7, 14]
         @test run.events[end] === :status
         @test count(==(:metric), run.events) == 14
         @test length(run.inputs) == 1
