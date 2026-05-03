@@ -70,10 +70,10 @@ end
 
     @testset "bundled resource allocation configs" begin
         default_spec = ContextualDFLTraining.load_grid_config(
-            joinpath(experiment.root_dir, "grid_configs", "default.yml"),
+            joinpath(experiment.root_dir, "grid_configs", "default.yaml"),
         )
         smoke_spec = ContextualDFLTraining.load_grid_config(
-            joinpath(experiment.root_dir, "grid_configs", "smoke.yml"),
+            joinpath(experiment.root_dir, "grid_configs", "smoke.yaml"),
         )
 
         @test length(ContextualDFLTraining.resolve_grid_configs(experiment, default_spec)) == 24
@@ -81,7 +81,7 @@ end
     end
 
     mktempdir() do dir
-        yaml_path = joinpath(dir, "grid.yml")
+        yaml_path = joinpath(dir, "grid.yaml")
         write(
             yaml_path,
             """
@@ -204,7 +204,7 @@ end
     end
 
     mktempdir() do dir
-        piecewise_path = joinpath(dir, "piecewise.yml")
+        piecewise_path = joinpath(dir, "piecewise.yaml")
         write(
             piecewise_path,
             """
@@ -248,7 +248,7 @@ end
     end
 
     mktempdir() do dir
-        values_path = joinpath(dir, "values.yml")
+        values_path = joinpath(dir, "values.yaml")
         write(
             values_path,
             """
@@ -292,7 +292,7 @@ end
         )
 
         mktempdir() do dir
-            empty_values_path = joinpath(dir, "empty_values.yml")
+            empty_values_path = joinpath(dir, "empty_values.yaml")
             write(
                 empty_values_path,
                 """
@@ -305,7 +305,7 @@ end
             )
             @test_throws ArgumentError ContextualDFLTraining.load_grid_config(empty_values_path)
 
-            empty_segments_path = joinpath(dir, "empty_segments.yml")
+            empty_segments_path = joinpath(dir, "empty_segments.yaml")
             write(
                 empty_segments_path,
                 """
@@ -318,7 +318,7 @@ end
             )
             @test_throws ArgumentError ContextualDFLTraining.load_grid_config(empty_segments_path)
 
-            non_positive_path = joinpath(dir, "non_positive.yml")
+            non_positive_path = joinpath(dir, "non_positive.yaml")
             write(
                 non_positive_path,
                 """
@@ -336,7 +336,7 @@ end
     end
 
     mktempdir() do dir
-        invalid_path = joinpath(dir, "invalid.yml")
+        invalid_path = joinpath(dir, "invalid.yaml")
         write(
             invalid_path,
             """
