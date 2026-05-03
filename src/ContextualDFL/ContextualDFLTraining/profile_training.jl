@@ -84,10 +84,10 @@ function profile_config_from_env(experiment)
         (;
             epochs=env_int("PROFILE_EPOCHS", 10),
             warmup_epochs=env_int("PROFILE_WARMUP_EPOCHS", 2),
-            mu=env_float("PROFILE_MU", DEFAULT_RUN_SETTINGS.mu),
-            mu_start=env_float("PROFILE_MU_START", DEFAULT_RUN_SETTINGS.mu_start),
-            mu_end=env_float("PROFILE_MU_END", DEFAULT_RUN_SETTINGS.mu_end),
-            mu_schedule=env_symbol("PROFILE_MU_SCHEDULE", DEFAULT_RUN_SETTINGS.mu_schedule),
+            mu=env_float("PROFILE_MU", 1.0),
+            mu_start=env_float("PROFILE_MU_START", 1.0),
+            mu_end=env_float("PROFILE_MU_END", 1.0),
+            mu_schedule=env_symbol("PROFILE_MU_SCHEDULE", :constant),
             rho=env_float("PROFILE_RHO", DEFAULT_RUN_SETTINGS.rho),
             tolerance_relative=env_float("PROFILE_TOLERANCE_RELATIVE", DEFAULT_RUN_SETTINGS.tolerance_relative),
             tolerance_absolute_floor=env_float(

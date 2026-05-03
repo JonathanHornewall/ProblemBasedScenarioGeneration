@@ -94,6 +94,10 @@ function profile_config(; overrides...)
         base_config(;
             epochs=100,
             warmup_epochs=2,
+            mu=1.0,
+            mu_start=1.0,
+            mu_end=1.0,
+            mu_schedule=:constant,
             learning_rate=1e-3,
             hidden_size=128,
             depth=2,
