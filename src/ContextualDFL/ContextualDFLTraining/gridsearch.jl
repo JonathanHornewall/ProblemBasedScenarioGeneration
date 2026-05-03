@@ -477,8 +477,9 @@ end
 function upload_mlflow_grid_config_artifacts!(mlf, grid_spec::GridSearchSpec, configs)
     source_extension = grid_spec.format == :yaml ? ".yaml" : ".json"
     source_data = read(grid_spec.path)
-    resolved_data = Vector{UInt8}(codeunits(resolved_grid_json(configs)))
-    digest_data = Vector{UInt8}(codeunits(grid_spec.digest * "\n"))
+    resolved_json = resolved_grid_json(configs)
+    resolved_data = Vector{UInt8}(codeunits(resolved_json))
+    digest_data = Vector{UInt8}(codeunits(grid_config_digest(configs) * "\n"))
 
     with_mlflow_retry("upload grid config source artifact") do
         MLFlowClient.uploadartifact(
@@ -547,7 +548,7 @@ function grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec
         "grid_candidate_count" => string(length(configs)),
         "grid_config_name" => grid_spec.name,
         "grid_config_path" => grid_spec.path,
-        "grid_config_digest" => grid_spec.digest,
+        "grid_config_digest" => grid_config_digest(configs),
         "grid_config_version" => string(grid_spec.version),
         "grid_config_format" => string(grid_spec.format),
         "grid_worker_count" => string(length(worker_hosts)),

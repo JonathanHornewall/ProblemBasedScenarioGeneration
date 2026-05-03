@@ -12,7 +12,6 @@ struct GridSearchSpec
     grid::Dict{Symbol,Vector{Any}}
     schedules::Dict{Symbol,Any}
     run_id_template::Union{Nothing,String}
-    digest::String
     raw::Dict{String,Any}
 end
 
@@ -130,7 +129,6 @@ function load_grid_config(path::AbstractString)
         grid,
         schedules,
         run_id_template,
-        grid_config_digest(absolute_path),
         raw,
     )
 end
@@ -314,7 +312,7 @@ function resolve_grid_configs(experiment, spec::GridSearchSpec)
     merge!(static_config, spec.base)
     merge!(static_config, spec.fixed)
 
-    configs = NamedTuple[]
+    configs_without_digest = NamedTuple[]
     for (index, candidate_values) in enumerate(grid_candidates(spec.grid))
         config = copy(static_config)
         merge!(config, spec.schedules)
@@ -322,15 +320,18 @@ function resolve_grid_configs(experiment, spec::GridSearchSpec)
 
         config[:grid_config_name] = spec.name
         config[:grid_config_path] = spec.path
-        config[:grid_config_digest] = spec.digest
         config[:grid_config_version] = spec.version
         config[:grid_candidate_index] = index
 
         haskey(config, :run_id) || (config[:run_id] = grid_run_id(spec, config, index))
-        push!(configs, namedtuple_from_dict(config))
+        push!(configs_without_digest, namedtuple_from_dict(config))
     end
 
-    return configs
+    digest = grid_config_digest(configs_without_digest)
+    return [
+        merge(config, (; grid_config_digest=digest)) for
+        config in configs_without_digest
+    ]
 end
 
 function grid_candidates(grid::Dict{Symbol,Vector{Any}})
@@ -379,15 +380,18 @@ function namedtuple_from_dict(values::Dict{Symbol,Any})
     return NamedTuple{Tuple(keys_sorted)}(Tuple(values[key] for key in keys_sorted))
 end
 
-function grid_config_digest(path::AbstractString)
-    return "sha256:" * bytes2hex(sha256(read(path)))
+function grid_config_digest(configs)
+    data = Vector{UInt8}(codeunits(resolved_grid_json(configs)))
+    return "sha256:" * bytes2hex(sha256(data))
 end
+
+const RESOLVED_GRID_JSON_OMITTED_KEYS = Set(["grid_config_digest"])
 
 function resolved_grid_json(configs)
-    return sprint(io -> JSON3.pretty(io, json_ready(configs)))
+    return sprint(io -> JSON3.pretty(io, json_ready(configs, RESOLVED_GRID_JSON_OMITTED_KEYS)))
 end
 
-function json_ready(value)
+function json_ready(value, omitted_keys::Set{String}=Set{String}())
     value === missing && return nothing
     value === nothing && return nothing
     value isa Symbol && return string(value)
@@ -396,11 +400,24 @@ function json_ready(value)
     value isa AbstractString && return value
 
     if value isa NamedTuple
-        return Dict(string(key) => json_ready(getproperty(value, key)) for key in keys(value))
+        ready_keys = Symbol[
+            key for key in sort!(collect(keys(value)); by=string) if
+            !(string(key) in omitted_keys)
+        ]
+        return NamedTuple{Tuple(ready_keys)}(
+            Tuple(json_ready(getproperty(value, key), omitted_keys) for key in ready_keys),
+        )
     elseif value isa AbstractDict
-        return Dict(string(key) => json_ready(item) for (key, item) in value)
+        source_keys = [
+            key for key in sort!(collect(keys(value)); by=string) if
+            !(string(key) in omitted_keys)
+        ]
+        ready_keys = Symbol.(string.(source_keys))
+        return NamedTuple{Tuple(ready_keys)}(
+            Tuple(json_ready(value[key], omitted_keys) for key in source_keys),
+        )
     elseif value isa AbstractVector || value isa Tuple
-        return Any[json_ready(item) for item in value]
+        return Any[json_ready(item, omitted_keys) for item in value]
     end
 
     return string(value)
