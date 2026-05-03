@@ -158,28 +158,12 @@ function evaluate_policy_against_optimum(
     program,
     parametric_decoder,
     solver;
-    optimal_results=nothing,
+    optimal_results,
     split_name=:test,
     mu=0,
     kwargs...,
 )
-    optimal_solve_seconds = 0.0
-    actual_optimal_results = optimal_results
-
-    if isnothing(actual_optimal_results)
-        optimal_solve_seconds = @elapsed begin
-            actual_optimal_results = solve_dataset_to_optimality(
-                contextual_data_set,
-                program,
-                parametric_decoder,
-                solver;
-                mu=mu,
-                kwargs...,
-            )
-        end
-    end
-
-    length(actual_optimal_results) == length(contextual_data_set) ||
+    length(optimal_results) == length(contextual_data_set) ||
         throw(DimensionMismatch("optimal_results must have one entry per data point."))
 
     policy_values = nothing
@@ -195,7 +179,7 @@ function evaluate_policy_against_optimum(
         )
     end
 
-    optimal_values = [result.objective_value for result in actual_optimal_results]
+    optimal_values = [result.objective_value for result in optimal_results]
     split_name = Symbol(split_name)
     regrets = Float64.(policy_values) .- Float64.(optimal_values)
     relative_regrets = [
@@ -211,7 +195,6 @@ function evaluate_policy_against_optimum(
             split_name,
             (;
                 sample_count=length(contextual_data_set),
-                optimal_solve_seconds=optimal_solve_seconds,
                 policy_eval_seconds=policy_eval_seconds,
             ),
         ),
@@ -230,7 +213,7 @@ function evaluate_policy_against_optimum(
     return (;
         metrics=metrics,
         per_sample=per_sample,
-        optimal_results=actual_optimal_results,
+        optimal_results=optimal_results,
     )
 end
 

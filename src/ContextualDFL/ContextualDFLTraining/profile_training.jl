@@ -1,10 +1,12 @@
 #!/usr/bin/env julia
 
+using ArgParse
 using Distributed
 using Sockets
 
 include(joinpath(@__DIR__, "src", "grid_config.jl"))
 include(joinpath(@__DIR__, "src", "csv_results.jl"))
+include(joinpath(@__DIR__, "src", "experiments", "ExperimentAPI.jl"))
 
 const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
@@ -33,6 +35,20 @@ function env_flag(name, default=false)
     return value in ("1", "true", "yes", "y")
 end
 
+function parse_commandline(args=ARGS)
+    settings = ArgParseSettings(
+        description="Run a ContextualDFLTraining profiling job for one experiment.",
+    )
+
+    @add_arg_table! settings begin
+        "--experiment"
+            help = "Experiment id, module name, or config path to profile, e.g. resource_allocation/experiment_1"
+            required = true
+    end
+
+    return parse_args(args, settings)
+end
+
 function ensure_clean_worker_start!()
     nprocs() == 1 ||
         error("Refusing to run with pre-existing workers. Start Julia without -p or --machine-file.")
@@ -51,7 +67,7 @@ function sync_code!()
     return nothing
 end
 
-function profile_config_from_env()
+function profile_config_from_env(experiment)
     run_id = get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3")
     mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", false)
     profile_mlflow_progress = env_flag("PROFILE_MLFLOW_PROGRESS", mlflow_enabled)
@@ -141,7 +157,7 @@ function profile_config_from_env()
             ),
         ),
     )
-    return cfg
+    return with_experiment_metadata(experiment, cfg)
 end
 
 function with_profile_output_config(config, output_dir)
@@ -246,13 +262,15 @@ function write_profile_outputs(result, output_dir)
 end
 
 function main()
+    parsed_args = parse_commandline()
+    experiment = load_experiment(parsed_args["experiment"])
     ensure_clean_worker_start!()
     worker = nothing
 
     try
         output_dir = profile_output_dir()
         config = with_profile_output_config(
-            merge(profile_config_from_env(), (; coordinator_hostname=Sockets.gethostname())),
+            merge(profile_config_from_env(experiment), (; coordinator_hostname=Sockets.gethostname())),
             output_dir,
         )
         println("Running remote profile $(config.run_id) with $(config.epochs) profiled epoch(s)")

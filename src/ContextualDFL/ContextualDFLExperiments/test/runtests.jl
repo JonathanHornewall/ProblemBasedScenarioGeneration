@@ -114,8 +114,16 @@ end
     @test comparison.metrics.test_optimal_value_mean ≈ 15.5
     @test comparison.metrics.test_regret_mean ≈ 0.0
     @test comparison.metrics.test_relative_regret_mean ≈ 0.0
-    @test comparison.metrics.test_optimal_solve_seconds == 0.0
     @test comparison.metrics.test_policy_eval_seconds >= 0.0
+
+    @test_throws UndefKeywordError evaluate_policy_against_optimum(
+        decision_set,
+        data_set,
+        program,
+        decoder,
+        solver;
+        split_name=:test,
+    )
 
     generator = ContextualDFL.ScenarioGenerator(
         neural_net=context -> [context[1] + 4.0],

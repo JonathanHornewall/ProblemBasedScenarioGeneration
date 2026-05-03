@@ -42,7 +42,7 @@ function train_and_evaluate(config::NamedTuple)
         evaluation_seconds = 0.0
 
         object_build_seconds = @elapsed begin
-            objects = resource_allocation_training_objects(cfg)
+            objects = training_objects_for_config(cfg)
         end
         training_seconds = @elapsed begin
             training = train_with_contextualdfl(objects, cfg)
@@ -287,10 +287,30 @@ function assert_remote_training_worker!(config)
 end
 
 function mlflow_dataset_name(config)
-    return string(config_value(config, :mlflow_dataset_name, "resource_allocation_generated"))
+    return string(
+        config_value(
+            config,
+            :mlflow_dataset_name,
+            config_value(config, :experiment_name, "resource_allocation_generated"),
+        ),
+    )
 end
 
 function mlflow_dataset_source(config)
+    if hasproperty(config, :experiment_id)
+        return join(
+            (
+                "ContextualDFLTraining.experiment",
+                "experiment_id=$(config.experiment_id)",
+                "seed=$(config.seed)",
+                "n_samples=$(config.n_samples)",
+                "validation_fraction=$(config.validation_fraction)",
+                "test_fraction=$(config.test_fraction)",
+            ),
+            ";",
+        )
+    end
+
     return join(
         (
             "ContextualDFLExperiments.resource_allocation",
@@ -679,17 +699,26 @@ function evaluate_model_for_reporting(model, objects, config)
 end
 
 function evaluate_optimality_on_splits(model, objects, config)
+    spec = experiment_from_config(config)
+    spec === nothing && throw(
+        ArgumentError(
+            "optimality_evaluation=true requires config.experiment_id so precomputed optimal results can be loaded.",
+        ),
+    )
+
     policy = optimality_policy(model, objects, config)
     metrics = NamedTuple()
 
-    for (split_name, dataset) in optimality_evaluation_datasets(objects, config)
+    for (split_name, dataset) in optimality_splits_for_config(objects, config)
         isempty(dataset) && continue
+        optimal_results = load_optimal_results(spec, split_name; dataset=dataset)
         result = ContextualDFLExperiments.evaluate_policy_against_optimum(
             policy,
             dataset,
             objects.program,
             objects.reference_scenario_decoder,
             objects.solver;
+            optimal_results=optimal_results,
             split_name=split_name,
             mu=Float64(config_value(config, :optimality_mu, 0.0)),
         )

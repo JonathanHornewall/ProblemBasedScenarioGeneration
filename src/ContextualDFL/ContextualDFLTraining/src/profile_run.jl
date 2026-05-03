@@ -270,12 +270,12 @@ function profile_standard_training(config::NamedTuple)
                         profile_mlflow_progress=false,
                     ),
                 )
-                warmup_objects = resource_allocation_training_objects(warmup_cfg)
+                warmup_objects = training_objects_for_config(warmup_cfg)
                 strict_contextualdfl_training(warmup_objects, warmup_cfg)
                 GC.gc()
             end
 
-            objects = resource_allocation_training_objects(cfg)
+            objects = training_objects_for_config(cfg)
             model = objects.scenario_generator.neural_net
             initial_train_mse = split_mse(model, objects.data.train)
 

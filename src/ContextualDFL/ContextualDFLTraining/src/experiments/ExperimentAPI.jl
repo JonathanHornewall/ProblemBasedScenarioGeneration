@@ -27,15 +27,15 @@ const REQUIRED_EXPERIMENT_FUNCTIONS = (
     :optimal_results_path,
 )
 
-function default_experiment_selector()
-    return get(
-        ENV,
-        "CONTEXTUALDFL_EXPERIMENT",
-        get(ENV, "EXPERIMENT", "resource_allocation/experiment_1"),
+function load_experiment()
+    throw(
+        ArgumentError(
+            "load_experiment requires an explicit selector. Scripts should pass --experiment <experiment>.",
+        ),
     )
 end
 
-function load_experiment(selector=default_experiment_selector())
+function load_experiment(selector)
     selector isa ExperimentSpec && return selector
     selector_string = string(selector)
     path = resolve_experiment_config_path(selector_string)

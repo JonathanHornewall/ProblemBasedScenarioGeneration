@@ -2,6 +2,7 @@
 
 using Dates
 using Distributed
+using ArgParse
 import MLFlowClient
 using SHA
 using Sockets
@@ -89,7 +90,7 @@ function deterministic_mlflow_experiment_name(experiment)
     return "ContextualDFLTraining/" * string(experiment.name)
 end
 
-function grid_mlflow_settings(experiment=load_experiment(default_experiment_selector()))
+function grid_mlflow_settings(experiment)
     deterministic_id = deterministic_mlflow_experiment_id(experiment.id)
     return (;
         enabled=true,
@@ -726,7 +727,7 @@ function mlflow_filter_escape(value)
     return replace(string(value), "\\" => "\\\\", "\"" => "\\\"")
 end
 
-function selected_grid(experiment=load_experiment(default_experiment_selector()))
+function selected_grid(experiment)
     overrides = grid_overrides_from_env()
     if env_flag("GRIDSEARCH_SMOKE", false)
         return experiment_smoke_configs(experiment; overrides...)
@@ -756,6 +757,20 @@ function grid_overrides_from_env()
     )
 end
 
+function parse_commandline(args=ARGS)
+    settings = ArgParseSettings(
+        description="Run a ContextualDFLTraining grid search for one experiment.",
+    )
+
+    @add_arg_table! settings begin
+        "--experiment"
+            help = "Experiment id, module name, or config path to run, e.g. resource_allocation/experiment_1"
+            required = true
+    end
+
+    return parse_args(args, settings)
+end
+
 function gridsearch_id(timestamp::AbstractString)
     return "gridsearch_" * timestamp
 end
@@ -775,7 +790,7 @@ function annotate_grid_config(
     config,
     index::Integer,
     timestamp::AbstractString,
-    mlflow_settings=grid_mlflow_settings(),
+    mlflow_settings,
     parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
@@ -821,7 +836,7 @@ end
 function annotate_grid_configs(
     configs,
     timestamp::AbstractString,
-    mlflow_settings=grid_mlflow_settings(),
+    mlflow_settings,
     parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
@@ -839,6 +854,9 @@ function annotate_grid_configs(
 end
 
 function main()
+    parsed_args = parse_commandline()
+    experiment = load_experiment(parsed_args["experiment"])
+
     ensure_clean_worker_start!()
     sync_code!()
     remote_worker_ids = add_remote_workers!()
@@ -849,7 +867,6 @@ function main()
 
     timestamp = result_timestamp()
     grid_id = gridsearch_id(timestamp)
-    experiment = load_experiment(default_experiment_selector())
     mlflow_settings = grid_mlflow_settings(experiment)
     validate_mlflow_settings(mlflow_settings)
     mlflow_settings = ensure_mlflow_grid_experiment(mlflow_settings)
