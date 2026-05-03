@@ -1,6 +1,26 @@
+using Configurations: @option, from_dict
 using JSON3
 using SHA
 using YAML
+
+@option struct GridScheduleConfig
+    kind::String = ""
+    type::String = ""
+    start::Union{Nothing,Float64} = nothing
+    stop::Union{Nothing,Float64} = nothing
+    value::Union{Nothing,Float64} = nothing
+end
+
+@option struct GridFileConfig
+    version::Int
+    name::Union{Nothing,String} = nothing
+    description::Union{Nothing,String} = nothing
+    base::Dict{String,Any} = Dict{String,Any}()
+    fixed::Dict{String,Any} = Dict{String,Any}()
+    grid::Dict{String,Any} = Dict{String,Any}()
+    schedules::Dict{String,GridScheduleConfig} = Dict{String,GridScheduleConfig}()
+    run_id_template::Union{Nothing,String} = nothing
+end
 
 struct GridSearchSpec
     path::String
@@ -14,19 +34,6 @@ struct GridSearchSpec
     run_id_template::Union{Nothing,String}
     raw::Dict{String,Any}
 end
-
-const GRID_CONFIG_TOP_LEVEL_KEYS = Set(
-    [
-        "version",
-        "name",
-        "description",
-        "base",
-        "fixed",
-        "grid",
-        "schedules",
-        "run_id_template",
-    ],
-)
 
 const GRID_SYMBOL_KEYS = Set(
     [
@@ -100,24 +107,24 @@ function load_grid_config(path::AbstractString)
         throw(ArgumentError("grid config file does not exist: $absolute_path"))
 
     format = grid_config_format(absolute_path)
-    raw = normalize_grid_config_data(read_grid_config_file(absolute_path, format))
-    validate_grid_config_top_level!(raw, absolute_path)
+    raw = grid_config_data(read_grid_config_file(absolute_path, format))
+    parsed = parse_grid_file_config(raw, absolute_path)
 
-    version = required_int(raw, "version", absolute_path)
+    version = parsed.version
     version == 1 ||
         throw(ArgumentError("unsupported grid config version $version in $absolute_path"))
 
-    name = string(get(raw, "name", splitext(basename(absolute_path))[1]))
+    name = parsed.name === nothing ? splitext(basename(absolute_path))[1] : string(parsed.name)
     isempty(strip(name)) &&
         throw(ArgumentError("grid config name must not be empty in $absolute_path"))
 
-    base = settings_section(raw, "base")
-    fixed = settings_section(raw, "fixed")
-    grid = grid_section(raw)
-    schedules = schedule_settings(raw)
-    run_id_template = haskey(raw, "run_id_template") ?
-        string(raw["run_id_template"]) :
-        nothing
+    base = settings_section(parsed.base)
+    fixed = settings_section(parsed.fixed)
+    grid = grid_section(parsed.grid)
+    schedules = schedule_settings(parsed.schedules)
+    run_id_template = parsed.run_id_template === nothing ?
+        nothing :
+        string(parsed.run_id_template)
 
     return GridSearchSpec(
         absolute_path,
@@ -146,15 +153,15 @@ function read_grid_config_file(path::AbstractString, format::Symbol)
     throw(ArgumentError("unsupported grid config format $format"))
 end
 
-function normalize_grid_config_data(value)
+function grid_config_data(value)
     if value isa AbstractDict || value isa JSON3.Object
         output = Dict{String,Any}()
         for (key, item) in pairs(value)
-            output[string(key)] = normalize_grid_config_data(item)
+            output[string(key)] = grid_config_data(item)
         end
         return output
     elseif value isa AbstractVector || value isa JSON3.Array
-        return Any[normalize_grid_config_data(item) for item in value]
+        return Any[grid_config_data(item) for item in value]
     elseif value isa AbstractString || value isa Number || value isa Bool ||
            value === nothing || value === missing
         return value
@@ -162,40 +169,45 @@ function normalize_grid_config_data(value)
     return string(value)
 end
 
-function validate_grid_config_top_level!(raw, path)
+function parse_grid_file_config(raw, path::AbstractString)
     raw isa AbstractDict ||
         throw(ArgumentError("grid config $path must contain a mapping/object at the top level."))
 
-    unknown = sort!(setdiff(collect(keys(raw)), collect(GRID_CONFIG_TOP_LEVEL_KEYS)))
-    isempty(unknown) ||
-        throw(ArgumentError("unknown top-level grid config key(s) in $path: $(join(unknown, ", "))"))
-    return nothing
+    normalize_grid_schedule_aliases!(raw)
+    try
+        return from_dict(GridFileConfig, raw)
+    catch error
+        throw(ArgumentError("invalid grid config $path: $(sprint(showerror, error))"))
+    end
 end
 
-function required_int(raw, key::AbstractString, path::AbstractString)
-    haskey(raw, key) || throw(ArgumentError("grid config $path is missing required key '$key'."))
-    return Int(raw[key])
+function normalize_grid_schedule_aliases!(raw)
+    schedules = get(raw, "schedules", nothing)
+    schedules isa AbstractDict || return raw
+
+    for (_, schedule) in schedules
+        schedule isa AbstractDict || continue
+        if haskey(schedule, "end")
+            haskey(schedule, "stop") || (schedule["stop"] = schedule["end"])
+            delete!(schedule, "end")
+        end
+    end
+
+    return raw
 end
 
-function section_dict(raw, key::AbstractString)
-    value = get(raw, key, Dict{String,Any}())
-    value isa AbstractDict ||
-        throw(ArgumentError("grid config section '$key' must be a mapping/object."))
-    return value
-end
-
-function settings_section(raw, key::AbstractString)
+function settings_section(section)
     output = Dict{Symbol,Any}()
-    for (setting_key, value) in section_dict(raw, key)
+    for (setting_key, value) in section
         symbol_key = Symbol(setting_key)
         output[symbol_key] = normalize_grid_setting_value(symbol_key, value)
     end
     return output
 end
 
-function grid_section(raw)
+function grid_section(grid_values)
     output = Dict{Symbol,Vector{Any}}()
-    for (setting_key, values) in section_dict(raw, "grid")
+    for (setting_key, values) in grid_values
         values isa AbstractVector ||
             throw(ArgumentError("grid entry '$setting_key' must be a non-empty array."))
         isempty(values) &&
@@ -229,22 +241,20 @@ function normalize_grid_setting_value(key::Symbol, value)
     return value
 end
 
-function schedule_settings(raw)
+function schedule_settings(schedules)
     output = Dict{Symbol,Any}()
-    schedules = section_dict(raw, "schedules")
 
     for (name, spec) in schedules
         schedule_name = Symbol(name)
-        spec isa AbstractDict ||
-            throw(ArgumentError("schedule '$name' must be a mapping/object."))
         merge!(output, normalize_schedule(schedule_name, spec))
     end
 
     return output
 end
 
-function normalize_schedule(name::Symbol, spec)
-    kind = Symbol(get(spec, "kind", get(spec, "type", "")))
+function normalize_schedule(name::Symbol, spec::GridScheduleConfig)
+    raw_kind = isempty(strip(spec.kind)) ? spec.type : spec.kind
+    kind = Symbol(strip(raw_kind))
     kind === Symbol("") &&
         throw(ArgumentError("schedule '$name' must define a kind."))
 
@@ -263,11 +273,11 @@ function normalize_mu_schedule(kind::Symbol, spec)
 
     output = Dict{Symbol,Any}(:mu_schedule => kind)
     if kind == :constant
-        haskey(spec, "value") && (output[:mu] = Float64(spec["value"]))
+        spec.value !== nothing && (output[:mu] = Float64(spec.value))
         return output
     end
 
-    output[:mu_start] = Float64(required_schedule_value(spec, "start", "mu"))
+    output[:mu_start] = Float64(required_schedule_value(spec, :start, "mu"))
     output[:mu_end] = Float64(schedule_stop_value(spec, "mu"))
     return output
 end
@@ -281,27 +291,28 @@ function normalize_mu_ref_schedule(kind::Symbol, spec)
 
     output = Dict{Symbol,Any}(:mu_ref_schedule => kind)
     if kind == :constant
-        haskey(spec, "value") && (output[:mu_ref] = Float64(spec["value"]))
+        spec.value !== nothing && (output[:mu_ref] = Float64(spec.value))
         return output
     end
 
-    output[:mu_ref_start] = Float64(required_schedule_value(spec, "start", "mu_ref"))
+    output[:mu_ref_start] = Float64(required_schedule_value(spec, :start, "mu_ref"))
     output[:mu_ref_end] = Float64(schedule_stop_value(spec, "mu_ref"))
     return output
 end
 
-function required_schedule_value(spec, key::AbstractString, schedule_name::AbstractString)
-    haskey(spec, key) ||
+function required_schedule_value(
+    spec::GridScheduleConfig,
+    key::Symbol,
+    schedule_name::AbstractString,
+)
+    value = getproperty(spec, key)
+    value === nothing &&
         throw(ArgumentError("schedule '$schedule_name' must define '$key'."))
-    return spec[key]
+    return value
 end
 
-function schedule_stop_value(spec, schedule_name::AbstractString)
-    if haskey(spec, "stop")
-        return spec["stop"]
-    elseif haskey(spec, "end")
-        return spec["end"]
-    end
+function schedule_stop_value(spec::GridScheduleConfig, schedule_name::AbstractString)
+    spec.stop !== nothing && return spec.stop
     throw(ArgumentError("schedule '$schedule_name' must define 'stop' or 'end'."))
 end
 
@@ -338,22 +349,11 @@ function grid_candidates(grid::Dict{Symbol,Vector{Any}})
     keys_sorted = sort!(collect(keys(grid)); by=string)
     isempty(keys_sorted) && return [Dict{Symbol,Any}()]
 
-    candidates = Dict{Symbol,Any}[]
-    function visit(index, values)
-        if index > length(keys_sorted)
-            push!(candidates, copy(values))
-            return nothing
-        end
-        key = keys_sorted[index]
-        for value in grid[key]
-            values[key] = value
-            visit(index + 1, values)
-        end
-        delete!(values, key)
-        return nothing
-    end
-    visit(1, Dict{Symbol,Any}())
-    return candidates
+    reversed_keys = reverse(keys_sorted)
+    return [
+        Dict{Symbol,Any}(key => value for (key, value) in zip(keys_sorted, reverse(values))) for
+        values in Iterators.product((grid[key] for key in reversed_keys)...)
+    ]
 end
 
 function grid_run_id(spec::GridSearchSpec, config::Dict{Symbol,Any}, index::Integer)
