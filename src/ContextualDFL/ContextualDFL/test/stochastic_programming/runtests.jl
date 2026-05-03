@@ -685,6 +685,41 @@ end
         @test tangents[10][1, 1] ≈ q_fd atol = 1e-5
     end
 
+    @testset "solve rrule rejects malformed nonzero cotangent" begin
+        program = StochasticProgram(
+            A_eq=reshape([1.0], 1, 1),
+            A_ineq=reshape([1.0], 1, 1),
+            b_eq=[1.0],
+            b_ineq=[2.0],
+            c=[0.0],
+        )
+
+        W_eq_array = reshape([1.0], 1, 1, 1)
+        W_ineq_array = reshape([1.0], 1, 1, 1)
+        T_eq_array = reshape([1.0], 1, 1, 1)
+        T_ineq_array = reshape([0.0], 1, 1, 1)
+        h_eq_array = reshape([2.0], 1, 1)
+        h_ineq_array = reshape([3.0], 1, 1)
+        q_array = reshape([1.0], 1, 1)
+
+        _, pullback = ChainRulesCore.rrule(
+            solve,
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=0.25,
+            tol=1e-9,
+        )
+
+        @test_throws ArgumentError pullback("not a valid cotangent")
+    end
+
     @testset "solve rrule rejects dual output cotangents" begin
         program = StochasticProgram(
             A_eq=reshape([1.0], 1, 1),

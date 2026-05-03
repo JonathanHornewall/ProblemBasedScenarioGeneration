@@ -1,3 +1,5 @@
+import ChainRulesCore
+
 struct ResourceAllocationDemandVectorDecoder{TBaseScenario} <: ContextualDFL.VectorDecoder
     base_scenario::TBaseScenario
 end
@@ -93,6 +95,64 @@ function ChainRulesCore.rrule(
 end
 
 function _resource_allocation_demand_rows(decoder::ResourceAllocationDemandParametricDecoder)
+    scenario = decoder.base_scenario
+    resource_count = size(scenario.T_eq, 2)
+    demand_count = length(scenario.h_eq) - resource_count
+    return (resource_count + 1):(resource_count + demand_count)
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(ContextualDFL.decode_scenario_collection),
+    decoder::ResourceAllocationDemandVectorDecoder,
+    demand_vector::AbstractVector{<:Number};
+    nr_scenarios=nothing,
+)
+    isnothing(nr_scenarios) &&
+        throw(ArgumentError(
+            "ResourceAllocationDemandVectorDecoder rrule requires explicit nr_scenarios.",
+        ))
+    nr_scenarios isa Integer && nr_scenarios > 0 ||
+        throw(ArgumentError("nr_scenarios must be a positive integer."))
+
+    scenario = decoder.base_scenario
+    resource_count = size(scenario.T_eq, 2)
+    demand_count = length(scenario.h_eq) - resource_count
+    expected_length = demand_count * nr_scenarios
+    length(demand_vector) == expected_length ||
+        throw(DimensionMismatch(
+            "demand_vector has length $(length(demand_vector)); expected " *
+            "$(expected_length) for demand_count=$demand_count, " *
+            "nr_scenarios=$nr_scenarios.",
+        ))
+
+    output = ContextualDFL.decode_scenario_collection(
+        decoder,
+        demand_vector;
+        nr_scenarios=nr_scenarios,
+    )
+    demand_rows = (resource_count + 1):(resource_count + demand_count)
+    project_demand = ChainRulesCore.ProjectTo(demand_vector)
+
+    function resource_allocation_vector_decode_pullback(output_tangent)
+        dh_eq_array = ContextualDFL._array_cotangent(
+            output_tangent,
+            5,
+            output[5];
+            name=:h_eq_array,
+        )
+        ddemand_vector = vec(copy(view(dh_eq_array, demand_rows, :)))
+
+        return (
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            project_demand(ddemand_vector),
+        )
+    end
+
+    return output, resource_allocation_vector_decode_pullback
+end
+
+function _resource_allocation_demand_rows(decoder::ResourceAllocationDemandVectorDecoder)
     scenario = decoder.base_scenario
     resource_count = size(scenario.T_eq, 2)
     demand_count = length(scenario.h_eq) - resource_count

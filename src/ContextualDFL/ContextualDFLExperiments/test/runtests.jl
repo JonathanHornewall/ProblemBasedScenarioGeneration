@@ -1,5 +1,7 @@
 using ContextualDFL
 using ContextualDFLExperiments
+using Flux
+using LinearAlgebra
 using Random
 using Test
 
@@ -46,6 +48,16 @@ function tiny_scenario(h)
         h_ineq_xi=Float64[],
         q_xi=[3.0],
     )
+end
+
+function small_resource_allocation_ad_problem()
+    data = ResourceAllocationProblemData(
+        [1.0 0.8 1.2; 0.7 1.1 0.9],
+        [1.0, 1.2],
+        [3.0, 4.0, 5.0],
+        [1.0, 1.0],
+    )
+    return data, ResourceAllocationProblem(data)
 end
 
 @testset "ContextualDFLExperiments" begin
@@ -157,6 +169,46 @@ end
     @test vector_h_eq[1:2] == zeros(2)
     @test vector_h_eq[3:5] == resource_scenario.h_eq_xi
 
+    predicted_demand = vcat(resource_scenario.h_eq_xi, 2 .* resource_scenario.h_eq_xi)
+    @test_throws ArgumentError ChainRulesCore.rrule(
+        ContextualDFL.decode_scenario_collection,
+        resource_vector_decoder,
+        predicted_demand,
+    )
+    @test_throws DimensionMismatch ChainRulesCore.rrule(
+        ContextualDFL.decode_scenario_collection,
+        resource_vector_decoder,
+        predicted_demand[1:(end - 1)];
+        nr_scenarios=2,
+    )
+
+    decoded = ContextualDFL.decode_scenario_collection(
+        resource_vector_decoder,
+        predicted_demand;
+        nr_scenarios=2,
+    )
+    _, vector_pullback = ChainRulesCore.rrule(
+        ContextualDFL.decode_scenario_collection,
+        resource_vector_decoder,
+        predicted_demand;
+        nr_scenarios=2,
+    )
+    dh_eq_cotangent = zeros(size(decoded[5]))
+    dh_eq_cotangent[3:5, :] = [1.0 4.0; 2.0 5.0; 3.0 6.0]
+    output_cotangent = ntuple(
+        index -> index == 5 ? dh_eq_cotangent : zeros(size(decoded[index])),
+        length(decoded),
+    )
+    vector_tangents =
+        vector_pullback(ChainRulesCore.Tangent{typeof(decoded)}(output_cotangent...))
+    @test vector_tangents[3] == vec(dh_eq_cotangent[3:5, :])
+    @test vector_tangents[3][1] == dh_eq_cotangent[3, 1]
+    @test vector_tangents[3][4] == dh_eq_cotangent[3, 2]
+
+    zero_vector_tangents = vector_pullback(ChainRulesCore.ZeroTangent())
+    @test zero_vector_tangents[3] == zeros(length(predicted_demand))
+    @test zero_vector_tangents[3] isa Vector{Float64}
+
     resource_parametric_decoder = ResourceAllocationDemandParametricDecoder(resource_problem)
     _, _, _, _, h_eq, h_ineq, q = resource_parametric_decoder(resource_scenario)
     @test h_eq[1:2] == zeros(2)
@@ -200,6 +252,165 @@ end
         @test scenario_tangent.T_ineq_xi isa ChainRulesCore.NoTangent
         @test scenario_tangent.h_ineq_xi isa ChainRulesCore.NoTangent
         @test scenario_tangent.q_xi isa ChainRulesCore.NoTangent
+    end
+
+    @testset "ResourceAllocationDemandVectorDecoder real AD" begin
+        data, problem = small_resource_allocation_ad_problem()
+        decoder = ResourceAllocationDemandVectorDecoder(problem)
+
+        resource_count = size(data.service_rate_parameters, 1)
+        demand_count = size(data.service_rate_parameters, 2)
+        K = 2
+
+        demand = collect(1.0:(demand_count * K))
+        H = reshape(
+            collect(1.0:((resource_count + demand_count) * K)),
+            resource_count + demand_count,
+            K,
+        )
+
+        f(d) = begin
+            _, _, _, _, h_eq_array, _, _ =
+                ContextualDFL.decode_scenario_collection(decoder, d; nr_scenarios=K)
+            return sum(h_eq_array .* H)
+        end
+
+        g = only(Flux.gradient(f, demand))
+        expected = vec(H[(resource_count + 1):(resource_count + demand_count), :])
+
+        @test g ≈ expected atol = 1e-10 rtol = 1e-10
+        @test !all(iszero, g)
+    end
+
+    @testset "solve rrule real AD matches finite difference wrt h_eq_array" begin
+        data, problem = small_resource_allocation_ad_problem()
+        solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+        decoder = ResourceAllocationDemandVectorDecoder(problem)
+
+        K = 1
+        demand = [5.0, 6.0, 7.0]
+        W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+            ContextualDFL.decode_scenario_collection(decoder, demand; nr_scenarios=K)
+
+        μ = 0.25
+        z_weight = [0.3, -0.7]
+
+        f(h_candidate) = begin
+            z, _, _, _, _, _ = ContextualDFL.solve(
+                solver,
+                stochastic_program(problem),
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_candidate,
+                h_ineq,
+                q;
+                μ=μ,
+                tol=1e-9,
+            )
+            return dot(z_weight, z)
+        end
+
+        g = only(Flux.gradient(f, h_eq))
+
+        direction = zeros(size(h_eq))
+        direction[(size(data.service_rate_parameters, 1) + 1):end, :] .= [0.4, -0.2, 0.3]
+
+        ϵ = 1e-4
+        fd = (f(h_eq .+ ϵ .* direction) - f(h_eq .- ϵ .* direction)) / (2ϵ)
+
+        @test abs(fd) > 1e-8
+        @test sum(g .* direction) ≈ fd atol = 3e-3 rtol = 3e-2
+    end
+
+    @testset "predicted demand gradient through decode and solve is nonzero and correct" begin
+        _, problem = small_resource_allocation_ad_problem()
+        solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+        decoder = ResourceAllocationDemandVectorDecoder(problem)
+
+        K = 2
+        demand = [5.0, 6.0, 7.0, 4.5, 6.5, 8.0]
+        μ = 0.25
+        z_weight = [0.3, -0.7]
+
+        f(d) = begin
+            W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+                ContextualDFL.decode_scenario_collection(decoder, d; nr_scenarios=K)
+
+            z, _, _, _, _, _ = ContextualDFL.solve(
+                solver,
+                stochastic_program(problem),
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_eq,
+                h_ineq,
+                q;
+                μ=μ,
+                tol=1e-9,
+            )
+
+            return dot(z_weight, z)
+        end
+
+        g = only(Flux.gradient(f, demand))
+
+        direction = [0.1, -0.2, 0.3, -0.4, 0.2, 0.1]
+        direction ./= norm(direction)
+
+        ϵ = 1e-4
+        fd = (f(demand .+ ϵ .* direction) - f(demand .- ϵ .* direction)) / (2ϵ)
+
+        @test abs(fd) > 1e-8
+        @test !all(iszero, g)
+        @test dot(g, direction) ≈ fd atol = 3e-3 rtol = 3e-2
+    end
+
+    @testset "DflScenLoss gradient wrt predicted demand matches finite difference" begin
+        _, problem = small_resource_allocation_ad_problem()
+        solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+
+        input_decoder = ResourceAllocationDemandVectorDecoder(problem)
+        reference_decoder = ResourceAllocationDemandParametricDecoder(problem)
+
+        K = 2
+        loss = ContextualDFL.DflScenLoss(
+            input_decoder,
+            reference_decoder,
+            solver,
+            stochastic_program(problem);
+            nr_scenarios=K,
+        )
+
+        predicted_demand = [5.0, 6.0, 7.0, 4.5, 6.5, 8.0]
+        reference_scenarios = [
+            ContextualDFL.ParametricScenario(; h_eq_xi=[5.5, 6.0, 7.5]),
+            ContextualDFL.ParametricScenario(; h_eq_xi=[4.0, 6.8, 8.2]),
+        ]
+        μ = 0.25
+
+        f(d) = loss(
+            d,
+            reference_scenarios,
+            μ,
+            μ;
+            tol=1e-9,
+        )
+
+        g = only(Flux.gradient(f, predicted_demand))
+
+        direction = [0.1, -0.2, 0.3, -0.4, 0.2, 0.1]
+        direction ./= norm(direction)
+
+        ϵ = 1e-4
+        fd = (f(predicted_demand .+ ϵ .* direction) -
+              f(predicted_demand .- ϵ .* direction)) / (2ϵ)
+
+        @test abs(fd) > 1e-8
+        @test !all(iszero, g)
+        @test dot(g, direction) ≈ fd atol = 5e-3 rtol = 5e-2
     end
 
     resource_data_set = generate_contextual_data_set(
