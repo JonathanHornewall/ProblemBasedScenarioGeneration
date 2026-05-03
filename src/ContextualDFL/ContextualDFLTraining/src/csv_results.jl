@@ -1,3 +1,5 @@
+import CSV
+
 if !isdefined(@__MODULE__, :unix_milliseconds)
     # Explicit Unix epoch milliseconds, independent of the local timezone.
     unix_milliseconds() = round(Int64, time() * 1000)
@@ -131,47 +133,24 @@ function join_prefix(prefix::AbstractString, key)
 end
 
 function write_csv(path, rows)
-    open(path, "w") do io
-        if isempty(rows)
-            return nothing
+    if isempty(rows)
+        open(path, "w") do
         end
-
-        headers = sorted_headers(rows)
-        write_csv_row(io, string.(headers))
-
-        for row in rows
-            write_csv_row(io, [csv_cell(get(row, header, "")) for header in headers])
-        end
+        return path
     end
 
+    headers = Symbol[]
+    seen = Set{Symbol}()
+    for row in rows, header in keys(row)
+        header in seen && continue
+        push!(seen, header)
+        push!(headers, header)
+    end
+    sort!(headers; by=String)
+
+    columns = map(headers) do header
+        header => [something(get(row, header, missing), missing) for row in rows]
+    end
+    CSV.write(path, (; columns...); missingstring="")
     return path
-end
-
-function sorted_headers(rows)
-    headers = Set{Symbol}()
-    for row in rows
-        foreach(header -> push!(headers, header), keys(row))
-    end
-    return sort!(collect(headers); by=String)
-end
-
-function csv_cell(value)
-    value === nothing && return ""
-    value === missing && return ""
-    return string(value)
-end
-
-function write_csv_row(io, values)
-    for (index, value) in enumerate(values)
-        index > 1 && print(io, ",")
-        print(io, csv_escape(value))
-    end
-    print(io, "\n")
-end
-
-function csv_escape(value::AbstractString)
-    if occursin('"', value) || occursin(',', value) || occursin('\n', value) || occursin('\r', value)
-        return "\"" * replace(value, "\"" => "\"\"") * "\""
-    end
-    return value
 end
