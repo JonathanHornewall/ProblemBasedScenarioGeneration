@@ -87,6 +87,18 @@ function logmetric(
     end
 end
 
+function logbatch(
+    mlf::NamedMLFlowClient,
+    run;
+    metrics=MLFlowClient.Metric[],
+    params=MLFlowClient.Param[],
+    tags=MLFlowClient.Tag[],
+)
+    return with_mlflow_retry("log batch") do
+        MLFlowClient.logbatch(mlf.client, run; metrics=metrics, params=params, tags=tags)
+    end
+end
+
 function setruntag(mlf::NamedMLFlowClient, run, key, value)
     return with_mlflow_retry("set tag $key") do
         MLFlowClient.setruntag(mlf.client, run, string(key), string(value))
@@ -107,6 +119,7 @@ end
 
 const Dataset = MLFlowClient.Dataset
 const DatasetInput = MLFlowClient.DatasetInput
+const Metric = MLFlowClient.Metric
 const Tag = MLFlowClient.Tag
 
 function uploadartifact(mlf::NamedMLFlowClient, run, path)
@@ -128,6 +141,306 @@ end
 function updaterun(mlf::NamedMLFlowClient, run; status, end_time=missing)
     return with_mlflow_retry("update run") do
         MLFlowClient.updaterun(mlf.client, run; status=status, end_time=end_time)
+    end
+end
+
+function log_mlflow_metric!(mlf, run, key, value; timestamp, step)
+    return logmetric(
+        mlf,
+        run,
+        key,
+        Float64(value);
+        timestamp=Int64(timestamp),
+        step=Int(step),
+    )
+end
+
+function log_mlflow_epoch!(mlf, run, epoch, loss_value, _display_loss, metadata)
+    timestamp = mlflow_unix_milliseconds()
+    step = Int64(epoch)
+    metrics = Metric[Metric("loss", Float64(loss_value), timestamp, step)]
+    append!(metrics, mlflow_epoch_metadata_metrics(metadata; timestamp=timestamp, step=step))
+    return logbatch(mlf, run; metrics=metrics)
+end
+
+function mlflow_epoch_metadata_metrics(metadata; timestamp, step)
+    metadata isa NamedTuple || return Metric[]
+    metrics = Metric[]
+
+    for (metric_name, field_name) in (
+        ("epoch_seconds", :epoch_seconds),
+        ("epoch_mu_in", :mu_in),
+        ("epoch_mu_ref", :mu_ref),
+        ("epoch_iterations", :iterations),
+    )
+        field_name in keys(metadata) || continue
+        value = getproperty(metadata, field_name)
+        mlflow_metric_value(value) || continue
+        push!(metrics, Metric(metric_name, Float64(value), Int64(timestamp), Int64(step)))
+    end
+
+    return metrics
+end
+
+function log_mlflow_params!(mlf, run, prefix::AbstractString, values)
+    params = Dict{String,String}()
+    flatten_mlflow_params!(params, prefix, values)
+
+    for key in sort!(collect(keys(params)))
+        logparam(mlf, run, key, params[key])
+    end
+
+    return nothing
+end
+
+function flatten_mlflow_params!(
+    params::Dict{String,String},
+    prefix::AbstractString,
+    values::NamedTuple,
+)
+    for key in keys(values)
+        flatten_mlflow_params!(params, join_mlflow_key(prefix, key), getproperty(values, key))
+    end
+    return params
+end
+
+function flatten_mlflow_params!(
+    params::Dict{String,String},
+    prefix::AbstractString,
+    values::AbstractDict,
+)
+    for (key, value) in values
+        flatten_mlflow_params!(params, join_mlflow_key(prefix, key), value)
+    end
+    return params
+end
+
+function flatten_mlflow_params!(params::Dict{String,String}, prefix::AbstractString, value)
+    isempty(prefix) && return params
+    mlflow_param_value(value) || return params
+    params[prefix] = string(value)
+    return params
+end
+
+function log_mlflow_evaluation_result!(mlf, run, name::AbstractString, result)
+    if result isa NamedTuple || result isa AbstractDict
+        metrics = mlflow_evaluation_field(result, :metrics, result)
+        artifacts = mlflow_evaluation_field(result, :artifacts, nothing)
+        log_mlflow_metrics!(mlf, run, name, metrics; step=0)
+        log_mlflow_artifacts!(mlf, run, artifacts)
+    elseif mlflow_metric_value(result)
+        log_mlflow_metrics!(mlf, run, "", Dict(name => result); step=0)
+    end
+
+    return nothing
+end
+
+function mlflow_evaluation_field(values::NamedTuple, key::Symbol, default)
+    return key in keys(values) ? getproperty(values, key) : default
+end
+
+function mlflow_evaluation_field(values::AbstractDict, key::Symbol, default)
+    return haskey(values, key) ? values[key] : get(values, string(key), default)
+end
+
+function log_mlflow_metrics!(mlf, run, prefix::AbstractString, values; step::Integer)
+    metrics = Dict{String,Float64}()
+    flatten_mlflow_metrics!(metrics, prefix, values)
+
+    timestamp = mlflow_unix_milliseconds()
+    for key in sort!(collect(keys(metrics)))
+        log_mlflow_metric!(
+            mlf,
+            run,
+            key,
+            metrics[key];
+            timestamp=timestamp,
+            step=step,
+        )
+    end
+
+    return nothing
+end
+
+function flatten_mlflow_metrics!(
+    metrics::Dict{String,Float64},
+    prefix::AbstractString,
+    values::NamedTuple,
+)
+    for key in keys(values)
+        flatten_mlflow_metrics!(metrics, join_mlflow_key(prefix, key), getproperty(values, key))
+    end
+    return metrics
+end
+
+function flatten_mlflow_metrics!(
+    metrics::Dict{String,Float64},
+    prefix::AbstractString,
+    values::AbstractDict,
+)
+    for (key, value) in values
+        flatten_mlflow_metrics!(metrics, join_mlflow_key(prefix, key), value)
+    end
+    return metrics
+end
+
+function flatten_mlflow_metrics!(metrics::Dict{String,Float64}, prefix::AbstractString, value)
+    isempty(prefix) && return metrics
+    mlflow_metric_value(value) || return metrics
+    metrics[prefix] = Float64(value)
+    return metrics
+end
+
+function mlflow_metric_value(value)
+    value isa Bool && return false
+    value isa Number || return false
+    float_value = try
+        Float64(value)
+    catch
+        return false
+    end
+    return isfinite(float_value)
+end
+
+function log_mlflow_artifacts!(mlf, run, artifacts)
+    artifacts === nothing && return nothing
+
+    if artifacts isa AbstractString
+        isfile(artifacts) && upload_mlflow_artifact!(mlf, run, artifacts; artifact_path=basename(artifacts))
+        return nothing
+    elseif artifacts isa Pair
+        path = last(artifacts)
+        path isa AbstractString && isfile(path) &&
+            upload_mlflow_artifact!(mlf, run, path; artifact_path=string(first(artifacts)))
+        return nothing
+    elseif artifacts isa NamedTuple || artifacts isa AbstractDict
+        for (name, path) in pairs(artifacts)
+            path isa AbstractString && isfile(path) &&
+                upload_mlflow_artifact!(mlf, run, path; artifact_path=string(name))
+        end
+        return nothing
+    elseif artifacts isa AbstractVector || artifacts isa Tuple
+        for artifact in artifacts
+            log_mlflow_artifacts!(mlf, run, artifact)
+        end
+    end
+
+    return nothing
+end
+
+function upload_mlflow_artifact!(mlf, run, path; artifact_path)
+    if applicable(uploadartifact, mlf, run, path)
+        uploadartifact(mlf, run, path)
+    elseif applicable(uploadartifact, mlf, run, path, artifact_path)
+        uploadartifact(mlf, run, path, artifact_path)
+    else
+        uploadartifact(mlf, string(artifact_path), read(path))
+    end
+
+    return nothing
+end
+
+function log_mlflow_source_tags!(
+    mlf,
+    run;
+    source_name,
+    source_type,
+    source_git_commit,
+)
+    setruntag(mlf, run, "mlflow.source.name", string(source_name))
+    setruntag(mlf, run, "mlflow.source.type", string(source_type))
+    isnothing(source_git_commit) ||
+        setruntag(mlf, run, "mlflow.source.git.commit", string(source_git_commit))
+
+    return nothing
+end
+
+function log_mlflow_dataset!(
+    mlf,
+    run;
+    dataset_inputs=nothing,
+    dataset_name=nothing,
+    dataset_digest=nothing,
+    dataset_source_type="local",
+    dataset_source=nothing,
+    dataset_context="training",
+)
+    inputs = if !isnothing(dataset_inputs)
+        dataset_inputs
+    elseif !any(isnothing, (dataset_name, dataset_digest, dataset_source))
+        dataset = Dataset(
+            string(dataset_name),
+            string(dataset_digest),
+            string(dataset_source_type),
+            string(dataset_source),
+            nothing,
+            nothing,
+        )
+        [DatasetInput([Tag("context", string(dataset_context))], dataset)]
+    else
+        return nothing
+    end
+
+    try
+        loginputs(mlf, run; datasets=inputs)
+    catch error
+        error isa MethodError || rethrow()
+        loginputs(mlf, run, inputs)
+    end
+
+    return nothing
+end
+
+function tag_optional_mlflow_evaluation_error!(mlf, run, name, error)
+    setruntag(
+        mlf,
+        run,
+        "mlflow.optional_evaluation.$(name).error",
+        sprint(showerror, error),
+    )
+    return nothing
+end
+
+function run_mlflow_evaluation_callbacks!(
+    mlf,
+    run,
+    callbacks,
+    train_result;
+    optional::Bool,
+)
+    isempty(mlflow_callback_pairs(callbacks)) && return nothing
+
+    for (name, callback) in mlflow_callback_pairs(callbacks)
+        try
+            result = applicable(callback, train_result) ? callback(train_result) : callback()
+            log_mlflow_evaluation_result!(mlf, run, string(name), result)
+        catch error
+            optional || rethrow()
+            tag_optional_mlflow_evaluation_error!(mlf, run, name, error)
+        end
+    end
+
+    return nothing
+end
+
+mlflow_callback_pairs(callbacks::NamedTuple) = collect(pairs(callbacks))
+mlflow_callback_pairs(callbacks::AbstractDict) = collect(pairs(callbacks))
+mlflow_callback_pairs(callbacks::Tuple) = collect(pairs(callbacks))
+mlflow_callback_pairs(callbacks::AbstractVector) = collect(pairs(callbacks))
+mlflow_callback_pairs(::Nothing) = Pair{Symbol,Any}[]
+
+function join_mlflow_key(prefix::AbstractString, key)
+    key_text = string(key)
+    return isempty(prefix) ? key_text : prefix * "_" * key_text
+end
+
+mlflow_unix_milliseconds() = round(Int64, time() * 1000)
+
+function git_commit_or_nothing()
+    try
+        return strip(read(pipeline(`git rev-parse HEAD`; stderr=devnull), String))
+    catch
+        return nothing
     end
 end
 

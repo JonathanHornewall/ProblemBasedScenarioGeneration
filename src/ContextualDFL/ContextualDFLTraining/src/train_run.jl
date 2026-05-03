@@ -108,7 +108,7 @@ function train_with_contextualdfl(objects, config)
         mlflow_result = train_with_contextualdfl_mlflow(objects, config)
         return (;
             result=mlflow_result.result,
-            backend="ContextualDFL.train_with_mlflow!",
+            backend="ContextualDFL.train! with ContextualDFLTraining MLflow",
             fallback_reason="",
             final_metrics=mlflow_result.final_metrics,
         )
@@ -145,55 +145,118 @@ function train_with_contextualdfl_mlflow(objects, config)
     model = objects.scenario_generator.neural_net
     mu_schedule = mu_schedule_for_config(config)
     mu_ref_schedule = mu_ref_schedule_for_config(config, mu_schedule)
+    run = createrun(mlf, experiment_id; start_time=unix_milliseconds())
+    training_succeeded = false
 
-    result = ContextualDFL.train_with_mlflow!(
-        mlf,
-        experiment_id,
-        model,
-        loss,
-        mu_schedule,
-        mu_ref_schedule,
-        objects.data.train;
-        learning_rate=config.learning_rate,
-        optimizer_type=Flux.Adam,
-        epochs=config.epochs,
-        batchsize=config.batch_size,
-        shuffle=Bool(config_value(config, :shuffle, false)),
-        reset_optimizer_each_epoch=Bool(
-            config_value(config, :reset_optimizer_each_epoch, false),
-        ),
-        source_name=string(
-            config_value(
-                config,
-                :mlflow_source_name,
-                "ContextualDFLTraining/gridsearch.jl",
+    try
+        log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule, mu_ref_schedule)
+        log_mlflow_params!(mlf, run, "experiment", mlflow_experiment_spec(objects, config))
+        log_mlflow_params!(mlf, run, "data", mlflow_data_spec(objects, config))
+        log_mlflow_params!(mlf, run, "model", mlflow_model_spec(model, objects, config))
+        log_mlflow_params!(mlf, run, "method", mlflow_method_spec(objects, config))
+        log_mlflow_source_tags!(
+            mlf,
+            run;
+            source_name=string(
+                config_value(
+                    config,
+                    :mlflow_source_name,
+                    "ContextualDFLTraining/gridsearch.jl",
+                ),
             ),
-        ),
-        source_type=string(config_value(config, :mlflow_source_type, "LOCAL")),
-        dataset_name=mlflow_dataset_name(config),
-        dataset_digest=mlflow_dataset_digest(objects, config),
-        dataset_source_type="generated",
-        dataset_source=mlflow_dataset_source(config),
-        dataset_context="training",
-        save_model=upload_model_artifact,
-        model_save_path=model_save_path,
-        upload_model_artifact=upload_model_artifact,
-        model_artifact_path="models/" * basename(model_save_path),
-        experiment_spec=mlflow_experiment_spec(objects, config),
-        data_spec=mlflow_data_spec(objects, config),
-        model_spec=mlflow_model_spec(model, objects, config),
-        method_spec=mlflow_method_spec(objects, config),
-        evaluation_callbacks=Dict(
-            "" => (train_result) -> begin
-                trained_model = extract_model(train_result, objects.scenario_generator)
-                metrics = evaluate_model_for_reporting(trained_model, objects, config)
-                final_metrics[] = metrics
-                return metrics
-            end,
-        ),
-    )
+            source_type=string(config_value(config, :mlflow_source_type, "LOCAL")),
+            source_git_commit=git_commit_or_nothing(),
+        )
+        log_mlflow_dataset!(
+            mlf,
+            run;
+            dataset_name=mlflow_dataset_name(config),
+            dataset_digest=mlflow_dataset_digest(objects, config),
+            dataset_source_type="generated",
+            dataset_source=mlflow_dataset_source(config),
+            dataset_context="training",
+        )
 
-    return (; result=result, final_metrics=final_metrics[])
+        result = ContextualDFL.train!(
+            model,
+            loss,
+            mu_schedule,
+            mu_ref_schedule,
+            objects.data.train;
+            learning_rate=config.learning_rate,
+            optimizer_type=Flux.Adam,
+            epochs=config.epochs,
+            batchsize=config.batch_size,
+            shuffle=Bool(config_value(config, :shuffle, false)),
+            reset_optimizer_each_epoch=Bool(
+                config_value(config, :reset_optimizer_each_epoch, false),
+            ),
+            save_model=upload_model_artifact,
+            model_save_path=model_save_path,
+            on_epoch_end=(epoch, loss_value, display_loss, metadata) -> log_mlflow_epoch!(
+                mlf,
+                run,
+                epoch,
+                loss_value,
+                display_loss,
+                metadata,
+            ),
+            nr_scenarios=config_value(config, :nr_scenarios, nothing),
+        )
+
+        if upload_model_artifact && isfile(model_save_path)
+            upload_mlflow_artifact!(
+                mlf,
+                run,
+                model_save_path;
+                artifact_path="models/" * basename(model_save_path),
+            )
+        end
+
+        trained_model = extract_model(result, objects.scenario_generator)
+        metrics = evaluate_model_for_reporting(trained_model, objects, config)
+        final_metrics[] = metrics
+        log_mlflow_evaluation_result!(mlf, run, "", metrics)
+
+        training_succeeded = true
+        return (; result=result, final_metrics=final_metrics[])
+    finally
+        status = training_succeeded ? RunStatus.FINISHED : RunStatus.FAILED
+        try
+            updaterun(mlf, run; status=status, end_time=unix_milliseconds())
+        catch
+            training_succeeded && rethrow()
+        end
+    end
+end
+
+function log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule, mu_ref_schedule)
+    logparam(mlf, run, "learning_rate", string(config.learning_rate))
+    logparam(mlf, run, "optimizer_type", string(Flux.Adam))
+    logparam(mlf, run, "epochs", string(config.epochs))
+    logparam(mlf, run, "batchsize", string(config.batch_size))
+    logged_scenarios = logged_nr_scenarios(
+        loss,
+        config_value(config, :nr_scenarios, nothing),
+    )
+    isnothing(logged_scenarios) ||
+        logparam(mlf, run, "nr_scenarios", string(logged_scenarios))
+    logparam(mlf, run, "mu_in_schedule", string(collect(mu_schedule)))
+    logparam(mlf, run, "mu_ref_schedule", string(collect(mu_ref_schedule)))
+    logparam(mlf, run, "shuffle", string(Bool(config_value(config, :shuffle, false))))
+    logparam(
+        mlf,
+        run,
+        "reset_optimizer_each_epoch",
+        string(Bool(config_value(config, :reset_optimizer_each_epoch, false))),
+    )
+    return nothing
+end
+
+function logged_nr_scenarios(loss, nr_scenarios)
+    isnothing(nr_scenarios) || return Int(nr_scenarios)
+    hasproperty(loss, :nr_scenarios) || return nothing
+    return getproperty(loss, :nr_scenarios)
 end
 
 function add_worker_mlflow_tags(config)
