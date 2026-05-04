@@ -60,10 +60,10 @@ end
 
 function remote_worker_specs()
     return [
-        ("rwl@gcp-big-1", env_worker_count("GCP_BIG_1_WORKERS", :auto)),
-        ("rwl@gcp-small-1", env_worker_count("GCP_SMALL_1_WORKERS", :auto)),
-        ("rwl@gcp-big-2", env_worker_count("GCP_BIG_2_WORKERS", :auto)),
-        ("rwl@gcp-small-2", env_worker_count("GCP_SMALL_2_WORKERS", :auto)),
+        ("rwl@gcp-8c-1", env_worker_count("GCP_8C_1_WORKERS", :auto)),
+        ("rwl@gcp-4c-1", env_worker_count("GCP_4C_1_WORKERS", :auto)),
+        ("rwl@gcp-8c-2", env_worker_count("GCP_8C_2_WORKERS", :auto)),
+        ("rwl@gcp-4c-2", env_worker_count("GCP_4C_2_WORKERS", :auto)),
     ]
 end
 
