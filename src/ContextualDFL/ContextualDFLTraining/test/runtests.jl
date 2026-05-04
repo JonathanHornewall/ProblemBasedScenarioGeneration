@@ -907,22 +907,65 @@ end
             repeat_count=2,
             learning_rate=0.001,
         )
-        parents = annotate_parents([base_config], "12345", settings, "")
+        repeat_seeds = [101, 202]
+        parents = annotate_parents(
+            [base_config],
+            "12345",
+            settings,
+            "";
+            repeat_training_data_seeds=repeat_seeds,
+        )
         parent_runs = create_parent_runs(settings, parents)
-        children = annotate_repeats(parents, parent_runs, settings)
+        children = annotate_repeats(
+            parents,
+            parent_runs,
+            settings;
+            repeat_training_data_seeds=repeat_seeds,
+        )
 
         @test length(parents) == 1
         @test only(parents).run_id ==
               "gridsearch_12345__candidate_0001__base"
+        @test only(parents).repeat_training_data_seed_sequence == "101,202"
         @test length(children) == 2
         @test children[1].run_id ==
               "gridsearch_12345__candidate_0001__base__repeat_001"
         @test children[2].run_id ==
               "gridsearch_12345__candidate_0001__base__repeat_002"
         @test all(child -> child.seed == 11, children)
-        @test children[1].training_data_seed != children[2].training_data_seed
+        @test children[1].training_data_seed == 101
+        @test children[2].training_data_seed == 202
+        @test children[1].repeat_training_data_seed == 101
+        @test children[2].repeat_training_data_seed == 202
+        @test children[1].mlflow_tags.training_data_seed == 101
+        @test children[1].mlflow_tags.repeat_training_data_seed == 101
         @test all(child -> child.training_data_cache == false, children)
         @test all(child -> child.write_training_data_artifact == false, children)
+
+        mlflow_params = ContextualDFLTraining.mlflow_params_for_config(children[1])
+        @test mlflow_params["config_training_data_seed"] == "101"
+        @test mlflow_params["config_repeat_training_data_seed"] == "101"
+
+        comparison_configs = [
+            base_config,
+            merge(base_config, (; run_id="base_other", learning_rate=0.002)),
+        ]
+        comparison_parents = annotate_parents(
+            comparison_configs,
+            "12345",
+            settings,
+            "";
+            repeat_training_data_seeds=repeat_seeds,
+        )
+        comparison_children = annotate_repeats(
+            comparison_parents,
+            create_parent_runs(settings, comparison_parents),
+            settings;
+            repeat_training_data_seeds=repeat_seeds,
+        )
+        @test comparison_children[1].training_data_seed == comparison_children[3].training_data_seed
+        @test comparison_children[2].training_data_seed == comparison_children[4].training_data_seed
+        @test comparison_children[1].training_data_seed != comparison_children[2].training_data_seed
 
         child_results = [
             (;
@@ -1160,6 +1203,23 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
             "model",
             (; depth=2, hidden_size=64, nested=(; activation=:relu), skipped=[1, 2]),
         )
+        ContextualDFLTraining.log_contextualdfl_training_params!(
+            mlf,
+            run,
+            :dfl_scen,
+            (;
+                learning_rate=0.001,
+                epochs=2,
+                batch_size=8,
+                training_data_seed=101,
+                repeat_training_data_seed=101,
+                repeat_index=1,
+            ),
+            [0.1, 0.01],
+            [0.1, 0.01],
+            [0.0, 0.0],
+            [0.0, 0.0],
+        )
         ContextualDFLTraining.log_mlflow_epoch!(
             mlf,
             run,
@@ -1183,6 +1243,9 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
         @test params["model_hidden_size"] == "64"
         @test params["model_nested_activation"] == "relu"
         @test !haskey(params, "model_skipped")
+        @test params["training_data_seed"] == "101"
+        @test params["repeat_training_data_seed"] == "101"
+        @test params["repeat_index"] == "1"
 
         metrics = Dict(metric[1] => metric[2] for metric in run.metrics)
         @test metrics["loss"] == 1.5

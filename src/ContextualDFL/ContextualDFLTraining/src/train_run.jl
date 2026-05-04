@@ -306,6 +306,18 @@ function log_contextualdfl_training_params!(
         "reset_optimizer_each_epoch",
         string(Bool(config_value(config, :reset_optimizer_each_epoch, false))),
     )
+    training_seed = config_value(config, :training_data_seed, nothing)
+    if training_seed !== nothing && training_seed !== missing
+        logparam(mlf, run, "training_data_seed", string(training_seed))
+    end
+    repeat_training_seed = config_value(config, :repeat_training_data_seed, training_seed)
+    if repeat_training_seed !== nothing && repeat_training_seed !== missing
+        logparam(mlf, run, "repeat_training_data_seed", string(repeat_training_seed))
+    end
+    repeat_index = config_value(config, :repeat_index, nothing)
+    if repeat_index !== nothing && repeat_index !== missing
+        logparam(mlf, run, "repeat_index", string(repeat_index))
+    end
     return nothing
 end
 
@@ -657,6 +669,12 @@ function mlflow_data_spec(objects, config)
         target_dimension=target_dimension,
         validation_fraction=config_value(config, :validation_fraction, missing),
         test_fraction=config_value(config, :test_fraction, missing),
+        training_data_seed=config_value(config, :training_data_seed, missing),
+        repeat_training_data_seed=config_value(
+            config,
+            :repeat_training_data_seed,
+            config_value(config, :training_data_seed, missing),
+        ),
         train_context_seed=config_value(config, :training_data_seed, missing),
         train_scenario_seed=config_value(config, :training_data_seed, missing),
         split_seed=config_value(config, :training_data_seed, missing),

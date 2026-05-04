@@ -4,6 +4,7 @@ using Dates
 using Distributed
 using ArgParse
 import MLFlowClient
+using Random
 using SHA
 using Sockets
 using Statistics
@@ -21,6 +22,7 @@ const MLFLOW_RETRY_ATTEMPTS = 8
 const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
 const MLFLOW_RETRY_BACKOFF = 1.5
 const GRID_CANDIDATE_START_STAGGER_SECONDS = 0.25
+const GRID_TRAINING_DATA_SEED_MAX = typemax(Int32) - 1
 
 function _contextualdfltraining_remote_eval(config)
     started_at = unix_milliseconds()
@@ -435,6 +437,8 @@ function create_mlflow_grid_parent_run(
     configs,
     worker_hosts,
     grid_spec::GridSearchSpec,
+    ;
+    repeat_training_data_seeds=nothing,
 )
     settings.enabled || return nothing
 
@@ -454,7 +458,14 @@ function create_mlflow_grid_parent_run(
     git_commit = git_commit_or_empty()
     isempty(git_commit) || (tags["mlflow.source.git.commit"] = git_commit)
 
-    parent_params = grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec)
+    parent_params = grid_parent_params(
+        grid_id,
+        timestamp,
+        configs,
+        worker_hosts,
+        grid_spec;
+        repeat_training_data_seeds=repeat_training_data_seeds,
+    )
 
     run = with_mlflow_retry("create grid parent run") do
         MLFlowClient.createrun(
@@ -655,7 +666,14 @@ function fail_mlflow_config_parent_runs(parents)
     return nothing
 end
 
-function grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec::GridSearchSpec)
+function grid_parent_params(
+    grid_id,
+    timestamp,
+    configs,
+    worker_hosts,
+    grid_spec::GridSearchSpec;
+    repeat_training_data_seeds=nothing,
+)
     params = Dict{String,String}(
         "gridsearch_id" => grid_id,
         "gridsearch_timestamp" => timestamp,
@@ -669,6 +687,21 @@ function grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec
         "grid_worker_count" => string(length(worker_hosts)),
         "grid_worker_hosts" => join(sort!(unique(collect(values(worker_hosts)))), ","),
     )
+
+    if repeat_training_data_seeds !== nothing
+        repeat_seeds = normalize_repeat_training_data_seeds(
+            repeat_training_data_seeds,
+            grid_repeat_seed_count(configs),
+        )
+        if !isempty(repeat_seeds)
+            params["grid_repeat_training_data_seed_count"] = string(length(repeat_seeds))
+            params["grid_repeat_training_data_seed_sequence"] =
+                repeat_training_data_seed_sequence(repeat_seeds)
+            for (index, seed) in enumerate(repeat_seeds)
+                params["grid_" * repeat_tag(index) * "_training_data_seed"] = string(seed)
+            end
+        end
+    end
 
     if !isempty(configs)
         config = first(configs)
@@ -950,27 +983,77 @@ function grid_repeat_count(config)
     return count
 end
 
-function deterministic_training_data_seed(
-    grid_id::AbstractString,
-    candidate_index::Integer,
-    repeat_index::Integer,
-    base_run_id::AbstractString,
-)
-    digest = bytes2hex(
-        sha1(
-            join(
-                (
-                    grid_id,
-                    string(candidate_index),
-                    string(repeat_index),
-                    string(base_run_id),
-                ),
-                "\n",
-            ),
+function grid_repeat_seed_count(configs)
+    return maximum((grid_repeat_count(config) for config in configs); init=0)
+end
+
+function random_training_data_seeds(count::Integer; rng=Random.default_rng())
+    count >= 0 || throw(ArgumentError("repeat seed count must be non-negative."))
+
+    seeds = Int[]
+    seen = Set{Int}()
+    while length(seeds) < count
+        seed = rand(rng, 1:GRID_TRAINING_DATA_SEED_MAX)
+        seed in seen && continue
+        push!(seeds, seed)
+        push!(seen, seed)
+    end
+    return seeds
+end
+
+function generate_repeat_training_data_seeds(configs; rng=Random.default_rng())
+    return random_training_data_seeds(grid_repeat_seed_count(configs); rng=rng)
+end
+
+function normalize_repeat_training_data_seeds(seeds, required_count::Integer)
+    required_count >= 0 ||
+        throw(ArgumentError("required repeat seed count must be non-negative."))
+    seeds === nothing && return random_training_data_seeds(required_count)
+
+    normalized = Int.(collect(seeds))
+    length(normalized) >= required_count || throw(
+        ArgumentError(
+            "repeat_training_data_seeds must contain at least $required_count seed(s), got $(length(normalized)).",
         ),
     )
-    value = parse(UInt64, digest[1:15]; base=16)
-    return Int(1 + value % UInt64(typemax(Int32) - 1))
+
+    selected = normalized[1:required_count]
+    all(seed -> 1 <= seed <= GRID_TRAINING_DATA_SEED_MAX, selected) || throw(
+        ArgumentError(
+            "repeat_training_data_seeds must be in 1:$(GRID_TRAINING_DATA_SEED_MAX).",
+        ),
+    )
+    length(unique(selected)) == length(selected) || throw(
+        ArgumentError("repeat_training_data_seeds must contain distinct seeds."),
+    )
+    return selected
+end
+
+function repeat_training_data_seed_sequence(seeds)
+    return join(string.(seeds), ",")
+end
+
+function parse_repeat_training_data_seed_sequence(value)
+    text = strip(string(value))
+    isempty(text) && return Int[]
+    return [parse(Int, strip(part)) for part in split(text, ",")]
+end
+
+function repeat_training_data_seeds_from_config_parents(config_parent_configs, required_count)
+    best_seeds = nothing
+    for config_parent in config_parent_configs
+        config_parent isa NamedTuple || continue
+        hasproperty(config_parent, :repeat_training_data_seed_sequence) || continue
+        seeds = parse_repeat_training_data_seed_sequence(
+            getproperty(config_parent, :repeat_training_data_seed_sequence),
+        )
+        length(seeds) >= required_count &&
+            return normalize_repeat_training_data_seeds(seeds, required_count)
+        if best_seeds === nothing || length(seeds) > length(best_seeds)
+            best_seeds = seeds
+        end
+    end
+    return best_seeds === nothing ? nothing : best_seeds
 end
 
 function annotate_grid_config_parent(
@@ -980,12 +1063,17 @@ function annotate_grid_config_parent(
     mlflow_settings,
     grid_parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
+    ;
+    repeat_training_data_seeds=nothing,
 )
     grid_id = gridsearch_id(timestamp)
     candidate = candidate_tag(index)
     previous_run_id = base_run_id(config, index)
     candidate_name = grid_id * "__" * candidate * "__" * previous_run_id
     repeats = grid_repeat_count(config)
+    repeat_seeds =
+        normalize_repeat_training_data_seeds(repeat_training_data_seeds, repeats)
+    seed_sequence = repeat_training_data_seed_sequence(repeat_seeds)
 
     return merge(
         config,
@@ -998,6 +1086,7 @@ function annotate_grid_config_parent(
             candidate_name=candidate_name,
             config_parent_name=candidate_name,
             repeat_count=repeats,
+            repeat_training_data_seed_sequence=seed_sequence,
             mlflow_enabled=mlflow_settings.enabled,
             mlflow_experiment_id=mlflow_settings.experiment_id,
             mlflow_experiment_name=mlflow_settings.experiment_name,
@@ -1015,6 +1104,7 @@ function annotate_grid_config_parent(
                 candidate_name=candidate_name,
                 config_parent_name=candidate_name,
                 repeat_count=repeats,
+                repeat_training_data_seed_sequence=seed_sequence,
                 gridsearch_parent_run_id=grid_parent_run_id,
                 mlflow_parentRunId=grid_parent_run_id,
                 mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
@@ -1031,7 +1121,13 @@ function annotate_grid_config_parents(
     mlflow_settings,
     grid_parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
+    ;
+    repeat_training_data_seeds=nothing,
 )
+    shared_repeat_seeds = normalize_repeat_training_data_seeds(
+        repeat_training_data_seeds,
+        grid_repeat_seed_count(configs),
+    )
     return [
         annotate_grid_config_parent(
             config,
@@ -1039,7 +1135,8 @@ function annotate_grid_config_parents(
             timestamp,
             mlflow_settings,
             grid_parent_run_id,
-            coordinator_hostname,
+            coordinator_hostname;
+            repeat_training_data_seeds=shared_repeat_seeds,
         ) for
         (index, config) in enumerate(configs)
     ]
@@ -1050,14 +1147,22 @@ function annotate_repeat_config(
     repeat_index::Integer,
     mlflow_settings,
     config_parent_run_id::AbstractString="",
+    ;
+    repeat_training_data_seeds=nothing,
 )
     child_name = string(config_parent.candidate_name) * "__" * repeat_tag(repeat_index)
-    training_seed = deterministic_training_data_seed(
-        string(config_parent.gridsearch_id),
-        Int(config_parent.candidate_index),
-        Int(repeat_index),
-        string(config_parent.base_run_id),
+    seed_source = if repeat_training_data_seeds === nothing &&
+                     config_parent isa NamedTuple &&
+                     hasproperty(config_parent, :repeat_training_data_seed_sequence)
+        parse_repeat_training_data_seed_sequence(config_parent.repeat_training_data_seed_sequence)
+    else
+        repeat_training_data_seeds
+    end
+    repeat_seeds = normalize_repeat_training_data_seeds(
+        seed_source,
+        Int(config_parent.repeat_count),
     )
+    training_seed = repeat_seeds[Int(repeat_index)]
     tags = merge(
         config_parent.mlflow_tags,
         (;
@@ -1067,6 +1172,7 @@ function annotate_repeat_config(
             repeat_index=Int(repeat_index),
             repeat_count=Int(config_parent.repeat_count),
             training_data_seed=training_seed,
+            repeat_training_data_seed=training_seed,
             gridsearch_parent_run_id=config_parent_run_id,
             mlflow_parentRunId=config_parent_run_id,
             gridsearch_role="repeat",
@@ -1083,6 +1189,7 @@ function annotate_repeat_config(
             repeat_index=Int(repeat_index),
             repeat_count=Int(config_parent.repeat_count),
             training_data_seed=training_seed,
+            repeat_training_data_seed=training_seed,
             training_data_cache=false,
             write_training_data_artifact=false,
             mlflow_enabled=mlflow_settings.enabled,
@@ -1094,7 +1201,20 @@ function annotate_repeat_config(
     )
 end
 
-function annotate_repeat_configs(config_parent_configs, config_parent_runs, mlflow_settings)
+function annotate_repeat_configs(
+    config_parent_configs,
+    config_parent_runs,
+    mlflow_settings;
+    repeat_training_data_seeds=nothing,
+)
+    required_count = grid_repeat_seed_count(config_parent_configs)
+    seed_source = repeat_training_data_seeds === nothing ?
+        repeat_training_data_seeds_from_config_parents(config_parent_configs, required_count) :
+        repeat_training_data_seeds
+    shared_repeat_seeds = normalize_repeat_training_data_seeds(
+        seed_source,
+        required_count,
+    )
     child_configs = NamedTuple[]
     for (config_parent, config_parent_run) in zip(config_parent_configs, config_parent_runs)
         parent_run_id = mlflow_parent_run_id(config_parent_run)
@@ -1105,7 +1225,8 @@ function annotate_repeat_configs(config_parent_configs, config_parent_runs, mlfl
                     config_parent,
                     repeat_index,
                     mlflow_settings,
-                    parent_run_id,
+                    parent_run_id;
+                    repeat_training_data_seeds=shared_repeat_seeds,
                 ),
             )
         end
@@ -1209,13 +1330,15 @@ function main()
     validate_mlflow_settings(mlflow_settings)
     mlflow_settings = ensure_mlflow_grid_experiment(mlflow_settings)
     base_configs = selected_grid(experiment, grid_spec)
+    repeat_training_data_seeds = generate_repeat_training_data_seeds(base_configs)
     parent_run = create_mlflow_grid_parent_run(
         mlflow_settings,
         grid_id,
         timestamp,
         base_configs,
         worker_hosts,
-        grid_spec,
+        grid_spec;
+        repeat_training_data_seeds=repeat_training_data_seeds,
     )
     parent_run_id = mlflow_parent_run_id(parent_run)
     config_parent_configs = annotate_grid_config_parents(
@@ -1223,13 +1346,19 @@ function main()
         timestamp,
         mlflow_settings,
         parent_run_id,
-        Sockets.gethostname(),
+        Sockets.gethostname();
+        repeat_training_data_seeds=repeat_training_data_seeds,
     )
     config_parent_runs = Any[]
     configs = NamedTuple[]
     try
         config_parent_runs = create_mlflow_config_parent_runs(mlflow_settings, config_parent_configs)
-        configs = annotate_repeat_configs(config_parent_configs, config_parent_runs, mlflow_settings)
+        configs = annotate_repeat_configs(
+            config_parent_configs,
+            config_parent_runs,
+            mlflow_settings;
+            repeat_training_data_seeds=repeat_training_data_seeds,
+        )
     catch error
         fail_mlflow_config_parent_runs(config_parent_runs)
         fail_mlflow_grid_parent_run(parent_run)
@@ -1238,6 +1367,10 @@ function main()
     println("Grid search id: $grid_id")
     println(
         "Grid config: $(grid_spec.name) ($(grid_spec.path), $(length(base_configs)) candidate(s), $(length(configs)) repeat run(s))",
+    )
+    println(
+        "Repeat training data seeds: ",
+        repeat_training_data_seed_sequence(repeat_training_data_seeds),
     )
     if mlflow_settings.enabled
         println(
