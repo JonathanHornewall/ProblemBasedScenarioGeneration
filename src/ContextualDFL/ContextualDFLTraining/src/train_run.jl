@@ -731,7 +731,6 @@ function mlflow_method_spec(objects, config)
         optimality_validation_sample_count=Int(config_value(config, :optimality_validation_sample_count, 0)),
         optimality_mu=Float64(config_value(config, :optimality_mu, 0.0)),
         optimality_rho=Float64(config_value(config, :optimality_rho, 0.0)),
-        optimality_evaluate_mode=string(config_value(config, :optimality_evaluate_mode, :mean_only)),
         optimality_evaluation_batches=config_value(config, :optimality_evaluation_batches, nothing),
         policy_inference_mu=policy_inference_mu,
         policy_inference_rho=policy_inference_rho,
@@ -961,8 +960,6 @@ function evaluate_optimality_on_splits(model, objects, config)
             split_name=split_name,
             mu=Float64(config_value(config, :optimality_mu, 0.0)),
             rho=Float64(config_value(config, :optimality_rho, 0.0)),
-            evaluation_batches=config_value(config, :optimality_evaluation_batches, nothing),
-            evaluate_mode=Symbol(config_value(config, :optimality_evaluate_mode, :mean_only)),
         )
         metrics = merge(metrics, result.metrics)
     end

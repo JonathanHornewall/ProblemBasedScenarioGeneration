@@ -1,0 +1,44 @@
+version: 1
+name: resource_allocation_experiment_1_search_2
+description: Compare four mu annealing schedules across activations and depths.
+
+base:
+  epochs: 50
+  repeat_count: 5
+
+grid:
+  activation: [relu, silu, geelu]
+  depth: [2, 3]
+  schedules:
+    mu:
+      - kind: piecewise
+        segments:
+          - epochs: 10
+            value: 1.0
+          - epochs: 5
+            value: 0.8
+          - epochs: 5
+            value: 0.6
+          - epochs: 5
+            value: 0.4
+          - epochs: 5
+            value: 0.3
+          - epochs: 5
+            value: 0.2
+          - epochs: 5
+            value: 0.1
+          - epochs: 5
+            value: 0.05
+          - epochs: 5
+            value: 0.01
+      - kind: linear
+        start: 1.0
+        stop: 0.01
+      - kind: geometric
+        start: 1.0
+        stop: 0.01
+      - kind: exponential
+        start: 1.0
+        stop: 0.01
+    mu_ref:
+      - kind: match_input

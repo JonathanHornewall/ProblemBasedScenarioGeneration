@@ -29,7 +29,6 @@ const DEFAULT_RUN_SETTINGS = (;
     optimality_validation_sample_count=0,
     optimality_mu=0.0,
     optimality_rho=0.0,
-    optimality_evaluate_mode=:mean_only,
     optimality_evaluation_batches=nothing,
     policy_inference_rho=nothing,
     loss=:dfl_scen,

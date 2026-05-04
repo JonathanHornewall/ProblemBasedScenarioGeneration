@@ -1,0 +1,39 @@
+nohup: ignoring input
+
+[618102] signal 15: Terminated
+in expression starting at /home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining/gridsearch.jl:957
+unknown function (ip: 0x78a9d4498d6f) at /lib/x86_64-linux-gnu/libc.so.6
+pthread_cond_wait at /lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+task_done_hook at ./task.jl:868
+jfptr_task_done_hook_59905.1 at /home/rwl/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+jl_finish_task at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/task.c:341
+start_task at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/task.c:1263
+unknown function (ip: (nil)) at (unknown file)
+epoll_pwait at /lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv__io_poll at /workspace/srcdir/libuv/src/unix/linux.c:1404
+uv_run at /workspace/srcdir/libuv/src/unix/core.c:430
+ijl_task_get_next at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/scheduler.c:457
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+wait at ./condition.jl:136 [inlined]
+take_buffered at ./channels.jl:532
+take! at ./channels.jl:526
+unknown function (ip: 0x78a96e142d02) at (unknown file)
+take! at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:726
+#remotecall_fetch#109 at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:461
+remotecall_fetch at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:454 [inlined]
+#remotecall_fetch#113 at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:492 [inlined]
+remotecall_fetch at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/usr/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:492
+unknown function (ip: 0x78a96d128b6f) at (unknown file)
+#run_grid_on_remote_workers##3 at /home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining/gridsearch.jl:323
+unknown function (ip: 0x78a96d125cdd) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 103257516 (Pool: 103253782; Big: 3734); GC: 32

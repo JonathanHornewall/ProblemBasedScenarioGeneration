@@ -50,7 +50,6 @@ const GRID_SYMBOL_KEYS = Set(
         :method,
         :mu_ref_schedule,
         :mu_schedule,
-        :optimality_evaluate_mode,
         :rho_ref_schedule,
         :rho_schedule,
     ],

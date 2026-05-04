@@ -12,7 +12,7 @@
 #   base: scalar settings merged after package and experiment defaults.
 #   fixed: scalar settings merged after base.
 #   grid: arrays of candidate values; Cartesian product creates candidates.
-#   schedules: typed shorthand for mu_schedule and mu_ref_schedule.
+#   schedules: typed shorthand for mu/mu_ref/rho/rho_ref schedules.
 #   run_id_template: optional; null uses grid_<name>_<index>_<hash>.
 #
 # run_id_template placeholders:
@@ -80,6 +80,21 @@ base:
   mu_ref_start: 1.0
   mu_ref_end: 0.01
   rho: 0.0
+  rho_start: 0.0
+  rho_end: 0.0
+  # Prefer the schedules section below over setting rho_schedule directly.
+  # rho_schedule possible scalar values: constant, linear, geometric, exponential.
+  # It may also be an explicit numeric array with exactly epochs entries.
+  rho_schedule: constant
+  # rho_ref_schedule possible scalar values:
+  #   match_input, same, input, zero, zeros, none, constant, linear, geometric, exponential.
+  # It may also be an explicit numeric array with exactly epochs entries.
+  rho_ref_schedule: match_input
+  # Used only when rho_ref_schedule is constant.
+  rho_ref: 0.0
+  # Used only when rho_ref_schedule is linear/geometric/exponential.
+  rho_ref_start: 0.0
+  rho_ref_end: 0.0
 
   # Reporting tolerance defaults.
   tolerance_relative: 0.10
@@ -91,8 +106,13 @@ base:
   optimality_train_sample_count: 0
   optimality_validation_sample_count: 0
   optimality_mu: 0.0
-  # Defaults to mu when omitted; explicit here for discoverability.
+  optimality_rho: 0.0
+  optimality_evaluation_batches: 4
+  # Defaults to the final resolved training mu_schedule value when omitted.
+  # Explicit here for discoverability and as an override example.
   policy_inference_mu: 0.01
+  # Defaults to the final resolved training rho_schedule value when omitted.
+  policy_inference_rho: null
 
   # Runtime/training optional booleans.
   # These default to false unless noted.
@@ -161,7 +181,8 @@ grid:
   #
   # Float keys:
   # learning_rate, dropout, mu, mu_start, mu_end, mu_ref, mu_ref_start,
-  # mu_ref_end, rho, optimality_mu, policy_inference_mu,
+  # mu_ref_end, rho, rho_start, rho_end, rho_ref, rho_ref_start, rho_ref_end,
+  # optimality_mu, optimality_rho, policy_inference_mu, policy_inference_rho,
   # tolerance_relative, tolerance_absolute_floor.
   #
   # Boolean keys:
@@ -170,10 +191,10 @@ grid:
   # knn_homogenization, log_barrier_inference.
   #
   # Symbol/string-to-symbol keys:
-  # loss, method, mu_schedule, mu_ref_schedule.
+  # loss, method, mu_schedule, mu_ref_schedule, rho_schedule, rho_ref_schedule.
 
 schedules:
-  # Supported schedule names: mu, mu_ref.
+  # Supported schedule names: mu, mu_ref, rho, rho_ref.
   #
   # Supported mu kinds:
   #   constant:    value optional; if omitted, uses base.mu.
@@ -188,6 +209,9 @@ schedules:
   #   zero/zeros/none: all zeros.
   #   constant, linear, geometric, exponential, values/manual, piecewise/step:
   #     same rules as mu, with mu_ref-specific fields.
+  #
+  # rho and rho_ref support the same kinds as mu and mu_ref respectively, with
+  # rho-specific fields.
 
   mu:
     kind: geometric
@@ -227,3 +251,10 @@ schedules:
     #
     # kind: values
     # values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]
+
+  rho:
+    kind: constant
+    value: 0.0
+
+  rho_ref:
+    kind: match_input

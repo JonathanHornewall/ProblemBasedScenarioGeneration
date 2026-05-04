@@ -26,12 +26,9 @@ function parse_commandline(args=ARGS)
             arg_type = Int
             default = 0
         "--evaluation-batches"
-            help = "Number of Monte Carlo evaluation batches stored with the optimal solutions."
+            help = "Number of scenario collections per context used for benchmark evaluation."
             arg_type = Int
             default = 1
-        "--evaluate-mode"
-            help = "Optimal-solution evaluation mode: mean_only or batched."
-            default = "batched"
     end
 
     return parse_args(args, settings)
@@ -49,13 +46,6 @@ function nonnegative_int(value, name::AbstractString)
     return value
 end
 
-function checked_evaluate_mode(value)
-    mode = Symbol(value)
-    mode in (:mean_only, :batched) ||
-        throw(ArgumentError("evaluate-mode must be mean_only or batched, got $value."))
-    return mode
-end
-
 function main()
     parsed_args = parse_commandline()
     experiment = ContextualDFLTraining.load_experiment(parsed_args["experiment"])
@@ -67,7 +57,6 @@ function main()
     )
     evaluation_batches =
         positive_int(parsed_args["evaluation-batches"], "evaluation-batches")
-    evaluate_mode = checked_evaluate_mode(parsed_args["evaluate-mode"])
     overrides = test_scenarios_per_context > 0 ?
         (; test_scenarios_per_context=test_scenarios_per_context) :
         NamedTuple()
@@ -107,7 +96,6 @@ function main()
             mu=Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0)),
             rho=Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0)),
             evaluation_batches=evaluation_batches,
-            evaluate_mode=evaluate_mode,
         )
     end
 
@@ -119,7 +107,6 @@ function main()
         data_set_size=data_set_size,
         metadata=(;
             solve_seconds=solve_seconds,
-            evaluate_mode=string(evaluate_mode),
             evaluation_batches=evaluation_batches,
         ),
     )

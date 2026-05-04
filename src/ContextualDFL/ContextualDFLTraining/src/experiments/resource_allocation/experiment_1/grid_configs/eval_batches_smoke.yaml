@@ -1,6 +1,6 @@
 version: 1
 name: resource_allocation_experiment_1_eval_batches_smoke
-description: Smoke grid for one-scenario training and batched 100-scenario test evaluation.
+description: Smoke grid for one-scenario training and replicated test evaluation.
 
 base:
   epochs: 1
@@ -29,7 +29,6 @@ base:
   optimality_validation_sample_count: 0
   optimality_mu: 0.0
   optimality_rho: 0.0
-  optimality_evaluate_mode: batched
   optimality_evaluation_batches: 4
   training_context_count: 8
   training_scenarios_per_context: 1
