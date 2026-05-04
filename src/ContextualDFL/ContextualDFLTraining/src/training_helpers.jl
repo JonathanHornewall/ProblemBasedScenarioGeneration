@@ -42,9 +42,10 @@ end
 
 function build_loss(config, vector_decoder, reference_decoder, solver, program)
     loss_name = Symbol(config_value(config, :loss, :dfl_scen))
-    if loss_name == :dfl_scen
+    if loss_name in (:dfl_scen, :spo_plus)
         nr_scenarios = config_value(config, :nr_scenarios, nothing)
-        return ContextualDFL.DflScenLoss(
+        loss_type = loss_name == :dfl_scen ? ContextualDFL.DflScenLoss : ContextualDFL.SPOPlusLoss
+        return loss_type(
             vector_decoder,
             reference_decoder,
             solver,
@@ -52,7 +53,7 @@ function build_loss(config, vector_decoder, reference_decoder, solver, program)
             nr_scenarios=isnothing(nr_scenarios) ? 1 : Int(nr_scenarios),
         )
     end
-    throw(ArgumentError("unsupported loss $(loss_name); use :dfl_scen"))
+    throw(ArgumentError("unsupported loss $(loss_name); use :dfl_scen or :spo_plus"))
 end
 
 function split_contextual_dataset(

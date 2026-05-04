@@ -227,6 +227,17 @@ function train_with_contextualdfl_mlflow(objects, config)
 
         training_succeeded = true
         return (; result=result, final_metrics=final_metrics[])
+    catch error
+        error_text = exception_text(error, catch_backtrace())
+        try
+            log_mlflow_stacktrace_artifact!(mlf, run, error_text)
+        catch mlflow_error
+            @warn "Failed to upload MLflow stacktrace artifact" error=exception_text(
+                mlflow_error,
+                catch_backtrace(),
+            )
+        end
+        rethrow()
     finally
         status = training_succeeded ? RunStatus.FINISHED : RunStatus.FAILED
         try

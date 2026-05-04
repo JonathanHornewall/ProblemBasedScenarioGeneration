@@ -121,6 +121,7 @@ const Dataset = MLFlowClient.Dataset
 const DatasetInput = MLFlowClient.DatasetInput
 const Metric = MLFlowClient.Metric
 const Tag = MLFlowClient.Tag
+const MLFLOW_STACKTRACE_ARTIFACT_PATH = "errors/stacktrace.txt"
 
 function uploadartifact(mlf::NamedMLFlowClient, run, path)
     return uploadartifact(mlf, run, path, basename(path))
@@ -136,6 +137,37 @@ function uploadartifact(mlf::NamedMLFlowClient, artifact_path::AbstractString, d
     return with_mlflow_retry("upload artifact $artifact_path") do
         MLFlowClient.uploadartifact(mlf.client, string(artifact_path), data)
     end
+end
+
+function log_mlflow_stacktrace_artifact!(mlf, run, error_text)
+    artifact_path = mlflow_run_artifact_path(run, MLFLOW_STACKTRACE_ARTIFACT_PATH)
+    uploadartifact(mlf, artifact_path, Vector{UInt8}(codeunits(string(error_text))))
+    return nothing
+end
+
+function mlflow_run_artifact_path(run, artifact_path)
+    relative_path = clean_mlflow_artifact_path(artifact_path)
+    artifact_uri = try
+        string(getproperty(getproperty(run, :info), :artifact_uri))
+    catch
+        ""
+    end
+
+    startswith(artifact_uri, "mlflow-artifacts:/") || return relative_path
+    root_path = replace(artifact_uri, r"^mlflow-artifacts:/*" => "")
+    return join_mlflow_artifact_path(root_path, relative_path)
+end
+
+function join_mlflow_artifact_path(prefix, artifact_path)
+    clean_prefix = clean_mlflow_artifact_path(prefix)
+    clean_path = clean_mlflow_artifact_path(artifact_path)
+    isempty(clean_prefix) && return clean_path
+    isempty(clean_path) && return clean_prefix
+    return clean_prefix * "/" * clean_path
+end
+
+function clean_mlflow_artifact_path(path)
+    return strip(replace(string(path), "\\" => "/"), '/')
 end
 
 function updaterun(mlf::NamedMLFlowClient, run; status, end_time=missing)

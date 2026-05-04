@@ -116,6 +116,65 @@ end
     @test comparison.metrics.test_relative_regret_mean ≈ 0.0
     @test comparison.metrics.test_policy_eval_seconds >= 0.0
 
+    split_data_set = generate_contextual_data_set(
+        [[1.0]],
+        [[tiny_scenario(5.0), tiny_scenario(6.0)]],
+    )
+    split_decision_set = reshape([1.0], 1, 1)
+    split_optimal_results = solve_dataset_to_optimality(
+        split_data_set,
+        program,
+        decoder,
+        solver;
+        splits=2,
+    )
+    split_result = only(split_optimal_results)
+    @test split_result.objective_values ≈ [14.0, 17.0]
+    @test split_result.objective_value ≈ 15.5
+    @test length(split_result.split_results) == 2
+
+    split_policy_values = evaluate_policy(
+        split_decision_set,
+        split_data_set,
+        program,
+        decoder,
+        solver;
+        splits=2,
+    )
+    @test split_policy_values ≈ [15.5]
+
+    split_comparison = evaluate_policy_against_optimum(
+        split_decision_set,
+        split_data_set,
+        program,
+        decoder,
+        solver;
+        optimal_results=split_optimal_results,
+        split_name=:test,
+    )
+    @test split_comparison.metrics.test_split_count == 2
+    @test only(split_comparison.per_sample).policy_split_values ≈ [14.0, 17.0]
+    @test only(split_comparison.per_sample).optimal_split_values ≈ [14.0, 17.0]
+    @test split_comparison.metrics.test_regret_mean ≈ 0.0
+
+    @test_throws ArgumentError solve_dataset_to_optimality(
+        split_data_set,
+        program,
+        decoder,
+        solver;
+        splits=3,
+    )
+    @test_throws ArgumentError evaluate_policy_against_optimum(
+        split_decision_set,
+        split_data_set,
+        program,
+        decoder,
+        solver;
+        optimal_results=split_optimal_results,
+        split_name=:test,
+        splits=1,
+    )
+
     @test_throws UndefKeywordError evaluate_policy_against_optimum(
         decision_set,
         data_set,

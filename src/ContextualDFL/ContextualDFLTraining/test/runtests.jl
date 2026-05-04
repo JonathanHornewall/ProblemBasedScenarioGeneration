@@ -881,4 +881,21 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
         @test length(run.inputs) == 1
         @test length(only(run.inputs).dataset.digest) <= 36
     end
+
+    @testset "logs failure stacktraces as artifacts" begin
+        mlf = FakeMLFlow()
+        run = FakeRun()
+        empty!(GLOBAL_ARTIFACT_RUN[])
+
+        ContextualDFLTraining.log_mlflow_stacktrace_artifact!(mlf, run, "full stacktrace")
+        append!(run.artifacts, GLOBAL_ARTIFACT_RUN[])
+
+        @test only(run.artifacts)[1] == "errors/stacktrace.txt"
+        @test String(only(run.artifacts)[2]) == "full stacktrace"
+        @test isempty(run.tags)
+        @test ContextualDFLTraining.mlflow_run_artifact_path(
+            (; info=(; artifact_uri="mlflow-artifacts:/3/run-id/artifacts")),
+            "errors/stacktrace.txt",
+        ) == "3/run-id/artifacts/errors/stacktrace.txt"
+    end
 end

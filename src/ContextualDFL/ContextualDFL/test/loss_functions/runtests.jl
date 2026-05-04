@@ -1,3 +1,5 @@
+import Flux
+
 struct DflTestVectorDecoder <: VectorDecoder end
 
 function (::DflTestVectorDecoder)(vector::AbstractVector)
@@ -9,6 +11,32 @@ function (::DflTestVectorDecoder)(vector::AbstractVector)
         view(vector, 3:3),
         zeros(eltype(vector), 0),
         view(vector, 4:4),
+    )
+end
+
+struct SPOPlusTestQDecoder <: VectorDecoder end
+
+function (::SPOPlusTestQDecoder)(q::AbstractVector)
+    return (
+        zeros(eltype(q), 0, 1),
+        reshape([-one(eltype(q)), one(eltype(q))], 2, 1),
+        zeros(eltype(q), 0, 0),
+        zeros(eltype(q), 2, 0),
+        zeros(eltype(q), 0),
+        [zero(eltype(q)), one(eltype(q))],
+        q,
+    )
+end
+
+function spo_plus_test_scenario(q)
+    return ParametricScenario(;
+        W_eq_xi=zeros(0, 1),
+        W_ineq_xi=reshape([-1.0, 1.0], 2, 1),
+        T_eq_xi=zeros(0, 0),
+        T_ineq_xi=zeros(2, 0),
+        h_eq_xi=Float64[],
+        h_ineq_xi=[0.0, 1.0],
+        q_xi=[q],
     )
 end
 
@@ -84,4 +112,65 @@ end
 
     @test default_reference_mu_loss ≈ explicit_reference_mu_loss atol = 1e-7 rtol = 1e-7
     @test !isapprox(default_reference_mu_loss, zero_reference_mu_loss; atol=1e-4, rtol=1e-4)
+
+    @testset "SPOPlusLoss objective-vector surrogate" begin
+        spo_program = StochasticProgram(
+            A_eq=zeros(0, 0),
+            A_ineq=zeros(0, 0),
+            b_eq=Float64[],
+            b_ineq=Float64[],
+            c=Float64[],
+        )
+        q_decoder = SPOPlusTestQDecoder()
+        spo_loss = SPOPlusLoss(q_decoder, ParametricDecoder(), solver, spo_program)
+
+        @test spo_loss.input_scenario_decoder === q_decoder
+        @test spo_loss.reference_scenario_decoder isa ParametricDecoder
+        @test spo_loss.solver === solver
+        @test spo_loss.program === spo_program
+        @test spo_loss.nr_scenarios == 1
+        @test_throws ArgumentError SPOPlusLoss(q_decoder, ParametricDecoder(), solver, spo_program; nr_scenarios=0)
+
+        reference = [spo_plus_test_scenario(2.0)]
+        prediction = [0.25]
+        @test spo_loss(prediction, reference, 0.0) ≈ 1.5 atol = 1e-8
+        @test spo_loss([2.0], reference, 0.0) ≈ 0.0 atol = 1e-8
+        @test only(Flux.gradient(q -> spo_loss(q, reference, 0.0), prediction)) ≈ [-2.0] atol = 1e-8
+
+        ϵ = 1e-6
+        finite_difference_gradient =
+            (
+                spo_loss(prediction .+ ϵ, reference, 0.0) -
+                spo_loss(prediction .- ϵ, reference, 0.0)
+            ) / (2ϵ)
+        @test finite_difference_gradient ≈ -2.0 atol = 1e-5
+        @test_throws ArgumentError spo_loss(prediction, reference, 0.1)
+
+        two_scenario_loss =
+            SPOPlusLoss(q_decoder, ParametricDecoder(), solver, spo_program; nr_scenarios=2)
+        two_reference = [spo_plus_test_scenario(2.0), spo_plus_test_scenario(-3.0)]
+        two_prediction = [0.25, -0.5]
+        probabilities = [0.25, 0.75]
+
+        @test two_scenario_loss(
+            two_prediction,
+            two_reference,
+            0.0;
+            probabilities=probabilities,
+        ) ≈ 1.875 atol = 1e-8
+        @test only(
+            Flux.gradient(
+                q -> two_scenario_loss(q, two_reference, 0.0; probabilities=probabilities),
+                two_prediction,
+            ),
+        ) ≈ [-0.5, 1.5] atol = 1e-8
+
+        mismatched_feasible_loss =
+            SPOPlusLoss(input_decoder, passthrough_decoder, solver, bounded_program)
+        @test_throws ArgumentError mismatched_feasible_loss(
+            input_scenario_parameter_collection,
+            reference_scenario_parameter_collection,
+            0.0,
+        )
+    end
 end

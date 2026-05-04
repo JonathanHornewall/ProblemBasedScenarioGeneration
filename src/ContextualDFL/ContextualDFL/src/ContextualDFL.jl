@@ -24,6 +24,7 @@ export
     ScenarioGenerator,
     ScenarioSampler,
     Solver,
+    SPOPlusLoss,
     StochasticProgram,
     batch_size_schedule,
     constant_schedule,
@@ -76,6 +77,7 @@ include("ScenarioGenerator.jl")
 
 include("learning/loss_functions/Loss.jl")
 include("learning/loss_functions/DflScenLoss.jl")
+include("learning/loss_functions/SPO_plus_loss.jl")
 include("learning/loss_functions/dfl_c_loss.jl")
 include("learning/loss_functions/MSE_scen_loss.jl")
 include("learning/loss_functions/projected_z_loss.jl")

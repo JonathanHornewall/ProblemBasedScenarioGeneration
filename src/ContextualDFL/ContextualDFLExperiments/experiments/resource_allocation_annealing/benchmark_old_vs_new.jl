@@ -308,10 +308,32 @@ function new_loss(demand; kwargs...)
     return loss_object(demand, actual_collection, mu_in, mu_ref; nr_scenarios=1, kwargs...)
 end
 
+const reference_input = reduce(vcat, (scenario.h_eq_xi for scenario in actual_collection))
+const reference_cache = Dict{Any,Float64}()
+
+function reference_cache_key(; kwargs...)
+    return Tuple((key, value) for (key, value) in pairs(kwargs))
+end
+
+function cached_reference_value(; kwargs...)
+    key = reference_cache_key(; kwargs...)
+    return get!(reference_cache, key) do
+        Float64(
+            loss_object(
+                reference_input,
+                actual_collection,
+                mu_ref,
+                mu_ref;
+                nr_scenarios=1,
+                kwargs...,
+            ),
+        )
+    end
+end
+
 function new_relative_display(demand; kwargs...)
     evaluated = loss_object(demand, actual_collection, mu_in, mu_ref; nr_scenarios=1, kwargs...)
-    reference_input = reduce(vcat, (scenario.h_eq_xi for scenario in actual_collection))
-    reference = loss_object(reference_input, actual_collection, mu_ref, mu_ref; nr_scenarios=1, kwargs...)
+    reference = cached_reference_value(; kwargs...)
     return (evaluated - reference) / abs(reference)
 end
 
@@ -336,6 +358,7 @@ function recourse_gradient_z(z; kwargs...)
 end
 
 function measure_suite(implementation; kwargs...)
+    cached_reference_value(; kwargs...)
     measure(implementation, "forward_loss", () -> new_loss(predicted_demand; kwargs...))
     measure(
         implementation,

@@ -518,6 +518,34 @@ loss_kwargs = (; nr_scenarios=nr_scenarios)
 
 context_at(index) = data_set_training[index].context
 scenario_at(index) = data_set_training[index].scenario_parameters
+display_reference_input(index) =
+    reduce(vcat, (scenario.h_eq_xi for scenario in scenario_at(index)))
+
+relative_display_loss(loss_value, reference_value) =
+    (Float64(loss_value) - Float64(reference_value)) / abs(Float64(reference_value))
+
+function compute_display_reference_values(mu_ref)
+    return [
+        Float64(
+            loss_object(
+                display_reference_input(index),
+                scenario_at(index),
+                mu_ref,
+                mu_ref;
+                loss_kwargs...,
+            ),
+        ) for index in 1:N
+    ]
+end
+
+function display_reference_values!(cache, mu_ref, buckets)
+    haskey(cache, mu_ref) && return cache[mu_ref]
+    values = time_bucket!(buckets, "display_reference_precompute") do
+        compute_display_reference_values(mu_ref)
+    end
+    cache[mu_ref] = values
+    return values
+end
 
 function new_loss_batch(loss_fn, model, idxs)
     return Statistics.mean(
@@ -525,13 +553,12 @@ function new_loss_batch(loss_fn, model, idxs)
     )
 end
 
-function new_relative_batch(relative_fn, model, idxs)
-    return Statistics.mean(
-        relative_fn(model(context_at(index)), scenario_at(index)) for index in idxs
-    )
+function new_display_batch(loss_value, reference_values, idxs)
+    reference_mean = Statistics.mean(reference_values[index] for index in idxs)
+    return relative_display_loss(loss_value, reference_mean)
 end
 
-function run_epoch!(model, opt, loss_fn, relative_fn, buckets)
+function run_epoch!(model, opt, loss_fn, reference_values, buckets)
     state = time_bucket!(buckets, "optimizer_setup") do
         Flux.setup(opt, model)
     end
@@ -549,7 +576,7 @@ function run_epoch!(model, opt, loss_fn, relative_fn, buckets)
             Flux.update!(state, model, gradients[1])
         end
         display_value = time_bucket!(buckets, "relative_display_loss") do
-            new_relative_batch(relative_fn, model, idxs)
+            new_display_batch(loss_value, reference_values, idxs)
         end
         push!(epoch_losses, Float64(display_value))
     end
@@ -559,19 +586,15 @@ end
 function run_annealing!(model, buckets)
     stage_seconds = Float64[]
     total_iterations = 0
+    display_reference_cache = Dict{Any,Vector{Float64}}()
     for (stage_index, (mu_in, mu_ref)) in enumerate(stage_specs)
         println("Starting new stage $(stage_index) with mu_in=$(mu_in), mu_ref=$(mu_ref), epochs=$(epochs_per_stage)")
         stage_started = time()
         loss_fn(output, scenario_parameters) =
             loss_object(output, scenario_parameters, mu_in, mu_ref; loss_kwargs...)
-        function relative_fn(output, scenario_parameters)
-            evaluated_value = loss_object(output, scenario_parameters, mu_in, mu_ref; loss_kwargs...)
-            reference_input = reduce(vcat, (scenario.h_eq_xi for scenario in scenario_parameters))
-            reference_value = loss_object(reference_input, scenario_parameters, mu_ref, mu_ref; loss_kwargs...)
-            return (evaluated_value - reference_value) / abs(reference_value)
-        end
+        reference_values = display_reference_values!(display_reference_cache, mu_ref, buckets)
         for epoch in 1:epochs_per_stage
-            average_display = run_epoch!(model, Flux.Adam(step_size), loss_fn, relative_fn, buckets)
+            average_display = run_epoch!(model, Flux.Adam(step_size), loss_fn, reference_values, buckets)
             total_iterations += N
             println("Epoch $(epoch) with avg loss $(average_display) ($(N) iterations)")
         end
@@ -596,12 +619,8 @@ function run_micro_measurements()
     mu_in, mu_ref = first(stage_specs)
     loss_fn(output, scenario_parameters) =
         loss_object(output, scenario_parameters, mu_in, mu_ref; loss_kwargs...)
-    function relative_fn(output, scenario_parameters)
-        evaluated_value = loss_object(output, scenario_parameters, mu_in, mu_ref; loss_kwargs...)
-        reference_input = reduce(vcat, (scenario.h_eq_xi for scenario in scenario_parameters))
-        reference_value = loss_object(reference_input, scenario_parameters, mu_ref, mu_ref; loss_kwargs...)
-        return (evaluated_value - reference_value) / abs(reference_value)
-    end
+    reference_values = compute_display_reference_values(mu_ref)
+    loss_value_for_display = loss_fn(model(context_at(1)), scenario_at(1))
 
     predicted_demand = 50.0 .+ 0.1 .* collect(1:demand_count)
     actual_demand = 55.0 .+ 0.2 .* collect(1:demand_count)
@@ -617,7 +636,7 @@ function run_micro_measurements()
     measure(impl, mode, "model_forward", () -> model(context_at(1)), repeats, warmups)
     measure(impl, mode, "loss_forward", () -> loss_fn(model(context_at(1)), scenario_at(1)), repeats, warmups)
     measure(impl, mode, "training_gradient", () -> Flux.withgradient(m -> new_loss_batch(loss_fn, m, idxs), model)[2][1], repeats, warmups)
-    measure(impl, mode, "relative_display_loss", () -> new_relative_batch(relative_fn, model, idxs), repeats, warmups)
+    measure(impl, mode, "relative_display_loss", () -> new_display_batch(loss_value_for_display, reference_values, idxs), repeats, warmups)
     measure(impl, mode, "forward_loss_fixed_demand", () -> loss_object(predicted_demand, actual_collection, mu_in, mu_ref; nr_scenarios=1), repeats, warmups)
     measure(impl, mode, "gradient_demand", () -> Flux.gradient(d -> loss_object(d, actual_collection, mu_in, mu_ref; nr_scenarios=1), predicted_demand)[1], repeats, warmups)
     measure(impl, mode, "surrogate_solve", () -> ContextualDFL.solve(solver, program, decoded_predicted...; μ=mu_in)[1], repeats, warmups)
@@ -632,7 +651,7 @@ function run_micro_measurements()
 
     relative_profile_path = joinpath(out_dir, "profile_new_relative_loss.txt")
     profile_to_file(relative_profile_path, profile_delay, profile_mincount) do
-        new_relative_batch(relative_fn, model, idxs)
+        new_display_batch(loss_value_for_display, reference_values, idxs)
     end
     emit_profile_file(impl, mode, "relative_loss", relative_profile_path)
 
@@ -644,7 +663,7 @@ function run_micro_measurements()
                 new_loss_batch(loss_fn, trainable_model, idxs)
             end
             Flux.update!(state, model, gradients[1])
-            new_relative_batch(relative_fn, model, idxs)
+            new_display_batch(loss_value, reference_values, idxs)
         end
         emit_profile_file(impl, mode, "training_iteration", iteration_profile_path)
     end
