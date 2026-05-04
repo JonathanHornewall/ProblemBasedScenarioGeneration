@@ -38,12 +38,14 @@ struct GridSearchSpec
     fixed::Dict{Symbol,Any}
     grid::Dict{Symbol,Vector{Any}}
     schedules::Dict{Symbol,Any}
+    schedule_grid::Vector{Dict{Symbol,Any}}
     run_id_template::Union{Nothing,String}
     raw::Dict{String,Any}
 end
 
 const GRID_SYMBOL_KEYS = Set(
     [
+        :activation,
         :loss,
         :method,
         :mu_ref_schedule,
@@ -69,6 +71,7 @@ const GRID_INT_KEYS = Set(
         :optimality_train_sample_count,
         :optimality_validation_sample_count,
         :replicate_index,
+        :repeat_count,
         :scenarios_per_context,
         :seed,
         :test_scenarios_per_context,
@@ -140,7 +143,9 @@ function load_grid_config(path::AbstractString)
 
     base = settings_section(parsed.base)
     fixed = settings_section(parsed.fixed)
-    grid = grid_section(parsed.grid)
+    raw_grid = copy(parsed.grid)
+    schedule_grid = schedule_grid_section(pop_grid_schedules!(raw_grid))
+    grid = grid_section(raw_grid)
     schedules = schedule_settings(parsed.schedules)
     run_id_template = parsed.run_id_template === nothing ?
         nothing :
@@ -155,6 +160,7 @@ function load_grid_config(path::AbstractString)
         fixed,
         grid,
         schedules,
+        schedule_grid,
         run_id_template,
         raw,
     )
@@ -202,18 +208,49 @@ function parse_grid_file_config(raw, path::AbstractString)
 end
 
 function normalize_grid_schedule_aliases!(raw)
-    schedules = get(raw, "schedules", nothing)
-    schedules isa AbstractDict || return raw
+    normalize_schedule_aliases_in_section!(get(raw, "schedules", nothing))
 
-    for (_, schedule) in schedules
-        schedule isa AbstractDict || continue
-        if haskey(schedule, "end")
-            haskey(schedule, "stop") || (schedule["stop"] = schedule["end"])
-            delete!(schedule, "end")
+    grid = get(raw, "grid", nothing)
+    if grid isa AbstractDict
+        grid_schedules = get(grid, "schedules", nothing)
+        if grid_schedules isa AbstractDict
+            for (_, schedules) in grid_schedules
+                if schedules isa AbstractVector
+                    for schedule in schedules
+                        normalize_single_schedule_aliases!(schedule)
+                    end
+                else
+                    normalize_single_schedule_aliases!(schedules)
+                end
+            end
         end
     end
 
     return raw
+end
+
+function normalize_schedule_aliases_in_section!(schedules)
+    schedules isa AbstractDict || return schedules
+    for (_, schedule) in schedules
+        normalize_single_schedule_aliases!(schedule)
+    end
+    return schedules
+end
+
+function normalize_single_schedule_aliases!(schedule)
+    schedule isa AbstractDict || return schedule
+    if haskey(schedule, "end")
+        haskey(schedule, "stop") || (schedule["stop"] = schedule["end"])
+        delete!(schedule, "end")
+    end
+    return schedule
+end
+
+function pop_grid_schedules!(grid_values::Dict{String,Any})
+    haskey(grid_values, "schedules") || return nothing
+    schedules = grid_values["schedules"]
+    delete!(grid_values, "schedules")
+    return schedules
 end
 
 function settings_section(section)
@@ -269,6 +306,68 @@ function schedule_settings(schedules)
         merge!(output, normalize_schedule(schedule_name, spec))
     end
 
+    return output
+end
+
+function schedule_grid_section(schedules)
+    schedules === nothing && return [Dict{Symbol,Any}()]
+    schedules isa AbstractDict ||
+        throw(ArgumentError("grid.schedules must be a mapping/object."))
+
+    options = Dict{Symbol,Vector{Dict{Symbol,Any}}}()
+    for (name, values) in schedules
+        values isa AbstractVector ||
+            throw(ArgumentError("grid.schedules entry '$name' must be a non-empty array."))
+        isempty(values) &&
+            throw(ArgumentError("grid.schedules entry '$name' must not be empty."))
+
+        schedule_name = Symbol(name)
+        options[schedule_name] = [
+            normalize_schedule(schedule_name, grid_schedule_config(schedule_name, value)) for
+            value in values
+        ]
+    end
+
+    return schedule_grid_candidates(options)
+end
+
+function grid_schedule_config(schedule_name::Symbol, value)
+    value isa GridScheduleConfig && return value
+    value isa AbstractDict || throw(
+        ArgumentError(
+            "grid.schedules entry '$schedule_name' candidates must be schedule mappings/objects.",
+        ),
+    )
+
+    string_keyed = Dict{String,Any}(string(key) => item for (key, item) in value)
+    normalize_single_schedule_aliases!(string_keyed)
+    try
+        return from_dict(GridScheduleConfig, string_keyed)
+    catch error
+        throw(
+            ArgumentError(
+                "invalid grid.schedules entry '$schedule_name': $(sprint(showerror, error))",
+            ),
+        )
+    end
+end
+
+function schedule_grid_candidates(options::Dict{Symbol,Vector{Dict{Symbol,Any}}})
+    keys_sorted = sort!(collect(keys(options)); by=string)
+    isempty(keys_sorted) && return [Dict{Symbol,Any}()]
+
+    reversed_keys = reverse(keys_sorted)
+    return vec([
+        merge_schedule_candidate_values(keys_sorted, reverse(values)) for
+        values in Iterators.product((options[key] for key in reversed_keys)...)
+    ])
+end
+
+function merge_schedule_candidate_values(keys_sorted, values)
+    output = Dict{Symbol,Any}()
+    for (_, settings) in zip(keys_sorted, values)
+        merge!(output, settings)
+    end
     return output
 end
 
@@ -427,15 +526,22 @@ function resolve_grid_configs(
     merge!(static_config, spec.fixed)
 
     configs_without_digest = NamedTuple[]
-    for (index, candidate_values) in enumerate(grid_candidates(spec.grid))
+    index = 0
+    for candidate_values in grid_candidates(spec.grid),
+        schedule_candidate_values in spec.schedule_grid
+
+        index += 1
         config = copy(static_config)
         merge!(config, spec.schedules)
         merge!(config, candidate_values)
+        merge!(config, schedule_candidate_values)
 
         config[:grid_config_name] = spec.name
         config[:grid_config_path] = spec.path
         config[:grid_config_version] = spec.version
         config[:grid_candidate_index] = index
+
+        validate_explicit_schedule_lengths!(config)
 
         haskey(config, :run_id) || (config[:run_id] = grid_run_id(spec, config, index))
         push!(configs_without_digest, namedtuple_from_dict(config))
@@ -446,6 +552,21 @@ function resolve_grid_configs(
         merge(config, (; grid_config_digest=digest)) for
         config in configs_without_digest
     ]
+end
+
+function validate_explicit_schedule_lengths!(config::Dict{Symbol,Any})
+    epochs = Int(get(config, :epochs, 0))
+    for key in (:mu_schedule, :mu_ref_schedule, :rho_schedule, :rho_ref_schedule)
+        haskey(config, key) || continue
+        values = config[key]
+        values isa AbstractVector || continue
+        length(values) == epochs || throw(
+            ArgumentError(
+                "$(key) vector length $(length(values)) must equal epochs $(epochs).",
+            ),
+        )
+    end
+    return nothing
 end
 
 function grid_candidates(grid::Dict{Symbol,Vector{Any}})

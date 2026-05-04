@@ -312,8 +312,8 @@ function training_dataset_name(spec::ExperimentSpec, config::NamedTuple)
         return string(experiment_call(spec, :training_dataset_name, config))
     end
 
-    seed = experiment_config_value(config, :seed, nothing)
-    return isnothing(seed) ? spec.name : string(spec.name, "-", Int(seed))
+    training_seed = experiment_config_value(config, :training_data_seed, nothing)
+    return isnothing(training_seed) ? spec.name : string(spec.name, "-", Int(training_seed))
 end
 
 function training_data_identity(spec::ExperimentSpec, config::NamedTuple)
@@ -324,7 +324,7 @@ function training_data_identity(spec::ExperimentSpec, config::NamedTuple)
     return (;
         experiment_id=spec.id,
         experiment_name=spec.name,
-        seed=experiment_config_value(config, :seed, missing),
+        training_data_seed=experiment_config_value(config, :training_data_seed, missing),
     )
 end
 

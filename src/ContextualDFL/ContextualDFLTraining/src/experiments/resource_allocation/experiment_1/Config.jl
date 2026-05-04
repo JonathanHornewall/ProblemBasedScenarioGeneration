@@ -16,6 +16,7 @@ const DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT = 1
 const DEFAULT_VALIDATION_FRACTION = 0.13333333333333333
 const DEFAULT_GENERATED_SPLIT_TEST_FRACTION = 0.20
 const DEFAULT_TEST_SCENARIOS_PER_CONTEXT = 100
+const DEFAULT_TRAINING_DATA_SEED = 1
 
 const DEMAND_SIGMA = 5.0
 const DEMAND_POWER = 2.0
@@ -67,6 +68,7 @@ function training_data_defaults()
         collection_duplicates_per_context=DEFAULT_COLLECTION_DUPLICATES_PER_CONTEXT,
         validation_fraction=DEFAULT_VALIDATION_FRACTION,
         generated_split_test_fraction=DEFAULT_GENERATED_SPLIT_TEST_FRACTION,
+        training_data_seed=DEFAULT_TRAINING_DATA_SEED,
     )
 end
 
@@ -354,8 +356,18 @@ function data_splits(problem_instance, config, rng::Random.AbstractRNG)
     )
 end
 
+function training_data_seed(config)
+    return Int(
+        ContextualDFLTraining.config_value(
+            config,
+            :training_data_seed,
+            DEFAULT_TRAINING_DATA_SEED,
+        ),
+    )
+end
+
 function training_data(config)
-    rng = Random.MersenneTwister(Int(config.seed))
+    rng = Random.MersenneTwister(training_data_seed(config))
     return data_splits(problem(), config, rng)
 end
 
@@ -369,7 +381,7 @@ function training_dataset_name(config)
             "ctx$(training_context_count(config))",
             "scen$(training_scenarios_per_context(config))",
             "dup$(collection_duplicates_count(config))",
-            "seed$(Int(config.seed))",
+            "training_seed$(training_data_seed(config))",
         ),
         "-",
     )
@@ -423,7 +435,7 @@ function training_data_identity(config)
     identity = (;
         experiment_id=EXPERIMENT_ID,
         problem_instance_id=problem_instance_id(problem()),
-        seed=Int(config.seed),
+        training_data_seed=training_data_seed(config),
         training_context_count=training_context_count(config),
         training_scenarios_per_context=training_scenarios_per_context(config),
         collection_duplicates_per_context=collection_duplicates_count(config),
@@ -462,7 +474,7 @@ function data_metadata(splits, config)
         (
             "ContextualDFLTraining.experiment",
             "experiment_id=$(EXPERIMENT_ID)",
-            "seed=$(config.seed)",
+            "training_data_seed=$(training_data_seed(config))",
             "training_context_count=$(training_context_count(config))",
             "training_scenarios_per_context=$(training_scenarios_per_context(config))",
             "collection_duplicates_per_context=$(collection_duplicates_count(config))",
@@ -487,9 +499,9 @@ function data_metadata(splits, config)
         generated_split_test_fraction=
             test_source == :generated_split ? generated_split_test_fraction(config) : 0.0,
         test_source=test_source,
-        train_context_seed=Int(config.seed),
-        train_scenario_seed=Int(config.seed),
-        split_seed=Int(config.seed),
+        train_context_seed=training_data_seed(config),
+        train_scenario_seed=training_data_seed(config),
+        split_seed=training_data_seed(config),
         test_data_artifact=get(Dict(pairs(test_artifact)), :path, ""),
     )
 end
@@ -503,6 +515,7 @@ function model_metadata(model, problem_instance, splits, config)
         activation=string(ContextualDFLTraining.config_value(config, :activation, "relu")),
         output_activation="softplus",
         dropout=Float64(config.dropout),
+        initialization_seed=Int(config.seed),
         input_dimension=isempty(splits.train) ? 0 : length(first(splits.train).context),
         output_dimension=demand_count(problem_instance) * scenario_count,
     )
@@ -556,7 +569,11 @@ function training_objects(config, data)
     objects = problem_objects(config)
     test_data_artifact = test_data_artifact_metadata(config)
     scenario_count = dataset_scenarios_per_context(data.train, config)
-    effective_config = merge(config, (; nr_scenarios=scenario_count))
+    model_initialization_seed = Int(config.seed)
+    effective_config = merge(
+        config,
+        (; nr_scenarios=scenario_count, model_initialization_seed=model_initialization_seed),
+    )
 
     neural_net = ContextualDFLTraining.build_neural_net(
         length(first(data.train).context),
@@ -564,6 +581,8 @@ function training_objects(config, data)
         hidden_size=Int(config.hidden_size),
         depth=Int(config.depth),
         dropout=Float64(config.dropout),
+        activation=ContextualDFLTraining.config_value(config, :activation, :relu),
+        seed=model_initialization_seed,
     )
     generator = ContextualDFL.ScenarioGenerator(
         neural_net=neural_net,

@@ -499,13 +499,105 @@ function upload_mlflow_grid_config_artifacts!(mlf, grid_spec::GridSearchSpec, co
     return nothing
 end
 
-function close_mlflow_grid_parent_run(parent, results)
+function close_mlflow_grid_parent_run(parent, config_parent_results; child_results=Any[])
     parent === nothing && return nothing
 
-    success = all(result -> getproperty(result, :status) == "ok", results)
-    mark_failed_mlflow_candidates!(results)
-    log_grid_aggregate_metrics!(parent.client, parent.run, results)
+    success = all(result -> getproperty(result, :status) == "ok", config_parent_results)
+    mark_failed_mlflow_candidates!(child_results)
+    log_grid_aggregate_metrics!(parent.client, parent.run, config_parent_results)
     with_mlflow_retry("update grid parent run") do
+        MLFlowClient.updaterun(
+            parent.client,
+            parent.run;
+            status=success ? MLFlowClient.RunStatus.FINISHED : MLFlowClient.RunStatus.FAILED,
+            end_time=unix_milliseconds(),
+        )
+    end
+    return nothing
+end
+
+function create_mlflow_config_parent_runs(settings, config_parent_configs)
+    settings.enabled || return fill(nothing, length(config_parent_configs))
+    return [
+        create_mlflow_config_parent_run(settings, config) for
+        config in config_parent_configs
+    ]
+end
+
+function create_mlflow_config_parent_run(settings, config)
+    mlf = mlflow_client(settings)
+    tags = Dict(
+        "gridsearch_id" => string(config.gridsearch_id),
+        "gridsearch_timestamp" => string(config.gridsearch_timestamp),
+        "gridsearch_role" => "config_parent",
+        "training_project" => "ContextualDFLTraining",
+        "run_id" => string(config.run_id),
+        "base_run_id" => string(config.base_run_id),
+        "candidate_index" => string(config.candidate_index),
+        "candidate_name" => string(config.candidate_name),
+        "repeat_count" => string(config.repeat_count),
+        "gridsearch_parent_run_id" => string(config.mlflow_parent_run_id),
+        "mlflow.parentRunId" => string(config.mlflow_parent_run_id),
+        "mlflow.experiment.name" => string(settings.experiment_name),
+        "contextualdfl.experiment_id" => string(settings.contextualdfl_experiment_id),
+        "contextualdfl.experiment_name" => string(settings.contextualdfl_experiment_name),
+        "contextualdfl.deterministic_experiment_id" => string(settings.deterministic_experiment_id),
+        "mlflow.source.name" => "ContextualDFLTraining/gridsearch.jl",
+        "mlflow.source.type" => "LOCAL",
+    )
+    git_commit = git_commit_or_empty()
+    isempty(git_commit) || (tags["mlflow.source.git.commit"] = git_commit)
+
+    run = with_mlflow_retry("create config parent run") do
+        MLFlowClient.createrun(
+            mlf,
+            string(settings.experiment_id);
+            run_name=string(config.candidate_name),
+            start_time=unix_milliseconds(),
+            tags=tags,
+        )
+    end
+
+    log_config_parent_params!(mlf, run, config)
+    return (; client=mlf, run=run, config=config)
+end
+
+function log_config_parent_params!(mlf, run, config)
+    params = Dict{String,String}(
+        "gridsearch_id" => string(config.gridsearch_id),
+        "candidate_index" => string(config.candidate_index),
+        "base_run_id" => string(config.base_run_id),
+        "repeat_count" => string(config.repeat_count),
+    )
+
+    for key in keys(config)
+        value = getproperty(config, key)
+        mlflow_scalar_value(value) || continue
+        params["config_" * string(key)] = string(value)
+    end
+
+    for key in sort!(collect(keys(params)))
+        with_mlflow_retry("log config parent param $key") do
+            MLFlowClient.logparam(mlf, run, key, params[key])
+        end
+    end
+
+    return nothing
+end
+
+function close_mlflow_config_parent_runs(config_parent_runs, config_parent_results)
+    for (parent, result) in zip(config_parent_runs, config_parent_results)
+        close_mlflow_config_parent_run(parent, result)
+    end
+    return nothing
+end
+
+function close_mlflow_config_parent_run(parent, result)
+    parent === nothing && return nothing
+
+    success = getproperty(result, :status) == "ok"
+    log_config_parent_aggregate_metrics!(parent.client, parent.run, result)
+    with_mlflow_retry("update config parent run") do
         MLFlowClient.updaterun(
             parent.client,
             parent.run;
@@ -542,11 +634,31 @@ function fail_mlflow_grid_parent_run(parent)
     return nothing
 end
 
+function fail_mlflow_config_parent_runs(parents)
+    for parent in parents
+        parent === nothing && continue
+        try
+            with_mlflow_retry("fail config parent run") do
+                MLFlowClient.updaterun(
+                    parent.client,
+                    parent.run;
+                    status=MLFlowClient.RunStatus.FAILED,
+                    end_time=unix_milliseconds(),
+                )
+            end
+        catch error
+            println("Could not mark config parent MLflow run failed: ", sprint(showerror, error))
+        end
+    end
+    return nothing
+end
+
 function grid_parent_params(grid_id, timestamp, configs, worker_hosts, grid_spec::GridSearchSpec)
     params = Dict{String,String}(
         "gridsearch_id" => grid_id,
         "gridsearch_timestamp" => timestamp,
         "grid_candidate_count" => string(length(configs)),
+        "grid_repeat_run_count" => string(sum(grid_repeat_count(config) for config in configs; init=0)),
         "grid_config_name" => grid_spec.name,
         "grid_config_path" => grid_spec.path,
         "grid_config_digest" => grid_config_digest(configs),
@@ -618,6 +730,41 @@ function grid_variable_config_keys(configs)
 end
 
 function log_grid_aggregate_metrics!(mlf, run, results)
+    log_aggregate_metrics!(mlf, run, "grid", aggregate_metric_summaries(results))
+    return nothing
+end
+
+function log_config_parent_aggregate_metrics!(mlf, run, result)
+    summaries = getproperty(result, :aggregate_metrics)
+    summaries isa AbstractDict || return nothing
+    log_aggregate_metrics!(mlf, run, "config", summaries)
+    return nothing
+end
+
+function log_aggregate_metrics!(mlf, run, prefix_root::AbstractString, summaries)
+    for key in sort!(collect(keys(summaries)); by=String)
+        summary = summaries[key]
+        prefix = prefix_root * "_" * string(key)
+        timestamp = unix_milliseconds()
+        for field in (:count, :mean, :median, :min, :max, :std, :stderr)
+            value = getproperty(summary, field)
+            with_mlflow_retry("log aggregate metric $(prefix)_$(field)") do
+                MLFlowClient.logmetric(
+                    mlf,
+                    run,
+                    prefix * "_" * string(field),
+                    Float64(value);
+                    timestamp=timestamp,
+                    step=0,
+                )
+            end
+        end
+    end
+
+    return nothing
+end
+
+function aggregate_metric_summaries(results)
     metric_keys = Set{Symbol}()
     for result in results
         getproperty(result, :status) == "ok" || continue
@@ -629,6 +776,7 @@ function log_grid_aggregate_metrics!(mlf, run, results)
         end
     end
 
+    summaries = Dict{Symbol,NamedTuple}()
     for key in sort!(collect(metric_keys); by=String)
         values = Float64[
             Float64(getproperty(getproperty(result, :final_metrics), key)) for result in results if
@@ -638,62 +786,26 @@ function log_grid_aggregate_metrics!(mlf, run, results)
             mlflow_numeric_metric(getproperty(getproperty(result, :final_metrics), key))
         ]
         isempty(values) && continue
-
-        prefix = "grid_" * string(key)
-        timestamp = unix_milliseconds()
-        with_mlflow_retry("log aggregate metric $(prefix)_mean") do
-            MLFlowClient.logmetric(
-                mlf,
-                run,
-                prefix * "_mean",
-                mean(values);
-                timestamp=timestamp,
-                step=0,
-            )
-        end
-        with_mlflow_retry("log aggregate metric $(prefix)_median") do
-            MLFlowClient.logmetric(
-                mlf,
-                run,
-                prefix * "_median",
-                median(values);
-                timestamp=timestamp,
-                step=0,
-            )
-        end
-        with_mlflow_retry("log aggregate metric $(prefix)_min") do
-            MLFlowClient.logmetric(
-                mlf,
-                run,
-                prefix * "_min",
-                minimum(values);
-                timestamp=timestamp,
-                step=0,
-            )
-        end
-        with_mlflow_retry("log aggregate metric $(prefix)_max") do
-            MLFlowClient.logmetric(
-                mlf,
-                run,
-                prefix * "_max",
-                maximum(values);
-                timestamp=timestamp,
-                step=0,
-            )
-        end
-        with_mlflow_retry("log aggregate metric $(prefix)_std") do
-            MLFlowClient.logmetric(
-                mlf,
-                run,
-                prefix * "_std",
-                length(values) > 1 ? std(values) : 0.0;
-                timestamp=timestamp,
-                step=0,
-            )
-        end
+        std_value = length(values) > 1 ? std(values) : 0.0
+        summaries[key] = (;
+            count=Float64(length(values)),
+            mean=mean(values),
+            median=median(values),
+            min=minimum(values),
+            max=maximum(values),
+            std=std_value,
+            stderr=std_value / sqrt(length(values)),
+        )
     end
 
-    return nothing
+    return summaries
+end
+
+function aggregate_mean_metrics(summaries::AbstractDict)
+    keys_sorted = sort!(collect(keys(summaries)); by=String)
+    return NamedTuple{Tuple(keys_sorted)}(
+        Tuple(getproperty(summaries[key], :mean) for key in keys_sorted),
+    )
 end
 
 function with_mlflow_retry(callback, operation)
@@ -770,6 +882,9 @@ function validate_grid_does_not_override_problem_identity(experiment, grid_spec:
     union!(provided_keys, keys(grid_spec.fixed))
     union!(provided_keys, keys(grid_spec.grid))
     union!(provided_keys, keys(grid_spec.schedules))
+    for schedule_candidate in grid_spec.schedule_grid
+        union!(provided_keys, keys(schedule_candidate))
+    end
 
     overridden = sort!(collect(intersect(identity_keys, provided_keys)); by=string)
     isempty(overridden) && return nothing
@@ -811,6 +926,10 @@ function candidate_tag(index::Integer)
     return "candidate_" * lpad(string(index), 4, "0")
 end
 
+function repeat_tag(index::Integer)
+    return "repeat_" * lpad(string(index), 3, "0")
+end
+
 function base_run_id(config, index::Integer)
     if config isa NamedTuple && :run_id in keys(config)
         return string(config.run_id)
@@ -818,18 +937,53 @@ function base_run_id(config, index::Integer)
     return candidate_tag(index)
 end
 
-function annotate_grid_config(
+function grid_config_value(config, key::Symbol, default)
+    config isa NamedTuple || return default
+    return key in keys(config) ? getproperty(config, key) : default
+end
+
+function grid_repeat_count(config)
+    count = Int(grid_config_value(config, :repeat_count, 1))
+    count > 0 || throw(ArgumentError("repeat_count must be positive."))
+    return count
+end
+
+function deterministic_training_data_seed(
+    grid_id::AbstractString,
+    candidate_index::Integer,
+    repeat_index::Integer,
+    base_run_id::AbstractString,
+)
+    digest = bytes2hex(
+        sha1(
+            join(
+                (
+                    grid_id,
+                    string(candidate_index),
+                    string(repeat_index),
+                    string(base_run_id),
+                ),
+                "\n",
+            ),
+        ),
+    )
+    value = parse(UInt64, digest[1:15]; base=16)
+    return Int(1 + value % UInt64(typemax(Int32) - 1))
+end
+
+function annotate_grid_config_parent(
     config,
     index::Integer,
     timestamp::AbstractString,
     mlflow_settings,
-    parent_run_id::AbstractString="",
+    grid_parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
     grid_id = gridsearch_id(timestamp)
     candidate = candidate_tag(index)
     previous_run_id = base_run_id(config, index)
     candidate_name = grid_id * "__" * candidate * "__" * previous_run_id
+    repeats = grid_repeat_count(config)
 
     return merge(
         config,
@@ -840,13 +994,15 @@ function annotate_grid_config(
             gridsearch_timestamp=timestamp,
             candidate_index=Int(index),
             candidate_name=candidate_name,
+            config_parent_name=candidate_name,
+            repeat_count=repeats,
             mlflow_enabled=mlflow_settings.enabled,
             mlflow_experiment_id=mlflow_settings.experiment_id,
             mlflow_experiment_name=mlflow_settings.experiment_name,
             mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
             mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
-            mlflow_parent_run_id=parent_run_id,
+            mlflow_parent_run_id=grid_parent_run_id,
             mlflow_run_name=candidate_name,
             coordinator_hostname=coordinator_hostname,
             mlflow_tags=(;
@@ -855,34 +1011,181 @@ function annotate_grid_config(
                 candidate_index=Int(index),
                 base_run_id=previous_run_id,
                 candidate_name=candidate_name,
-                gridsearch_parent_run_id=parent_run_id,
-                mlflow_parentRunId=parent_run_id,
+                config_parent_name=candidate_name,
+                repeat_count=repeats,
+                gridsearch_parent_run_id=grid_parent_run_id,
+                mlflow_parentRunId=grid_parent_run_id,
                 mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
                 mlflow_experiment_name=mlflow_settings.experiment_name,
-                gridsearch_role="candidate",
+                gridsearch_role="config_parent",
             ),
         ),
     )
 end
 
-function annotate_grid_configs(
+function annotate_grid_config_parents(
     configs,
     timestamp::AbstractString,
     mlflow_settings,
-    parent_run_id::AbstractString="",
+    grid_parent_run_id::AbstractString="",
     coordinator_hostname::AbstractString=Sockets.gethostname(),
 )
     return [
-        annotate_grid_config(
+        annotate_grid_config_parent(
             config,
             index,
             timestamp,
             mlflow_settings,
-            parent_run_id,
+            grid_parent_run_id,
             coordinator_hostname,
         ) for
         (index, config) in enumerate(configs)
     ]
+end
+
+function annotate_repeat_config(
+    config_parent,
+    repeat_index::Integer,
+    mlflow_settings,
+    config_parent_run_id::AbstractString="",
+)
+    child_name = string(config_parent.candidate_name) * "__" * repeat_tag(repeat_index)
+    training_seed = deterministic_training_data_seed(
+        string(config_parent.gridsearch_id),
+        Int(config_parent.candidate_index),
+        Int(repeat_index),
+        string(config_parent.base_run_id),
+    )
+    tags = merge(
+        config_parent.mlflow_tags,
+        (;
+            candidate_name=child_name,
+            config_parent_name=config_parent.candidate_name,
+            config_parent_run_id=config_parent_run_id,
+            repeat_index=Int(repeat_index),
+            repeat_count=Int(config_parent.repeat_count),
+            training_data_seed=training_seed,
+            gridsearch_parent_run_id=config_parent_run_id,
+            mlflow_parentRunId=config_parent_run_id,
+            gridsearch_role="repeat",
+        ),
+    )
+
+    return merge(
+        config_parent,
+        (;
+            run_id=child_name,
+            candidate_name=child_name,
+            config_parent_name=config_parent.candidate_name,
+            config_parent_run_id=config_parent_run_id,
+            repeat_index=Int(repeat_index),
+            repeat_count=Int(config_parent.repeat_count),
+            training_data_seed=training_seed,
+            training_data_cache=false,
+            write_training_data_artifact=false,
+            mlflow_enabled=mlflow_settings.enabled,
+            mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
+            mlflow_parent_run_id=config_parent_run_id,
+            mlflow_run_name=child_name,
+            mlflow_tags=tags,
+        ),
+    )
+end
+
+function annotate_repeat_configs(config_parent_configs, config_parent_runs, mlflow_settings)
+    child_configs = NamedTuple[]
+    for (config_parent, config_parent_run) in zip(config_parent_configs, config_parent_runs)
+        parent_run_id = mlflow_parent_run_id(config_parent_run)
+        for repeat_index in 1:Int(config_parent.repeat_count)
+            push!(
+                child_configs,
+                annotate_repeat_config(
+                    config_parent,
+                    repeat_index,
+                    mlflow_settings,
+                    parent_run_id,
+                ),
+            )
+        end
+    end
+    return child_configs
+end
+
+function config_parent_results(config_parent_configs, child_results)
+    return [
+        config_parent_result(config_parent, child_results_for_config(config_parent, child_results)) for
+        config_parent in config_parent_configs
+    ]
+end
+
+function child_results_for_config(config_parent, child_results)
+    parent_name = string(config_parent.candidate_name)
+    return [
+        result for result in child_results if
+        result_config_parent_name(getproperty(result, :config)) == parent_name
+    ]
+end
+
+function result_config_parent_name(config)
+    config isa NamedTuple || return ""
+    if :config_parent_name in keys(config)
+        return string(config.config_parent_name)
+    end
+    return ""
+end
+
+function config_parent_result(config_parent, child_results)
+    expected_repeats = Int(config_parent.repeat_count)
+    successful_repeats = count(result -> getproperty(result, :status) == "ok", child_results)
+    failed_repeats = length(child_results) - successful_repeats
+    success = length(child_results) == expected_repeats && failed_repeats == 0
+    summaries = aggregate_metric_summaries(child_results)
+    metrics = merge(
+        aggregate_mean_metrics(summaries),
+        (;
+            repeat_count=Float64(expected_repeats),
+            repeat_successful_count=Float64(successful_repeats),
+            repeat_failed_count=Float64(failed_repeats),
+        ),
+    )
+    started_at = isempty(child_results) ?
+        unix_milliseconds() :
+        minimum(getproperty(result, :started_at) for result in child_results)
+    finished_at = isempty(child_results) ?
+        unix_milliseconds() :
+        maximum(getproperty(result, :finished_at) for result in child_results)
+    elapsed_seconds = sum(
+        Float64(getproperty(result, :elapsed_seconds)) for result in child_results;
+        init=0.0,
+    )
+    error = success ? "" : config_parent_error(child_results, expected_repeats)
+
+    return (;
+        status=success ? "ok" : "failed",
+        run_id=config_parent.run_id,
+        config=config_parent,
+        worker=NamedTuple(),
+        final_metrics=metrics,
+        aggregate_metrics=summaries,
+        epoch_history=Dict{Symbol,Any}[],
+        error=error,
+        started_at=started_at,
+        finished_at=finished_at,
+        elapsed_seconds=elapsed_seconds,
+    )
+end
+
+function config_parent_error(child_results, expected_repeats)
+    parts = String[]
+    length(child_results) == expected_repeats || push!(
+        parts,
+        "Expected $(expected_repeats) repeat(s), recorded $(length(child_results)).",
+    )
+    for result in child_results
+        getproperty(result, :status) == "ok" && continue
+        push!(parts, "$(getproperty(result, :run_id)): $(getproperty(result, :status))")
+    end
+    return join(parts, " ")
 end
 
 function main()
@@ -913,16 +1216,26 @@ function main()
         grid_spec,
     )
     parent_run_id = mlflow_parent_run_id(parent_run)
-    configs = annotate_grid_configs(
+    config_parent_configs = annotate_grid_config_parents(
         base_configs,
         timestamp,
         mlflow_settings,
         parent_run_id,
         Sockets.gethostname(),
     )
+    config_parent_runs = Any[]
+    configs = NamedTuple[]
+    try
+        config_parent_runs = create_mlflow_config_parent_runs(mlflow_settings, config_parent_configs)
+        configs = annotate_repeat_configs(config_parent_configs, config_parent_runs, mlflow_settings)
+    catch error
+        fail_mlflow_config_parent_runs(config_parent_runs)
+        fail_mlflow_grid_parent_run(parent_run)
+        rethrow()
+    end
     println("Grid search id: $grid_id")
     println(
-        "Grid config: $(grid_spec.name) ($(grid_spec.path), $(length(base_configs)) candidate(s))",
+        "Grid config: $(grid_spec.name) ($(grid_spec.path), $(length(base_configs)) candidate(s), $(length(configs)) repeat run(s))",
     )
     if mlflow_settings.enabled
         println(
@@ -936,14 +1249,18 @@ function main()
     results = try
         run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
     catch error
+        fail_mlflow_config_parent_runs(config_parent_runs)
         fail_mlflow_grid_parent_run(parent_run)
         rethrow()
     end
-    close_mlflow_grid_parent_run(parent_run, results)
+    config_results = config_parent_results(config_parent_configs, results)
+    close_mlflow_config_parent_runs(config_parent_runs, config_results)
+    close_mlflow_grid_parent_run(parent_run, config_results; child_results=results)
 
     output_dir = write_grid_results(
         results;
         configs=configs,
+        config_results=config_results,
         output_root=joinpath(@__DIR__, "results"),
         timestamp=timestamp,
     )

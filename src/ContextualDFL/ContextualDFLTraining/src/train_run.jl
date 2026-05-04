@@ -397,7 +397,8 @@ function mlflow_dataset_source(objects, config)
 
     parts = String["ContextualDFLTraining.experiment"]
     hasproperty(config, :experiment_id) && push!(parts, "experiment_id=$(config.experiment_id)")
-    hasproperty(config, :seed) && push!(parts, "seed=$(config.seed)")
+    hasproperty(config, :training_data_seed) &&
+        push!(parts, "training_data_seed=$(config.training_data_seed)")
     hasproperty(config, :validation_fraction) &&
         push!(parts, "validation_fraction=$(config.validation_fraction)")
     hasproperty(config, :test_fraction) && push!(parts, "test_fraction=$(config.test_fraction)")
@@ -418,7 +419,7 @@ function mlflow_dataset_digest(objects, config)
 
     split_summary = (
         "dataset=$(mlflow_dataset_name(objects, config))",
-        "seed=$(config_value(config, :seed, ""))",
+        "training_data_seed=$(config_value(config, :training_data_seed, ""))",
         "train_x=$(size(dataset_context_matrix(objects.data.train)))",
         "train_y=$(size(dataset_target_matrix(objects.data.train, objects)))",
         "validation_x=$(size(dataset_context_matrix(objects.data.validation)))",
@@ -624,7 +625,11 @@ function mlflow_experiment_spec(objects, config)
         variant=string(config_value(config, :method_variant, "default")),
         run_group=string(config_value(config, :gridsearch_id, "")),
         candidate_index=config_value(config, :candidate_index, ""),
-        replicate_index=config_value(config, :replicate_index, config.seed),
+        replicate_index=config_value(
+            config,
+            :repeat_index,
+            config_value(config, :replicate_index, missing),
+        ),
         base_run_id=string(config_value(config, :base_run_id, "")),
     )
 end
@@ -652,10 +657,10 @@ function mlflow_data_spec(objects, config)
         target_dimension=target_dimension,
         validation_fraction=config_value(config, :validation_fraction, missing),
         test_fraction=config_value(config, :test_fraction, missing),
-        train_context_seed=config_value(config, :seed, missing),
-        train_scenario_seed=config_value(config, :seed, missing),
-        split_seed=config_value(config, :seed, missing),
-        optimization_seed=config_value(config, :optimization_seed, config_value(config, :seed, missing)),
+        train_context_seed=config_value(config, :training_data_seed, missing),
+        train_scenario_seed=config_value(config, :training_data_seed, missing),
+        split_seed=config_value(config, :training_data_seed, missing),
+        optimization_seed=config_value(config, :optimization_seed, missing),
     )
     return merge(defaults, object_metadata(objects, :data_metadata))
 end
@@ -669,7 +674,13 @@ function mlflow_model_spec(model, objects, config)
         output_activation="softplus",
         dropout=config_value(config, :dropout, missing),
         parameter_count=model_parameter_count(model),
-        initialization_seed=string(config_value(config, :model_initialization_seed, "global_rng")),
+        initialization_seed=string(
+            config_value(
+                config,
+                :model_initialization_seed,
+                config_value(config, :seed, "global_rng"),
+            ),
+        ),
         input_dimension=isempty(objects.data.train) ? 0 : length(first(objects.data.train).context),
         output_dimension=model_output_dimension(objects),
     )

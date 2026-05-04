@@ -12,6 +12,7 @@ end
 function write_grid_results(
     results;
     configs=nothing,
+    config_results=nothing,
     output_root=joinpath(@__DIR__, "..", "results"),
     timestamp=result_timestamp(),
 )
@@ -31,7 +32,10 @@ function write_grid_results(
     best_rows = sort(successful_rows; by=row -> get(row, :validation_mse, Inf))
     write_csv(joinpath(output_dir, "best.csv"), best_rows)
 
-    config_summary_rows = grid_config_summary_rows(configs, results)
+    aggregate_rows = config_aggregate_rows(config_results)
+    write_csv(joinpath(output_dir, "config_aggregates.csv"), aggregate_rows)
+
+    config_summary_rows = grid_config_summary_rows(configs, results; config_results=config_results)
     write_csv(joinpath(output_dir, "config.csv"), config_summary_rows)
 
     if configs !== nothing
@@ -75,13 +79,62 @@ function epoch_result_rows(results)
     return rows
 end
 
-function grid_config_summary_rows(configs, results)
+function config_aggregate_rows(config_results)
+    config_results === nothing && return Dict{Symbol,Any}[]
+
+    return [config_aggregate_row(result) for result in config_results]
+end
+
+function config_aggregate_row(result)
+    row = Dict{Symbol,Any}()
+    row[:status] = getproperty(result, :status)
+    row[:run_id] = getproperty(result, :run_id)
+    row[:started_at] = getproperty(result, :started_at)
+    row[:finished_at] = getproperty(result, :finished_at)
+    row[:elapsed_seconds] = getproperty(result, :elapsed_seconds)
+    row[:error] = getproperty(result, :error)
+
+    flatten_to_dict!(row, "config", getproperty(result, :config))
+    flatten_to_dict!(row, "", getproperty(result, :final_metrics))
+
+    aggregate_metrics = getproperty(result, :aggregate_metrics)
+    if aggregate_metrics isa AbstractDict
+        for key in sort!(collect(keys(aggregate_metrics)); by=String)
+            summary = aggregate_metrics[key]
+            for field in (:count, :mean, :median, :min, :max, :std, :stderr)
+                row[Symbol(string(key) * "_" * string(field))] = getproperty(summary, field)
+            end
+        end
+    end
+
+    return row
+end
+
+function grid_config_summary_rows(configs, results; config_results=nothing)
     rows = Dict{Symbol,Any}[
         Dict(:key => "created_at_unix_ms", :value => unix_milliseconds()),
         Dict(:key => "result_count", :value => length(results)),
         Dict(:key => "successful_count", :value => count(result -> result.status == "ok", results)),
         Dict(:key => "failed_count", :value => count(result -> result.status != "ok", results)),
     ]
+
+    if config_results !== nothing
+        push!(rows, Dict(:key => "config_parent_count", :value => length(config_results)))
+        push!(
+            rows,
+            Dict(
+                :key => "config_parent_successful_count",
+                :value => count(result -> result.status == "ok", config_results),
+            ),
+        )
+        push!(
+            rows,
+            Dict(
+                :key => "config_parent_failed_count",
+                :value => count(result -> result.status != "ok", config_results),
+            ),
+        )
+    end
 
     if configs !== nothing
         push!(rows, Dict(:key => "config_count", :value => length(configs)))

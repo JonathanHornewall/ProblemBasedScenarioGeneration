@@ -11,8 +11,9 @@
 #   description: optional.
 #   base: scalar settings merged after package and experiment defaults.
 #   fixed: scalar settings merged after base.
-#   grid: arrays of candidate values; Cartesian product creates candidates.
-#   schedules: typed shorthand for mu/mu_ref/rho/rho_ref schedules.
+#   grid: arrays of candidate values; Cartesian product creates config candidates.
+#     grid.schedules compares whole mu/mu_ref/rho/rho_ref schedules.
+#   schedules: fixed/default typed shorthand for mu/mu_ref/rho/rho_ref schedules.
 #   run_id_template: optional; null uses grid_<name>_<index>_<hash>.
 #
 # run_id_template placeholders:
@@ -58,6 +59,11 @@ base:
   depth: 2
   batch_size: 8
   dropout: 0.0
+  activation: relu
+  # Number of repeated training-data draws per resolved config candidate.
+  # Repeats keep seed fixed for model initialization and vary training_data_seed.
+  repeat_count: 1
+  # Model initialization seed. Gridsearch repeats do not use this for data generation.
   seed: 143
 
   # Loss and homotopy/barrier defaults.
@@ -164,18 +170,22 @@ fixed: {}
 
 grid:
   # Current resource_allocation_experiment_1_default grid.
-  # Candidate count here is 3 * 2 * 2 * 2 * 1 * 1 = 24.
+  # Config-candidate count here is 3 * 2 * 2 * 2 * 1 * 1 * 1 = 24.
+  # Total child training runs are config-candidate count * repeat_count.
   learning_rate: [0.001, 0.0005, 0.0003]
   hidden_size: [64, 128]
   depth: [2, 3]
   batch_size: [8, 16]
   dropout: [0.0]
+  activation: [relu]
   seed: [143]
+  # repeat_count may be set in base/fixed or gridded here.
+  # repeat_count: [3]
 
   # Other typed keys may be gridded too.
   #
   # Integer keys:
-  # candidate_index, replicate_index, epochs, warmup_epochs, seed, display_real,
+  # candidate_index, replicate_index, repeat_count, epochs, warmup_epochs, seed, display_real,
   # hidden_size, depth, batch_size,
   # optimality_test_sample_count, optimality_train_sample_count,
   # optimality_validation_sample_count.
@@ -192,9 +202,31 @@ grid:
   # knn_homogenization, log_barrier_inference.
   #
   # Symbol/string-to-symbol keys:
-  # loss, method, mu_schedule, mu_ref_schedule, rho_schedule, rho_ref_schedule.
+  # activation, loss, method, mu_schedule, mu_ref_schedule, rho_schedule, rho_ref_schedule.
+  #
+  # Whole-schedule grid examples. Each schedule name takes an array of schedule specs,
+  # and these arrays are included in the same Cartesian product as scalar grid keys.
+  # end is accepted as an alias for stop.
+  #
+  # schedules:
+  #   mu:
+  #     - kind: geometric
+  #       start: 1.0
+  #       end: 0.01
+  #     - kind: values
+  #       values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]
+  #   mu_ref:
+  #     - kind: match_input
+  #   rho:
+  #     - kind: constant
+  #       value: 0.0
+  #   rho_ref:
+  #     - kind: match_input
 
 schedules:
+  # Fixed/default schedule values for every config candidate.
+  # Use grid.schedules above when comparing whole schedules.
+  #
   # Supported schedule names: mu, mu_ref, rho, rho_ref.
   #
   # Supported mu kinds:
@@ -218,40 +250,9 @@ schedules:
     kind: geometric
     start: 1.0
     stop: 0.01
-    # Alternative examples:
-    # kind: constant
-    # value: 0.01
-    #
-    # kind: linear
-    # start: 1.0
-    # stop: 0.01
-    #
-    # kind: values
-    # values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]
-    #
-    # kind: piecewise
-    # segments:
-    #   - epochs: 3
-    #     value: 1.0
-    #   - epochs: 4
-    #     value: 0.1
-    #   - epochs: 3
-    #     value: 0.01
 
   mu_ref:
     kind: match_input
-    # Alternative examples:
-    # kind: zero
-    #
-    # kind: constant
-    # value: 0.01
-    #
-    # kind: linear
-    # start: 1.0
-    # stop: 0.01
-    #
-    # kind: values
-    # values: [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.02, 0.015, 0.0125, 0.01]
 
   rho:
     kind: constant

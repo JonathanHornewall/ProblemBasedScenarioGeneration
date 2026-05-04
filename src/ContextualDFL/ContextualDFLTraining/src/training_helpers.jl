@@ -8,7 +8,15 @@ end
 
 (schedule::ConstantSchedule)(args...; kwargs...) = schedule.value
 
-function build_neural_net(input_dimension, output_dimension; hidden_size, depth, dropout)
+function build_neural_net(
+    input_dimension,
+    output_dimension;
+    hidden_size,
+    depth,
+    dropout,
+    activation=:relu,
+    seed=nothing,
+)
     input_dimension > 0 ||
         throw(ArgumentError("input_dimension must be positive."))
     output_dimension > 0 ||
@@ -18,18 +26,42 @@ function build_neural_net(input_dimension, output_dimension; hidden_size, depth,
     depth > 0 ||
         throw(ArgumentError("depth must be positive."))
 
-    layers = Any[Dense(input_dimension => hidden_size, relu)]
+    activation_fn = activation_function(activation)
+    init = dense_initializer(seed)
+
+    layers = Any[Dense(input_dimension => hidden_size, activation_fn; init=init)]
 
     for _ in 2:depth
         dropout > 0 && push!(layers, Dropout(dropout))
-        push!(layers, Dense(hidden_size => hidden_size, relu))
+        push!(layers, Dense(hidden_size => hidden_size, activation_fn; init=init))
     end
 
     dropout > 0 && push!(layers, Dropout(dropout))
-    push!(layers, Dense(hidden_size => output_dimension))
+    push!(layers, Dense(hidden_size => output_dimension; init=init))
     push!(layers, x -> Flux.softplus.(x))
 
     return Chain(layers...) |> f64
+end
+
+function activation_function(activation)
+    name = Symbol(lowercase(string(activation)))
+    name == :relu && return Flux.relu
+    name in (:silu, :swish) && return Flux.swish
+    name in (:gelu, :geelu) && return Flux.gelu
+    name == :tanh && return tanh
+    name == :sigmoid && return Flux.sigmoid
+    name in (:identity, :linear, :none) && return identity
+    throw(
+        ArgumentError(
+            "unsupported activation $(activation); use relu, silu/swish, gelu/geelu, tanh, sigmoid, or identity.",
+        ),
+    )
+end
+
+function dense_initializer(seed)
+    seed === nothing && return Flux.glorot_uniform
+    seed === missing && return Flux.glorot_uniform
+    return Flux.glorot_uniform(Random.MersenneTwister(Int(seed)))
 end
 
 function build_solver(config)

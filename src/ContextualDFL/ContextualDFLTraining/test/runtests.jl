@@ -1,6 +1,7 @@
 using ContextualDFLTraining
 using ContextualDFL
 using ContextualDFLExperiments
+using Flux
 using Test
 
 mutable struct FakeRun
@@ -13,6 +14,63 @@ mutable struct FakeRun
 end
 
 struct TrainingTestVectorDecoder <: ContextualDFL.VectorDecoder end
+
+function flattened_trainables(model)
+    return reduce(vcat, (vec(Array(parameter)) for parameter in Flux.trainables(model)))
+end
+
+@testset "ContextualDFLTraining model construction" begin
+    for activation in (:relu, :silu, :swish, :gelu, :geelu, :tanh, :sigmoid, :identity)
+        model = ContextualDFLTraining.build_neural_net(
+            3,
+            2;
+            hidden_size=4,
+            depth=2,
+            dropout=0.0,
+            activation=activation,
+            seed=7,
+        )
+        @test size(model(ones(Float64, 3, 5))) == (2, 5)
+    end
+
+    @test_throws ArgumentError ContextualDFLTraining.build_neural_net(
+        3,
+        2;
+        hidden_size=4,
+        depth=1,
+        dropout=0.0,
+        activation=:unsupported,
+        seed=7,
+    )
+
+    first_model = ContextualDFLTraining.build_neural_net(
+        3,
+        2;
+        hidden_size=4,
+        depth=2,
+        dropout=0.0,
+        seed=11,
+    )
+    same_seed_model = ContextualDFLTraining.build_neural_net(
+        3,
+        2;
+        hidden_size=4,
+        depth=2,
+        dropout=0.0,
+        seed=11,
+    )
+    different_seed_model = ContextualDFLTraining.build_neural_net(
+        3,
+        2;
+        hidden_size=4,
+        depth=2,
+        dropout=0.0,
+        seed=12,
+    )
+
+    @test flattened_trainables(first_model) == flattened_trainables(same_seed_model)
+    @test flattened_trainables(first_model) != flattened_trainables(different_seed_model)
+end
 
 @testset "ContextualDFLTraining experiments" begin
     spec = ContextualDFLTraining.load_experiment("ResourceAllocationExperiment1")
@@ -64,7 +122,7 @@ struct TrainingTestVectorDecoder <: ContextualDFL.VectorDecoder end
     @test length(target) == objects.model_metadata.output_dimension
     @test objects.problem_metadata.problem == "resource_allocation"
     expected_dataset_name =
-        "resource_allocation_experiment_1-ctx$(config.training_context_count)-scen$(config.training_scenarios_per_context)-dup$(config.collection_duplicates_per_context)-seed$(config.seed)"
+        "resource_allocation_experiment_1-ctx$(config.training_context_count)-scen$(config.training_scenarios_per_context)-dup$(config.collection_duplicates_per_context)-training_seed$(config.training_data_seed)"
     @test objects.data_metadata.dataset_name == expected_dataset_name
     @test startswith(objects.data_metadata.dataset_path, training_data_dir)
     @test isfile(objects.data_metadata.dataset_path)
@@ -143,10 +201,10 @@ struct TrainingTestVectorDecoder <: ContextualDFL.VectorDecoder end
             experiment_name() = "toy_cached"
             experiment_module_name() = :ToyCachedExperiment
             artifact_dir() = joinpath(@__DIR__, "artifacts")
-            base_config() = (; experiment_id=experiment_id(), seed=1)
+            base_config() = (; experiment_id=experiment_id(), seed=1, training_data_seed=1)
             training_data(config) = rand()
-            training_data_identity(config) = (; seed=config.seed)
-            training_dataset_name(config) = "toy_cached-\$(config.seed)"
+            training_data_identity(config) = (; training_data_seed=config.training_data_seed)
+            training_dataset_name(config) = "toy_cached-\$(config.training_data_seed)"
             training_objects(config) = error("legacy path should not be used")
             training_objects(config, data) = (; data=data, data_metadata=(; generated_by="toy"))
             optimality_splits(objects, config) = Pair{Symbol,Any}[]
@@ -158,7 +216,7 @@ struct TrainingTestVectorDecoder <: ContextualDFL.VectorDecoder end
         cached_spec = ContextualDFLTraining.load_experiment(config_path)
         cached_config = merge(
             ContextualDFLTraining.experiment_base_config(cached_spec),
-            (; seed=7, training_data_dir=joinpath(dir, "cache")),
+            (; seed=70, training_data_seed=7, training_data_dir=joinpath(dir, "cache")),
         )
         first_objects = ContextualDFLTraining.training_objects_for_config(cached_config)
         second_objects = ContextualDFLTraining.training_objects_for_config(cached_config)
@@ -407,6 +465,33 @@ end
     end
 
     mktempdir() do dir
+        yaml_path = joinpath(dir, "repeat_activation_grid.yaml")
+        write(
+            yaml_path,
+            """
+            version: 1
+            name: repeat_activation_grid
+            base:
+              repeat_count: 2
+            fixed:
+              learning_rate: 0.001
+              hidden_size: 16
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+            grid:
+              activation: [relu, gelu]
+              seed: [1]
+            """,
+        )
+
+        configs = selected_grid(experiment, grid_load_grid_config(yaml_path))
+        @test length(configs) == 2
+        @test Set(config.activation for config in configs) == Set([:relu, :gelu])
+        @test all(config -> config.repeat_count == 2, configs)
+    end
+
+    mktempdir() do dir
         yaml_path = joinpath(dir, "grid.yaml")
         write(
             yaml_path,
@@ -506,6 +591,57 @@ end
         )
         @test ContextualDFLTraining.resolved_grid_json(blank_line_configs) == resolved_json
         @test ContextualDFLTraining.grid_config_digest(blank_line_configs) == digest
+    end
+
+    mktempdir() do dir
+        nested_path = joinpath(dir, "nested_schedules.yaml")
+        write(
+            nested_path,
+            """
+            version: 1
+            name: nested_schedule_grid
+            base:
+              epochs: 3
+            fixed:
+              learning_rate: 0.001
+              hidden_size: 16
+              depth: 1
+              batch_size: 4
+              dropout: 0.0
+            grid:
+              seed: [1]
+              schedules:
+                mu:
+                  - kind: geometric
+                    start: 1.0
+                    end: 0.01
+                  - kind: values
+                    values: [1.0, 0.5, 0.25]
+                mu_ref:
+                  - kind: match_input
+                rho:
+                  - kind: constant
+                    value: 0.0
+                rho_ref:
+                  - kind: match_input
+            schedules:
+              mu:
+                kind: constant
+                value: 0.5
+            """,
+        )
+
+        configs = selected_grid(experiment, grid_load_grid_config(nested_path))
+        @test length(configs) == 2
+        @test count(config -> config.mu_schedule == :geometric, configs) == 1
+        @test count(config -> config.mu_schedule == [1.0, 0.5, 0.25], configs) == 1
+        geometric_config = only([config for config in configs if config.mu_schedule == :geometric])
+        manual_config = only([config for config in configs if config.mu_schedule isa AbstractVector])
+        @test geometric_config.mu_end == 0.01
+        @test manual_config.mu_ref_schedule == :match_input
+        @test all(config -> config.rho_schedule == :constant, configs)
+        @test all(config -> config.rho == 0.0, configs)
+        @test all(config -> config.rho_ref_schedule == :match_input, configs)
     end
 
     mktempdir() do dir
@@ -730,7 +866,99 @@ end
                 """,
             )
             @test_throws ArgumentError ContextualDFLTraining.load_grid_config(non_positive_path)
+
+            wrong_length_path = joinpath(dir, "wrong_length.yaml")
+            write(
+                wrong_length_path,
+                """
+                version: 1
+                base:
+                  epochs: 3
+                schedules:
+                  mu:
+                    kind: values
+                    values: [1.0, 0.5]
+                """,
+            )
+            @test_throws ArgumentError selected_grid(
+                experiment,
+                grid_load_grid_config(wrong_length_path),
+            )
         end
+    end
+
+    @testset "repeat annotation and aggregates" begin
+        annotate_parents = getfield(gridsearch_module, :annotate_grid_config_parents)
+        create_parent_runs = getfield(gridsearch_module, :create_mlflow_config_parent_runs)
+        annotate_repeats = getfield(gridsearch_module, :annotate_repeat_configs)
+        parent_results = getfield(gridsearch_module, :config_parent_results)
+
+        settings = (;
+            enabled=false,
+            experiment_id="",
+            experiment_name="",
+            deterministic_experiment_id="",
+            tracking_uri="",
+            upload_model_artifact=false,
+        )
+        base_config = (;
+            run_id="base",
+            seed=11,
+            repeat_count=2,
+            learning_rate=0.001,
+        )
+        parents = annotate_parents([base_config], "12345", settings, "")
+        parent_runs = create_parent_runs(settings, parents)
+        children = annotate_repeats(parents, parent_runs, settings)
+
+        @test length(parents) == 1
+        @test only(parents).run_id ==
+              "gridsearch_12345__candidate_0001__base"
+        @test length(children) == 2
+        @test children[1].run_id ==
+              "gridsearch_12345__candidate_0001__base__repeat_001"
+        @test children[2].run_id ==
+              "gridsearch_12345__candidate_0001__base__repeat_002"
+        @test all(child -> child.seed == 11, children)
+        @test children[1].training_data_seed != children[2].training_data_seed
+        @test all(child -> child.training_data_cache == false, children)
+        @test all(child -> child.write_training_data_artifact == false, children)
+
+        child_results = [
+            (;
+                status="ok",
+                run_id=children[1].run_id,
+                config=children[1],
+                worker=NamedTuple(),
+                final_metrics=(; validation_mse=1.0),
+                epoch_history=Dict{Symbol,Any}[],
+                error="",
+                started_at=1,
+                finished_at=2,
+                elapsed_seconds=1.0,
+            ),
+            (;
+                status="ok",
+                run_id=children[2].run_id,
+                config=children[2],
+                worker=NamedTuple(),
+                final_metrics=(; validation_mse=3.0),
+                epoch_history=Dict{Symbol,Any}[],
+                error="",
+                started_at=2,
+                finished_at=3,
+                elapsed_seconds=1.0,
+            ),
+        ]
+        config_result = only(parent_results(parents, child_results))
+        summary = config_result.aggregate_metrics[:validation_mse]
+
+        @test config_result.status == "ok"
+        @test config_result.final_metrics.validation_mse == 2.0
+        @test summary.count == 2.0
+        @test summary.mean == 2.0
+        @test summary.std ≈ sqrt(2.0)
+        @test summary.stderr == 1.0
     end
 
     @testset "policy inference smoothing defaults" begin
