@@ -62,6 +62,7 @@ function main()
                 objects.reference_scenario_decoder,
                 objects.solver;
                 mu=Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0)),
+                rho=Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0)),
             )
         end
         path = ContextualDFLTraining.save_optimal_results!(

@@ -15,9 +15,11 @@ function ChainRulesCore.rrule(
     q_array;
     probabilities=nothing,
     μ=0,
+    ρ=0,
+    rho=ρ,
     kwargs...,
 )
-    lp, μ_vector, result = _solve_stochastic_extensive(
+    lp, μ_vector, ρ_vector, result = _solve_stochastic_extensive(
         solver,
         sp,
         W_eq_array,
@@ -29,6 +31,7 @@ function ChainRulesCore.rrule(
         q_array;
         probabilities=probabilities,
         μ=μ,
+        ρ=rho,
         kwargs...,
     )
     output = _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
@@ -76,6 +79,7 @@ function ChainRulesCore.rrule(
             solver,
             lp,
             μ_vector,
+            ρ_vector,
             result,
             primal_tangent;
             kwargs...,
@@ -126,19 +130,28 @@ function _lp_reverse_from_primal_tangent(
     solver,
     lp::LP,
     μ,
+    ρ,
     result,
     primal_tangent;
     kwargs...,
 )
     tight_tol = haskey(kwargs, :tight_tol) ? kwargs[:tight_tol] : 1e-7
-    cache = _lp_reverse_precompute(lp, μ, result, tight_tol)
+    cache = _lp_reverse_precompute(lp, μ, ρ, result, tight_tol)
 
     n = length(lp.c)
     m_eq = length(lp.b_eq)
     m_ineq = length(lp.b_ineq)
-    T = promote_type(eltype(lp.c), eltype(lp.b_eq), eltype(lp.b_ineq), eltype(primal_tangent))
+    T = promote_type(
+        eltype(lp.c),
+        eltype(lp.b_eq),
+        eltype(lp.b_ineq),
+        eltype(cache.μ),
+        eltype(cache.ρ),
+        eltype(primal_tangent),
+    )
 
     μ_vector = cache.μ
+    ρ_vector = cache.ρ
     kkt_size = _is_zero_barrier_parameter(μ_vector) ? n + m_eq + length(cache.tight) : n + m_eq
     rhs = zeros(T, kkt_size)
     rhs[1:n] = primal_tangent
@@ -154,9 +167,12 @@ function _lp_reverse_from_primal_tangent(
         db_eq .= view(adjoint_constraints, 1:m_eq)
         db_ineq[cache.tight] .= view(adjoint_constraints, (m_eq + 1):length(adjoint_constraints))
 
-        if !isempty(cache.loose)
+        if _is_zero_quadratic_parameter(ρ_vector) && !isempty(cache.loose)
             db_ineq[cache.loose] .=
                 cache.d .* (view(lp.A_ineq, cache.loose, :) * adjoint_primal)
+        end
+        if !_is_zero_quadratic_parameter(ρ_vector)
+            dc .= .-adjoint_primal
         end
 
         return dc, db_eq, db_ineq
@@ -172,7 +188,12 @@ function _lp_reverse_from_primal_tangent(
 end
 
 function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
+    return _lp_reverse_precompute(lp, μ, 0, result, tight_tol)
+end
+
+function _lp_reverse_precompute(lp::LP, μ, ρ, result, tight_tol)
     μ_vector = _barrier_parameter_vector(lp, μ)
+    ρ_vector = _quadratic_parameter_vector(lp, ρ)
 
     z = result isa AbstractVector ? result : result.z
     n = length(lp.c)
@@ -201,11 +222,17 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
         end
 
         tight = selected_tight
-        A_loose = lp.A_ineq[loose, :]
-        d = one(eltype(slack)) ./ (slack[loose] .^ 2)
+        d = _is_zero_quadratic_parameter(ρ_vector) ?
+            one(eltype(slack)) ./ (slack[loose] .^ 2) :
+            zeros(promote_type(eltype(slack), eltype(ρ_vector)), length(loose))
 
-        H = transpose(A_loose) * (Diagonal(d) * A_loose)
-        T = promote_type(eltype(H), eltype(F), eltype(μ_vector))
+        H = if _is_zero_quadratic_parameter(ρ_vector)
+            A_loose = lp.A_ineq[loose, :]
+            transpose(A_loose) * (Diagonal(d) * A_loose)
+        else
+            Diagonal(ρ_vector)
+        end
+        T = promote_type(eltype(H), eltype(F), eltype(μ_vector), eltype(ρ_vector))
         K = if issparse(H) || issparse(F)
             [
                 sparse(H) sparse(transpose(F))
@@ -219,7 +246,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
         end
 
         K_factorization = issparse(K) ? lu(K) : bunchkaufman(Symmetric(K))
-        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=tight, loose=loose)
+        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, ρ=ρ_vector, tight=tight, loose=loose)
     end
 
     all(>(zero(eltype(slack))), slack) ||
@@ -227,7 +254,8 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
 
     d = one(eltype(slack)) ./ (slack .^ 2)
     H = transpose(lp.A_ineq) * (Diagonal(μ_vector .* d) * lp.A_ineq)
-    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector))
+    H = _is_zero_quadratic_parameter(ρ_vector) ? H : H + Diagonal(ρ_vector)
+    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector), eltype(ρ_vector))
     K = if issparse(H) || issparse(lp.A_eq)
         [
             sparse(H) sparse(transpose(lp.A_eq))
@@ -241,7 +269,7 @@ function _lp_reverse_precompute(lp::LP, μ, result, tight_tol)
     end
 
     K_factorization = issparse(K) ? lu(K) : bunchkaufman(Symmetric(K))
-    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
+    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, ρ=ρ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
 end
 
 function _array_cotangent(output_tangent, index, template; name)

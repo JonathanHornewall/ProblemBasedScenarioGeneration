@@ -12,6 +12,8 @@ mutable struct FakeRun
     events::Vector{Symbol}
 end
 
+struct TrainingTestVectorDecoder <: ContextualDFL.VectorDecoder end
+
 @testset "ContextualDFLTraining experiments" begin
     spec = ContextualDFLTraining.load_experiment("ResourceAllocationExperiment1")
     @test spec.id == "resource_allocation/experiment_1"
@@ -429,6 +431,12 @@ end
                 stop: 0.01
               mu_ref:
                 kind: match_input
+              rho:
+                kind: linear
+                start: 0.3
+                stop: 0.1
+              rho_ref:
+                kind: zero
             run_id_template: "{name}_{index}_{hash}"
             """,
         )
@@ -448,6 +456,10 @@ end
         @test all(config -> config.mu_start == 1.0, configs)
         @test all(config -> config.mu_end == 0.01, configs)
         @test all(config -> config.mu_ref_schedule == :match_input, configs)
+        @test all(config -> config.rho_schedule == :linear, configs)
+        @test all(config -> config.rho_start == 0.3, configs)
+        @test all(config -> config.rho_end == 0.1, configs)
+        @test all(config -> config.rho_ref_schedule == :zero, configs)
         @test all(config -> startswith(config.run_id, "yaml_grid_"), configs)
         @test startswith(digest, "sha256:")
         @test all(config -> config.grid_config_digest == digest, configs)
@@ -478,6 +490,12 @@ end
                 stop: 0.01
               mu_ref:
                 kind: match_input
+              rho:
+                kind: linear
+                start: 0.3
+                stop: 0.1
+              rho_ref:
+                kind: zero
             run_id_template: "{name}_{index}_{hash}"
 
             """,
@@ -588,6 +606,16 @@ end
               mu_ref:
                 kind: values
                 values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+              rho:
+                kind: piecewise
+                segments:
+                  - epochs: 3
+                    value: 0.2
+                  - epochs: 3
+                    value: 0.05
+              rho_ref:
+                kind: values
+                values: [0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
             """,
         )
 
@@ -596,10 +624,16 @@ end
 
         @test config.mu_schedule == [1.0, 1.0, 0.9, 0.9, 0.9, 0.4]
         @test config.mu_ref_schedule == [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        @test config.rho_schedule == [0.2, 0.2, 0.2, 0.05, 0.05, 0.05]
+        @test config.rho_ref_schedule == [0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
         @test ContextualDFLTraining.mu_schedule_for_config(config) ==
               [1.0, 1.0, 0.9, 0.9, 0.9, 0.4]
         @test ContextualDFLTraining.mu_ref_schedule_for_config(config) ==
               [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        @test ContextualDFLTraining.rho_schedule_for_config(config) ==
+              [0.2, 0.2, 0.2, 0.05, 0.05, 0.05]
+        @test ContextualDFLTraining.rho_ref_schedule_for_config(config) ==
+              [0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
     end
 
     mktempdir() do dir
@@ -645,6 +679,15 @@ end
         @test_throws ArgumentError ContextualDFLTraining.mu_schedule_for_config(
             (; epochs=3, mu=0.0, mu_schedule=[1, 2]),
         )
+        @test ContextualDFLTraining.rho_schedule_for_config(
+            (; epochs=3, rho=0.0, rho_schedule=[0.3, 0.2, 0.1]),
+        ) == [0.3, 0.2, 0.1]
+        @test ContextualDFLTraining.rho_ref_schedule_for_config(
+            (; epochs=3, rho=0.0, rho_schedule=[0.3, 0.2, 0.1], rho_ref_schedule=:match_input),
+        ) == [0.3, 0.2, 0.1]
+        @test_throws ArgumentError ContextualDFLTraining.rho_schedule_for_config(
+            (; epochs=3, rho=0.0, rho_schedule=[0.3, 0.2]),
+        )
 
         mktempdir() do dir
             empty_values_path = joinpath(dir, "empty_values.yaml")
@@ -688,6 +731,90 @@ end
             )
             @test_throws ArgumentError ContextualDFLTraining.load_grid_config(non_positive_path)
         end
+    end
+
+    @testset "policy inference smoothing defaults" begin
+        policy_objects = (;
+            scenario_decoder=TrainingTestVectorDecoder(),
+            reference_scenario_decoder=TrainingTestVectorDecoder(),
+            solver=:solver,
+            program=:program,
+        )
+        base_policy_config = (; loss=:dfl_scen, solver=:highs, mu=0.0, mu_schedule=:constant, rho=0.0, rho_schedule=:constant)
+        annealed_config = merge(
+            base_policy_config,
+            (;
+                epochs=3,
+                mu=9.0,
+                mu_schedule=:geometric,
+                mu_start=1.0,
+                mu_end=0.05,
+            ),
+        )
+        manual_config = merge(
+            base_policy_config,
+            (; epochs=3, mu=9.0, mu_schedule=[1.0, 0.5, 0.25]),
+        )
+        override_config = merge(manual_config, (; policy_inference_mu=0.7))
+        null_override_config = merge(manual_config, (; policy_inference_mu=nothing))
+        zero_epoch_config =
+            merge(base_policy_config, (; epochs=0, mu=0.4, mu_schedule=:constant))
+
+        @test ContextualDFLTraining.policy_inference_mu_for_config(annealed_config) ≈ 0.05
+        @test ContextualDFLTraining.policy_inference_mu_for_config(manual_config) == 0.25
+        @test ContextualDFLTraining.policy_inference_mu_for_config(override_config) == 0.7
+        @test ContextualDFLTraining.policy_inference_mu_for_config(null_override_config) ==
+              0.25
+        @test ContextualDFLTraining.policy_inference_mu_for_config(zero_epoch_config) == 0.4
+
+        policy = ContextualDFLTraining.optimality_policy(
+            identity,
+            policy_objects,
+            annealed_config,
+        )
+        annealed_method_spec =
+            ContextualDFLTraining.mlflow_method_spec(policy_objects, annealed_config)
+        method_spec = ContextualDFLTraining.mlflow_method_spec(policy_objects, manual_config)
+
+        @test policy.mu ≈ 0.05
+        @test annealed_method_spec.policy_inference_mu == policy.mu
+        @test method_spec.policy_inference_mu == 0.25
+
+        rho_annealed_config = merge(
+            base_policy_config,
+            (;
+                epochs=3,
+                rho=9.0,
+                rho_schedule=:linear,
+                rho_start=0.3,
+                rho_end=0.1,
+                policy_inference_rho=nothing,
+            ),
+        )
+        rho_manual_config = merge(
+            base_policy_config,
+            (; epochs=3, rho=9.0, rho_schedule=[0.3, 0.2, 0.1], policy_inference_rho=nothing),
+        )
+        rho_override_config = merge(rho_manual_config, (; policy_inference_rho=0.7))
+        rho_zero_epoch_config =
+            merge(base_policy_config, (; epochs=0, rho=0.4, rho_schedule=:constant, policy_inference_rho=nothing))
+
+        @test ContextualDFLTraining.policy_inference_rho_for_config(rho_annealed_config) ≈ 0.1
+        @test ContextualDFLTraining.policy_inference_rho_for_config(rho_manual_config) == 0.1
+        @test ContextualDFLTraining.policy_inference_rho_for_config(rho_override_config) == 0.7
+        @test ContextualDFLTraining.policy_inference_rho_for_config(rho_zero_epoch_config) == 0.4
+
+        rho_policy = ContextualDFLTraining.optimality_policy(
+            identity,
+            policy_objects,
+            rho_annealed_config,
+        )
+        rho_method_spec =
+            ContextualDFLTraining.mlflow_method_spec(policy_objects, rho_manual_config)
+
+        @test rho_policy.rho ≈ 0.1
+        @test rho_method_spec.policy_inference_rho == 0.1
+        @test rho_method_spec.quadratic_smoothing_training == true
     end
 
     mktempdir() do dir
@@ -815,6 +942,8 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
                 mu=0.1,
                 mu_in=0.1,
                 mu_ref=0.0,
+                rho_in=0.2,
+                rho_ref=0.05,
                 iterations=3,
                 epoch_seconds=0.25,
                 real_display_loss=0.75,
@@ -831,6 +960,8 @@ const GLOBAL_ARTIFACT_RUN = Ref{Vector{Tuple{String,Vector{UInt8}}}}(
         @test metrics["loss"] == 1.5
         @test metrics["epoch_mu_in"] == 0.1
         @test metrics["epoch_mu_ref"] == 0.0
+        @test metrics["epoch_rho_in"] == 0.2
+        @test metrics["epoch_rho_ref"] == 0.05
         @test metrics["epoch_iterations"] == 3.0
         @test metrics["epoch_seconds"] == 0.25
         @test metrics["display_loss"] == 2.5

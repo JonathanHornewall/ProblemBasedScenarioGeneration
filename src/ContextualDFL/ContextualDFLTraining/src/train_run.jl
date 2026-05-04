@@ -121,6 +121,8 @@ function train_with_contextualdfl(objects, config)
         mu_schedule_for_config(config),
         mu_ref_schedule_for_config(config),
         objects.data.train;
+        rho_in_schedule=rho_schedule_for_config(config),
+        rho_ref_schedule=rho_ref_schedule_for_config(config),
         learning_rate=config.learning_rate,
         optimizer_type=Flux.Adam,
         epochs=config.epochs,
@@ -149,11 +151,22 @@ function train_with_contextualdfl_mlflow(objects, config)
     model = objects.scenario_generator.neural_net
     mu_schedule = mu_schedule_for_config(config)
     mu_ref_schedule = mu_ref_schedule_for_config(config, mu_schedule)
+    rho_schedule = rho_schedule_for_config(config)
+    rho_ref_schedule = rho_ref_schedule_for_config(config, rho_schedule)
     run = createrun(mlf, experiment_id; start_time=unix_milliseconds())
     training_succeeded = false
 
     try
-        log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule, mu_ref_schedule)
+        log_contextualdfl_training_params!(
+            mlf,
+            run,
+            loss,
+            config,
+            mu_schedule,
+            mu_ref_schedule,
+            rho_schedule,
+            rho_ref_schedule,
+        )
         log_mlflow_params!(mlf, run, "experiment", mlflow_experiment_spec(objects, config))
         log_mlflow_params!(mlf, run, "data", mlflow_data_spec(objects, config))
         log_mlflow_params!(mlf, run, "model", mlflow_model_spec(model, objects, config))
@@ -187,6 +200,8 @@ function train_with_contextualdfl_mlflow(objects, config)
             mu_schedule,
             mu_ref_schedule,
             objects.data.train;
+            rho_in_schedule=rho_schedule,
+            rho_ref_schedule=rho_ref_schedule,
             learning_rate=config.learning_rate,
             optimizer_type=Flux.Adam,
             epochs=config.epochs,
@@ -248,7 +263,16 @@ function train_with_contextualdfl_mlflow(objects, config)
     end
 end
 
-function log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule, mu_ref_schedule)
+function log_contextualdfl_training_params!(
+    mlf,
+    run,
+    loss,
+    config,
+    mu_schedule,
+    mu_ref_schedule,
+    rho_schedule,
+    rho_ref_schedule,
+)
     logparam(mlf, run, "learning_rate", string(config.learning_rate))
     logparam(mlf, run, "optimizer_type", string(Flux.Adam))
     logparam(mlf, run, "epochs", string(config.epochs))
@@ -261,6 +285,8 @@ function log_contextualdfl_training_params!(mlf, run, loss, config, mu_schedule,
         logparam(mlf, run, "nr_scenarios", string(logged_scenarios))
     logparam(mlf, run, "mu_in_schedule", string(collect(mu_schedule)))
     logparam(mlf, run, "mu_ref_schedule", string(collect(mu_ref_schedule)))
+    logparam(mlf, run, "rho_in_schedule", string(collect(rho_schedule)))
+    logparam(mlf, run, "rho_ref_schedule", string(collect(rho_ref_schedule)))
     logparam(
         mlf,
         run,
@@ -448,6 +474,30 @@ function mu_schedule_for_config(config)
     throw(ArgumentError("unsupported mu_schedule $(schedule)"))
 end
 
+function policy_inference_mu_for_config(config, mu_schedule=nothing)
+    if config isa NamedTuple && :policy_inference_mu in keys(config)
+        policy_mu = config.policy_inference_mu
+        (policy_mu === nothing || policy_mu === missing) || return Float64(policy_mu)
+    end
+
+    resolved_mu_schedule =
+        isnothing(mu_schedule) ? mu_schedule_for_config(config) : mu_schedule
+    isempty(resolved_mu_schedule) && return Float64(config_value(config, :mu, 0.0))
+    return Float64(last(resolved_mu_schedule))
+end
+
+function policy_inference_rho_for_config(config, rho_schedule=nothing)
+    if config isa NamedTuple && :policy_inference_rho in keys(config)
+        policy_rho = config.policy_inference_rho
+        (policy_rho === nothing || policy_rho === missing) || return Float64(policy_rho)
+    end
+
+    resolved_rho_schedule =
+        isnothing(rho_schedule) ? rho_schedule_for_config(config) : rho_schedule
+    isempty(resolved_rho_schedule) && return Float64(config_value(config, :rho, 0.0))
+    return Float64(last(resolved_rho_schedule))
+end
+
 function mu_ref_schedule_for_config(config, mu_schedule=mu_schedule_for_config(config))
     epochs = Int(config.epochs)
     raw_schedule = config_value(config, :mu_ref_schedule, :match_input)
@@ -486,6 +536,77 @@ function mu_ref_schedule_for_config(config, mu_schedule=mu_schedule_for_config(c
     end
 
     throw(ArgumentError("unsupported mu_ref_schedule $(schedule)"))
+end
+
+function rho_schedule_for_config(config)
+    epochs = Int(config.epochs)
+    epochs >= 0 || throw(ArgumentError("epochs must be non-negative."))
+    epochs == 0 && return Float64[]
+
+    raw_schedule = config_value(config, :rho_schedule, :constant)
+    if raw_schedule isa AbstractVector
+        length(raw_schedule) == epochs ||
+            throw(ArgumentError("rho_schedule vector must have one value per epoch."))
+        return Float64.(raw_schedule)
+    end
+
+    schedule = Symbol(raw_schedule)
+    rho_start = Float64(config_value(config, :rho_start, config.rho))
+    rho_end = Float64(config_value(config, :rho_end, config.rho))
+
+    if schedule == :constant
+        return fill(Float64(config.rho), epochs)
+    elseif schedule == :linear
+        epochs == 1 && return [rho_start]
+        return collect(range(rho_start, rho_end; length=epochs))
+    elseif schedule == :geometric || schedule == :exponential
+        rho_start > 0 && rho_end > 0 ||
+            throw(ArgumentError("$schedule rho annealing requires positive rho_start and rho_end."))
+        epochs == 1 && return [rho_start]
+        return exp.(range(log(rho_start), log(rho_end); length=epochs))
+    end
+
+    throw(ArgumentError("unsupported rho_schedule $(schedule)"))
+end
+
+function rho_ref_schedule_for_config(config, rho_schedule=rho_schedule_for_config(config))
+    epochs = Int(config.epochs)
+    raw_schedule = config_value(config, :rho_ref_schedule, :match_input)
+
+    if raw_schedule isa AbstractVector
+        length(raw_schedule) == epochs ||
+            throw(ArgumentError("rho_ref_schedule vector must have one value per epoch."))
+        return Float64.(raw_schedule)
+    end
+
+    schedule = Symbol(raw_schedule)
+    if schedule in (:match_input, :same, :input)
+        length(rho_schedule) == epochs ||
+            throw(ArgumentError("rho_schedule must have one value per epoch."))
+        return Float64.(rho_schedule)
+    elseif schedule in (:zero, :zeros, :none)
+        return zeros(Float64, epochs)
+    elseif schedule == :constant
+        return fill(Float64(config_value(config, :rho_ref, config.rho)), epochs)
+    elseif schedule == :linear
+        epochs == 1 && return [Float64(config_value(config, :rho_ref_start, config_value(config, :rho_start, config.rho)))]
+        return collect(
+            range(
+                Float64(config_value(config, :rho_ref_start, config_value(config, :rho_start, config.rho))),
+                Float64(config_value(config, :rho_ref_end, config_value(config, :rho_end, config.rho)));
+                length=epochs,
+            ),
+        )
+    elseif schedule == :geometric || schedule == :exponential
+        rho_ref_start = Float64(config_value(config, :rho_ref_start, config_value(config, :rho_start, config.rho)))
+        rho_ref_end = Float64(config_value(config, :rho_ref_end, config_value(config, :rho_end, config.rho)))
+        rho_ref_start > 0 && rho_ref_end > 0 ||
+            throw(ArgumentError("$schedule rho_ref annealing requires positive rho_ref_start and rho_ref_end."))
+        epochs == 1 && return [rho_ref_start]
+        return exp.(range(log(rho_ref_start), log(rho_ref_end); length=epochs))
+    end
+
+    throw(ArgumentError("unsupported rho_ref_schedule $(schedule)"))
 end
 
 function mlflow_experiment_spec(objects, config)
@@ -558,6 +679,10 @@ end
 function mlflow_method_spec(objects, config)
     mu_schedule = mu_schedule_for_config(config)
     mu_ref_schedule = mu_ref_schedule_for_config(config, mu_schedule)
+    rho_schedule = rho_schedule_for_config(config)
+    rho_ref_schedule = rho_ref_schedule_for_config(config, rho_schedule)
+    policy_inference_mu = policy_inference_mu_for_config(config, mu_schedule)
+    policy_inference_rho = policy_inference_rho_for_config(config, rho_schedule)
     return (;
         loss=string(config.loss),
         solver=string(config.solver),
@@ -574,9 +699,18 @@ function mlflow_method_spec(objects, config)
         mu_ref_end=isempty(mu_ref_schedule) ? missing : last(mu_ref_schedule),
         mu_ref_schedule=string(config_value(config, :mu_ref_schedule, :match_input)),
         rho=config.rho,
+        rho_start=isempty(rho_schedule) ? missing : first(rho_schedule),
+        rho_end=isempty(rho_schedule) ? missing : last(rho_schedule),
+        rho_schedule=string(config_value(config, :rho_schedule, :constant)),
+        rho_ref=Float64(config_value(config, :rho_ref, config.rho)),
+        rho_ref_start=isempty(rho_ref_schedule) ? missing : first(rho_ref_schedule),
+        rho_ref_end=isempty(rho_ref_schedule) ? missing : last(rho_ref_schedule),
+        rho_ref_schedule=string(config_value(config, :rho_ref_schedule, :match_input)),
         homotopy_schedule=string(config_value(config, :mu_schedule, :constant)),
         log_barrier_training=any(!iszero, mu_schedule),
         reference_log_barrier_training=any(!iszero, mu_ref_schedule),
+        quadratic_smoothing_training=any(!iszero, rho_schedule),
+        reference_quadratic_smoothing_training=any(!iszero, rho_ref_schedule),
         log_barrier_inference=Bool(config_value(config, :log_barrier_inference, any(!iszero, mu_schedule))),
         display_smooth=Bool(config_value(config, :display_smooth, false)),
         display_real=config_value(config, :display_real, nothing),
@@ -585,7 +719,11 @@ function mlflow_method_spec(objects, config)
         optimality_train_sample_count=Int(config_value(config, :optimality_train_sample_count, 0)),
         optimality_validation_sample_count=Int(config_value(config, :optimality_validation_sample_count, 0)),
         optimality_mu=Float64(config_value(config, :optimality_mu, 0.0)),
-        policy_inference_mu=Float64(config_value(config, :policy_inference_mu, config.mu)),
+        optimality_rho=Float64(config_value(config, :optimality_rho, 0.0)),
+        optimality_evaluate_mode=string(config_value(config, :optimality_evaluate_mode, :mean_only)),
+        optimality_evaluation_batches=config_value(config, :optimality_evaluation_batches, nothing),
+        policy_inference_mu=policy_inference_mu,
+        policy_inference_rho=policy_inference_rho,
         fine_tuning=Bool(config_value(config, :fine_tuning, false)),
         annealing=Bool(config_value(config, :annealing, false)),
         knn_homogenization=Bool(config_value(config, :knn_homogenization, false)),
@@ -811,6 +949,9 @@ function evaluate_optimality_on_splits(model, objects, config)
             optimal_results=optimal_results,
             split_name=split_name,
             mu=Float64(config_value(config, :optimality_mu, 0.0)),
+            rho=Float64(config_value(config, :optimality_rho, 0.0)),
+            evaluation_batches=config_value(config, :optimality_evaluation_batches, nothing),
+            evaluate_mode=Symbol(config_value(config, :optimality_evaluate_mode, :mean_only)),
         )
         metrics = merge(metrics, result.metrics)
     end
@@ -823,12 +964,14 @@ function optimality_policy(model, objects, config)
         neural_net=model,
         scenario_decoder=objects.scenario_decoder,
     )
-    policy_mu = Float64(config_value(config, :policy_inference_mu, config.mu))
+    policy_mu = policy_inference_mu_for_config(config)
+    policy_rho = policy_inference_rho_for_config(config)
     return ContextualDFLExperiments.ScenarioGenerationPolicy(
         scenario_generator,
         objects.solver,
         objects.program;
         mu=policy_mu,
+        rho=policy_rho,
     )
 end
 
@@ -867,6 +1010,7 @@ function evaluate_split(model, dataset, objects, config, prefix)
     x_data = dataset_context_matrix(dataset)
     target = dataset_target_matrix(dataset, objects)
     predictions, inference_timings = timed_model_prediction(model, x_data, config)
+    target = reporting_target_for_prediction(target, predictions)
     prediction_matrix = matrix_like(predictions, target)
 
     errors = prediction_matrix .- target
@@ -902,6 +1046,29 @@ function timed_model_prediction(model, x_data, config)
     end
 
     return predictions, timings
+end
+
+function reporting_target_for_prediction(target, prediction)
+    output_dimension = reporting_prediction_output_dimension(prediction, target)
+    output_dimension === nothing && return target
+    size(target, 1) == output_dimension && return target
+    size(target, 1) % output_dimension == 0 || return target
+
+    scenario_count = size(target, 1) ÷ output_dimension
+    scenario_count > 1 || return target
+
+    scenario_target = reshape(target, output_dimension, scenario_count, size(target, 2))
+    return dropdims(mean(scenario_target; dims=2); dims=2)
+end
+
+function reporting_prediction_output_dimension(prediction, target)
+    prediction_matrix = Array(prediction)
+    if ndims(prediction_matrix) == 2 && size(prediction_matrix, 2) == size(target, 2)
+        return size(prediction_matrix, 1)
+    elseif ndims(prediction_matrix) == 1 && size(target, 2) == 1
+        return length(prediction_matrix)
+    end
+    return nothing
 end
 
 function percentile_95(values::AbstractVector{<:Real})

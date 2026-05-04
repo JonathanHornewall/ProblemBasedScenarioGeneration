@@ -109,6 +109,8 @@ end
             @test isempty(payload.scenario_data.h_eq_array)
             @test payload.μ == 0
             @test payload.effective_μ == zeros(2)
+            @test payload.ρ == 0
+            @test payload.effective_ρ == zeros(1)
             @test payload.probabilities == probabilities
             @test payload.kwargs.constraint_tolerance == 1e-7
             @test payload.original_error_text != ""
@@ -169,6 +171,8 @@ end
             @test isempty(payload.scenario_data.h_ineq_array)
             @test payload.μ == 0
             @test payload.scenario_μ == 0
+            @test payload.ρ == 0
+            @test payload.scenario_ρ == 0
             @test payload.kwargs.constraint_tolerance == 1e-8
             @test payload.original_error_text != ""
         end
@@ -226,6 +230,21 @@ end
             q_array;
             probabilities=probabilities,
         ) ≈ 23.0 atol = 1e-8
+        @test cost_function(
+            program,
+            solver,
+            z,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            probabilities=probabilities,
+            ρ=0.5,
+            tol=1e-10,
+        ) ≈ 31.0 atol = 1e-7
 
         primal, dual_eq, dual_ineq = ContextualDFL.G_hat(
             solver,
@@ -299,6 +318,61 @@ end
         ) / (2ϵ)
 
         @test tangents[4][1] ≈ finite_difference_gradient atol = 1e-5
+
+        rho_value = 0.5
+        value_rho, pullback_rho = ChainRulesCore.rrule(
+            cost_function,
+            program,
+            solver,
+            z,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            μ=0,
+            ρ=rho_value,
+            probabilities=probabilities,
+            tol=1e-10,
+        )
+        tangents_rho = pullback_rho(1.0)
+        finite_difference_gradient_rho = (
+            cost_function(
+                program,
+                solver,
+                z .+ ϵ,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                ρ=rho_value,
+                probabilities=probabilities,
+                tol=1e-10,
+            ) -
+            cost_function(
+                program,
+                solver,
+                z .- ϵ,
+                W_eq_array,
+                W_ineq_array,
+                T_eq_array,
+                T_ineq_array,
+                h_eq_array,
+                h_ineq_array,
+                q_array;
+                ρ=rho_value,
+                probabilities=probabilities,
+                tol=1e-10,
+            )
+        ) / (2ϵ)
+
+        @test value_rho ≈ 31.0 atol = 1e-7
+        @test tangents_rho[4][1] ≈ finite_difference_gradient_rho atol = 1e-5
     end
 
     @testset "probability-scaled log barrier" begin
@@ -357,6 +431,59 @@ end
             μ * probabilities[2],
         ]
         manual_result = solve(solver, extensive_lp; μ=manual_barrier, tol=1e-10)
+
+        @test vcat(stochastic_result[1], vec(stochastic_result[2])) ≈ manual_result.z atol = 1e-8
+    end
+
+    @testset "probability-scaled quadratic smoothing" begin
+        program = StochasticProgram(
+            A_eq=zeros(0, 1),
+            A_ineq=reshape([-1.0, 1.0], 2, 1),
+            b_eq=Float64[],
+            b_ineq=[0.0, 10.0],
+            c=[1.0],
+        )
+
+        W_eq_array = zeros(0, 1, 2)
+        W_ineq_array = zeros(2, 1, 2)
+        W_ineq_array[:, :, 1] = reshape([-1.0, 1.0], 2, 1)
+        W_ineq_array[:, :, 2] = reshape([-1.0, 1.0], 2, 1)
+        T_eq_array = zeros(0, 1, 2)
+        T_ineq_array = zeros(2, 1, 2)
+        h_eq_array = zeros(0, 2)
+        h_ineq_array = [0.0 0.0; 5.0 7.0]
+        q_array = reshape([2.0, 3.0], 1, 2)
+        probabilities = [0.25, 0.75]
+        ρ = 0.7
+
+        stochastic_result = solve(
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            probabilities=probabilities,
+            ρ=ρ,
+            tol=1e-10,
+        )
+
+        extensive_lp = construct_lp(
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            probabilities=probabilities,
+        )
+        manual_ρ = [ρ, ρ * probabilities[1], ρ * probabilities[2]]
+        manual_result = solve(solver, extensive_lp; ρ=manual_ρ, tol=1e-10)
 
         @test vcat(stochastic_result[1], vec(stochastic_result[2])) ≈ manual_result.z atol = 1e-8
     end
@@ -770,5 +897,69 @@ end
         ) / (2ϵ)
 
         @test tangents[10][1, 1] ≈ q_fd atol = 1e-3
+    end
+
+    @testset "quadratic solve rrule scenario RHS sensitivity" begin
+        program = StochasticProgram(
+            A_eq=zeros(0, 1),
+            A_ineq=zeros(0, 1),
+            b_eq=Float64[],
+            b_ineq=Float64[],
+            c=[0.0],
+        )
+
+        W_eq_array = reshape([1.0], 1, 1, 1)
+        W_ineq_array = zeros(0, 1, 1)
+        T_eq_array = reshape([1.0], 1, 1, 1)
+        T_ineq_array = zeros(0, 1, 1)
+        h_eq_array = reshape([2.0], 1, 1)
+        h_ineq_array = zeros(0, 1)
+        q_array = reshape([1.0], 1, 1)
+        ρ = 1.0
+
+        output, pullback = ChainRulesCore.rrule(
+            solve,
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_eq_array,
+            h_ineq_array,
+            q_array;
+            ρ=ρ,
+            tol=1e-10,
+        )
+        output_tangent = (
+            ones(1),
+            zeros(1, 1),
+            Float64[],
+            Float64[],
+            zeros(1, 1),
+            zeros(0, 1),
+        )
+        tangents = pullback(output_tangent)
+
+        f(h_candidate) = solve(
+            solver,
+            program,
+            W_eq_array,
+            W_ineq_array,
+            T_eq_array,
+            T_ineq_array,
+            h_candidate,
+            h_ineq_array,
+            q_array;
+            ρ=ρ,
+            tol=1e-10,
+        )[1][1]
+
+        ϵ = 1e-5
+        h_fd = (f(h_eq_array .+ ϵ) - f(h_eq_array .- ϵ)) / (2ϵ)
+
+        @test output[1] ≈ [1.5] atol = 1e-7
+        @test output[2] ≈ reshape([0.5], 1, 1) atol = 1e-7
+        @test tangents[8][1, 1] ≈ h_fd atol = 1e-5
     end
 end

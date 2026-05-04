@@ -227,9 +227,10 @@ include("resource_allocation_instance.jl")
             resource_allocation_scenario_arrays(instance, generated.scenario_collections[1])
         program = instance.stochastic_program
         μ = 0.25
+        ρ = 0.1
 
         lp = construct_lp(program, W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q)
-        base_result = solve(solver, lp; μ=μ, tol=1e-9)
+        base_result = solve(solver, lp; μ=μ, ρ=ρ, tol=1e-9)
         @test status_is_optimal(base_result.status)
         assert_resource_allocation_feasible(lp, base_result.z; atol=1e-5)
 
@@ -240,6 +241,7 @@ include("resource_allocation_instance.jl")
             solver,
             lp,
             μ;
+            ρ=ρ,
             pre_computed=base_result,
             dc=dc,
             db_eq=db_eq,
@@ -263,7 +265,7 @@ include("resource_allocation_instance.jl")
             c=lp.c - ϵ .* dc,
         )
         finite_difference_dz =
-            (solve(solver, lp_plus; μ=μ, tol=1e-9).z - solve(solver, lp_minus; μ=μ, tol=1e-9).z) ./ (2ϵ)
+            (solve(solver, lp_plus; μ=μ, ρ=ρ, tol=1e-9).z - solve(solver, lp_minus; μ=μ, ρ=ρ, tol=1e-9).z) ./ (2ϵ)
         @test dz ≈ finite_difference_dz atol = 2e-3 rtol = 2e-2
 
         z_for_cost = fill(15.0, length(program.c))
@@ -280,13 +282,14 @@ include("resource_allocation_instance.jl")
             h_ineq,
             q;
             μ=μ,
+            ρ=ρ,
             tol=1e-9,
         )
         dz_cost = cost_pullback(1.0)[4]
         direction = vec(deterministic_resource_allocation_direction(size(z_for_cost); scale=0.1, phase=0.7))
         finite_difference_cost = (
-            cost_function(program, solver, z_for_cost + ϵ .* direction, W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q; μ=μ, tol=1e-9) -
-            cost_function(program, solver, z_for_cost - ϵ .* direction, W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q; μ=μ, tol=1e-9)
+            cost_function(program, solver, z_for_cost + ϵ .* direction, W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q; μ=μ, ρ=ρ, tol=1e-9) -
+            cost_function(program, solver, z_for_cost - ϵ .* direction, W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q; μ=μ, ρ=ρ, tol=1e-9)
         ) / (2ϵ)
 
         @test value isa Number
@@ -304,6 +307,7 @@ include("resource_allocation_instance.jl")
             h_ineq,
             q;
             μ=μ,
+            ρ=ρ,
             tol=1e-9,
         )
         dy_tangent = deterministic_resource_allocation_direction(size(output[2]); scale=0.03, phase=0.2)
@@ -337,6 +341,7 @@ include("resource_allocation_instance.jl")
                 h_ineq,
                 q;
                 μ=μ,
+                ρ=ρ,
                 tol=1e-9,
             )
             return sum(candidate_output[2] .* dy_tangent)

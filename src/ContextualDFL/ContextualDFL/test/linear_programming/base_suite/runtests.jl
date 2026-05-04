@@ -2,8 +2,8 @@ struct TestLPSolver <: LPSolver end
 struct TestLogBarSolver <: LogBarSolver end
 
 ContextualDFL.solve(::TestLPSolver, lp::LP; kwargs...) = (; method=:lp, lp, kwargs)
-ContextualDFL.solve(::TestLogBarSolver, lp::LP; μ=nothing, kwargs...) =
-    (; method=:log_barrier, lp, μ, kwargs)
+ContextualDFL.solve(::TestLogBarSolver, lp::LP; μ=nothing, ρ=nothing, kwargs...) =
+    (; method=:log_barrier, lp, μ, ρ, kwargs)
 
 @testset "base LP suite" begin
     @testset "LP construction" begin
@@ -56,11 +56,25 @@ ContextualDFL.solve(::TestLogBarSolver, lp::LP; μ=nothing, kwargs...) =
 
         vector_barrier_solution = solve(solver, log_barrier_lp; μ=[0.25])
         zero_vector_solution = solve(solver, log_barrier_lp; μ=zeros(1))
+        quadratic_solution = solve(solver, lp; ρ=0.5)
+        vector_quadratic_solution = solve(solver, lp; rho=[0.25, 0.75])
+        zero_quadratic_solution = solve(solver, lp; ρ=zeros(2))
+        combined_solution = solve(solver, log_barrier_lp; μ=0.5, ρ=0.25)
 
         @test vector_barrier_solution.method == :log_barrier
         @test vector_barrier_solution.μ == [0.25]
         @test zero_vector_solution.method == :lp
+        @test quadratic_solution.method == :log_barrier
+        @test quadratic_solution.ρ == [0.5, 0.5]
+        @test vector_quadratic_solution.ρ == [0.25, 0.75]
+        @test zero_quadratic_solution.method == :lp
+        @test combined_solution.method == :log_barrier
+        @test combined_solution.μ == [0.5]
+        @test combined_solution.ρ == [0.25, 0.25]
         @test_throws DimensionMismatch solve(solver, log_barrier_lp; μ=[0.25, 0.5])
+        @test_throws DimensionMismatch solve(solver, lp; ρ=[0.25])
+        @test_throws ArgumentError solve(solver, lp; ρ=-0.25)
+        @test_throws ArgumentError solve(solver, lp; ρ=[0.25, -0.75])
     end
 
     @testset "infeasible solves throw" begin

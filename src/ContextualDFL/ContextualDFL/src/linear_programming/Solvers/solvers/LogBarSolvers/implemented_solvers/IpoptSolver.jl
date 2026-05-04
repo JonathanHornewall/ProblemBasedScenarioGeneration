@@ -7,14 +7,19 @@ function solve(
     solver::IpoptSolver,
     lp::LP;
     μ=nothing,
+    ρ=0,
+    rho=ρ,
     slack_lower_bound=1e-9,
     constraint_tolerance=1e-6,
     kwargs...,
 )
-    μ_vector = _barrier_parameter_vector(lp, μ)
+    μ_value = isnothing(μ) ? zeros(eltype(lp.c), length(lp.b_ineq)) : μ
+    μ_vector = _barrier_parameter_vector(lp, μ_value)
+    ρ_vector = _quadratic_parameter_vector(lp, rho)
     positive_barrier_indices = findall(!iszero, μ_vector)
-    isempty(positive_barrier_indices) &&
-        throw(ArgumentError("IpoptSolver requires at least one positive log-barrier weight."))
+    positive_quadratic_indices = findall(!iszero, ρ_vector)
+    isempty(positive_barrier_indices) && isempty(positive_quadratic_indices) &&
+        throw(ArgumentError("IpoptSolver requires at least one positive smoothing weight."))
     slack_lower_bound > zero(slack_lower_bound) ||
         throw(ArgumentError("slack_lower_bound must be positive."))
     bound_lp, bound_map = _extract_variable_bounds_for_solver(
@@ -68,7 +73,8 @@ function solve(
     JuMP.@NLobjective(
         model,
         Min,
-        sum(bound_lp.c[j] * z[j] for j in 1:n_variables) -
+        sum(bound_lp.c[j] * z[j] for j in 1:n_variables) +
+        0.5 * sum(ρ_vector[j] * z[j]^2 for j in positive_quadratic_indices) -
         sum(
             μ_vector[general_original_rows[k]] * log(s[k]) for
             k in positive_general_positions
@@ -102,6 +108,7 @@ function solve(
             dual_status=JuMP.dual_status(model),
             raw_status=JuMP.raw_status(model),
             solver=solver,
+            ρ_vector=ρ_vector,
         ),
     )
 

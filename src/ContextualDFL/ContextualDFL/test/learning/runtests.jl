@@ -1,4 +1,5 @@
 import Flux
+import ChainRulesCore
 
 function supervised_dataset(inputs, targets)
     points = [
@@ -71,6 +72,58 @@ target_vector(scenario_parameters) = only(scenario_parameters).h_eq_xi
         @test [row.mu_in for row in result.history] == mu_schedule
         @test [row.mu_ref for row in result.history] == mu_schedule
         @test [row.mu for row in result.history] == mu_schedule
+    end
+
+    @testset "train! threads rho schedules only when requested" begin
+        model = Flux.Chain(Flux.Dense(1 => 1))
+        data = supervised_dataset(1:4, 2:2:8)
+        mu_schedule = [0.0, 0.0]
+        rho_in_schedule = [0.0, 0.2]
+        rho_ref_schedule = [0.1, 0.3]
+        rho_calls = Tuple{Float64,Float64}[]
+
+        function rho_loss(prediction, scenario_parameters, mu_in, mu_ref; rho_in, rho_ref, kwargs...)
+            ChainRulesCore.ignore_derivatives() do
+                push!(rho_calls, (Float64(rho_in), Float64(rho_ref)))
+            end
+            return sum(abs2, prediction .- target_vector(scenario_parameters))
+        end
+
+        result = train!(
+            model,
+            rho_loss,
+            nothing,
+            mu_schedule,
+            data;
+            optimizer_type=Flux.Descent,
+            learning_rate=1e-4,
+            epochs=length(mu_schedule),
+            batchsize=2,
+            rho_in_schedule=rho_in_schedule,
+            rho_ref_schedule=rho_ref_schedule,
+        )
+
+        @test [row.rho_in for row in result.history] == rho_in_schedule
+        @test [row.rho_ref for row in result.history] == rho_ref_schedule
+        @test Set(rho_calls) == Set(zip(rho_in_schedule, rho_ref_schedule))
+
+        strict_loss(prediction, scenario_parameters, mu_in, mu_ref) =
+            sum(abs2, prediction .- target_vector(scenario_parameters))
+        strict_result = train!(
+            model,
+            strict_loss,
+            nothing,
+            fill(0.0, 1),
+            data;
+            optimizer_type=Flux.Descent,
+            learning_rate=1e-4,
+            epochs=1,
+            batchsize=2,
+            rho_in_schedule=[0.0],
+            rho_ref_schedule=[0.0],
+        )
+        @test only(strict_result.history).rho_in == 0.0
+        @test only(strict_result.history).rho_ref == 0.0
     end
 
     @testset "train! rejects non-finite training loss" begin

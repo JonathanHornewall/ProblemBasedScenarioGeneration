@@ -13,6 +13,8 @@ function ChainRulesCore.rrule(
     h_ineq_array,
     q_array;
     μ=0,
+    ρ=0,
+    rho=ρ,
     probabilities=nothing,
     return_dual=false,
     kwargs...,
@@ -33,6 +35,7 @@ function ChainRulesCore.rrule(
         q_array,
         ;
         μ=μ,
+        ρ=rho,
         probabilities=probabilities,
         kwargs...,
     )
@@ -80,6 +83,8 @@ function _cost_and_z_gradient(
     h_ineq_array,
     q_array;
     μ=0,
+    ρ=0,
+    rho=ρ,
     probabilities=nothing,
     kwargs...,
 )
@@ -113,12 +118,15 @@ function _cost_and_z_gradient(
         probabilities
     end
     first_stage_μ = _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
-    T = promote_type(T, eltype(p_vector), eltype(first_stage_μ))
+    first_stage_ρ = _first_stage_quadratic_parameter(first_stage_lp, q_array, rho)
+    T = promote_type(T, eltype(p_vector), eltype(first_stage_μ), eltype(first_stage_ρ))
 
     value =
-        sum(first_stage_lp.c .* z) -
+        sum(first_stage_lp.c .* z) +
+        _first_stage_quadratic_value(z, first_stage_ρ) -
         _first_stage_barrier_value(first_stage_lp, z, first_stage_μ)
     dz = T.(first_stage_lp.c)
+    _add_first_stage_quadratic_gradient!(dz, z, first_stage_ρ)
     _add_first_stage_barrier_gradient!(dz, first_stage_lp, z, first_stage_μ)
 
     for k in 1:K
@@ -130,6 +138,14 @@ function _cost_and_z_gradient(
             length(first_stage_lp.b_ineq),
             p_vector[k],
         )
+        scenario_ρ = _scenario_quadratic_parameter(
+            size(q_array, 1),
+            K,
+            rho,
+            k,
+            length(first_stage_lp.c),
+            p_vector[k],
+        )
         result = try
             second_stage_lp = LP(
                 view(W_eq_array, :, :, k),
@@ -139,7 +155,7 @@ function _cost_and_z_gradient(
                 view(q_array, :, k),
             )
 
-            solve(solver, second_stage_lp; μ=scenario_μ, kwargs...)
+            solve(solver, second_stage_lp; μ=scenario_μ, ρ=scenario_ρ, kwargs...)
         catch error
             _throw_stochastic_program_failure(
                 error,
@@ -154,11 +170,13 @@ function _cost_and_z_gradient(
                 h_ineq_array,
                 q_array;
                 μ=μ,
+                ρ=rho,
                 probabilities=probabilities,
                 kwargs=(; kwargs...),
                 z=z,
                 scenario_index=k,
                 scenario_μ=scenario_μ,
+                scenario_ρ=scenario_ρ,
             )
         end
 

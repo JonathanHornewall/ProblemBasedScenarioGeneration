@@ -1,0 +1,54 @@
+version: 1
+name: resource_allocation_experiment_1_eval_batches_smoke
+description: Smoke grid for one-scenario training and batched 100-scenario test evaluation.
+
+base:
+  epochs: 1
+  learning_rate: 0.001
+  hidden_size: 16
+  depth: 1
+  batch_size: 1
+  dropout: 0.0
+  loss: dfl_scen
+  method: dfl_scen
+  method_variant: eval_batches_smoke
+  rrule_variant: default
+  mu: 0.01
+  mu_start: 0.01
+  mu_end: 0.01
+  mu_schedule: constant
+  mu_ref_schedule: match_input
+  rho: 0.0
+  rho_schedule: constant
+  rho_ref_schedule: match_input
+  policy_inference_mu: 0.01
+  policy_inference_rho: null
+  optimality_evaluation: true
+  optimality_test_sample_count: 2
+  optimality_train_sample_count: 0
+  optimality_validation_sample_count: 0
+  optimality_mu: 0.0
+  optimality_rho: 0.0
+  optimality_evaluate_mode: batched
+  optimality_evaluation_batches: 4
+  training_context_count: 8
+  training_scenarios_per_context: 1
+  collection_duplicates_per_context: 1
+  validation_fraction: 0.25
+  generated_split_test_fraction: 0.0
+  inference_repetitions: 1
+  warmup_epochs: 0
+  shuffle: false
+  reset_optimizer_each_epoch: false
+  fine_tuning: false
+  annealing: false
+  knn_homogenization: false
+  log_barrier_inference: true
+  allow_local_training: false
+
+fixed: {}
+
+grid:
+  seed: [142]
+
+schedules: {}

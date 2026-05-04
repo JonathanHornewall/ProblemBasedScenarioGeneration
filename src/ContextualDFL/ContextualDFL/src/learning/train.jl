@@ -47,6 +47,8 @@ function train!(
     reset_optimizer_each_epoch::Bool=false,
     on_epoch_end=nothing,
     nr_scenarios=nothing,
+    rho_in_schedule=nothing,
+    rho_ref_schedule=nothing,
     display_smooth::Bool=false,
     display_real=nothing,
     display_reference_input=nothing,
@@ -57,6 +59,13 @@ function train!(
         throw(ArgumentError("mu_in_schedule must have one value per epoch."))
     length(mu_ref_schedule) == epochs ||
         throw(ArgumentError("mu_ref_schedule must have one value per epoch."))
+    rho_in_values = _optional_schedule_values(rho_in_schedule, epochs, :rho_in_schedule)
+    rho_ref_values = _optional_schedule_values(
+        isnothing(rho_ref_schedule) ? rho_in_schedule : rho_ref_schedule,
+        epochs,
+        :rho_ref_schedule,
+    )
+    pass_rho = any(!iszero, rho_in_values) || any(!iszero, rho_ref_values)
     isempty(data_set) && throw(ArgumentError("training data must not be empty."))
     _validate_nr_scenarios(nr_scenarios)
     _validate_display_options(display_smooth, display_real, display_reference_input)
@@ -68,13 +77,15 @@ function train!(
     display_reference_cache = Dict{Any,Vector{Float64}}()
 
     if display_smooth
-        for mu_ref in unique(mu_ref_schedule)
+        for (mu_ref, rho_ref) in unique(collect(zip(mu_ref_schedule, rho_ref_values)))
             _display_reference_values!(
                 display_reference_cache,
                 loss,
                 data_set,
                 display_reference_input,
                 mu_ref;
+                rho_ref=rho_ref,
+                pass_rho=pass_rho,
                 loss_kwargs=loss_kwargs,
             )
         end
@@ -89,6 +100,8 @@ function train!(
             data_set,
             display_reference_input,
             0.0;
+            rho_ref=0.0,
+            pass_rho=pass_rho,
             loss_kwargs=loss_kwargs,
         )
     end
@@ -100,6 +113,9 @@ function train!(
         epoch_started = time()
         mu_in = mu_in_schedule[epoch_number]
         mu_ref = mu_ref_schedule[epoch_number]
+        rho_in = rho_in_values[epoch_number]
+        rho_ref = rho_ref_values[epoch_number]
+        epoch_loss_kwargs = _with_rho_loss_kwargs(loss_kwargs, pass_rho, rho_in, rho_ref)
 
         if reset_optimizer_each_epoch
             state = Flux.setup(optimizer, neural_net)
@@ -120,7 +136,7 @@ function train!(
                         _scenario_parameters(data_set[index]),
                         mu_in,
                         mu_ref;
-                        loss_kwargs...,
+                        epoch_loss_kwargs...,
                     )
                     for index in idxs
                 )
@@ -138,8 +154,9 @@ function train!(
             push!(epoch_losses, loss_float)
 
             if display_smooth
+                reference_key = _display_reference_cache_key(mu_ref, rho_ref, pass_rho)
                 reference_mean = Statistics.mean(
-                    display_reference_cache[mu_ref][index] for index in idxs
+                    display_reference_cache[reference_key][index] for index in idxs
                 )
                 display_loss = _relative_display_loss(loss_float, reference_mean)
                 push!(
@@ -161,7 +178,7 @@ function train!(
                         _scenario_parameters(data_set[index]),
                         mu_in,
                         mu_ref;
-                        loss_kwargs...,
+                        epoch_loss_kwargs...,
                     )
                     for index in idxs
                 )
@@ -193,7 +210,7 @@ function train!(
                     _scenario_parameters(data_point),
                     mu_in,
                     0.0;
-                    loss_kwargs...,
+                    _with_rho_loss_kwargs(loss_kwargs, pass_rho, rho_in, 0.0)...,
                 )
                 for data_point in data_set
             )
@@ -221,6 +238,8 @@ function train!(
             mu=mu_in,
             mu_in=mu_in,
             mu_ref=mu_ref,
+            rho_in=rho_in,
+            rho_ref=rho_ref,
             iterations=length(epoch_losses),
             epoch_seconds=epoch_seconds,
             real_display_loss=real_display_loss,
@@ -250,6 +269,8 @@ function train!(
                 mu=mu_in,
                 mu_in=mu_in,
                 mu_ref=mu_ref,
+                rho_in=rho_in,
+                rho_ref=rho_ref,
                 loss=average_loss,
                 display_loss=average_display_loss,
                 real_display_loss=real_display_loss,
@@ -351,6 +372,21 @@ end
 _training_loss_kwargs(nr_scenarios) =
     isnothing(nr_scenarios) ? NamedTuple() : (; nr_scenarios=Int(nr_scenarios))
 
+function _optional_schedule_values(schedule, epochs, name::Symbol)
+    if isnothing(schedule)
+        return zeros(Float64, epochs)
+    end
+
+    length(schedule) == epochs ||
+        throw(ArgumentError("$(name) must have one value per epoch."))
+    return collect(schedule)
+end
+
+function _with_rho_loss_kwargs(loss_kwargs, pass_rho, rho_in, rho_ref)
+    pass_rho || return loss_kwargs
+    return merge(loss_kwargs, (; rho_in=rho_in, rho_ref=rho_ref))
+end
+
 _default_mu_ref_schedule(mu_in_schedule, mu_ref_schedule) =
     isnothing(mu_ref_schedule) ? mu_in_schedule : mu_ref_schedule
 
@@ -378,9 +414,13 @@ function _display_reference_values!(
     data_set,
     display_reference_input,
     mu_ref;
+    rho_ref=0,
+    pass_rho=false,
     loss_kwargs,
 )
-    haskey(cache, mu_ref) && return cache[mu_ref]
+    cache_key = _display_reference_cache_key(mu_ref, rho_ref, pass_rho)
+    haskey(cache, cache_key) && return cache[cache_key]
+    reference_loss_kwargs = _with_rho_loss_kwargs(loss_kwargs, pass_rho, rho_ref, rho_ref)
 
     # Reference inputs represent the exact scenario, so this is the cached baseline.
     values = [
@@ -390,7 +430,7 @@ function _display_reference_values!(
                 _scenario_parameters(data_point),
                 mu_ref,
                 mu_ref;
-                loss_kwargs...,
+                reference_loss_kwargs...,
             ),
             "display reference loss";
             epoch=0,
@@ -399,9 +439,12 @@ function _display_reference_values!(
             mu_ref=mu_ref,
         ) for (index, data_point) in enumerate(data_set)
     ]
-    cache[mu_ref] = values
+    cache[cache_key] = values
     return values
 end
+
+_display_reference_cache_key(mu_ref, rho_ref, pass_rho) =
+    pass_rho ? (mu_ref, rho_ref) : mu_ref
 
 _relative_display_loss(loss_value, reference_value) =
     (Float64(loss_value) - Float64(reference_value)) / abs(Float64(reference_value))

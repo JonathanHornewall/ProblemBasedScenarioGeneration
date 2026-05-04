@@ -10,9 +10,11 @@ function solve(
     q_array;
     probabilities=nothing,
     μ=0,
+    ρ=0,
+    rho=ρ,
     kwargs...,
 )
-    _, _, result = _solve_stochastic_extensive(
+    _, _, _, result = _solve_stochastic_extensive(
         solver,
         sp,
         W_eq_array,
@@ -24,6 +26,7 @@ function solve(
         q_array;
         probabilities=probabilities,
         μ=μ,
+        ρ=rho,
         kwargs...,
     )
     return _split_stochastic_solution(sp, result, W_eq_array, W_ineq_array, q_array)
@@ -41,6 +44,8 @@ function _solve_stochastic_extensive(
     q_array;
     probabilities=nothing,
     μ=0,
+    ρ=0,
+    rho=ρ,
     kwargs...,
 )
     lp = construct_lp(
@@ -56,9 +61,11 @@ function _solve_stochastic_extensive(
     )
     μ_vector =
         _stochastic_barrier_parameter_vector(lp, sp, W_ineq_array, μ; probabilities=probabilities)
+    ρ_vector =
+        _stochastic_quadratic_parameter_vector(lp, sp, q_array, rho; probabilities=probabilities)
 
     result = try
-        solve(solver, lp; μ=μ_vector, kwargs...)
+        solve(solver, lp; μ=μ_vector, ρ=ρ_vector, kwargs...)
     catch error
         _throw_stochastic_program_failure(
             error,
@@ -73,13 +80,15 @@ function _solve_stochastic_extensive(
             h_ineq_array,
             q_array;
             μ=μ,
+            ρ=rho,
             effective_μ=μ_vector,
+            effective_ρ=ρ_vector,
             probabilities=probabilities,
             kwargs=(; kwargs...),
         )
     end
 
-    return lp, μ_vector, result
+    return lp, μ_vector, ρ_vector, result
 end
 
 function _stochastic_barrier_parameter_vector(
@@ -120,6 +129,46 @@ function _stochastic_barrier_parameter_vector(
     end
 
     return μ_vector
+end
+
+function _stochastic_quadratic_parameter_vector(
+    lp::LP,
+    sp::StochasticProgram,
+    q_array,
+    ρ;
+    probabilities=nothing,
+)
+    ρ isa AbstractVector && return _quadratic_parameter_vector(lp, ρ)
+
+    K = size(q_array, 2)
+    first_stage_variables = length(sp.first_stage_lp.c)
+    second_stage_variables = size(q_array, 1)
+
+    T = promote_type(
+        typeof(ρ),
+        isnothing(probabilities) ? Float64 : eltype(probabilities),
+    )
+    ρ_vector = zeros(T, length(lp.c))
+
+    ρ >= zero(ρ) || throw(ArgumentError("ρ must be non-negative."))
+    ρ_vector[1:first_stage_variables] .= ρ
+
+    probability_vector = if isnothing(probabilities)
+        fill(one(T) / K, K)
+    else
+        length(probabilities) == K ||
+            throw(DimensionMismatch("probabilities must have one entry per scenario."))
+        probabilities
+    end
+
+    for k in 1:K
+        first_col = first_stage_variables + (k - 1) * second_stage_variables + 1
+        last_col = first_stage_variables + k * second_stage_variables
+        cols = first_col:last_col
+        ρ_vector[cols] .= ρ .* probability_vector[k]
+    end
+
+    return ρ_vector
 end
 
 function _split_stochastic_solution(sp::StochasticProgram, result, W_eq_array, W_ineq_array, q_array)

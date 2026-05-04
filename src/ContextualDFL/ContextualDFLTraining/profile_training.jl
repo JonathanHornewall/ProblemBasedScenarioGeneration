@@ -73,6 +73,10 @@ function profile_config_from_env(experiment)
     run_id = get(ENV, "PROFILE_RUN_ID", "profile_standard_seed3")
     mlflow_enabled = env_flag("PROFILE_MLFLOW_ENABLED", true)
     profile_mlflow_progress = env_flag("PROFILE_MLFLOW_PROGRESS", mlflow_enabled)
+    profile_rho = env_float("PROFILE_RHO", DEFAULT_RUN_SETTINGS.rho)
+    profile_policy_inference_rho = haskey(ENV, "PROFILE_POLICY_INFERENCE_RHO") ?
+        env_float("PROFILE_POLICY_INFERENCE_RHO", profile_rho) :
+        nothing
     base = if experiment_has_function(experiment, :profile_config)
         experiment_call(experiment, :profile_config)
     else
@@ -88,7 +92,14 @@ function profile_config_from_env(experiment)
             mu_start=env_float("PROFILE_MU_START", 1.0),
             mu_end=env_float("PROFILE_MU_END", 1.0),
             mu_schedule=env_symbol("PROFILE_MU_SCHEDULE", :constant),
-            rho=env_float("PROFILE_RHO", DEFAULT_RUN_SETTINGS.rho),
+            rho=profile_rho,
+            rho_start=env_float("PROFILE_RHO_START", DEFAULT_RUN_SETTINGS.rho_start),
+            rho_end=env_float("PROFILE_RHO_END", DEFAULT_RUN_SETTINGS.rho_end),
+            rho_schedule=env_symbol("PROFILE_RHO_SCHEDULE", DEFAULT_RUN_SETTINGS.rho_schedule),
+            rho_ref=env_float("PROFILE_RHO_REF", DEFAULT_RUN_SETTINGS.rho_ref),
+            rho_ref_start=env_float("PROFILE_RHO_REF_START", DEFAULT_RUN_SETTINGS.rho_ref_start),
+            rho_ref_end=env_float("PROFILE_RHO_REF_END", DEFAULT_RUN_SETTINGS.rho_ref_end),
+            rho_ref_schedule=env_symbol("PROFILE_RHO_REF_SCHEDULE", DEFAULT_RUN_SETTINGS.rho_ref_schedule),
             tolerance_relative=env_float("PROFILE_TOLERANCE_RELATIVE", DEFAULT_RUN_SETTINGS.tolerance_relative),
             tolerance_absolute_floor=env_float(
                 "PROFILE_TOLERANCE_ABSOLUTE_FLOOR",
@@ -111,6 +122,8 @@ function profile_config_from_env(experiment)
                 DEFAULT_RUN_SETTINGS.optimality_validation_sample_count,
             ),
             optimality_mu=env_float("PROFILE_OPTIMALITY_MU", DEFAULT_RUN_SETTINGS.optimality_mu),
+            optimality_rho=env_float("PROFILE_OPTIMALITY_RHO", DEFAULT_RUN_SETTINGS.optimality_rho),
+            policy_inference_rho=profile_policy_inference_rho,
             loss=env_symbol("PROFILE_LOSS", :dfl_scen),
             learning_rate=env_float("PROFILE_LEARNING_RATE", 1e-3),
             hidden_size=env_int("PROFILE_HIDDEN_SIZE", 128),

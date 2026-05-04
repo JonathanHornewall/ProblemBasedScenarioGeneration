@@ -5,6 +5,8 @@ function diff_solve(
     solver,
     lp::LP,
     μ;
+    ρ=0,
+    rho=ρ,
     pre_computed=nothing,
     dc=zeros(eltype(lp.c), length(lp.c)),
     db_eq=zeros(eltype(lp.b_eq), length(lp.b_eq)),
@@ -12,7 +14,7 @@ function diff_solve(
     tight_tol=1e-7,
     kwargs...,
 )
-    cache = _diff_precompute(solver, lp, μ, pre_computed, tight_tol; kwargs...)
+    cache = _diff_precompute(solver, lp, μ, rho, pre_computed, tight_tol; kwargs...)
     n = length(lp.c)
     m_eq = length(lp.b_eq)
     m_ineq = length(lp.b_ineq)
@@ -22,12 +24,17 @@ function diff_solve(
     length(db_ineq) == m_ineq || throw(DimensionMismatch("db_ineq must have length $m_ineq."))
 
     μ_vector = cache.μ
-    T = promote_type(eltype(cache.z), eltype(lp.c), eltype(μ_vector))
+    ρ_vector = cache.ρ
+    T = promote_type(eltype(cache.z), eltype(lp.c), eltype(μ_vector), eltype(ρ_vector))
     rhs_x = zeros(T, n)
 
     if _is_zero_barrier_parameter(μ_vector)
-        all(iszero, db_ineq) ||
+        if _is_zero_quadratic_parameter(ρ_vector)
+            all(iszero, db_ineq) ||
             (rhs_x .+= transpose(lp.A_ineq[cache.loose, :]) * (cache.d .* db_ineq[cache.loose]))
+        else
+            all(iszero, dc) || (rhs_x .-= dc)
+        end
         rhs = vcat(rhs_x, db_eq, db_ineq[cache.tight])
     else
         rhs_eq = zeros(T, m_eq)
@@ -43,19 +50,26 @@ function diff_solve(
 end
 
 function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...)
+    return _diff_precompute(solver, lp, μ, 0, pre_computed, tight_tol; kwargs...)
+end
+
+function _diff_precompute(solver, lp::LP, μ, ρ, pre_computed, tight_tol; kwargs...)
     μ_vector = _barrier_parameter_vector(lp, μ)
+    ρ_vector = _quadratic_parameter_vector(lp, ρ)
 
     if !isnothing(pre_computed) && hasproperty(pre_computed, :K_factorization)
         pre_computed.μ == μ_vector ||
             throw(ArgumentError("pre_computed was built with a different μ."))
+        hasproperty(pre_computed, :ρ) && pre_computed.ρ == ρ_vector ||
+            throw(ArgumentError("pre_computed was built with a different ρ."))
         return pre_computed
     end
 
     solve_result = if isnothing(pre_computed)
-        if _is_zero_barrier_parameter(μ_vector)
+        if _is_zero_barrier_parameter(μ_vector) && _is_zero_quadratic_parameter(ρ_vector)
             solve(solver, lp; kwargs...)
         else
-            solve(solver, lp; μ=μ_vector, kwargs...)
+            solve(solver, lp; μ=μ_vector, ρ=ρ_vector, kwargs...)
         end
     else
         pre_computed
@@ -74,7 +88,7 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         tight = findall(abs.(slack) .<= tight_tol)
         loose = findall(slack .> tight_tol)
         rank(Matrix(lp.A_eq)) == size(lp.A_eq, 1) ||
-            throw(ArgumentError("Analytic-center differentiation requires A_eq to have full row rank."))
+            throw(ArgumentError("Differentiation requires A_eq to have full row rank."))
 
         F = Matrix(lp.A_eq)
         selected_tight = Int[]
@@ -90,11 +104,17 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         end
 
         tight = selected_tight
-        A_loose = lp.A_ineq[loose, :]
-        d = one(eltype(slack)) ./ (slack[loose] .^ 2)
+        d = _is_zero_quadratic_parameter(ρ_vector) ?
+            one(eltype(slack)) ./ (slack[loose] .^ 2) :
+            zeros(promote_type(eltype(slack), eltype(ρ_vector)), length(loose))
 
-        H = transpose(A_loose) * (Diagonal(d) * A_loose)
-        T = promote_type(eltype(H), eltype(F), eltype(μ_vector))
+        H = if _is_zero_quadratic_parameter(ρ_vector)
+            A_loose = lp.A_ineq[loose, :]
+            transpose(A_loose) * (Diagonal(d) * A_loose)
+        else
+            Diagonal(ρ_vector)
+        end
+        T = promote_type(eltype(H), eltype(F), eltype(μ_vector), eltype(ρ_vector))
         K = if issparse(H) || issparse(F)
             [
                 sparse(H) sparse(transpose(F))
@@ -108,7 +128,7 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
         end
 
         K_factorization = issparse(K) ? factorize(K) : bunchkaufman(Symmetric(K))
-        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=tight, loose=loose)
+        return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, ρ=ρ_vector, tight=tight, loose=loose)
     end
 
     all(>(zero(eltype(slack))), slack) ||
@@ -118,7 +138,8 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
 
     d = one(eltype(slack)) ./ (slack .^ 2)
     H = transpose(lp.A_ineq) * (Diagonal(μ_vector .* d) * lp.A_ineq)
-    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector))
+    H = _is_zero_quadratic_parameter(ρ_vector) ? H : H + Diagonal(ρ_vector)
+    T = promote_type(eltype(H), eltype(lp.A_eq), eltype(μ_vector), eltype(ρ_vector))
     K = if issparse(H) || issparse(lp.A_eq)
         [
             sparse(H) sparse(transpose(lp.A_eq))
@@ -132,5 +153,5 @@ function _diff_precompute(solver, lp::LP, μ, pre_computed, tight_tol; kwargs...
     end
 
     K_factorization = issparse(K) ? factorize(K) : bunchkaufman(Symmetric(K))
-    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
+    return (; z=z, d=d, K_factorization=K_factorization, μ=μ_vector, ρ=ρ_vector, tight=Int[], loose=collect(1:length(lp.b_ineq)))
 end

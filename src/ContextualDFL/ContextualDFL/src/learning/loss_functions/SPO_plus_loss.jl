@@ -38,6 +38,8 @@ function (loss::SPOPlusLoss)(
     reference_scenario_parameter_collection,
     mu_in=0,
     mu_ref=mu_in;
+    rho_in=0,
+    rho_ref=rho_in,
     probabilities=nothing,
     nr_scenarios=loss.nr_scenarios,
     validate_fixed_feasible_set=true,
@@ -62,6 +64,8 @@ function (loss::SPOPlusLoss)(
         loss.solver,
         input_arrays...,
         reference_arrays...;
+        rho_in=rho_in,
+        rho_ref=rho_ref,
         probabilities=probabilities,
         validate_fixed_feasible_set=validate_fixed_feasible_set,
         fixed_feasible_set_atol=fixed_feasible_set_atol,
@@ -87,6 +91,8 @@ function _spo_plus_loss_value(
     reference_h_eq_array,
     reference_h_ineq_array,
     reference_q_array;
+    rho_in=0,
+    rho_ref=rho_in,
     probabilities=nothing,
     validate_fixed_feasible_set=true,
     fixed_feasible_set_atol=0,
@@ -110,6 +116,8 @@ function _spo_plus_loss_value(
         reference_h_eq_array,
         reference_h_ineq_array,
         reference_q_array;
+        rho_in=rho_in,
+        rho_ref=rho_ref,
         probabilities=probabilities,
         validate_fixed_feasible_set=validate_fixed_feasible_set,
         fixed_feasible_set_atol=fixed_feasible_set_atol,
@@ -137,6 +145,8 @@ function ChainRulesCore.rrule(
     reference_h_eq_array,
     reference_h_ineq_array,
     reference_q_array;
+    rho_in=0,
+    rho_ref=rho_in,
     probabilities=nothing,
     validate_fixed_feasible_set=true,
     fixed_feasible_set_atol=0,
@@ -160,6 +170,8 @@ function ChainRulesCore.rrule(
         reference_h_eq_array,
         reference_h_ineq_array,
         reference_q_array;
+        rho_in=rho_in,
+        rho_ref=rho_ref,
         probabilities=probabilities,
         validate_fixed_feasible_set=validate_fixed_feasible_set,
         fixed_feasible_set_atol=fixed_feasible_set_atol,
@@ -219,6 +231,8 @@ function _spo_plus_oracle(
     reference_h_eq_array,
     reference_h_ineq_array,
     reference_q_array;
+    rho_in=0,
+    rho_ref=rho_in,
     probabilities=nothing,
     validate_fixed_feasible_set=true,
     fixed_feasible_set_atol=0,
@@ -280,6 +294,7 @@ function _spo_plus_oracle(
         reference_q_array;
         probabilities=probabilities,
         μ=0,
+        ρ=rho_ref,
         kwargs...,
     )
     perturbed_z, perturbed_y, _, _, _, _ = solve(
@@ -294,14 +309,49 @@ function _spo_plus_oracle(
         perturbed_q_array;
         probabilities=probabilities,
         μ=0,
+        ρ=rho_in,
         kwargs...,
     )
 
     value =
-        _spo_plus_linear_objective(program, reference_z, reference_y, perturbed_q_array; probabilities=probabilities) -
-        _spo_plus_linear_objective(program, perturbed_z, perturbed_y, perturbed_q_array; probabilities=probabilities)
+        _spo_plus_objective(program, reference_z, reference_y, perturbed_q_array; probabilities=probabilities, ρ=rho_ref) -
+        _spo_plus_objective(program, perturbed_z, perturbed_y, perturbed_q_array; probabilities=probabilities, ρ=rho_in)
 
     return value, reference_y, perturbed_y, p_vector
+end
+
+function _spo_plus_objective(
+    program::StochasticProgram,
+    z,
+    y,
+    q_array;
+    probabilities=nothing,
+    ρ=0,
+    rho=ρ,
+)
+    K = size(q_array, 2)
+    p_vector = _spo_plus_probability_vector(q_array, probabilities)
+    first_stage_ρ = _first_stage_quadratic_parameter(program.first_stage_lp, q_array, rho)
+    value =
+        sum(program.first_stage_lp.c .* z) +
+        _first_stage_quadratic_value(z, first_stage_ρ)
+    for k in 1:K
+        scenario_ρ = _scenario_quadratic_parameter(
+            size(q_array, 1),
+            K,
+            rho,
+            k,
+            length(program.first_stage_lp.c),
+            p_vector[k],
+        )
+        scenario_ρ_vector = _quadratic_parameter_vector(size(q_array, 1), scenario_ρ)
+        y_k = view(y, :, k)
+        value += p_vector[k] * (
+            sum(view(q_array, :, k) .* y_k) +
+            0.5 * sum(scenario_ρ_vector .* (y_k .^ 2))
+        )
+    end
+    return value
 end
 
 function _spo_plus_linear_objective(
@@ -335,7 +385,7 @@ end
 function _check_spo_plus_mu(mu_in, mu_ref)
     _is_zero_barrier_parameter(mu_in) && _is_zero_barrier_parameter(mu_ref) && return nothing
     throw(ArgumentError(
-        "SPOPlusLoss implements the standard nonsmoothed SPO+ surrogate; pass mu_in=0 and mu_ref=0.",
+        "SPOPlusLoss does not support log-barrier smoothing; pass mu_in=0 and mu_ref=0.",
     ))
 end
 

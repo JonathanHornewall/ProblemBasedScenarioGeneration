@@ -48,6 +48,9 @@ const GRID_SYMBOL_KEYS = Set(
         :method,
         :mu_ref_schedule,
         :mu_schedule,
+        :optimality_evaluate_mode,
+        :rho_ref_schedule,
+        :rho_schedule,
     ],
 )
 
@@ -61,6 +64,7 @@ const GRID_INT_KEYS = Set(
         :epochs,
         :hidden_size,
         :Nr_contexts,
+        :optimality_evaluation_batches,
         :optimality_test_sample_count,
         :optimality_train_sample_count,
         :optimality_validation_sample_count,
@@ -86,8 +90,15 @@ const GRID_FLOAT_KEYS = Set(
         :mu_ref_start,
         :mu_start,
         :optimality_mu,
+        :optimality_rho,
         :policy_inference_mu,
+        :policy_inference_rho,
         :rho,
+        :rho_end,
+        :rho_ref,
+        :rho_ref_end,
+        :rho_ref_start,
+        :rho_start,
         :test_fraction,
         :tolerance_absolute_floor,
         :tolerance_relative,
@@ -271,9 +282,13 @@ function normalize_schedule(name::Symbol, spec::GridScheduleConfig)
         return normalize_mu_schedule(kind, spec)
     elseif name == :mu_ref
         return normalize_mu_ref_schedule(kind, spec)
+    elseif name == :rho
+        return normalize_rho_schedule(kind, spec)
+    elseif name == :rho_ref
+        return normalize_rho_ref_schedule(kind, spec)
     end
 
-    throw(ArgumentError("unsupported schedule '$name'; supported schedules are mu and mu_ref."))
+    throw(ArgumentError("unsupported schedule '$name'; supported schedules are mu, mu_ref, rho, and rho_ref."))
 end
 
 function normalize_mu_schedule(kind::Symbol, spec)
@@ -312,6 +327,45 @@ function normalize_mu_ref_schedule(kind::Symbol, spec)
 
     output[:mu_ref_start] = Float64(required_schedule_value(spec, :start, "mu_ref"))
     output[:mu_ref_end] = Float64(schedule_stop_value(spec, "mu_ref"))
+    return output
+end
+
+function normalize_rho_schedule(kind::Symbol, spec)
+    manual_values = manual_schedule_values(kind, spec, "rho")
+    manual_values === nothing || return Dict{Symbol,Any}(:rho_schedule => manual_values)
+
+    kind in (:constant, :linear, :geometric, :exponential) ||
+        throw(ArgumentError("unsupported rho schedule kind '$kind'."))
+
+    output = Dict{Symbol,Any}(:rho_schedule => kind)
+    if kind == :constant
+        spec.value !== nothing && (output[:rho] = Float64(spec.value))
+        return output
+    end
+
+    output[:rho_start] = Float64(required_schedule_value(spec, :start, "rho"))
+    output[:rho_end] = Float64(schedule_stop_value(spec, "rho"))
+    return output
+end
+
+function normalize_rho_ref_schedule(kind::Symbol, spec)
+    manual_values = manual_schedule_values(kind, spec, "rho_ref")
+    manual_values === nothing || return Dict{Symbol,Any}(:rho_ref_schedule => manual_values)
+
+    if kind in (:match_input, :same, :input, :zero, :zeros, :none)
+        return Dict{Symbol,Any}(:rho_ref_schedule => kind)
+    end
+    kind in (:constant, :linear, :geometric, :exponential) ||
+        throw(ArgumentError("unsupported rho_ref schedule kind '$kind'."))
+
+    output = Dict{Symbol,Any}(:rho_ref_schedule => kind)
+    if kind == :constant
+        spec.value !== nothing && (output[:rho_ref] = Float64(spec.value))
+        return output
+    end
+
+    output[:rho_ref_start] = Float64(required_schedule_value(spec, :start, "rho_ref"))
+    output[:rho_ref_end] = Float64(schedule_stop_value(spec, "rho_ref"))
     return output
 end
 

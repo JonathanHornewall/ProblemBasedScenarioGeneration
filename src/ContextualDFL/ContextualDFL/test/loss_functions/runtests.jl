@@ -1,4 +1,5 @@
 import Flux
+import LinearAlgebra: dot
 
 struct DflTestVectorDecoder <: VectorDecoder end
 
@@ -113,6 +114,55 @@ end
     @test default_reference_mu_loss ≈ explicit_reference_mu_loss atol = 1e-7 rtol = 1e-7
     @test !isapprox(default_reference_mu_loss, zero_reference_mu_loss; atol=1e-4, rtol=1e-4)
 
+    rho = 0.2
+    default_reference_rho_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        0.0,
+        0.0;
+        rho_in=rho,
+        tol=1e-10,
+    )
+    explicit_reference_rho_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        0.0,
+        0.0;
+        rho_in=rho,
+        rho_ref=rho,
+        tol=1e-10,
+    )
+    zero_reference_rho_loss = dfl_loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        0.0,
+        0.0;
+        rho_in=rho,
+        rho_ref=0.0,
+    )
+
+    @test default_reference_rho_loss ≈ explicit_reference_rho_loss atol = 1e-7 rtol = 1e-7
+    @test !isapprox(default_reference_rho_loss, zero_reference_rho_loss; atol=1e-4, rtol=1e-4)
+
+    rho_direction = [0.0, 0.0, 0.1, -0.05]
+    rho_objective(v) = dfl_loss(
+        v,
+        reference_scenario_parameter_collection,
+        0.0,
+        0.0;
+        rho_in=rho,
+        rho_ref=rho,
+        tol=1e-10,
+    )
+    rho_gradient = only(Flux.gradient(rho_objective, input_scenario_parameter_collection))
+    ϵ = 1e-5
+    rho_finite_difference = (
+        rho_objective(input_scenario_parameter_collection .+ ϵ .* rho_direction) -
+        rho_objective(input_scenario_parameter_collection .- ϵ .* rho_direction)
+    ) / (2ϵ)
+
+    @test dot(rho_gradient, rho_direction) ≈ rho_finite_difference atol = 1e-4 rtol = 1e-3
+
     @testset "SPOPlusLoss objective-vector surrogate" begin
         spo_program = StochasticProgram(
             A_eq=zeros(0, 0),
@@ -146,6 +196,31 @@ end
         @test finite_difference_gradient ≈ -2.0 atol = 1e-5
         @test_throws ArgumentError spo_loss(prediction, reference, 0.1)
 
+        rho_spo = 4.0
+        rho_spo_value = spo_loss(prediction, reference, 0.0; rho_in=rho_spo, tol=1e-10)
+        explicit_rho_spo_value = spo_loss(
+            prediction,
+            reference,
+            0.0;
+            rho_in=rho_spo,
+            rho_ref=rho_spo,
+            tol=1e-10,
+        )
+        rho_spo_gradient = only(
+            Flux.gradient(
+                q -> spo_loss(q, reference, 0.0; rho_in=rho_spo, rho_ref=rho_spo, tol=1e-10),
+                prediction,
+            ),
+        )
+        rho_spo_finite_difference =
+            (
+                spo_loss(prediction .+ ϵ, reference, 0.0; rho_in=rho_spo, rho_ref=rho_spo, tol=1e-10) -
+                spo_loss(prediction .- ϵ, reference, 0.0; rho_in=rho_spo, rho_ref=rho_spo, tol=1e-10)
+            ) / (2ϵ)
+
+        @test rho_spo_value ≈ explicit_rho_spo_value atol = 1e-8
+        @test rho_spo_gradient[1] ≈ rho_spo_finite_difference atol = 1e-5 rtol = 1e-5
+
         two_scenario_loss =
             SPOPlusLoss(q_decoder, ParametricDecoder(), solver, spo_program; nr_scenarios=2)
         two_reference = [spo_plus_test_scenario(2.0), spo_plus_test_scenario(-3.0)]
@@ -167,7 +242,7 @@ end
 
         mismatched_feasible_loss =
             SPOPlusLoss(input_decoder, passthrough_decoder, solver, bounded_program)
-        @test_throws ArgumentError mismatched_feasible_loss(
+        @test_throws DimensionMismatch mismatched_feasible_loss(
             input_scenario_parameter_collection,
             reference_scenario_parameter_collection,
             0.0,

@@ -10,6 +10,8 @@ function cost_function(
     h_ineq_array,
     q_array;
     μ=0,
+    ρ=0,
+    rho=ρ,
     probabilities=nothing,
     return_dual=false,
     kwargs...,
@@ -27,6 +29,7 @@ function cost_function(
         q_array,
         ;
         μ=μ,
+        ρ=rho,
         probabilities=probabilities,
         return_dual=return_dual,
         kwargs...,
@@ -45,6 +48,8 @@ function G(
     h_ineq_array,
     q_array;
     μ=0,
+    ρ=0,
+    rho=ρ,
     probabilities=nothing,
     return_dual=false,
     kwargs...,
@@ -70,6 +75,8 @@ function G(
         probabilities
     end
     first_stage_μ = _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
+    first_stage_ρ = _first_stage_quadratic_parameter(first_stage_lp, q_array, rho)
+    T = promote_type(T, eltype(p_vector), eltype(first_stage_μ), eltype(first_stage_ρ))
 
     second_stage_value = zero(T)
     λ_h_eq_array = zeros(T, size(h_eq_array))
@@ -82,6 +89,14 @@ function G(
             μ,
             k,
             length(first_stage_lp.b_ineq),
+            p_vector[k],
+        )
+        scenario_ρ = _scenario_quadratic_parameter(
+            size(q_array, 1),
+            K,
+            rho,
+            k,
+            length(first_stage_lp.c),
             p_vector[k],
         )
         scenario_value_or_dual = try
@@ -97,6 +112,7 @@ function G(
                 view(q_array, :, k),
                 ;
                 μ=scenario_μ,
+                ρ=scenario_ρ,
                 return_dual=return_dual,
                 kwargs...,
             )
@@ -114,17 +130,21 @@ function G(
                 h_ineq_array,
                 q_array;
                 μ=μ,
+                ρ=rho,
                 probabilities=probabilities,
                 kwargs=(; kwargs...),
                 z=z,
                 scenario_index=k,
                 scenario_μ=scenario_μ,
+                scenario_ρ=scenario_ρ,
             )
         end
 
         if return_dual
             y, λ_h_eq, λ_h_ineq = scenario_value_or_dual
             scenario_value = sum(view(q_array, :, k) .* y)
+            scenario_ρ_vector = _quadratic_parameter_vector(length(y), scenario_ρ)
+            scenario_value += 0.5 * sum(scenario_ρ_vector .* (y .^ 2))
             scenario_μ_vector = _barrier_parameter_vector(size(W_ineq_array, 1), scenario_μ)
             positive_barrier_indices = findall(!iszero, scenario_μ_vector)
             if !isempty(positive_barrier_indices)
@@ -146,7 +166,8 @@ function G(
     end
 
     value =
-        sum(first_stage_lp.c .* z) -
+        sum(first_stage_lp.c .* z) +
+        _first_stage_quadratic_value(z, first_stage_ρ) -
         _first_stage_barrier_value(first_stage_lp, z, first_stage_μ) +
         second_stage_value
 
@@ -165,6 +186,8 @@ function G_hat(
     h_ineq,
     q;
     μ=0,
+    ρ=0,
+    rho=ρ,
     return_dual=false,
     kwargs...,
 )
@@ -178,7 +201,7 @@ function G_hat(
         q,
     )
 
-    result = solve(solver, second_stage_lp; μ=μ, kwargs...)
+    result = solve(solver, second_stage_lp; μ=μ, ρ=rho, kwargs...)
 
     if return_dual
         # The dual variables are returned for differentiability purposes.
@@ -203,6 +226,28 @@ function _first_stage_barrier_parameter(first_stage_lp, W_ineq_array, μ)
         ))
 
     return view(μ, 1:n_first_stage_inequalities)
+end
+
+function _first_stage_quadratic_parameter(first_stage_lp, q_array, ρ)
+    n_first_stage_variables = length(first_stage_lp.c)
+    ρ isa Number && return _quadratic_parameter_vector(n_first_stage_variables, ρ)
+
+    n_extensive_variables = n_first_stage_variables + size(q_array, 1) * size(q_array, 2)
+    ρ_vector = _quadratic_parameter_vector(n_extensive_variables, ρ)
+    return view(ρ_vector, 1:n_first_stage_variables)
+end
+
+function _first_stage_quadratic_value(z, ρ_vector)
+    positive_quadratic_indices = findall(!iszero, ρ_vector)
+    isempty(positive_quadratic_indices) && return zero(_sp_eltype(z, ρ_vector))
+
+    return 0.5 * sum(ρ_vector[i] * z[i]^2 for i in positive_quadratic_indices)
+end
+
+function _add_first_stage_quadratic_gradient!(dz, z, ρ_vector)
+    _is_zero_quadratic_parameter(ρ_vector) && return dz
+    dz .+= ρ_vector .* z
+    return dz
 end
 
 function _first_stage_barrier_value(first_stage_lp, z, μ_vector)
@@ -264,4 +309,43 @@ function _scenario_barrier_parameter(
 
     rows = ((scenario_index - 1) * n_inequalities + 1):(scenario_index * n_inequalities)
     return view(μ, rows)
+end
+
+function _scenario_quadratic_parameter(
+    n_variables,
+    n_scenarios,
+    ρ,
+    scenario_index,
+    n_first_stage_variables=0,
+    probability=nothing,
+)
+    ρ isa Number && return ρ
+
+    if n_first_stage_variables > 0
+        n_extensive_variables = n_first_stage_variables + n_variables * n_scenarios
+        if length(ρ) == n_extensive_variables
+            cols = (
+                n_first_stage_variables + (scenario_index - 1) * n_variables + 1
+            ):(n_first_stage_variables + scenario_index * n_variables)
+            scenario_ρ = view(ρ, cols)
+            isnothing(probability) && return scenario_ρ
+            iszero(probability) &&
+                throw(ArgumentError("probabilities must be nonzero when ρ is an extensive-form vector."))
+            return scenario_ρ ./ probability
+        end
+    end
+
+    if length(ρ) == n_variables * n_scenarios
+        cols = ((scenario_index - 1) * n_variables + 1):(scenario_index * n_variables)
+        scenario_ρ = view(ρ, cols)
+        isnothing(probability) && return scenario_ρ
+        iszero(probability) &&
+            throw(ArgumentError("probabilities must be nonzero when ρ is a stacked extensive-form vector."))
+        return scenario_ρ ./ probability
+    end
+
+    length(ρ) == n_variables ||
+        throw(DimensionMismatch("ρ must have one entry per scenario variable or per extensive-form variable."))
+
+    return ρ
 end

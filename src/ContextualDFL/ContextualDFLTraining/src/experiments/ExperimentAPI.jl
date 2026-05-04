@@ -552,6 +552,7 @@ function experiment_test_data_config(
     spec::ExperimentSpec;
     seed::Integer=DEFAULT_TEST_DATA_SEED,
     data_set_size::Integer=DEFAULT_TEST_DATA_SET_SIZE,
+    overrides...,
 )
     if experiment_has_function(spec, :test_data_config)
         return with_experiment_metadata(
@@ -561,6 +562,7 @@ function experiment_test_data_config(
                 :test_data_config;
                 seed=Int(seed),
                 data_set_size=Int(data_set_size),
+                overrides...,
             ),
         )
     end
@@ -572,6 +574,7 @@ function experiment_test_data_config(
             test_data_seed=Int(seed),
             data_set_size=Int(data_set_size),
         ),
+        NamedTuple(overrides),
     )
 end
 
@@ -579,8 +582,14 @@ function experiment_test_data_bundle(
     spec::ExperimentSpec;
     seed::Integer=DEFAULT_TEST_DATA_SEED,
     data_set_size::Integer=DEFAULT_TEST_DATA_SET_SIZE,
+    overrides...,
 )
-    config = experiment_test_data_config(spec; seed=seed, data_set_size=data_set_size)
+    config = experiment_test_data_config(
+        spec;
+        seed=seed,
+        data_set_size=data_set_size,
+        overrides...,
+    )
     if experiment_has_function(spec, :test_data_bundle)
         return experiment_call(
             spec,

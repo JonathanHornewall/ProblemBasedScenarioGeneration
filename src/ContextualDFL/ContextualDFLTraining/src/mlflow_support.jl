@@ -205,6 +205,8 @@ function mlflow_epoch_metadata_metrics(metadata; timestamp, step)
         ("epoch_seconds", :epoch_seconds),
         ("epoch_mu_in", :mu_in),
         ("epoch_mu_ref", :mu_ref),
+        ("epoch_rho_in", :rho_in),
+        ("epoch_rho_ref", :rho_ref),
         ("epoch_iterations", :iterations),
         ("real_display_loss", :real_display_loss),
     )

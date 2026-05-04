@@ -43,6 +43,45 @@
     end
 
     @testset "equality and inequality barrier cases" begin
+        @testset "quadratic smoothing cases" begin
+            one_dimensional_qp = LP(
+                A_ineq=reshape([-1.0, 1.0], 2, 1),
+                b_ineq=[0.0, 10.0],
+                c=[-4.0],
+            )
+            quadratic_result = solve(TEST_SOLVER, one_dimensional_qp; ρ=2.0, tol=1e-10)
+
+            @test is_optimal_status(quadratic_result.status)
+            @test quadratic_result.z ≈ [2.0] atol = 1e-7
+            @test quadratic_result.objective_value ≈ -4.0 atol = 1e-7
+            @test diff_solve(
+                TEST_SOLVER,
+                one_dimensional_qp,
+                0.0;
+                ρ=2.0,
+                pre_computed=quadratic_result,
+                dc=[1.0],
+            ) ≈ [-0.5] atol = 1e-8
+
+            combined_lp = LP(
+                A_ineq=reshape([-1.0, 1.0], 2, 1),
+                b_ineq=[0.0, 10.0],
+                c=[-1.0],
+            )
+            μ = 0.1
+            ρ = 0.5
+            combined_result = solve(TEST_SOLVER, combined_lp; μ=μ, ρ=ρ, tol=1e-10)
+            slack = combined_lp.b_ineq - combined_lp.A_ineq * combined_result.z
+            stationarity =
+                combined_lp.c .+
+                ρ .* combined_result.z .+
+                transpose(combined_lp.A_ineq) * (fill(μ, length(slack)) ./ slack)
+
+            @test is_optimal_status(combined_result.status)
+            @test minimum(slack) > 1e-8
+            @test norm(stationarity, Inf) ≤ 5e-5
+        end
+
         @testset "vector barrier parameters" begin
             vector_barrier_lp = LP(
                 A_eq=ones(1, 2),

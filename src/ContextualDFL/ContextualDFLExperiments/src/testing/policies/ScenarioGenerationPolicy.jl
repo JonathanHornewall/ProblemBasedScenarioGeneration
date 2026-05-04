@@ -3,15 +3,17 @@ struct ScenarioGenerationPolicy{
     TSolver,
     TProgram,
     TMu,
+    TRho,
 } <: Policy
     scenario_generator::TGenerator
     solver::TSolver
     program::TProgram
     mu::TMu
+    rho::TRho
 end
 
-function ScenarioGenerationPolicy(scenario_generator, solver, program; mu=0)
-    return ScenarioGenerationPolicy(scenario_generator, solver, program, mu)
+function ScenarioGenerationPolicy(scenario_generator, solver, program; mu=0, rho=0)
+    return ScenarioGenerationPolicy(scenario_generator, solver, program, mu, rho)
 end
 
 function infer(policy::ScenarioGenerationPolicy, context)
@@ -33,6 +35,7 @@ function infer(policy::ScenarioGenerationPolicy, context)
         h_ineq,
         q;
         μ=policy.mu,
+        ρ=policy.rho,
     )
 
     return z

@@ -96,12 +96,15 @@ function _record_stochastic_program_failure(
     h_ineq_array,
     q_array;
     μ,
+    ρ=0,
     effective_μ=nothing,
+    effective_ρ=nothing,
     probabilities=nothing,
     kwargs=(;),
     z=nothing,
     scenario_index=nothing,
     scenario_μ=nothing,
+    scenario_ρ=nothing,
 )
     crash_file = _stochastic_crash_file()
     payload = (;
@@ -118,8 +121,11 @@ function _record_stochastic_program_failure(
             q_array,
         ),
         μ=_crash_copy(μ),
+        ρ=_crash_copy(ρ),
         effective_μ=_crash_copy(effective_μ),
+        effective_ρ=_crash_copy(effective_ρ),
         scenario_μ=_crash_copy(scenario_μ),
+        scenario_ρ=_crash_copy(scenario_ρ),
         probabilities=_crash_copy(probabilities),
         solver_type=string(typeof(solver)),
         kwargs=kwargs,
@@ -146,12 +152,15 @@ function _throw_stochastic_program_failure(
     h_ineq_array,
     q_array;
     μ,
+    ρ=0,
     effective_μ=nothing,
+    effective_ρ=nothing,
     probabilities=nothing,
     kwargs=(;),
     z=nothing,
     scenario_index=nothing,
     scenario_μ=nothing,
+    scenario_ρ=nothing,
 )
     crash_file = _record_stochastic_program_failure(
         error,
@@ -166,12 +175,15 @@ function _throw_stochastic_program_failure(
         h_ineq_array,
         q_array;
         μ=μ,
+        ρ=ρ,
         effective_μ=effective_μ,
+        effective_ρ=effective_ρ,
         probabilities=probabilities,
         kwargs=kwargs,
         z=z,
         scenario_index=scenario_index,
         scenario_μ=scenario_μ,
+        scenario_ρ=scenario_ρ,
     )
     throw(StochasticProgramFailure(location, crash_file, scenario_index))
 end
