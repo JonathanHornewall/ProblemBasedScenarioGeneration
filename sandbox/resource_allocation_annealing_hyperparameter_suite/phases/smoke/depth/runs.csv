@@ -1,0 +1,4 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+relu,1.3516203505177509,1,depth1,1,1,,0,1777862744253,888.8709424364083,2254.2662889249514,1365.395346488543,1.3516203505177509,geometric,depth,1,0.0,smoke_depth_depth1_rep01,94001,1777862686398,ok,4.148836779,2.0
+relu,1.3516123377144513,1,depth2,2,1,,0,1777862743719,888.8709424364083,2254.25805650954,1365.3871140731317,1.3516123377144513,geometric,depth,1,0.0,smoke_depth_depth2_rep01,94001,1777862686257,ok,4.009085716,2.0
+relu,1.3516233896790464,1,depth3,3,1,,0,1777862743912,888.8709424364083,2254.2708957480413,1365.399953311633,1.3516233896790464,geometric,depth,1,0.0,smoke_depth_depth3_rep01,94001,1777862686272,ok,4.035462432,2.0

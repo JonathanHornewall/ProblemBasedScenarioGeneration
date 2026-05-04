@@ -1,0 +1,2 @@
+activation,batch_size,candidate_name,depth,epochs,final_epochs,learning_rate,mu_in_preview,mu_ref_preview,mu_schedule_kind,phase,replicate,rho,rho_in_preview,rho_ref_preview,run_id,run_rel_dir,seed,training_contexts
+silu,1,depth2_silu,2,130,10,0.001,1.0|1.0|1.0|1.0|1.0|...|0.01,1.0|1.0|1.0|1.0|1.0|...|0.0,discrete,depth_activation_grid,3,0.0,0.0|0.0|0.0|0.0|0.0|...|0.0,0.0|0.0|0.0|0.0|0.0|...|0.0,full_depth_activation_grid_depth2_silu_rep03,runs/full/depth_activation_grid/depth2_silu/rep03,94003,100

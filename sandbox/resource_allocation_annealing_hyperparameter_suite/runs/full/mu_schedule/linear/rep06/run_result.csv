@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+silu,0.25867884659756596,1,linear,3,130,,10,1777922934591,805.7162362224142,1014.9601586597397,209.2439224373252,0.25867884659756596,linear,mu_schedule,6,0.0,full_mu_schedule_linear_rep06,94006,1777918202368,ok,319.170477767,30.0

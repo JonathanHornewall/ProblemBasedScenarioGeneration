@@ -50,6 +50,40 @@ function tiny_scenario(h)
     )
 end
 
+function shortage_program()
+    return ContextualDFL.StochasticProgram(
+        A_eq=zeros(0, 1),
+        A_ineq=reshape([-1.0], 1, 1),
+        b_eq=Float64[],
+        b_ineq=[0.0],
+        c=[1.0],
+    )
+end
+
+function shortage_scenario(demand)
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=zeros(0, 1),
+        W_ineq_xi=reshape([-1.0, -1.0], 2, 1),
+        T_eq_xi=zeros(0, 1),
+        T_ineq_xi=reshape([-1.0, 0.0], 2, 1),
+        h_eq_xi=Float64[],
+        h_ineq_xi=[-Float64(demand), 0.0],
+        q_xi=[10.0],
+    )
+end
+
+function shortage_scenario_with_q(demand, q)
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=zeros(0, 1),
+        W_ineq_xi=reshape([-1.0, -1.0], 2, 1),
+        T_eq_xi=zeros(0, 1),
+        T_ineq_xi=reshape([-1.0, 0.0], 2, 1),
+        h_eq_xi=Float64[],
+        h_ineq_xi=[-Float64(demand), 0.0],
+        q_xi=[Float64(q)],
+    )
+end
+
 function small_resource_allocation_ad_problem()
     data = ResourceAllocationProblemData(
         [1.0 0.8 1.2; 0.7 1.1 0.9],
@@ -79,11 +113,30 @@ end
     decoder = ContextualDFL.ParametricDecoder()
 
     optimal_results = solve_dataset_to_optimality(data_set, program, decoder, solver)
-    @test [result.z for result in optimal_results] == [[1.0], [1.0]]
+    @test [result.objective_values for result in optimal_results] ≈ [[14.0], [17.0]]
+    @test [result.evaluation_batches for result in optimal_results] == [1, 1]
     @test [result.objective_value for result in optimal_results] ≈ [14.0, 17.0]
 
     policy_values = evaluate_policy(decision_set, data_set, program, decoder, solver)
     @test policy_values ≈ [14.0, 17.0]
+
+    rho_optimal_results = solve_dataset_to_optimality(
+        data_set,
+        program,
+        decoder,
+        solver;
+        rho=0.5,
+    )
+    rho_policy_values = evaluate_policy(
+        decision_set,
+        data_set,
+        program,
+        decoder,
+        solver;
+        rho=0.5,
+    )
+    @test [result.objective_value for result in rho_optimal_results] ≈ [18.25, 23.5]
+    @test rho_policy_values ≈ [18.25, 23.5]
 
     value_summary = summarize_values([1.0, 2.0, 3.0]; prefix=:toy)
     @test value_summary.toy_count == 3
@@ -110,10 +163,12 @@ end
     @test comparison.optimal_results === optimal_results
     @test length(comparison.per_sample) == 2
     @test comparison.metrics.test_sample_count == 2
+    @test comparison.metrics.test_evaluation_batches == 1
     @test comparison.metrics.test_policy_value_mean ≈ 15.5
     @test comparison.metrics.test_optimal_value_mean ≈ 15.5
     @test comparison.metrics.test_regret_mean ≈ 0.0
     @test comparison.metrics.test_relative_regret_mean ≈ 0.0
+    @test comparison.metrics.test_gap_std_mean ≈ 0.0
     @test comparison.metrics.test_policy_eval_seconds >= 0.0
 
     split_data_set = generate_contextual_data_set(
@@ -126,12 +181,12 @@ end
         program,
         decoder,
         solver;
-        splits=2,
+        evaluation_batches=2,
     )
     split_result = only(split_optimal_results)
     @test split_result.objective_values ≈ [14.0, 17.0]
     @test split_result.objective_value ≈ 15.5
-    @test length(split_result.split_results) == 2
+    @test split_result.evaluation_batches == 2
 
     split_policy_values = evaluate_policy(
         split_decision_set,
@@ -139,7 +194,7 @@ end
         program,
         decoder,
         solver;
-        splits=2,
+        evaluation_batches=2,
     )
     @test split_policy_values ≈ [15.5]
 
@@ -152,27 +207,61 @@ end
         optimal_results=split_optimal_results,
         split_name=:test,
     )
-    @test split_comparison.metrics.test_split_count == 2
-    @test only(split_comparison.per_sample).policy_split_values ≈ [14.0, 17.0]
-    @test only(split_comparison.per_sample).optimal_split_values ≈ [14.0, 17.0]
+    @test split_comparison.metrics.test_evaluation_batches == 2
+    @test only(split_comparison.per_sample).policy_collection_values ≈ [14.0, 17.0]
+    @test only(split_comparison.per_sample).optimal_collection_values ≈ [14.0, 17.0]
+    @test only(split_comparison.per_sample).gap_values ≈ [0.0, 0.0]
+    @test only(split_comparison.per_sample).gap_std ≈ 0.0
     @test split_comparison.metrics.test_regret_mean ≈ 0.0
+
+    replication_data_set = generate_contextual_data_set(
+        [[0.0]],
+        [[shortage_scenario(2.0), shortage_scenario(8.0)]],
+    )
+    replication_decision_set = reshape([8.0], 1, 1)
+    replication_optimal_results = solve_dataset_to_optimality(
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        evaluation_batches=2,
+    )
+    @test only(replication_optimal_results).objective_values ≈ [2.0, 8.0] atol = 1e-6
+    @test only(replication_optimal_results).objective_value ≈ 5.0 atol = 1e-6
+
+    replication_comparison = evaluate_policy_against_optimum(
+        replication_decision_set,
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        optimal_results=replication_optimal_results,
+        split_name=:test,
+    )
+    @test only(replication_comparison.per_sample).policy_collection_values ≈
+        [8.0, 8.0] atol = 1e-6
+    @test only(replication_comparison.per_sample).gap_values ≈ [6.0, 0.0] atol = 1e-6
+    @test only(replication_comparison.per_sample).regret ≈ 3.0 atol = 1e-6
+    @test only(replication_comparison.per_sample).gap_stderr ≈ 3.0 atol = 1e-6
 
     @test_throws ArgumentError solve_dataset_to_optimality(
         split_data_set,
         program,
         decoder,
         solver;
-        splits=3,
+        evaluation_batches=3,
     )
     @test_throws ArgumentError evaluate_policy_against_optimum(
-        split_decision_set,
-        split_data_set,
+        decision_set,
+        data_set,
         program,
         decoder,
         solver;
-        optimal_results=split_optimal_results,
+        optimal_results=[
+            (; objective_values=[1.0, 2.0], objective_value=1.5),
+            (; objective_values=[1.0], objective_value=1.0),
+        ],
         split_name=:test,
-        splits=1,
     )
 
     @test_throws UndefKeywordError evaluate_policy_against_optimum(
@@ -189,7 +278,125 @@ end
         scenario_decoder=TinyVectorDecoder(),
     )
     scenario_policy = ScenarioGenerationPolicy(generator, solver, program)
+    rho_scenario_policy = ScenarioGenerationPolicy(generator, solver, program; mu=0.1, rho=0.2)
     @test infer(scenario_policy, [1.0]) ≈ [1.0]
+    @test rho_scenario_policy.mu == 0.1
+    @test rho_scenario_policy.rho == 0.2
+    @test infer(rho_scenario_policy, [1.0]) ≈ [1.0]
+
+    shortage_data_set = generate_contextual_data_set(
+        [[0.0], [10.0]],
+        [[shortage_scenario(2.0)], [shortage_scenario(8.0)]],
+    )
+    shortage_decoder = ContextualDFL.ParametricDecoder()
+    shortage_policy = SampleAverageApproximationPolicy(
+        shortage_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder,
+    )
+    @test infer(shortage_policy, [100.0]) ≈ [8.0] atol = 1e-6
+    @test generate_decision_set(shortage_policy, shortage_data_set) ≈
+        reshape([8.0, 8.0], 1, 2) atol = 1e-6
+
+    direct_shortage_policy = SampleAverageApproximationPolicy(
+        [shortage_scenario(2.0)],
+        solver,
+        shortage_program(),
+        shortage_decoder,
+    )
+    @test infer(direct_shortage_policy, [100.0]) ≈ [2.0] atol = 1e-6
+
+    @test default_knn_k(100) == 32
+    knn_policy = KNearestNeighborsPolicy(
+        shortage_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        k=1,
+    )
+    @test infer(knn_policy, [0.1]) ≈ [2.0] atol = 1e-6
+    @test infer(knn_policy, [9.9]) ≈ [8.0] atol = 1e-6
+    @test_throws ArgumentError KNearestNeighborsPolicy(
+        shortage_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        k=0,
+    )
+    @test_throws DimensionMismatch infer(knn_policy, [1.0, 2.0])
+
+    residual_data_set = generate_contextual_data_set(
+        [[-1.0], [1.0]],
+        [
+            [shortage_scenario(3.0), shortage_scenario(5.0)],
+            [shortage_scenario(5.0), shortage_scenario(7.0)],
+        ],
+    )
+    least_squares_policy = LeastSquaresPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+    )
+    @test size(least_squares_policy.coefficients) == (2, 2)
+    @test least_squares_policy.coefficients ≈ [-1.0 0.0; -5.0 0.0]
+    @test infer(least_squares_policy, [2.0]) ≈ [7.0] atol = 1e-6
+    @test generate_decision_set(least_squares_policy, residual_data_set) ≈
+        reshape([4.0, 6.0], 1, 2) atol = 1e-6
+
+    residual_policy = ResidualSampleAverageApproximationPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+    )
+    @test size(residual_policy.residuals) == (4, 2)
+    @test residual_policy.residuals[:, 1] ≈ [1.0, -1.0, 1.0, -1.0]
+    @test residual_policy.residuals[:, 2] ≈ zeros(4)
+    @test infer(residual_policy, [2.0]) ≈ [8.0] atol = 1e-6
+
+    clipped_policy = LeastSquaresPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        postprocess_prediction=target -> max.(target, [-6.0, 0.0]),
+    )
+    @test infer(clipped_policy, [2.0]) ≈ [6.0] atol = 1e-6
+
+    @test_throws ArgumentError LeastSquaresPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:not_a_component,
+    )
+    bad_postprocess_policy = LeastSquaresPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        postprocess_prediction=target -> target[1:1],
+    )
+    @test_throws DimensionMismatch infer(bad_postprocess_policy, [2.0])
+    @test_throws DimensionMismatch infer(least_squares_policy, [1.0, 2.0])
+
+    varying_structure_data_set = generate_contextual_data_set(
+        [[0.0], [1.0]],
+        [[shortage_scenario_with_q(2.0, 10.0)], [shortage_scenario_with_q(3.0, 12.0)]],
+    )
+    @test_throws ArgumentError LeastSquaresPolicy(
+        varying_structure_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+    )
 
     resource_data = default_resource_allocation_problem_data()
     @test size(resource_data.service_rate_parameters) == (20, 30)
@@ -491,6 +698,7 @@ end
         solver,
     )
     @test length(resource_results) == 1
-    @test length(only(resource_results).z) == 2
+    @test only(resource_results).evaluation_batches == 1
+    @test length(only(resource_results).objective_values) == 1
     @test isfinite(only(resource_results).objective_value)
 end

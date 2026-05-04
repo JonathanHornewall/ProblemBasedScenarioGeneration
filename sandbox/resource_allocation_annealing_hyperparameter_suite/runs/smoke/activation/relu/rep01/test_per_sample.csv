@@ -1,0 +1,3 @@
+candidate_name,optimal_split_values,optimal_value,phase,policy_split_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+relu,647.0645243955232,647.0645243955232,activation,1082.8809937860133,1082.8809937860133,435.81646939049006,0.6735286095271912,1,smoke_activation_relu_rep01,1
+relu,1130.6773604772934,1130.6773604772934,activation,3425.8782713350142,3425.8782713350142,2295.200910857721,2.02993443672459,1,smoke_activation_relu_rep01,2

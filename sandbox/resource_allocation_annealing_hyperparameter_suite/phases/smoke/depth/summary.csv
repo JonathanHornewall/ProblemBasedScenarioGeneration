@@ -1,0 +1,4 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+depth1,0,1.3516203505177509,1.3516203505177509,1.3516203505177509,1,1,NaN
+depth2,0,1.3516123377144513,1.3516123377144513,1.3516123377144513,1,1,NaN
+depth3,0,1.3516233896790464,1.3516233896790464,1.3516233896790464,1,1,NaN

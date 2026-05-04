@@ -26,6 +26,10 @@ export
     Solver,
     SPOPlusLoss,
     StochasticProgram,
+    TransShipmentProblem,
+    TransShipmentProblemData,
+    TransShipmentScenarioDecoder,
+    TransShipmentStochasticEntry,
     batch_size_schedule,
     constant_schedule,
     construct_lp,
@@ -38,11 +42,19 @@ export
     generate_scenario_set,
     mu_schedule,
     rho_schedule,
+    default_transshipment_data_dir,
     scenario_cost,
+    sample_transshipment_parameters,
     solve,
     solve_rrule,
     step_size_schedule,
+    transshipment_direct_mean_lp,
+    transshipment_mean_lp,
+    transshipment_mean_parameters,
+    transshipment_mean_scenario_arrays,
+    transshipment_scenario_arrays,
     train!,
+    validate_transshipment_problem,
     VectorDecoder
 
 include("linear_programming/LP.jl")
@@ -84,5 +96,7 @@ include("learning/loss_functions/projected_z_loss.jl")
 include("learning/train.jl")
 include("learning/utils/test.jl")
 include("learning/utils/hyper_parameter_helpers/schedules.jl")
+
+include("implementations/TransShipmentProblem/TransShipmentProblem.jl")
 
 end

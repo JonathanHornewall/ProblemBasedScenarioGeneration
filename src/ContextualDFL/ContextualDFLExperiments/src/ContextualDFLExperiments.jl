@@ -4,8 +4,11 @@ import ChainRulesCore
 import ContextualDFL
 
 export ContextDataGenerator,
+    KNearestNeighborsPolicy,
+    LeastSquaresPolicy,
     Policy,
     ProgramInstance,
+    ResidualSampleAverageApproximationPolicy,
     ResourceAllocationContextDataGenerator,
     ResourceAllocationDemandParametricDecoder,
     ResourceAllocationDemandVectorDecoder,
@@ -14,8 +17,10 @@ export ContextDataGenerator,
     ResourceAllocationScenarioDataGenerator,
     ScenarioDataGenerator,
     ScenarioGenerationPolicy,
+    SampleAverageApproximationPolicy,
     base_scenario,
     default_resource_allocation_problem_data,
+    default_knn_k,
     evaluate_policy,
     evaluate_policy_against_optimum,
     generate_contextual_data_set,
@@ -32,6 +37,7 @@ include("data_generation/scenario_generators/ScenarioDataGenerator.jl")
 include("program_instance/ProgramInstance.jl")
 include("testing/policies/Policy.jl")
 include("testing/policies/ScenarioGenerationPolicy.jl")
+include("testing/policies/BaselinePolicies.jl")
 include("testing/evaluation/evaluation.jl")
 
 include("implementations/resource_allocation_problem/problem_data/parameters.jl")

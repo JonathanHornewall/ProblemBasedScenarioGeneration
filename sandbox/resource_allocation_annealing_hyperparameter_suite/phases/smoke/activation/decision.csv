@@ -1,0 +1,2 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+gelu,0,1.3516783978380653,1.3516783978380653,1.3516783978380653,1,1,NaN

@@ -1,0 +1,2 @@
+activation,batch_size,candidate_name,depth,epochs,final_epochs,learning_rate,mu_in_preview,mu_ref_preview,mu_schedule_kind,phase,replicate,rho,rho_in_preview,rho_ref_preview,run_id,run_rel_dir,seed,training_contexts
+silu,1,delayed_log_1_5,3,130,10,0.001,1.0|0.996459|0.990016|0.981735|0.972019|...|0.01,1.0|0.996459|0.990016|0.981735|0.972019|...|0.0,delayed_log_1_5,mu_schedule,2,0.0,0.0|0.0|0.0|0.0|0.0|...|0.0,0.0|0.0|0.0|0.0|0.0|...|0.0,full_mu_schedule_delayed_log_1_5_rep02,runs/full/mu_schedule/delayed_log_1_5/rep02,94002,100

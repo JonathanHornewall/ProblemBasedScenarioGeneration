@@ -304,26 +304,33 @@ function profile_once(implementation, measurement, f)
     println("PROFILE_END\t$(implementation)\t$(measurement)")
 end
 
-function new_loss(demand; kwargs...)
-    return loss_object(demand, actual_collection, mu_in, mu_ref; nr_scenarios=1, kwargs...)
+function new_loss(demand, mu_in_value, mu_ref_value; kwargs...)
+    return loss_object(
+        demand,
+        actual_collection,
+        mu_in_value,
+        mu_ref_value;
+        nr_scenarios=1,
+        kwargs...,
+    )
 end
 
 const reference_input = reduce(vcat, (scenario.h_eq_xi for scenario in actual_collection))
 const reference_cache = Dict{Any,Float64}()
 
-function reference_cache_key(; kwargs...)
-    return Tuple((key, value) for (key, value) in pairs(kwargs))
+function reference_cache_key(mu_ref_value; kwargs...)
+    return (mu_ref_value, Tuple((key, value) for (key, value) in pairs(kwargs)))
 end
 
-function cached_reference_value(; kwargs...)
-    key = reference_cache_key(; kwargs...)
+function cached_reference_value(mu_ref_value; kwargs...)
+    key = reference_cache_key(mu_ref_value; kwargs...)
     return get!(reference_cache, key) do
         Float64(
             loss_object(
                 reference_input,
                 actual_collection,
-                mu_ref,
-                mu_ref;
+                mu_ref_value,
+                mu_ref_value;
                 nr_scenarios=1,
                 kwargs...,
             ),
@@ -331,57 +338,106 @@ function cached_reference_value(; kwargs...)
     end
 end
 
-function new_relative_display(demand; kwargs...)
-    evaluated = loss_object(demand, actual_collection, mu_in, mu_ref; nr_scenarios=1, kwargs...)
-    reference = cached_reference_value(; kwargs...)
+function new_relative_display(demand, mu_in_value, mu_ref_value; kwargs...)
+    evaluated = loss_object(
+        demand,
+        actual_collection,
+        mu_in_value,
+        mu_ref_value;
+        nr_scenarios=1,
+        kwargs...,
+    )
+    reference = cached_reference_value(mu_ref_value; kwargs...)
     return (evaluated - reference) / abs(reference)
 end
 
-function surrogate_solve(demand; kwargs...)
+function surrogate_solve(demand, mu_value; kwargs...)
     decoded = ContextualDFL.decode_scenario_collection(vector_decoder, demand; nr_scenarios=1)
-    return ContextualDFL.solve(solver, program, decoded...; mu_kw(mu_in)..., kwargs...)[1]
+    return ContextualDFL.solve(solver, program, decoded...; mu_kw(mu_value)..., kwargs...)[1]
 end
 
-function recourse_cost(z; kwargs...)
+function recourse_cost(z, mu_value; kwargs...)
     return ContextualDFL.cost_function(
         program,
         solver,
         z,
         decoded_actual...;
-        mu_kw(mu_ref)...,
+        mu_kw(mu_value)...,
         kwargs...,
     )
 end
 
-function recourse_gradient_z(z; kwargs...)
-    return Flux.gradient(z_value -> recourse_cost(z_value; kwargs...), z)[1]
+function recourse_gradient_z(z, mu_value; kwargs...)
+    return Flux.gradient(z_value -> recourse_cost(z_value, mu_value; kwargs...), z)[1]
 end
 
-function measure_suite(implementation; kwargs...)
-    cached_reference_value(; kwargs...)
-    measure(implementation, "forward_loss", () -> new_loss(predicted_demand; kwargs...))
+function measure_suite(
+    implementation;
+    mu_in_value=mu_in,
+    mu_ref_value=mu_ref,
+    loss_kwargs=(;),
+    solve_kwargs=loss_kwargs,
+)
+    cached_reference_value(mu_ref_value; loss_kwargs...)
+    measure(
+        implementation,
+        "forward_loss",
+        () -> new_loss(predicted_demand, mu_in_value, mu_ref_value; loss_kwargs...),
+    )
     measure(
         implementation,
         "gradient_demand",
-        () -> Flux.gradient(d -> new_loss(d; kwargs...), predicted_demand)[1],
+        () -> Flux.gradient(
+            d -> new_loss(d, mu_in_value, mu_ref_value; loss_kwargs...),
+            predicted_demand,
+        )[1],
     )
-    measure(implementation, "surrogate_solve", () -> surrogate_solve(predicted_demand; kwargs...))
-    measure(implementation, "recourse_cost", () -> recourse_cost(z_for_cost; kwargs...))
-    measure(implementation, "recourse_gradient_z", () -> recourse_gradient_z(z_for_cost; kwargs...))
+    measure(
+        implementation,
+        "surrogate_solve",
+        () -> surrogate_solve(predicted_demand, mu_in_value; solve_kwargs...),
+    )
+    measure(
+        implementation,
+        "recourse_cost",
+        () -> recourse_cost(z_for_cost, mu_ref_value; solve_kwargs...),
+    )
+    measure(
+        implementation,
+        "recourse_gradient_z",
+        () -> recourse_gradient_z(z_for_cost, mu_ref_value; solve_kwargs...),
+    )
     measure(
         implementation,
         "relative_display_loss",
-        () -> new_relative_display(predicted_demand; kwargs...),
+        () -> new_relative_display(
+            predicted_demand,
+            mu_in_value,
+            mu_ref_value;
+            loss_kwargs...,
+        ),
     )
 end
 
 measure_suite("new_default")
-measure_suite("new_tol_1e-9"; tol=1e-9)
+measure_suite("new_tol_1e-9"; loss_kwargs=(; tol=1e-9), solve_kwargs=(; tol=1e-9))
+measure_suite(
+    "new_rho_only_0.1";
+    mu_in_value=0.0,
+    mu_ref_value=0.0,
+    loss_kwargs=(; rho_in=0.1, rho_ref=0.1),
+    solve_kwargs=(; rho=0.1),
+)
+measure_suite(
+    "new_mu_rho_0.1";
+    loss_kwargs=(; rho_in=0.1, rho_ref=0.1),
+    solve_kwargs=(; rho=0.1),
+)
 
 profile_once(
     "new_default",
     "gradient_demand",
-    () -> Flux.gradient(d -> new_loss(d), predicted_demand)[1],
+    () -> Flux.gradient(d -> new_loss(d, mu_in, mu_ref), predicted_demand)[1],
 )
 """
 

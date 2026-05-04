@@ -1,0 +1,2 @@
+activation,batch_size,candidate_name,depth,epochs,final_epochs,learning_rate,mu_in_preview,mu_ref_preview,mu_schedule_kind,phase,replicate,rho,rho_in_preview,rho_ref_preview,run_id,run_rel_dir,seed,training_contexts
+gelu,1,delayed_log_2_0,2,1,0,0.001,1.0,1.0,delayed_log_2_0,mu_schedule,1,0.0,0.0,0.0,smoke_mu_schedule_delayed_log_2_0_rep01,runs/smoke/mu_schedule/delayed_log_2_0/rep01,94001,2

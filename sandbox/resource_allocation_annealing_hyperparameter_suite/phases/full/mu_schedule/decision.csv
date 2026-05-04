@@ -1,0 +1,2 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+warmup20_geometric,0,0.12314524303825572,0.062580059882546,0.03767438360218643,6,6,0.030879394994664088

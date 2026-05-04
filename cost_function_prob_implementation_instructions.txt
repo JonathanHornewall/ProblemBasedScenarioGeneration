@@ -1,0 +1,544 @@
+Yes: **SSN and transshipment are both good**, but they are not equally convenient.
+
+My practical ranking is:
+
+[
+\boxed{\text{Homem-de-Mello resource allocation} ;<; \text{transship} ;\ll; \text{SSN}/\texttt{ssn_rc}}
+]
+
+where “(<)” means “easier to get running.”
+
+Your own draft specifically wants one random-(h), one random-(q), and eventually one random-(W) experiment; these two are attractive because they cover the random-(q) and mixed (h+q) cases in a literature-backed way. 
+
+## 1. Where to find the data
+
+Both are in the public **USC3DLAB/SD** repository.
+
+The repository explicitly says it accepts **SMPS** input with three components: a core file for the single-scenario optimization problem, a time file for the stage decomposition, and a stochastic file for the random data. It also says version 2.0 supports randomness in RHS, technology matrix, and cost coefficient vector. ([GitHub][1])
+
+### Transshipment
+
+Use:
+
+```text
+USC3DLAB/SD/spInput/transship/transship.cor
+USC3DLAB/SD/spInput/transship/transship.tim
+USC3DLAB/SD/spInput/transship/transship.sto
+```
+
+I confirmed the files exist in the GitHub source: `transship.tim`, `transship.sto`, and `transship.cor`.   
+
+The repository file listing also includes `transship` in `spInput`. ([GitHub][2])
+
+### SSN / `ssn_rc`
+
+Use the random-cost SSN variants:
+
+```text
+USC3DLAB/SD/spInput/ssn_rc1/ssn_rc1.cor
+USC3DLAB/SD/spInput/ssn_rc1/ssn_rc1.tim
+USC3DLAB/SD/spInput/ssn_rc1/ssn_rc1.sto
+
+USC3DLAB/SD/spInput/ssn_rc2/ssn_rc2.cor
+USC3DLAB/SD/spInput/ssn_rc2/ssn_rc2.tim
+USC3DLAB/SD/spInput/ssn_rc2/ssn_rc2.sto
+
+...
+```
+
+The repository contains `ssn_rc1`, `ssn_rc2`, `ssn_rc3`, and `ssn_rc4`. ([GitHub][2]) I also confirmed the actual files for `ssn_rc1`, including `.cor`, `.tim`, and `.sto`, and similarly for the other variants.   
+
+The paper by Gangammanavar, Liu, and Sen is the main reference. It introduces two-stage SLP benchmarks with random second-stage cost coefficients and explicitly reports dimensions for `ssn_rcG` and `transship`. ([PubsOnline][3])
+
+## 2. Are the implementation details clear enough?
+
+### Transshipment: yes, mostly
+
+For transshipment, the implementation is relatively clear because the instance is small and the stochastic file is simple.
+
+The `.tim` file gives the stage split:
+
+```text
+Stage 0 starts at variable orderUp(0), row obj
+Stage 1 starts at variable begEnd(0), row initInv(0)
+```
+
+That is explicit in `transship.tim`. 
+
+The `.sto` file is also very simple. It uses independent normal randomness:
+
+```text
+INDEP NORMAL
+RHS dummy(0), ..., dummy(6)
+objective coefficients repDem(0), ..., repDem(6)
+```
+
+with means and standard deviations listed directly in the file. 
+
+So for transship, an AI agent can do the following:
+
+1. Parse `transship.cor` as an MPS/core file.
+2. Use `transship.tim` to split variables/rows into first stage and second stage.
+3. Use `transship.sto` to identify:
+
+   * random RHS entries: `dummy(0)`–`dummy(6)`, i.e. random (h);
+   * random objective entries: `repDem(0)`–`repDem(6)`, i.e. random (q).
+4. Convert the core into your standard block form:
+   [
+   A z = b,\qquad W y = h - Tz.
+   ]
+5. For contextualization, let the means of the normal distributions depend on (x), or sample base scenarios and define a context-dependent rescaling.
+
+The main annoyance is that the stochastic file uses **normal distributions** for both demand and costs. Since your neural net should not output negative costs, I would not copy the normal (q)-law blindly for generated scenarios. For training the scenario generator, use something like
+
+[
+q(x)=q_{\min}+\operatorname{softplus}(NN(x)).
+]
+
+For evaluation, you can either use the original normal distribution with truncation, or replace the random-cost law by a lognormal law calibrated to the same mean and standard deviation.
+
+### SSN / `ssn_rc`: clear, but more engineering
+
+SSN is also provided in a clean SMPS format, but it is much larger and more annoying.
+
+The `.tim` file gives a very clear stage split:
+
+```text
+Stage00 starts at variable capAdd[0], row budget
+Stage01 starts at variable flow[0][0], row demand[0]
+```
+
+That is explicit in `ssn_rc1.tim`. 
+
+The `.sto` file uses independent discrete randomness. The beginning of `ssn_rc1.sto` shows random RHS entries such as `demand[0]`, `demand[1]`, etc., each with discrete values and probabilities.  The random-cost paper reports that the `ssn_rcG` family has 86 random RHS entries and (G) random objective entries. ([Harsha Gangammanavar][4])
+
+Implementation steps are the same as for transship, but with more care:
+
+1. Parse `ssn_rcG.cor`.
+2. Use `ssn_rcG.tim` to split first-stage variables/rows from second-stage variables/rows.
+3. Parse `ssn_rcG.sto`.
+4. Treat random `RHS demand[...]` entries as (h(\xi)).
+5. Treat random objective entries as (q(\xi)).
+6. Start with `ssn_rc1`, not `ssn_rc4`.
+
+The single-scenario dimensions from Gangammanavar–Liu–Sen are:
+
+[
+n_1=89,\quad m_1=1,\qquad n_2=709,\quad m_2=178.
+]
+
+So a one-scenario solve is about
+
+[
+\boxed{798\text{ variables},\quad 179\text{ structural constraints}.}
+]
+
+That is not large for Gurobi/HiGHS, but it is meaningfully larger for repeated differentiable log-barrier solves.
+
+## 3. Which one is harder?
+
+### Transshipment is much easier
+
+Transship is probably the best near-deadline benchmark.
+
+Single-scenario size:
+
+[
+n_1=7,\quad m_1=0,\qquad n_2=77,\quad m_2=35.
+]
+
+So:
+
+[
+\boxed{84\text{ variables},\quad 35\text{ constraints}.}
+]
+
+The stochastic file is tiny, the number of random components is small, and the model is interpretable. The only real work is writing or reusing an SMPS parser.
+
+Compared to Homem-de-Mello’s resource allocation problem, transship is harder only because the data come in SMPS/MPS format rather than a clean hand-written generator. Computationally, it is still easy.
+
+### SSN is significantly harder
+
+SSN is harder for three reasons.
+
+First, it is roughly an order of magnitude larger:
+
+[
+\text{transship: } 84 \text{ vars}, 35 \text{ rows},
+]
+
+[
+\text{SSN: } 798 \text{ vars}, 179 \text{ rows}.
+]
+
+Second, the stochastic file is much larger. It has many independent discrete RHS variables, and the full implied support can be enormous. The paper’s table reports the support magnitude for `ssn_rcG` as (10^{70}), meaning that you should not think in terms of enumerating scenarios. ([Harsha Gangammanavar][4])
+
+Third, debugging is harder because SSN is a network-flow model with many indexed variables and constraints. If something is misparsed, it will be less obvious than in transship.
+
+Compared to Homem-de-Mello’s resource allocation problem, SSN is much harder:
+
+| Benchmark                          |    Data setup | Model size | Debuggability | Near-deadline risk |
+| ---------------------------------- | ------------: | ---------: | ------------: | -----------------: |
+| Homem-de-Mello resource allocation |     Very easy |      Small |     Very high |                Low |
+| Transship                          |      Moderate |      Small |   Medium–high |       Low–moderate |
+| SSN / `ssn_rc1`                    | Moderate–high |     Medium |        Medium |      Moderate–high |
+
+## My implementation recommendation
+
+Use **transship first**.
+
+It gives you the same main scientific benefit as SSN for your paper: random (h) and random (q), with feasibility-safe (q)-learning. It is small enough that you can debug the entire pipeline quickly.
+
+Then add **SSN** only after transship is working. Start with `ssn_rc1`. Do not start with `ssn_rc4`.
+
+A good plan for the AI agent would be:
+
+```text
+Task 1:
+Clone https://github.com/USC3DLAB/SD.
+
+Task 2:
+Implement a minimal SMPS reader for:
+  - .cor MPS core file,
+  - .tim time/stage file,
+  - .sto stochastic file with INDEP NORMAL and INDEP DISCRETE.
+
+Task 3:
+First target:
+  spInput/transship/transship.cor
+  spInput/transship/transship.tim
+  spInput/transship/transship.sto
+
+Task 4:
+Return arrays:
+  A_eq, A_ineq, b_eq, b_ineq, c,
+  W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q.
+
+Task 5:
+Validate by checking dimensions:
+  transship: n1=7, n2=77, m2=35.
+
+Task 6:
+Only after transship works, repeat for:
+  spInput/ssn_rc1/ssn_rc1.cor
+  spInput/ssn_rc1/ssn_rc1.tim
+  spInput/ssn_rc1/ssn_rc1.sto.
+
+Task 7:
+Validate dimensions:
+  ssn_rc1: n1=89, m1=1, n2=709, m2=178.
+```
+
+My honest assessment: **transship is realistic to add quickly; SSN is realistic only if your SMPS parser works cleanly.** If you have to hand-reconstruct the model from the paper, do transship and skip SSN for this submission.
+
+[1]: https://github.com/USC3DLAB/SD "GitHub - USC3DLAB/SD · GitHub"
+[2]: https://github.com/USC3DLAB/SD/tree/master/spInput "SD/spInput at master · USC3DLAB/SD · GitHub"
+[3]: https://pubsonline.informs.org/doi/10.1287/ijoc.2019.0929?utm_source=chatgpt.com "Stochastic Decomposition for Two-Stage Stochastic Linear Programs with Random Cost Coefficients | INFORMS Journal on Computing"
+[4]: https://gjharsha.github.io/papers_preprints/Gangammanavar_Liu_Sen_RandomCostSD_IJC2021.pdf?utm_source=chatgpt.com "Stochastic Decomposition for Two-stage Stochastic Linear"
+
+
+
+"User: is there an easy way to verify this?"
+
+
+Yes. The easiest robust verification is:
+
+[
+\boxed{\text{parse SMPS} \rightarrow \text{build one deterministic scenario} \rightarrow \text{solve independently} \rightarrow \text{compare rows, objective, and dimensions}.}
+]
+
+Do **not** first validate through the neural-network training loop. Validate the stochastic LP instance itself.
+
+## 1. First check the stage split
+
+For both problems, the `.tim` file gives the split between first-stage and second-stage variables/rows.
+
+For **transship**, the `.tim` file says:
+
+```text
+Stage 0 starts at variable orderUp(0), row obj
+Stage 1 starts at variable begEnd(0), row initInv(0)
+```
+
+This is explicit in `transship.tim`. 
+
+For **SSN**, the `.tim` file says:
+
+```text
+Stage00 starts at variable capAdd[0], row budget
+Stage01 starts at variable flow[0][0], row demand[0]
+```
+
+This is explicit in `ssn_rc1.tim`. 
+
+So the agent should output a diagnostic table:
+
+```text
+First-stage variables:
+  transship: orderUp(0), ..., orderUp(6)
+  ssn_rc1:   capAdd[0], ..., capAdd[88]
+
+Second-stage variables:
+  transship: begEnd(0), ...
+  ssn_rc1:   flow[0][0], ...
+
+First-stage rows:
+  transship: none except objective row
+  ssn_rc1:   budget
+
+Second-stage rows:
+  transship: initInv(0), ...
+  ssn_rc1:   demand[0], ...
+```
+
+If this split is wrong, everything downstream is wrong.
+
+## 2. Check known dimensions
+
+The validator should assert the expected dimensions.
+
+For **transship**:
+
+[
+n_1=7,\qquad n_2=77,\qquad m_2=35.
+]
+
+So one scenario should produce roughly
+
+[
+\boxed{84\text{ variables},\quad 35\text{ second-stage rows}.}
+]
+
+For **SSN / `ssn_rc1`**:
+
+[
+n_1=89,\qquad m_1=1,\qquad n_2=709,\qquad m_2=178.
+]
+
+So one scenario should produce roughly
+
+[
+\boxed{798\text{ variables},\quad 179\text{ total structural rows}.}
+]
+
+This should be a hard unit test. If the extracted arrays do not have these dimensions, stop immediately.
+
+## 3. Check that the stochastic entries hit the right blocks
+
+For **transship**, the `.sto` file is very clear. It declares independent normal randomness. The random RHS entries are `dummy(0)` through `dummy(6)`, and the random objective entries are `repDem(0)` through `repDem(6)`. 
+
+So the validator should check:
+
+```text
+Random h entries:
+  dummy(0), ..., dummy(6)
+
+Random q entries:
+  repDem(0), ..., repDem(6)
+```
+
+For **SSN**, the `.sto` file begins with independent discrete RHS entries `demand[0]`, `demand[1]`, etc., with values and probabilities.  The validator should check that all stochastic `RHS demand[...]` entries land in the second-stage RHS vector (h), not in (b), (T), or (W).
+
+This is important because a parser bug can easily put stochastic RHS entries into the wrong stage.
+
+## 4. Solve a deterministic mean-scenario version
+
+For each instance, build the deterministic scenario obtained by replacing every random component by its mean.
+
+Then solve it in two independent ways:
+
+1. Your internal block formulation:
+
+[
+\min_{z,y}\ c^\top z+q^\top y
+]
+
+subject to
+
+[
+Az=b,
+\qquad
+Wy=h-Tz.
+]
+
+2. A direct deterministic LP written out from the parsed `.cor` file after inserting the mean stochastic values.
+
+The two solves should agree on:
+
+```text
+objective value,
+first-stage decision z,
+row residuals,
+bound residuals.
+```
+
+Use tolerances like:
+
+```text
+objective difference <= 1e-6 * max(1, abs(obj))
+max equality residual <= 1e-7
+max inequality violation <= 1e-7
+```
+
+This is the single most useful verification.
+
+## 5. Scenario perturbation tests
+
+After the mean-scenario test works, test that changing one stochastic component affects exactly what it should.
+
+For transship:
+
+```text
+Perturb dummy(3) by +1.
+Expected:
+  exactly one component of h changes;
+  A, b, W, T, c, q unchanged.
+
+Perturb repDem(3) by +1.
+Expected:
+  exactly one component of q changes;
+  A, b, W, T, h unchanged.
+```
+
+For SSN:
+
+```text
+Perturb demand[17] by +1.
+Expected:
+  exactly one component of h changes;
+  all matrices unchanged.
+
+Perturb a random objective coefficient.
+Expected:
+  exactly one component of q changes;
+  all matrices and RHS unchanged.
+```
+
+This catches many subtle SMPS parsing errors.
+
+## 6. Feasibility smoke test
+
+Sample, say, (100) scenarios from the parsed stochastic distribution. For each sampled scenario:
+
+1. Solve the one-scenario LP.
+2. Check that the solver returns optimal.
+3. Check row residuals manually:
+
+[
+|Az-b|*\infty,
+\qquad
+|Wy+Tz-h|*\infty.
+]
+
+4. Check nonnegativity/bounds manually.
+
+For transship this should be very stable. For SSN this is still reasonable, but you may see more scaling issues.
+
+## 7. Objective reconstruction test
+
+After solving, recompute the objective manually from extracted arrays:
+
+[
+c^\top z+q^\top y.
+]
+
+Compare this with the solver-reported objective. If these differ, the likely causes are:
+
+* objective constant mishandled,
+* objective row parsed incorrectly,
+* stage split included/excluded wrong variables,
+* stochastic objective entries added to the wrong variables,
+* sign convention mismatch.
+
+This test is essential for `q`-learning experiments.
+
+## 8. Gradient sanity checks before training
+
+Since your paper differentiates through the generated scenario, add finite-difference tests before using the neural net.
+
+For a generated scenario (\xi'=(W,T,h',q')), solve for (z_\mu^*(\xi')). Then test:
+
+[
+\frac{z_\mu^*(h'+\varepsilon e_j,q')-z_\mu^*(h',q')}{\varepsilon}
+]
+
+against your implicit derivative with respect to (h_j), and similarly for (q_j).
+
+Use transship first. SSN is too large for first debugging.
+
+A good test is:
+
+```text
+Pick 5 random h components.
+Pick 5 random q components.
+Compare implicit derivative against centered finite difference.
+Tolerance: relative error around 1e-4 to 1e-3 is fine.
+```
+
+If this fails on transship, do not move to SSN.
+
+## 9. Regression artifacts the agent should print
+
+Ask the agent to produce a validation report like this:
+
+```text
+Instance: transship
+
+Files:
+  transship.cor: loaded
+  transship.tim: loaded
+  transship.sto: loaded
+
+Dimensions:
+  n1 = 7
+  n2 = 77
+  m1 = 0
+  m2 = 35
+
+Randomness:
+  random RHS entries = 7
+  random objective entries = 7
+  stochastic law = INDEP NORMAL
+
+Mean-scenario solve:
+  status = OPTIMAL
+  objective = ...
+  max first-stage residual = ...
+  max second-stage residual = ...
+  min variable value = ...
+
+Perturbation tests:
+  dummy(0) affects h only: PASS
+  repDem(0) affects q only: PASS
+
+Finite-difference derivative checks:
+  dz/dh: PASS
+  dz/dq: PASS
+```
+
+And similarly for `ssn_rc1`.
+
+## Bottom line
+
+For **transship**, validation should be easy. The file structure is small, the stochastic entries are few, and wrong parsing should show up quickly.
+
+For **SSN**, validation is still possible, but you need stricter diagnostics because the instance is larger and less interpretable.
+
+Compared with Homem-de-Mello’s resource allocation problem:
+
+```text
+Homem-de-Mello resource allocation:
+  easiest; generated directly from formulas.
+
+Transship:
+  slightly harder; requires SMPS parsing, but small and easy to validate.
+
+SSN:
+  much harder; same parsing issue, but larger and harder to debug.
+```
+
+So the best workflow is:
+
+[
+\boxed{\text{validate parser on transship first, then reuse exactly the same validation suite on ssn_rc1}.}
+]

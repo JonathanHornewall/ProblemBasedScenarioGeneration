@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+silu,0.12314524303825572,1,warmup20_geometric,3,130,,10,1777928492302,805.7162362224142,907.4457473378692,101.72951111545474,0.12314524303825572,warmup20_geometric,mu_schedule,4,0.0,full_mu_schedule_warmup20_geometric_rep04,94004,1777928222874,ok,261.163405356,30.0

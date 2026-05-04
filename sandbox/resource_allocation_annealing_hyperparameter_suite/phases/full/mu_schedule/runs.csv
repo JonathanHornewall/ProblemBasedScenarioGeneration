@@ -1,0 +1,31 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,1,,full_mu_schedule_linear_rep01,,,missing,,
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,2,,full_mu_schedule_linear_rep02,,,missing,,
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,3,,full_mu_schedule_linear_rep03,,,missing,,
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,4,,full_mu_schedule_linear_rep04,,,missing,,
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,5,,full_mu_schedule_linear_rep05,,,missing,,
+,Inf,,linear,,,missing run_result.jls,,,,,,Inf,,mu_schedule,6,,full_mu_schedule_linear_rep06,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,1,,full_mu_schedule_geometric_rep01,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,2,,full_mu_schedule_geometric_rep02,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,3,,full_mu_schedule_geometric_rep03,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,4,,full_mu_schedule_geometric_rep04,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,5,,full_mu_schedule_geometric_rep05,,,missing,,
+,Inf,,geometric,,,missing run_result.jls,,,,,,Inf,,mu_schedule,6,,full_mu_schedule_geometric_rep06,,,missing,,
+,Inf,,delayed_log_1_5,,,missing run_result.jls,,,,,,Inf,,mu_schedule,1,,full_mu_schedule_delayed_log_1_5_rep01,,,missing,,
+,Inf,,delayed_log_1_5,,,missing run_result.jls,,,,,,Inf,,mu_schedule,2,,full_mu_schedule_delayed_log_1_5_rep02,,,missing,,
+,Inf,,delayed_log_1_5,,,missing run_result.jls,,,,,,Inf,,mu_schedule,3,,full_mu_schedule_delayed_log_1_5_rep03,,,missing,,
+silu,0.042011381753212375,1,delayed_log_1_5,3,130,,10,1777927989250,805.7162362224142,839.3315968629651,33.61536064055049,0.042011381753212375,delayed_log_1_5,mu_schedule,4,0.0,full_mu_schedule_delayed_log_1_5_rep04,94004,1777923137803,ok,290.47949944,30.0
+silu,0.13000084236571127,1,delayed_log_1_5,3,130,,10,1777928082182,805.7162362224142,913.1956056663614,107.4793694439468,0.13000084236571127,delayed_log_1_5,mu_schedule,5,0.0,full_mu_schedule_delayed_log_1_5_rep05,94005,1777927754134,ok,318.877886919,30.0
+silu,0.05410527418902945,1,delayed_log_1_5,3,130,,10,1777928142022,805.7162362224142,851.6378261608884,45.92158993847397,0.05410527418902945,delayed_log_1_5,mu_schedule,6,0.0,full_mu_schedule_delayed_log_1_5_rep06,94006,1777927817795,ok,315.045934023,30.0
+silu,0.11833833629480389,1,delayed_log_2_0,3,130,,10,1777928163709,805.7162362224142,902.4106629347377,96.69442671232319,0.11833833629480389,delayed_log_2_0,mu_schedule,1,0.0,full_mu_schedule_delayed_log_2_0_rep01,94001,1777927841926,ok,313.214702537,30.0
+silu,0.09032772599032939,1,delayed_log_2_0,3,130,,10,1777928178894,805.7162362224142,871.2980561295112,65.5818199070965,0.09032772599032939,delayed_log_2_0,mu_schedule,2,0.0,full_mu_schedule_delayed_log_2_0_rep02,94002,1777927842932,ok,326.208216128,30.0
+silu,0.05784305474904312,1,delayed_log_2_0,3,130,,10,1777928216626,805.7162362224142,853.2578036197301,47.54156739731569,0.05784305474904312,delayed_log_2_0,mu_schedule,3,0.0,full_mu_schedule_delayed_log_2_0_rep03,94003,1777927884373,ok,322.868668419,30.0
+silu,0.03622312131862046,1,delayed_log_2_0,3,130,,10,1777928252497,805.7162362224142,835.3294261179047,29.613189895490418,0.03622312131862046,delayed_log_2_0,mu_schedule,4,0.0,full_mu_schedule_delayed_log_2_0_rep04,94004,1777927926241,ok,317.875041343,30.0
+silu,0.16340131209443548,1,delayed_log_2_0,3,130,,10,1777928275856,805.7162362224142,941.6505886901725,135.93435246775792,0.16340131209443548,delayed_log_2_0,mu_schedule,5,0.0,full_mu_schedule_delayed_log_2_0_rep05,94005,1777927946514,ok,320.234925706,30.0
+silu,0.06178775524802374,1,delayed_log_2_0,3,130,,10,1777928353337,805.7162362224142,857.3443242480191,51.62808802560453,0.06178775524802374,delayed_log_2_0,mu_schedule,6,0.0,full_mu_schedule_delayed_log_2_0_rep06,94006,1777928031987,ok,312.061118045,30.0
+silu,0.03767438360218643,1,warmup20_geometric,3,130,,10,1777928423957,805.7162362224142,835.3438205471618,29.627584324747588,0.03767438360218643,warmup20_geometric,mu_schedule,1,0.0,full_mu_schedule_warmup20_geometric_rep01,94001,1777928124213,ok,290.967293757,30.0
+silu,0.05900333160092435,1,warmup20_geometric,3,130,,10,1777928468240,805.7162362224142,853.0113969064809,47.29516068406625,0.05900333160092435,warmup20_geometric,mu_schedule,2,0.0,full_mu_schedule_warmup20_geometric_rep02,94002,1777928187106,ok,272.747589227,30.0
+silu,0.04325613510857185,1,warmup20_geometric,3,130,,10,1777928484071,805.7162362224142,842.1426826441234,36.426446421709066,0.04325613510857185,warmup20_geometric,mu_schedule,3,0.0,full_mu_schedule_warmup20_geometric_rep03,94003,1777928209896,ok,265.619827996,30.0
+silu,0.12314524303825572,1,warmup20_geometric,3,130,,10,1777928492302,805.7162362224142,907.4457473378692,101.72951111545474,0.12314524303825572,warmup20_geometric,mu_schedule,4,0.0,full_mu_schedule_warmup20_geometric_rep04,94004,1777928222874,ok,261.163405356,30.0
+silu,0.05861411854834615,1,warmup20_geometric,3,130,,10,1777928505621,805.7162362224142,855.0915189149032,49.37528269248872,0.05861411854834615,warmup20_geometric,mu_schedule,5,0.0,full_mu_schedule_warmup20_geometric_rep05,94005,1777928259768,ok,238.188539662,30.0
+silu,0.05378714739699152,1,warmup20_geometric,3,130,,10,1777928513941,805.7162362224142,851.9138286547859,46.197592432371415,0.05378714739699152,warmup20_geometric,mu_schedule,6,0.0,full_mu_schedule_warmup20_geometric_rep06,94006,1777928294701,ok,212.196938886,30.0

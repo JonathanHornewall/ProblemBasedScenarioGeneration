@@ -1,0 +1,9 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+depth1_gelu,6,NaN,NaN,NaN,0,6,NaN
+depth1_silu,6,NaN,NaN,NaN,0,6,NaN
+depth2_gelu,6,NaN,NaN,NaN,0,6,NaN
+depth2_silu,6,NaN,NaN,NaN,0,6,NaN
+depth3_gelu,6,NaN,NaN,NaN,0,6,NaN
+depth3_silu,6,NaN,NaN,NaN,0,6,NaN
+depth4_gelu,6,NaN,NaN,NaN,0,6,NaN
+depth4_silu,6,NaN,NaN,NaN,0,6,NaN

@@ -1,0 +1,3 @@
+candidate_name,optimal_split_values,optimal_value,phase,policy_split_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+batch16_rho_0p0,647.0645243955232,647.0645243955232,batch_size,1082.884277398718,1082.884277398718,435.8197530031948,0.6735336841566616,1,smoke_batch_size_batch16_rho_0p0_rep01,1
+batch16_rho_0p0,1130.6773604772934,1130.6773604772934,batch_size,3425.8805211488834,3425.8805211488834,2295.20316067159,2.0299364265175655,1,smoke_batch_size_batch16_rho_0p0_rep01,2

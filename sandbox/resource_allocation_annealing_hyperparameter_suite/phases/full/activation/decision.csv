@@ -1,0 +1,2 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+silu,0,0.25259366395512856,0.08500243605610443,0.024116869593447724,6,6,0.08333467988998576

@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+silu,1.351721069945245,1,silu,2,1,,0,1777862835080,888.8709424364083,2254.3713952743374,1365.500452837929,1.351721069945245,geometric,activation,1,0.0,smoke_activation_silu_rep01,94001,1777862775882,ok,4.317765179,2.0

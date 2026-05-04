@@ -1,0 +1,2 @@
+activation,batch_size,candidate_name,depth,display_loss,epoch,epoch_seconds,iterations,mu,mu_in,mu_ref,mu_schedule_kind,phase,replicate,rho,rho_in,rho_ref,run_id,seed,training_loss
+gelu,16,batch16_rho_0p0,2,2100.7027451651193,1,60.126676082611084,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.0,0.0,0.0,smoke_batch_size_batch16_rho_0p0_rep01,94001,2100.7027451651193

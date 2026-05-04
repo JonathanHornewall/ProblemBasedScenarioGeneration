@@ -1,0 +1,6 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+delayed_log_1_5,3,0.13000084236571127,0.07537249943598436,0.042011381753212375,3,6,0.04769441735673223
+delayed_log_2_0,0,0.16340131209443548,0.08798688428254269,0.03622312131862046,6,6,0.04666595778219039
+geometric,6,NaN,NaN,NaN,0,6,NaN
+linear,6,NaN,NaN,NaN,0,6,NaN
+warmup20_geometric,0,0.12314524303825572,0.062580059882546,0.03767438360218643,6,6,0.030879394994664088

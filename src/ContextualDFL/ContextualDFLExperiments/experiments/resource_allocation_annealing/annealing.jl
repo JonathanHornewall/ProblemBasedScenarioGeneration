@@ -8,6 +8,7 @@ using ContextualDFLExperiments
 
 import Random
 import Serialization
+import SparseArrays
 import Statistics
 
 const Flux = ContextualDFL.Flux
@@ -99,6 +100,298 @@ function normalized_gap_ucb_percent(policy_split_values, optimal_split_values)
     return 100 * ucb_gap / max(abs(optimal_mean), eps(Float64))
 end
 
+function testing_split_ranges(data_point, split_count)
+    scenario_count = length(data_point.scenario_parameters)
+    scenario_count % split_count == 0 ||
+        throw(ArgumentError(
+            "scenario count $scenario_count is not divisible by splits=$split_count.",
+        ))
+
+    split_size = scenario_count ÷ split_count
+    return [
+        ((split_index - 1) * split_size + 1):(split_index * split_size) for
+        split_index in 1:split_count
+    ]
+end
+
+function write_testing_partial(
+    path,
+    rows,
+    testing_count,
+    testing_splits,
+    csv_path;
+    active_context_index=nothing,
+    optimal_split_values=Float64[],
+    policy_split_values=Float64[],
+)
+    Serialization.serialize(
+        path,
+        (;
+            ucb_rows=rows,
+            completed_contexts=length(rows),
+            testing_context_limit=testing_count,
+            testing_splits=testing_splits,
+            csv_path=csv_path,
+            active_context_index=active_context_index,
+            optimal_split_values=Float64.(collect(optimal_split_values)),
+            policy_split_values=Float64.(collect(policy_split_values)),
+        ),
+    )
+end
+
+function resource_allocation_h_eq_matrix(problem, scenario_parameters)
+    scenario = base_scenario(problem)
+    resource_count = size(scenario.T_eq, 2)
+    demand_count = length(scenario.h_eq) - resource_count
+    h_eq_array = zeros(Float64, length(scenario.h_eq), length(scenario_parameters))
+
+    for (index, scenario_parameter) in enumerate(scenario_parameters)
+        length(scenario_parameter.h_eq_xi) == demand_count ||
+            throw(DimensionMismatch("scenario demand vector must have length $demand_count."))
+        h_eq_array[(resource_count + 1):end, index] = scenario_parameter.h_eq_xi
+    end
+
+    return h_eq_array
+end
+
+function resource_allocation_h_eq_vector(problem, scenario_parameter)
+    h_eq_array = resource_allocation_h_eq_matrix(problem, (scenario_parameter,))
+    return vec(h_eq_array)
+end
+
+function resource_allocation_extensive_lp(problem, scenario_parameters)
+    program = stochastic_program(problem)
+    first_stage_lp = program.first_stage_lp
+    scenario = base_scenario(problem)
+    h_eq_array = resource_allocation_h_eq_matrix(problem, scenario_parameters)
+
+    split_count = size(h_eq_array, 2)
+    z_count = length(first_stage_lp.c)
+    y_count = length(scenario.q)
+    variable_count = z_count + split_count * y_count
+    first_ineq_count = length(first_stage_lp.b_ineq)
+    recourse_eq_count = size(scenario.W_eq, 1)
+    recourse_ineq_count = size(scenario.W_ineq, 1)
+
+    A_eq = SparseArrays.spzeros(Float64, split_count * recourse_eq_count, variable_count)
+    A_ineq = SparseArrays.spzeros(
+        Float64,
+        first_ineq_count + split_count * recourse_ineq_count,
+        variable_count,
+    )
+    b_eq = zeros(Float64, split_count * recourse_eq_count)
+    b_ineq = zeros(Float64, first_ineq_count + split_count * recourse_ineq_count)
+    c = zeros(Float64, variable_count)
+
+    z_cols = 1:z_count
+    c[z_cols] = first_stage_lp.c
+    if first_ineq_count > 0
+        A_ineq[1:first_ineq_count, z_cols] = SparseArrays.sparse(first_stage_lp.A_ineq)
+        b_ineq[1:first_ineq_count] = first_stage_lp.b_ineq
+    end
+
+    W_eq = SparseArrays.sparse(scenario.W_eq)
+    W_ineq = SparseArrays.sparse(scenario.W_ineq)
+    T_eq = SparseArrays.sparse(scenario.T_eq)
+    T_ineq = SparseArrays.sparse(scenario.T_ineq)
+    probability = 1.0 / split_count
+
+    for split_index in 1:split_count
+        y_cols = (z_count + (split_index - 1) * y_count + 1):(z_count + split_index * y_count)
+        eq_rows = ((split_index - 1) * recourse_eq_count + 1):(split_index * recourse_eq_count)
+        ineq_rows = (
+            first_ineq_count + (split_index - 1) * recourse_ineq_count + 1
+        ):(first_ineq_count + split_index * recourse_ineq_count)
+
+        A_eq[eq_rows, z_cols] = T_eq
+        A_eq[eq_rows, y_cols] = W_eq
+        b_eq[eq_rows] = view(h_eq_array, :, split_index)
+
+        A_ineq[ineq_rows, z_cols] = T_ineq
+        A_ineq[ineq_rows, y_cols] = W_ineq
+        b_ineq[ineq_rows] = scenario.h_ineq
+
+        c[y_cols] = probability .* scenario.q
+    end
+
+    return ContextualDFL.LP(A_eq, A_ineq, b_eq, b_ineq, c)
+end
+
+function resource_allocation_extensive_rho(problem, scenario_parameters, rho)
+    rho isa Number ||
+        throw(ArgumentError("resource-allocation SAA testing expects scalar rho."))
+    rho >= 0 || throw(ArgumentError("rho must be non-negative."))
+
+    program = stochastic_program(problem)
+    scenario = base_scenario(problem)
+    split_count = length(scenario_parameters)
+    z_count = length(program.first_stage_lp.c)
+    y_count = length(scenario.q)
+    probability = 1.0 / split_count
+
+    rho_vector = zeros(Float64, z_count + split_count * y_count)
+    rho_vector[1:z_count] .= rho
+    for split_index in 1:split_count
+        y_cols = (z_count + (split_index - 1) * y_count + 1):(z_count + split_index * y_count)
+        rho_vector[y_cols] .= probability * rho
+    end
+    return rho_vector
+end
+
+function resource_allocation_optimal_split_value(problem, solver, scenario_parameters; mu, rho)
+    iszero(mu) || throw(ArgumentError("resource-allocation SAA testing expects mu=0."))
+
+    lp = resource_allocation_extensive_lp(problem, scenario_parameters)
+    result = ContextualDFL.solve(
+        solver,
+        lp;
+        μ=mu,
+        ρ=resource_allocation_extensive_rho(problem, scenario_parameters, rho),
+    )
+    return result.objective_value
+end
+
+function resource_allocation_policy_split_value(problem, solver, z, scenario_parameters; mu, rho)
+    iszero(mu) || throw(ArgumentError("resource-allocation SAA testing expects mu=0."))
+    rho isa Number ||
+        throw(ArgumentError("resource-allocation SAA testing expects scalar rho."))
+    rho >= 0 || throw(ArgumentError("rho must be non-negative."))
+
+    program = stochastic_program(problem)
+    scenario = base_scenario(problem)
+    probability = 1.0 / length(scenario_parameters)
+    value = sum(program.first_stage_lp.c .* z) + 0.5 * rho * sum(abs2, z)
+
+    for scenario_parameter in scenario_parameters
+        h_eq = resource_allocation_h_eq_vector(problem, scenario_parameter)
+        value += probability * ContextualDFL.G_hat(
+            solver,
+            z,
+            scenario.W_eq,
+            scenario.W_ineq,
+            scenario.T_eq,
+            scenario.T_ineq,
+            h_eq,
+            scenario.h_ineq,
+            scenario.q;
+            μ=mu,
+            ρ=rho,
+        )
+    end
+
+    return value
+end
+
+function solve_data_point_to_optimality_with_progress(
+    data_point,
+    problem,
+    solver;
+    mu,
+    rho=0,
+    splits,
+    context_index,
+    testing_count,
+    partial_path,
+    rows,
+    csv_path,
+    resume_values=Float64[],
+)
+    split_ranges = testing_split_ranges(data_point, splits)
+    objective_values = Float64.(collect(resume_values))
+
+    for split_index in (length(objective_values) + 1):splits
+        println("Testing context $(context_index)/$(testing_count): optimal split $(split_index)/$(splits)...")
+        scenario_range = split_ranges[split_index]
+        objective_value = resource_allocation_optimal_split_value(
+            problem,
+            solver,
+            view(data_point.scenario_parameters, scenario_range);
+            mu=mu,
+            rho=rho,
+        )
+
+        push!(objective_values, objective_value)
+        write_testing_partial(
+            partial_path,
+            rows,
+            testing_count,
+            splits,
+            csv_path;
+            active_context_index=context_index,
+            optimal_split_values=objective_values,
+        )
+    end
+
+    return objective_values
+end
+
+function evaluate_policy_on_data_point_with_progress(
+    policy,
+    data_point,
+    problem,
+    solver;
+    mu,
+    rho=0,
+    splits,
+    context_index,
+    testing_count,
+    partial_path,
+    rows,
+    csv_path,
+    optimal_split_values,
+    resume_values=Float64[],
+)
+    split_ranges = testing_split_ranges(data_point, splits)
+    policy_split_values = Float64.(collect(resume_values))
+    decision_set = generate_decision_set(policy, [data_point])
+    z = view(decision_set, :, 1)
+
+    for split_index in (length(policy_split_values) + 1):splits
+        println("Testing context $(context_index)/$(testing_count): policy split $(split_index)/$(splits)...")
+        scenario_range = split_ranges[split_index]
+        policy_value = resource_allocation_policy_split_value(
+            problem,
+            solver,
+            z,
+            view(data_point.scenario_parameters, scenario_range);
+            mu=mu,
+            rho=rho,
+        )
+
+        push!(policy_split_values, policy_value)
+        write_testing_partial(
+            partial_path,
+            rows,
+            testing_count,
+            splits,
+            csv_path;
+            active_context_index=context_index,
+            optimal_split_values=optimal_split_values,
+            policy_split_values=policy_split_values,
+        )
+    end
+
+    return policy_split_values
+end
+
+function testing_sample_row(index, policy_split_values, optimal_split_values)
+    policy_value = Statistics.mean(Float64.(policy_split_values))
+    optimal_value = Statistics.mean(Float64.(optimal_split_values))
+    regret = policy_value - optimal_value
+    relative_regret = regret / max(abs(optimal_value), eps(Float64))
+
+    return (;
+        sample_index=index,
+        policy_value=policy_value,
+        optimal_value=optimal_value,
+        regret=regret,
+        relative_regret=relative_regret,
+        policy_split_values=Float64.(collect(policy_split_values)),
+        optimal_split_values=Float64.(collect(optimal_split_values)),
+        ucb_percent=normalized_gap_ucb_percent(policy_split_values, optimal_split_values),
+    )
+end
+
 function run_saa_testing(
     model,
     problem,
@@ -107,11 +400,12 @@ function run_saa_testing(
     output_dir,
     reg_param_surr,
     reg_param_ref,
+    rho_surr=0.0,
+    rho_ref=0.0,
     testing_splits,
     testing_context_limit=length(data_set_testing),
 )
     program = stochastic_program(problem)
-    parametric_decoder = ResourceAllocationDemandParametricDecoder(problem)
     policy = ScenarioGenerationPolicy(
         ContextualDFL.ScenarioGenerator(;
             neural_net=model,
@@ -120,12 +414,16 @@ function run_saa_testing(
         solver,
         program;
         mu=reg_param_surr,
+        rho=rho_surr,
     )
 
     csv_path = joinpath(output_dir, "testing_saa_results.csv")
     partial_path = joinpath(output_dir, "testing_saa_partial.jls")
     testing_count = min(Int(testing_context_limit), length(data_set_testing))
     rows = NamedTuple[]
+    active_context_index = nothing
+    active_optimal_split_values = Float64[]
+    active_policy_split_values = Float64[]
 
     if isfile(partial_path)
         partial = Serialization.deserialize(partial_path)
@@ -133,59 +431,73 @@ function run_saa_testing(
             rows = collect(partial.ucb_rows)
             println("Resuming testing SAA from $(length(rows)) completed contexts.")
         end
+        if hasproperty(partial, :active_context_index)
+            active_context_index = partial.active_context_index
+            active_optimal_split_values = hasproperty(partial, :optimal_split_values) ?
+                Float64.(collect(partial.optimal_split_values)) : Float64[]
+            active_policy_split_values = hasproperty(partial, :policy_split_values) ?
+                Float64.(collect(partial.policy_split_values)) : Float64[]
+        end
     end
 
     length(rows) > testing_count && resize!(rows, testing_count)
     write_testing_csv(csv_path, rows)
 
     for index in (length(rows) + 1):testing_count
+        resume_current_context = active_context_index == index
+        optimal_resume_values =
+            resume_current_context ? active_optimal_split_values : Float64[]
+        policy_resume_values =
+            resume_current_context ? active_policy_split_values : Float64[]
+
         println("Testing context $(index)/$(testing_count): solving SAA optima...")
-        single_data_set = [data_set_testing[index]]
-        optimal_results = solve_dataset_to_optimality(
-            single_data_set,
-            program,
-            parametric_decoder,
+        data_point = data_set_testing[index]
+        optimal_split_values = solve_data_point_to_optimality_with_progress(
+            data_point,
+            problem,
             solver;
             mu=reg_param_ref,
+            rho=rho_ref,
             splits=testing_splits,
+            context_index=index,
+            testing_count=testing_count,
+            partial_path=partial_path,
+            rows=rows,
+            csv_path=csv_path,
+            resume_values=optimal_resume_values,
         )
 
         println("Testing context $(index)/$(testing_count): evaluating policy...")
-        comparison = evaluate_policy_against_optimum(
+        policy_split_values = evaluate_policy_on_data_point_with_progress(
             policy,
-            single_data_set,
-            program,
-            parametric_decoder,
+            data_point,
+            problem,
             solver;
-            optimal_results=optimal_results,
-            split_name=:test,
             mu=reg_param_ref,
+            rho=rho_ref,
             splits=testing_splits,
+            context_index=index,
+            testing_count=testing_count,
+            partial_path=partial_path,
+            rows=rows,
+            csv_path=csv_path,
+            optimal_split_values=optimal_split_values,
+            resume_values=policy_resume_values,
         )
 
-        sample = only(comparison.per_sample)
-        row = merge(
-            sample,
-            (;
-                sample_index=index,
-                ucb_percent=normalized_gap_ucb_percent(
-                    sample.policy_split_values,
-                    sample.optimal_split_values,
-                ),
-            ),
-        )
+        row = testing_sample_row(index, policy_split_values, optimal_split_values)
         push!(rows, row)
         write_testing_csv(csv_path, rows)
-        Serialization.serialize(
+        write_testing_partial(
             partial_path,
-            (;
-                ucb_rows=rows,
-                completed_contexts=length(rows),
-                testing_context_limit=testing_count,
-                testing_splits=testing_splits,
-                csv_path=csv_path,
-            ),
+            rows,
+            testing_count,
+            testing_splits,
+            csv_path,
         )
+        active_context_index = nothing
+        empty!(active_optimal_split_values)
+        empty!(active_policy_split_values)
         println(
             "Testing context $(index)/$(testing_count): UCB = $(row.ucb_percent), " *
             "relative regret = $(row.relative_regret)",
@@ -209,6 +521,7 @@ function run_saa_testing(
 end
 
 reg_param_ref = 0.0
+rho_ref = 0.0
 batchsize = 1
 default_epochs = 10
 step_size = 1e-3
@@ -240,6 +553,7 @@ experiment_parameters = (;
     N_xi_per_x=N_xi_per_x,
     testing_splits=testing_splits,
     reg_param_ref=reg_param_ref,
+    rho_ref=rho_ref,
     batchsize=batchsize,
     default_epochs=default_epochs,
     step_size=step_size,
@@ -251,6 +565,7 @@ experiment_parameters = (;
 final_reg_param_surr = param_list[end]
 final_stage_epochs = epoch_list[end]
 final_reg_param_prim = 0.0
+final_rho_surr = 0.0
 final_stage_index = length(param_list) + 1
 stage_histories = NamedTuple[]
 completed_stage_numbers = Set{Int}()
@@ -405,6 +720,8 @@ else
         output_dir=output_dir,
         reg_param_surr=final_reg_param_surr,
         reg_param_ref=reg_param_ref,
+        rho_surr=final_rho_surr,
+        rho_ref=rho_ref,
         testing_splits=testing_splits,
         testing_context_limit=testing_context_limit,
     )

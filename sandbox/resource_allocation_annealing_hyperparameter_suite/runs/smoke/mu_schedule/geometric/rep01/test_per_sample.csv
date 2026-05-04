@@ -1,0 +1,3 @@
+candidate_name,optimal_split_values,optimal_value,phase,policy_split_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+geometric,647.0645243955232,647.0645243955232,mu_schedule,1082.887804653922,1082.887804653922,435.8232802583989,0.6735391353212227,1,smoke_mu_schedule_geometric_rep01,1
+geometric,1130.6773604772934,1130.6773604772934,mu_schedule,3425.9444540558325,3425.9444540558325,2295.267093578539,2.029992970416987,1,smoke_mu_schedule_geometric_rep01,2

@@ -8,4 +8,5 @@ using Test
     include("scenario_decoders/runtests.jl")
     include("stochastic_programming/runtests.jl")
     include("resource_allocation_training/runtests.jl")
+    include("implementations/transshipment/runtests.jl")
 end

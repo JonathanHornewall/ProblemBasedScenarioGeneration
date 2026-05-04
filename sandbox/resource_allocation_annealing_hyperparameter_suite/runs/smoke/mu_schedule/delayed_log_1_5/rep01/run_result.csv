@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+gelu,1.3517344954649202,1,delayed_log_1_5,2,1,,0,1777862923156,888.8709424364083,2254.3843590867223,1365.513416650314,1.3517344954649202,delayed_log_1_5,mu_schedule,1,0.0,smoke_mu_schedule_delayed_log_1_5_rep01,94001,1777862863218,ok,4.380486169,2.0

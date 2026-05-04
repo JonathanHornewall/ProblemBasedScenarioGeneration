@@ -1,0 +1,9 @@
+activation,batch_size,candidate_name,depth,display_loss,epoch,epoch_seconds,iterations,mu,mu_in,mu_ref,mu_schedule_kind,phase,replicate,rho,rho_in,rho_ref,run_id,seed,training_loss
+gelu,1,batch1_rho_0p0,2,2100.6858454029625,1,57.720096826553345,2,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.0,0.0,0.0,smoke_batch_size_batch1_rho_0p0_rep01,94001,2100.6858454029625
+gelu,8,batch8_rho_0p0,2,2100.7254674090937,1,59.924631118774414,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.0,0.0,0.0,smoke_batch_size_batch8_rho_0p0_rep01,94001,2100.7254674090937
+gelu,16,batch16_rho_0p0,2,2100.7027451651193,1,60.126676082611084,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.0,0.0,0.0,smoke_batch_size_batch16_rho_0p0_rep01,94001,2100.7027451651193
+gelu,32,batch32_rho_0p0,2,2100.667147671341,1,59.91344499588013,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.0,0.0,0.0,smoke_batch_size_batch32_rho_0p0_rep01,94001,2100.667147671341
+gelu,1,batch1_rho_0p001,2,2271.3135027475205,1,57.56565499305725,2,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.001,0.001,0.001,smoke_batch_size_batch1_rho_0p001_rep01,94001,2271.3135027475205
+gelu,8,batch8_rho_0p001,2,2271.4625459795825,1,60.16597509384155,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.001,0.001,0.001,smoke_batch_size_batch8_rho_0p001_rep01,94001,2271.4625459795825
+gelu,16,batch16_rho_0p001,2,2271.403090935276,1,59.870646953582764,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.001,0.001,0.001,smoke_batch_size_batch16_rho_0p001_rep01,94001,2271.403090935276
+gelu,32,batch32_rho_0p001,2,2271.3979744306935,1,59.695876121520996,1,1.0,1.0,1.0,delayed_log_2_0,batch_size,1,0.001,0.001,0.001,smoke_batch_size_batch32_rho_0p001_rep01,94001,2271.3979744306935

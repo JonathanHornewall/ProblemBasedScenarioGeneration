@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+relu,0.17961653926401058,1,relu,3,130,,10,1777881886546,805.7162362224142,954.3258725870153,148.60963636460082,0.17961653926401058,discrete,activation,4,0.0,full_activation_relu_rep04,94004,1777877852917,ok,242.963512206,30.0

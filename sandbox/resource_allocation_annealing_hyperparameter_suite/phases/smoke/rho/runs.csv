@@ -1,0 +1,4 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+gelu,1.3517208074409734,1,rho_0p0,2,1,,0,1777863038901,888.8709424364083,2254.369266042399,1365.4983236059907,1.3517208074409734,delayed_log_2_0,rho,1,0.0,smoke_rho_rho_0p0_rep01,94001,1777862979760,ok,4.378001385,2.0
+gelu,1.5029915944452772,1,rho_0p001,2,1,,0,1777863036301,888.8709424364083,2380.2830556621093,1491.4121132257008,1.5029915944452772,delayed_log_2_0,rho,1,0.001,smoke_rho_rho_0p001_rep01,94001,1777862979678,ok,3.540138555,2.0
+gelu,2.115254419754429,1,rho_0p01,2,1,,0,1777863038098,888.8709424364083,2887.978831968284,1999.1078895318756,2.115254419754429,delayed_log_2_0,rho,1,0.01,smoke_rho_rho_0p01_rep01,94001,1777862979709,ok,3.701134274,2.0

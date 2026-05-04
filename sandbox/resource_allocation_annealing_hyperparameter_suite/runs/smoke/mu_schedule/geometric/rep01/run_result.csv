@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+gelu,1.3517660528691047,1,geometric,2,1,,0,1777862922048,888.8709424364083,2254.4161293548773,1365.545186918469,1.3517660528691047,geometric,mu_schedule,1,0.0,smoke_mu_schedule_geometric_rep01,94001,1777862863244,ok,4.034246838,2.0

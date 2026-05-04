@@ -1,0 +1,3 @@
+candidate_name,optimal_split_values,optimal_value,phase,policy_split_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+delayed_log_1_5,647.0645243955232,647.0645243955232,mu_schedule,1082.8773390395124,1082.8773390395124,435.8128146439892,0.673522961332362,1,smoke_mu_schedule_delayed_log_1_5_rep01,1
+delayed_log_1_5,1130.6773604772934,1130.6773604772934,mu_schedule,3425.891379133932,3425.891379133932,2295.2140186566385,2.0299460295974785,1,smoke_mu_schedule_delayed_log_1_5_rep01,2
