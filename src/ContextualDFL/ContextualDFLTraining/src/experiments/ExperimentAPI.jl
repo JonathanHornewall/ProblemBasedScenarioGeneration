@@ -650,9 +650,77 @@ function load_optimal_results(
     split_name::Symbol;
     dataset=nothing,
 )
-    path = split_name == :test && uses_generated_test_data(spec) ?
-        single_test_optimal_results_path(spec) :
-        optimal_results_path(spec, split_name)
+    if split_name == :test && uses_generated_test_data(spec)
+        test_artifact = load_test_data_artifact(spec)
+        test_seeds = test_artifact.metadata.seeds
+        dataset_digests_by_seed = Dict(
+            seed => digest for
+            (seed, digest) in zip(test_seeds, test_artifact.metadata.dataset_digests)
+        )
+        paths = test_artifact_paths(spec, "optimal_solutions")
+        isempty(paths) && throw(
+            ArgumentError(
+                "missing generated optimal-results artifacts for experiment $(spec.id) in $(test_data_dir(spec)). Run ContextualDFLTraining/generate_test_data.jl --experiment $(spec.id) first.",
+            ),
+        )
+
+        results_by_seed = Dict{Int,Any}()
+        for path in paths
+            payload = open(Serialization.deserialize, path)
+            hasproperty(payload, :test_data_seed) ||
+                throw(ArgumentError("optimal-results artifact $path is missing test_data_seed."))
+            hasproperty(payload, :data_set_size) ||
+                throw(ArgumentError("optimal-results artifact $path is missing data_set_size."))
+            hasproperty(payload, :dataset_digest) ||
+                throw(ArgumentError("optimal-results artifact $path is missing dataset_digest."))
+
+            seed = Int(payload.test_data_seed)
+            haskey(results_by_seed, seed) &&
+                throw(ArgumentError("duplicate optimal-results artifact for seed $seed."))
+            haskey(dataset_digests_by_seed, seed) || throw(
+                ArgumentError(
+                    "optimal-results artifact $path has seed $seed, but no matching test-data artifact was loaded.",
+                ),
+            )
+
+            results = optimal_results_from_payload(payload)
+            length(results) == Int(payload.data_set_size) ||
+                throw(ArgumentError("optimal-results artifact $path has $(length(results)) rows, expected $(payload.data_set_size)."))
+            String(payload.dataset_digest) == dataset_digests_by_seed[seed] || throw(
+                ArgumentError(
+                    "optimal-results artifact $path does not match test-data artifact seed $seed. Regenerate it with generate_test_data.jl.",
+                ),
+            )
+            validate_optimal_results_payload(spec, split_name, nothing, payload, path)
+            results_by_seed[seed] = results
+        end
+
+        missing_seeds = setdiff(Set(test_seeds), Set(keys(results_by_seed)))
+        isempty(missing_seeds) || throw(
+            ArgumentError(
+                "missing optimal-results artifact(s) for test data seed(s): $(join(sort!(collect(missing_seeds)), ", ")).",
+            ),
+        )
+
+        results = vcat([results_by_seed[seed] for seed in test_seeds]...)
+        if dataset !== nothing
+            full_dataset = test_artifact.dataset
+            if length(dataset) == length(full_dataset)
+                experiment_dataset_digest(dataset) == experiment_dataset_digest(full_dataset) ||
+                    throw(ArgumentError("optimal-results artifacts do not match the current dataset for split test. Regenerate them with generate_test_data.jl."))
+            elseif length(dataset) < length(full_dataset)
+                prefix_dataset = full_dataset[1:length(dataset)]
+                experiment_dataset_digest(dataset) == experiment_dataset_digest(prefix_dataset) ||
+                    throw(ArgumentError("limited test dataset must be a prefix of the generated test-data artifacts."))
+                return results[1:length(dataset)]
+            else
+                throw(DimensionMismatch("test dataset has $(length(dataset)) rows, but generated optimal-results artifacts cover $(length(full_dataset)) rows."))
+            end
+        end
+        return results
+    end
+
+    path = optimal_results_path(spec, split_name)
     isfile(path) || throw(
         ArgumentError(
             "missing precomputed optimal results for experiment $(spec.id), split $(split_name). Expected $path. Run ContextualDFLTraining/generate_test_data.jl for this experiment first.",
@@ -686,32 +754,14 @@ end
 function test_artifact_paths(spec::ExperimentSpec, prefix::AbstractString)
     dir = test_data_dir(spec)
     isdir(dir) || return String[]
-    pattern = Regex("^" * prefix * "_seed[0-9]+\\.jls\$")
+    pattern = Regex("^" * prefix * "_seed([0-9]+)\\.jls\$")
     paths = [
         joinpath(dir, name) for name in readdir(dir) if occursin(pattern, name)
     ]
-    return sort!(paths)
-end
-
-function single_test_artifact_path(spec::ExperimentSpec, prefix::AbstractString)
-    paths = test_artifact_paths(spec, prefix)
-    isempty(paths) && throw(
-        ArgumentError(
-            "missing generated test data artifacts for experiment $(spec.id) in $(test_data_dir(spec)). Run ContextualDFLTraining/generate_test_data.jl --experiment $(spec.id) first.",
-        ),
+    return sort!(
+        paths;
+        by=path -> parse(Int, only(match(pattern, basename(path)).captures)),
     )
-    length(paths) == 1 || throw(
-        ArgumentError(
-            "experiment $(spec.id) must have exactly one $prefix artifact in $(test_data_dir(spec)); found $(length(paths)): $(join(paths, ", ")).",
-        ),
-    )
-    return only(paths)
-end
-
-single_test_data_path(spec::ExperimentSpec) = single_test_artifact_path(spec, "test_data")
-
-function single_test_optimal_results_path(spec::ExperimentSpec)
-    return single_test_artifact_path(spec, "optimal_solutions")
 end
 
 function save_test_data!(
@@ -728,12 +778,6 @@ function save_test_data!(
         throw(ArgumentError("test dataset length $(length(dataset)) != data_set_size $data_set_size."))
 
     path = test_data_path(spec, seed)
-    existing = [item for item in test_artifact_paths(spec, "test_data") if item != path]
-    isempty(existing) || throw(
-        ArgumentError(
-            "experiment $(spec.id) already has a test data artifact: $(join(existing, ", ")). Remove or archive it before generating a different seed.",
-        ),
-    )
     mkpath(dirname(path))
     payload = merge(
         metadata,
@@ -754,17 +798,67 @@ function save_test_data!(
 end
 
 function load_test_data_artifact(spec::ExperimentSpec)
-    path = single_test_data_path(spec)
-    payload = open(Serialization.deserialize, path)
-    dataset = test_data_from_payload(payload)
-    validate_test_data_payload(spec, dataset, payload, path)
+    paths = test_artifact_paths(spec, "test_data")
+    isempty(paths) && throw(
+        ArgumentError(
+            "missing generated test data artifacts for experiment $(spec.id) in $(test_data_dir(spec)). Run ContextualDFLTraining/generate_test_data.jl --experiment $(spec.id) first.",
+        ),
+    )
+
+    datasets = Any[]
+    seeds = Int[]
+    data_set_sizes = Int[]
+    dataset_digests = String[]
+    expected_data_set_size = nothing
+    expected_context_dimension = nothing
+    expected_scenarios_per_context = nothing
+
+    for path in paths
+        payload = open(Serialization.deserialize, path)
+        dataset = test_data_from_payload(payload)
+        validate_test_data_payload(spec, dataset, payload, path)
+        isempty(dataset) &&
+            throw(ArgumentError("test data artifact $path must not contain an empty dataset."))
+
+        seed = Int(payload.test_data_seed)
+        seed in seeds &&
+            throw(ArgumentError("duplicate test data artifact for seed $seed."))
+        data_set_size = Int(payload.data_set_size)
+        context_dimension = length(first(dataset).context)
+        scenarios_per_context = length(first(dataset).scenario_parameters)
+
+        if expected_data_set_size === nothing
+            expected_data_set_size = data_set_size
+            expected_context_dimension = context_dimension
+            expected_scenarios_per_context = scenarios_per_context
+        elseif data_set_size != expected_data_set_size ||
+               context_dimension != expected_context_dimension ||
+               scenarios_per_context != expected_scenarios_per_context
+            throw(
+                ArgumentError(
+                    "test data artifact $path has shape (rows=$data_set_size, context_dimension=$context_dimension, scenarios_per_context=$scenarios_per_context), expected (rows=$expected_data_set_size, context_dimension=$expected_context_dimension, scenarios_per_context=$expected_scenarios_per_context).",
+                ),
+            )
+        end
+
+        push!(datasets, dataset)
+        push!(seeds, seed)
+        push!(data_set_sizes, data_set_size)
+        push!(dataset_digests, String(payload.dataset_digest))
+    end
+
+    dataset = vcat(datasets...)
     return (;
         dataset=dataset,
         metadata=(;
-            path=path,
-            seed=Int(payload.test_data_seed),
-            data_set_size=Int(payload.data_set_size),
-            dataset_digest=String(payload.dataset_digest),
+            path=join(paths, ","),
+            paths=paths,
+            seed=first(seeds),
+            seeds=seeds,
+            data_set_size=length(dataset),
+            data_set_sizes=data_set_sizes,
+            dataset_digest=experiment_dataset_digest(dataset),
+            dataset_digests=dataset_digests,
         ),
     )
 end
@@ -796,12 +890,6 @@ function save_test_optimal_results!(
     length(results) == data_set_size ||
         throw(ArgumentError("optimal results length $(length(results)) != data_set_size $data_set_size."))
     path = test_optimal_results_path(spec, seed)
-    existing = [item for item in test_artifact_paths(spec, "optimal_solutions") if item != path]
-    isempty(existing) || throw(
-        ArgumentError(
-            "experiment $(spec.id) already has a test optimal-results artifact: $(join(existing, ", ")). Remove or archive it before generating a different seed.",
-        ),
-    )
     mkpath(dirname(path))
     payload = merge(
         metadata,

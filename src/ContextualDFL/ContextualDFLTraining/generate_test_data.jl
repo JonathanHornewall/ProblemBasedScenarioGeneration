@@ -112,15 +112,14 @@ function main()
     )
     println("Wrote optimal solutions to $optimal_results_path")
 
-    loaded_dataset = ContextualDFLTraining.load_test_data(experiment)
-    length(loaded_dataset) == data_set_size ||
+    loaded_artifact = ContextualDFLTraining.load_test_data_artifact(experiment)
+    loaded_seed_index = findfirst(==(seed), loaded_artifact.metadata.seeds)
+    loaded_seed_index !== nothing ||
+        error("saved test data at $test_data_path were not found by the default loader")
+    loaded_artifact.metadata.data_set_sizes[loaded_seed_index] == data_set_size ||
         error("saved test data at $test_data_path have the wrong length")
-    loaded_results = ContextualDFLTraining.load_optimal_results(
-        experiment,
-        :test;
-        dataset=dataset,
-    )
-    length(loaded_results) == data_set_size ||
+    loaded_results = ContextualDFLTraining.load_optimal_results(experiment, :test)
+    length(loaded_results) == loaded_artifact.metadata.data_set_size ||
         error("saved optimal solutions at $optimal_results_path have the wrong length")
     println("Finished in $(round(solve_seconds; digits=3)) seconds")
 

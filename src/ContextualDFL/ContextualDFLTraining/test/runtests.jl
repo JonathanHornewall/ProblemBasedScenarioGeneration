@@ -359,6 +359,11 @@ end
             index in 1:3
         ]
         results = [(; objective_value=Float64(index)) for index in 1:3]
+        dataset_seed10 = [
+            (; context=[Float64(index)], scenario_parameters=[Float64(index + 1)]) for
+            index in 11:13
+        ]
+        results_seed10 = [(; objective_value=Float64(index)) for index in 11:13]
 
         data_path = ContextualDFLTraining.save_test_data!(
             spec,
@@ -373,23 +378,75 @@ end
             dataset=dataset,
             data_set_size=3,
         )
+        data_path_seed10 = ContextualDFLTraining.save_test_data!(
+            spec,
+            10,
+            dataset_seed10;
+            data_set_size=3,
+        )
+        optimal_path_seed10 = ContextualDFLTraining.save_test_optimal_results!(
+            spec,
+            10,
+            results_seed10;
+            dataset=dataset_seed10,
+            data_set_size=3,
+        )
 
         @test basename(data_path) == "test_data_seed7.jls"
         @test basename(optimal_path) == "optimal_solutions_seed7.jls"
+        @test basename(data_path_seed10) == "test_data_seed10.jls"
+        @test basename(optimal_path_seed10) == "optimal_solutions_seed10.jls"
         artifact = ContextualDFLTraining.load_test_data_artifact(spec)
-        @test artifact.dataset == dataset
+        combined_dataset = vcat(dataset, dataset_seed10)
+        combined_results = vcat(results, results_seed10)
+        @test artifact.dataset == combined_dataset
         @test artifact.metadata.seed == 7
-        @test artifact.metadata.data_set_size == 3
-        @test ContextualDFLTraining.load_test_data(spec) == dataset
-        @test ContextualDFLTraining.load_optimal_results(spec, :test; dataset=dataset) ==
-              results
+        @test artifact.metadata.seeds == [7, 10]
+        @test artifact.metadata.data_set_size == 6
+        @test artifact.metadata.data_set_sizes == [3, 3]
+        @test basename.(artifact.metadata.paths) == ["test_data_seed7.jls", "test_data_seed10.jls"]
+        @test length(artifact.metadata.dataset_digests) == 2
+        @test ContextualDFLTraining.load_test_data(spec) == combined_dataset
+        @test ContextualDFLTraining.load_optimal_results(spec, :test) ==
+              combined_results
+        @test ContextualDFLTraining.load_optimal_results(
+            spec,
+            :test;
+            dataset=combined_dataset,
+        ) == combined_results
+        @test ContextualDFLTraining.load_optimal_results(
+            spec,
+            :test;
+            dataset=combined_dataset[1:4],
+        ) == combined_results[1:4]
         @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(
             spec,
             :test;
-            dataset=dataset[1:2],
+            dataset=combined_dataset[2:4],
         )
 
-        cp(data_path, ContextualDFLTraining.test_data_path(spec, 8))
+        missing_optimal_dataset = [
+            (; context=[Float64(index)], scenario_parameters=[Float64(index + 1)]) for
+            index in 21:23
+        ]
+        ContextualDFLTraining.save_test_data!(
+            spec,
+            12,
+            missing_optimal_dataset;
+            data_set_size=3,
+        )
+        @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(spec, :test)
+
+        mismatched_dataset = [
+            (; context=[Float64(index)], scenario_parameters=[Float64(index + 1), Float64(index + 2)]) for
+            index in 31:33
+        ]
+        ContextualDFLTraining.save_test_data!(
+            spec,
+            13,
+            mismatched_dataset;
+            data_set_size=3,
+        )
         @test_throws ArgumentError ContextualDFLTraining.load_test_data(spec)
     end
 end
