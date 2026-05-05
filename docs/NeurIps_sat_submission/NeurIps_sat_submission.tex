@@ -14,7 +14,7 @@
 \usepackage{newunicodechar}
 \newunicodechar{★}{*}
 
-\title{Decision Focused Scenario Generation via Log-Barrier Surrogate for Contextual Two-Stage Stochastic Linear Programming}
+\title{Decision-Focused Scenario Learning for Contextual Stochastic Programming}
 \author{
 Jonathan Hornewall \\
 École des Ponts ParisTech \\
@@ -39,26 +39,7 @@ Universidad Adolfo Ibáñez \\
 \maketitle
 
 \begin{abstract}
-We present a novel method for solving contextual two-stage stochastic linear programs, by leveraging decision-focused learning for scenario generation. 
-Over a database of historical, observed context–scenario pairs $(x,\xi)$,  a neural net is trained to learn a context-to-scenario-collection map $x  \mapsto \xi_{1:S}$. 
-
-%The scenario generation is evaluated in a decision focused way, where first-stage decisions
-%are obtained by solving a log barrier regularization of the problem induced by the scenarios, after
-%which the decision is inserted into the true, unregularized problem. 
-
-%For an input $x$ and an output $\xi_{1:S}(x)$, the loss is computed in a decision focused manner. 
-%We first solve a log-barrier surrogate of the two-stag problem induced by the generated collection,
-%and then evaluating the performance of the decision on the true two-stage problem defined by the context $x$ (estimated empirically via the dataset).
-%The smoothness of the log-barrier surrogate enabls back-propagation, and thereby full end-to-end learning.
-
-For each generated collection of scenarios, a first-stage decision $z(\xi_{1:S})$ is computed by solving a log-barrier regularized version of the deterministic two-stage problem induced by the scenarios.
-The neural net is trained in a decision focused manner, to generate $\xi_{1:s}(x)$ to optimize the performance their induced first-stage decision $z(\xi_{1:S})$, on the true, unregularized problem.
-
-%Our approach builds upon existing literature by enabling multi-scenario generation, without requiring distributional learning or the use of neural surrogates to estimate value functions.
-
-
-%Although our focus is on a log-barrier regularized linear programs, our template extends to other differentiable reformulations that yield smooth solution maps (e.g., convex programs, SDPs).
-
+This paper studies decision focused scenario learning for contextual two-stage stochastic programming. The approach has emerged as a promising research direction, but challenges exist. Existing methods typically require specific assumptions on which second stage is random. Currently, a general theory for when scenario policies can theoretically yield optimal decision policies is also lacking. Generally, the non-differentiability of the decision-focused objective is a source of difficulty. This paper make three contributions. We first present a comprehensive theory for when scenario learning can encode optimal policies. It additionally shows an equivalence result between learning different second-stage data, significantly extending existing methods by relaxing required assumptions on second stage randomness. Secondly, we study log-barrier smoothing, showing how the it induces smoothnes and invexity in the decision focused loss. Finally, we present a novel method inpsired by interior point methods from classical optimization. It accommodates randomness in arbitrary second stage data, learns directly on the downstream decision objective without the need for surrogates, and has a natural selection rule for when optima are non-unique. We demonstrate its effectiveness on standard benchmarks.
 \end{abstract}
 
 % Keywords are often requested by NeurIPS; keep as plain text
