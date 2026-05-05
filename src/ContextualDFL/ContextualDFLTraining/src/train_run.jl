@@ -3,6 +3,7 @@ using ContextualDFLExperiments
 using Distributed
 using Flux
 using Random
+using Serialization
 using SHA
 using Sockets
 using Statistics
@@ -78,7 +79,7 @@ function train_and_evaluate(config::NamedTuple)
 
         return (;
             status="ok",
-            run_id=cfg.run_id,
+            run_id=string(config_value(cfg, :run_id, "")),
             config=cfg,
             worker=worker_metadata(),
             final_metrics=metrics,
@@ -132,6 +133,8 @@ function train_with_contextualdfl(objects, config)
         display_real=config_value(config, :display_real, nothing),
         display_reference_input=display_reference_input(objects, config),
     )
+    trained_model = extract_model(result, objects.scenario_generator)
+    save_flux_checkpoint_after_training!(trained_model, result, objects, config)
 
     return (;
         result=result,
@@ -226,6 +229,15 @@ function train_with_contextualdfl_mlflow(objects, config)
             display_reference_input=display_reference_input(objects, config),
         )
 
+        trained_model = extract_model(result, objects.scenario_generator)
+        checkpoint = save_flux_checkpoint_after_training!(
+            trained_model,
+            result,
+            objects,
+            mlflow_config,
+        )
+        log_mlflow_checkpoint_artifact!(mlf, run, checkpoint, mlflow_config)
+
         if upload_model_artifact && isfile(model_save_path)
             upload_mlflow_artifact!(
                 mlf,
@@ -235,7 +247,6 @@ function train_with_contextualdfl_mlflow(objects, config)
             )
         end
 
-        trained_model = extract_model(result, objects.scenario_generator)
         metrics = evaluate_model_for_reporting(trained_model, objects, config)
         final_metrics[] = metrics
         log_mlflow_evaluation_result!(mlf, run, "", metrics)
@@ -450,6 +461,126 @@ function mlflow_model_save_path(config)
     run_id = string(config_value(config, :run_id, "training-run"))
     safe_run_id = replace(run_id, r"[^A-Za-z0-9_.=-]" => "_")
     return joinpath(tempdir(), safe_run_id * ".jls")
+end
+
+function checkpoint_enabled(config)
+    return Bool(config_value(config, :checkpoint_enabled, true))
+end
+
+function checkpoint_upload_mlflow(config)
+    return Bool(config_value(config, :checkpoint_upload_mlflow, true))
+end
+
+function checkpoint_required(config)
+    return Bool(config_value(config, :checkpoint_required, false))
+end
+
+function checkpoint_format(config)
+    format = Symbol(config_value(config, :checkpoint_format, :jls))
+    format == :jls ||
+        throw(ArgumentError("unsupported checkpoint_format $(format); use :jls."))
+    return format
+end
+
+function default_checkpoint_root()
+    return joinpath(dirname(@__DIR__), "results", "checkpoints")
+end
+
+function checkpoint_directory(config)
+    configured_dir = string(config_value(config, :checkpoint_dir, ""))
+    if isempty(strip(configured_dir))
+        grid_id = string(config_value(config, :gridsearch_id, "standalone"))
+        return joinpath(default_checkpoint_root(), safe_checkpoint_identifier(grid_id))
+    end
+    return abspath(configured_dir)
+end
+
+function checkpoint_save_path(config)
+    format = checkpoint_format(config)
+    run_id = string(config_value(config, :run_id, "training-run"))
+    filename = safe_checkpoint_identifier(run_id) * "_checkpoint." * string(format)
+    return joinpath(checkpoint_directory(config), filename)
+end
+
+function safe_checkpoint_identifier(value)
+    text = replace(string(value), r"[^A-Za-z0-9_.=-]+" => "_")
+    text = strip(text, ['_'])
+    return isempty(text) ? "training-run" : text
+end
+
+function save_flux_checkpoint_after_training!(model, train_result, objects, config)
+    checkpoint_enabled(config) || return nothing
+
+    path = checkpoint_save_path(config)
+    try
+        save_flux_checkpoint!(path, model, train_result, objects, config)
+        return path
+    catch error
+        checkpoint_required(config) && rethrow()
+        @warn "Failed to save Flux checkpoint" path error=exception_text(error, catch_backtrace())
+        return nothing
+    end
+end
+
+function save_flux_checkpoint!(path::AbstractString, model, train_result, objects, config)
+    mkpath(dirname(path))
+    payload = flux_checkpoint_payload(model, train_result, objects, config, path)
+    temp_path = tempname(dirname(path))
+    open(temp_path, "w") do io
+        Serialization.serialize(io, payload)
+    end
+    mv(temp_path, path; force=true)
+    return path
+end
+
+function flux_checkpoint_payload(model, train_result, objects, config, path)
+    return (;
+        format_version=1,
+        checkpoint_format=:jls,
+        saved_at=Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SS.sZ"),
+        saved_at_unix_ms=unix_milliseconds(),
+        checkpoint_path=String(path),
+        run_id=string(config_value(config, :run_id, "")),
+        gridsearch_id=string(config_value(config, :gridsearch_id, "")),
+        candidate_index=config_value(config, :candidate_index, missing),
+        repeat_index=config_value(config, :repeat_index, missing),
+        worker=worker_metadata(),
+        config=config,
+        model_state=Flux.state(model),
+        optimizer_state=optimizer_flux_state(train_result),
+        epoch_history=extract_epoch_history(train_result),
+        model_metadata=mlflow_model_spec(model, objects, config),
+        data_metadata=mlflow_data_spec(objects, config),
+    )
+end
+
+function optimizer_flux_state(train_result)
+    hasproperty(train_result, :opt_state) || return missing
+    opt_state = getproperty(train_result, :opt_state)
+    (opt_state === nothing || opt_state === missing) && return missing
+    return Flux.state(opt_state)
+end
+
+function log_mlflow_checkpoint_artifact!(mlf, run, checkpoint_path, config)
+    checkpoint_path === nothing && return nothing
+    logparam(mlf, run, "checkpoint_path", string(checkpoint_path))
+    logparam(mlf, run, "checkpoint_format", string(checkpoint_format(config)))
+
+    checkpoint_upload_mlflow(config) || return nothing
+
+    artifact_path = "checkpoints/" * basename(checkpoint_path)
+    try
+        upload_mlflow_artifact!(mlf, run, checkpoint_path; artifact_path=artifact_path)
+        logparam(mlf, run, "checkpoint_artifact_path", artifact_path)
+    catch error
+        checkpoint_required(config) && rethrow()
+        @warn "Failed to upload Flux checkpoint artifact" artifact_path error=exception_text(
+            error,
+            catch_backtrace(),
+        )
+    end
+
+    return nothing
 end
 
 function contextual_dfl_loss(objects, config)

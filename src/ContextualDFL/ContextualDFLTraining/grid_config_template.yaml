@@ -155,6 +155,16 @@ base:
   mlflow_parent_run_id: ""
   mlflow_tags: {}
 
+  # Flux checkpoint written immediately after training and before evaluation.
+  # The checkpoint stores Flux.state(model), Flux.state(optimizer_state), config,
+  # worker metadata, and epoch history. Empty checkpoint_dir uses
+  # ContextualDFLTraining/results/checkpoints/<gridsearch_id>/.
+  checkpoint_enabled: true
+  checkpoint_upload_mlflow: true
+  checkpoint_required: false
+  checkpoint_dir: ""
+  checkpoint_format: jls
+
   # Safety default: direct local train_and_evaluate refuses worker 1 unless true.
   # Remote gridsearch workers do not need this.
   allow_local_training: false
@@ -200,11 +210,13 @@ grid:
   #
   # Boolean keys:
   # optimality_evaluation, display_smooth, shuffle, reset_optimizer_each_epoch,
-  # mlflow_enabled, mlflow_upload_model_artifact, fine_tuning, annealing,
+  # mlflow_enabled, mlflow_upload_model_artifact, checkpoint_enabled,
+  # checkpoint_upload_mlflow, checkpoint_required, fine_tuning, annealing,
   # knn_homogenization, log_barrier_inference.
   #
   # Symbol/string-to-symbol keys:
-  # activation, loss, method, mu_schedule, mu_ref_schedule, rho_schedule, rho_ref_schedule.
+  # activation, checkpoint_format, loss, method, mu_schedule, mu_ref_schedule,
+  # rho_schedule, rho_ref_schedule.
   #
   # Whole-schedule grid examples. Each schedule name takes an array of schedule specs,
   # and these arrays are included in the same Cartesian product as scalar grid keys.

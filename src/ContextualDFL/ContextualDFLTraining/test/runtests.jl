@@ -2,6 +2,7 @@ using ContextualDFLTraining
 using ContextualDFL
 using ContextualDFLExperiments
 using Flux
+using Serialization
 using Test
 
 mutable struct FakeRun
@@ -70,6 +71,45 @@ end
 
     @test flattened_trainables(first_model) == flattened_trainables(same_seed_model)
     @test flattened_trainables(first_model) != flattened_trainables(different_seed_model)
+end
+
+@testset "ContextualDFLTraining Flux checkpoints" begin
+    mktempdir() do dir
+        model = Chain(Dense(2 => 3, relu), Dense(3 => 1))
+        opt_state = Flux.setup(Flux.Adam(0.01), model)
+        train_result = (; model=model, opt_state=opt_state, history=[(; epoch=1, loss=0.25)])
+        objects = (;
+            data=(; train=[], validation=[], test=[]),
+            model_metadata=(; output_dimension=1),
+            data_metadata=(; dataset_name="checkpoint_test", dataset_digest="sha1:test"),
+        )
+        config = (;
+            run_id="checkpoint/run 1",
+            gridsearch_id="checkpoint_grid",
+            checkpoint_dir=dir,
+            checkpoint_format=:jls,
+            validation_fraction=0.0,
+        )
+        path = ContextualDFLTraining.save_flux_checkpoint!(
+            joinpath(dir, "checkpoint.jls"),
+            model,
+            train_result,
+            objects,
+            config,
+        )
+        payload = Serialization.deserialize(path)
+        reloaded_model = Chain(Dense(2 => 3, relu), Dense(3 => 1))
+
+        @test isfile(path)
+        @test payload.format_version == 1
+        @test payload.run_id == "checkpoint/run 1"
+        @test payload.gridsearch_id == "checkpoint_grid"
+        @test only(payload.epoch_history)[:epoch] == 1
+        @test only(payload.epoch_history)[:loss] == 0.25
+        @test payload.optimizer_state !== missing
+        Flux.loadmodel!(reloaded_model, payload.model_state)
+        @test Flux.state(reloaded_model) == payload.model_state
+    end
 end
 
 @testset "ContextualDFLTraining experiments" begin
@@ -1238,6 +1278,16 @@ end
 
 function ContextualDFLTraining.uploadartifact(
     ::FakeMLFlow,
+    artifact_path::AbstractString,
+    data::Vector{UInt8},
+)
+    push!(GLOBAL_ARTIFACT_RUN[], (string(artifact_path), data))
+    return nothing
+end
+
+function ContextualDFLTraining.uploadartifact(
+    ::FakeMLFlow,
+    ::FakeRun,
     artifact_path::AbstractString,
     data::Vector{UInt8},
 )

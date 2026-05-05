@@ -128,8 +128,18 @@ function uploadartifact(mlf::NamedMLFlowClient, run, path)
 end
 
 function uploadartifact(mlf::NamedMLFlowClient, run, path, artifact_path)
+    return uploadartifact(mlf, run, string(artifact_path), read(path))
+end
+
+function uploadartifact(
+    mlf::NamedMLFlowClient,
+    run,
+    artifact_path::AbstractString,
+    data::Vector{UInt8},
+)
+    run_id = string(getproperty(getproperty(run, :info), :run_id))
     return with_mlflow_retry("upload artifact $artifact_path") do
-        MLFlowClient.uploadartifact(mlf.client, string(artifact_path), read(path))
+        upload_run_artifact_data(mlf.client, run_id, artifact_path, data)
     end
 end
 
@@ -140,9 +150,33 @@ function uploadartifact(mlf::NamedMLFlowClient, artifact_path::AbstractString, d
 end
 
 function log_mlflow_stacktrace_artifact!(mlf, run, error_text)
-    artifact_path = mlflow_run_artifact_path(run, MLFLOW_STACKTRACE_ARTIFACT_PATH)
-    uploadartifact(mlf, artifact_path, Vector{UInt8}(codeunits(string(error_text))))
+    uploadartifact(mlf, run, MLFLOW_STACKTRACE_ARTIFACT_PATH, Vector{UInt8}(codeunits(string(error_text))))
     return nothing
+end
+
+function upload_run_artifact_data(client::MLFlowClient.MLFlow, run_id, artifact_path, data::Vector{UInt8})
+    uri = mlflow_ajax_uri(
+        client,
+        "upload-artifact";
+        parameters=Dict{Symbol,Any}(
+            :run_uuid => string(run_id),
+            :path => clean_mlflow_artifact_path(artifact_path),
+        ),
+    )
+    headers = MLFlowClient.headers(
+        client,
+        Dict("Content-Type" => "application/octet-stream"),
+    )
+    MLFlowClient.HTTP.post(uri, headers, data)
+    return true
+end
+
+function mlflow_ajax_uri(client::MLFlowClient.MLFlow, endpoint; parameters=Dict{Symbol,Any}())
+    root = replace(string(client.apiroot), r"/api/?$" => "")
+    return MLFlowClient.URIs.URI(
+        "$(root)/ajax-api/2.0/mlflow/$(endpoint)";
+        query=parameters,
+    )
 end
 
 function mlflow_run_artifact_path(run, artifact_path)
@@ -366,10 +400,10 @@ function log_mlflow_artifacts!(mlf, run, artifacts)
 end
 
 function upload_mlflow_artifact!(mlf, run, path; artifact_path)
-    if applicable(uploadartifact, mlf, run, path)
-        uploadartifact(mlf, run, path)
-    elseif applicable(uploadartifact, mlf, run, path, artifact_path)
+    if applicable(uploadartifact, mlf, run, path, artifact_path)
         uploadartifact(mlf, run, path, artifact_path)
+    elseif applicable(uploadartifact, mlf, run, path)
+        uploadartifact(mlf, run, path)
     else
         uploadartifact(mlf, string(artifact_path), read(path))
     end

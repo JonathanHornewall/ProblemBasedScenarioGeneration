@@ -46,6 +46,7 @@ end
 const GRID_SYMBOL_KEYS = Set(
     [
         :activation,
+        :checkpoint_format,
         :loss,
         :method,
         :mu_ref_schedule,
@@ -114,6 +115,9 @@ const GRID_BOOL_KEYS = Set(
         :display_smooth,
         :fine_tuning,
         :knn_homogenization,
+        :checkpoint_enabled,
+        :checkpoint_required,
+        :checkpoint_upload_mlflow,
         :log_barrier_inference,
         :mlflow_enabled,
         :mlflow_upload_model_artifact,
