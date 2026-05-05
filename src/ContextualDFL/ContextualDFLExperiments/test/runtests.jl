@@ -702,3 +702,5 @@ end
     @test length(only(resource_results).objective_values) == 1
     @test isfinite(only(resource_results).objective_value)
 end
+
+include("benchmark_instances/runtests.jl")

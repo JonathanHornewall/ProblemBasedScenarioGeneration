@@ -555,12 +555,12 @@ function _transshipment_parameter_values(decoder::TransShipmentScenarioDecoder, 
 
     rhs_values = _scenario_property(
         scenario_parameter,
-        (:rhs, :demand, :h, :h_eq);
+        (:rhs, :demand, :h, :h_eq, :h_eq_xi);
         default=decoder.mean_rhs_values,
     )
     objective_values = _scenario_property(
         scenario_parameter,
-        (:q, :objective, :cost, :costs);
+        (:q, :q_xi, :objective, :cost, :costs);
         default=decoder.mean_objective_values,
     )
 

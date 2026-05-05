@@ -14,6 +14,7 @@ function parse_grid_args(args)
         "remote-julia" => DEFAULT_REMOTE_JULIA,
         "skip-sync" => false,
         "summarize-only" => false,
+        "local-executor" => false,
     )
 
     index = 1
@@ -27,6 +28,8 @@ function parse_grid_args(args)
             parsed["skip-sync"] = true
         elseif arg == "--summarize-only"
             parsed["summarize-only"] = true
+        elseif arg in ("--local", "--local-executor")
+            parsed["local-executor"] = true
         elseif arg == "--jobs"
             index += 1
             index <= length(args) || error("--jobs requires an integer")
@@ -48,6 +51,7 @@ function parse_grid_args(args)
             Usage:
               julia run_depth_activation_grid.jl --dry-run [--smoke]
               julia run_depth_activation_grid.jl [--jobs N] [--host gcp-big]
+              julia run_depth_activation_grid.jl --local-executor [--jobs N]
               julia run_depth_activation_grid.jl --summarize-only
 
             Runs a sandboxed depth x activation grid:
@@ -57,6 +61,10 @@ function parse_grid_args(args)
             All other parameters use the original annealing baseline:
               discrete mu schedule, 130 epochs, final 10 epochs with mu_ref = 0,
               rho = 0, batch size = 1, 100 training contexts.
+
+            Use --local-executor when this script itself is already running on the
+            target compute host. In that mode it runs run_single.jl directly
+            instead of nesting ssh calls.
             """)
             exit(0)
         else
@@ -178,10 +186,45 @@ function run_remote_config(args, config)
     end
 end
 
-function run_remote_grid!(args, configs)
+function run_local_config(config)
+    if run_complete(config)
+        println("Skipping completed run $(config.run_id)")
+        flush(stdout)
+        return true
+    end
+
+    println("Launching $(config.run_id)")
+    flush(stdout)
+    mkpath(run_dir(config))
+    cmd = Cmd([
+        joinpath(Sys.BINDIR, "julia"),
+        "--project=" * TRAINING_PROJECT_DIR,
+        joinpath(SUITE_DIR, "run_single.jl"),
+        "--config",
+        config_path(config),
+    ])
+
+    try
+        run(
+            pipeline(
+                cmd;
+                stdout=joinpath(run_dir(config), "stdout.log"),
+                stderr=joinpath(run_dir(config), "stderr.log"),
+            ),
+        )
+        return true
+    catch error
+        println("Local command failed for $(config.run_id): ", sprint(showerror, error))
+        flush(stdout)
+        return false
+    end
+end
+
+function run_config_queue!(configs, run_one!; jobs)
     pending = pending_configs(configs)
     isempty(pending) && begin
         println("All grid runs are already complete.")
+        flush(stdout)
         return nothing
     end
 
@@ -198,18 +241,30 @@ function run_remote_grid!(args, configs)
         end
     end
 
-    worker_count = min(Int(args["jobs"]), length(pending))
+    worker_count = min(Int(jobs), length(pending))
     tasks = [
         @async begin
             while true
                 config = next_config!()
                 config === nothing && break
-                run_remote_config(args, config)
+                run_one!(config)
             end
         end for _ in 1:worker_count
     ]
     foreach(wait, tasks)
     return nothing
+end
+
+function run_remote_grid!(args, configs)
+    return run_config_queue!(
+        configs,
+        config -> run_remote_config(args, config);
+        jobs=Int(args["jobs"]),
+    )
+end
+
+function run_local_grid!(args, configs)
+    return run_config_queue!(configs, run_local_config; jobs=Int(args["jobs"]))
 end
 
 function summarize_grid!(configs; smoke=false)
@@ -272,9 +327,14 @@ function main()
     test_cache_exists(smoke=smoke) ||
         error("Missing shared test cache. Run run_suite.jl once or run_single.jl --precompute first.")
 
-    sync_code!(args)
-    run_remote_grid!(args, configs)
-    pull_remote_artifacts!(args)
+    if Bool(args["local-executor"])
+        run_local_grid!(args, configs)
+    else
+        sync_code!(args)
+        run_remote_grid!(args, configs)
+        pull_remote_artifacts!(args)
+    end
+
     summarize_grid!(configs; smoke=smoke)
     println("Depth x activation grid complete.")
     return nothing

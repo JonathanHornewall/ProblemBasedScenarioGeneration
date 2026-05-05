@@ -59,6 +59,14 @@ using Test
     @test count(!iszero, vec(q_arrays[7] - arrays[7])) == 1
     @test all(iszero, vec(q_arrays[5] - arrays[5]))
 
+    compact_scenario = ContextualDFL.ParametricScenario(;
+        h_eq_xi=mean_parameters.rhs .+ 1.0,
+        q_xi=mean_parameters.q .+ 1.0,
+    )
+    compact_arrays = decode_scenario_collection(decoder, [compact_scenario])
+    @test count(!iszero, vec(compact_arrays[5] - arrays[5])) == 7
+    @test count(!iszero, vec(compact_arrays[7] - arrays[7])) == 7
+
     vector_arrays = decode_scenario_collection(
         decoder,
         vcat(mean_parameters.rhs, mean_parameters.q);

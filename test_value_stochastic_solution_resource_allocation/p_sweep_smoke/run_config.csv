@@ -1,0 +1,2 @@
+smoke,output_dir,p_values,seeds,contexts_per_seed,scenarios_per_context,evaluation_batches,demand_sigma,context_terms,mu,rho,include_reference
+true,/home/rwl/ProblemBasedScenarioGeneration/test_value_stochastic_solution_resource_allocation/p_sweep_smoke,1.0,1,2,20,2,5.0,3,0.0,0.0,false

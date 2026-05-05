@@ -1,0 +1,4 @@
+candidate_name,failed_count,max_test_relative_regret,mean_test_relative_regret,min_test_relative_regret,ok_count,run_count,std_test_relative_regret
+rho_0p0,6,NaN,NaN,NaN,0,6,NaN
+rho_0p001,6,NaN,NaN,NaN,0,6,NaN
+rho_0p01,4,0.25628016379376084,0.2550481513032443,0.25381613881272785,2,6,0.0017423287731014787

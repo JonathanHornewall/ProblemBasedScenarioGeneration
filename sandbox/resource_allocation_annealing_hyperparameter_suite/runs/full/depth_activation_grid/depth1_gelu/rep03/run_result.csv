@@ -1,0 +1,2 @@
+activation,average_test_loss,batch_size,candidate_name,depth,epochs,error,final_epochs,finished_at,mean_test_optimal_value,mean_test_policy_value,mean_test_regret,mean_test_relative_regret,mu_schedule_kind,phase,replicate,rho,run_id,seed,started_at,status,test_policy_eval_seconds,test_sample_count
+gelu,0.08582267511793819,1,depth1_gelu,1,130,,10,1777934741437,805.7162362224142,878.4198784611864,72.70364223877176,0.08582267511793819,discrete,depth_activation_grid,3,0.0,full_depth_activation_grid_depth1_gelu_rep03,94003,1777930078592,ok,338.012598669,30.0
