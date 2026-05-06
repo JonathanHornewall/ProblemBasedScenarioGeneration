@@ -99,17 +99,19 @@ infer(policy::SampleAverageApproximationPolicy, context) = copy(policy.decision)
     LeastSquaresPolicy(data_set, solver, program, parametric_decoder; kwargs...)
 
 Ordinary least-squares certainty-equivalent baseline. The policy fits a linear
-map from contexts to one vector-valued `ParametricScenario` component, predicts
-that component for a new context, solves the one-scenario stochastic program,
-and returns the first-stage decision.
+map from contexts to one or more vector-valued `ParametricScenario` components,
+predicts those components for a new context, solves the one-scenario stochastic
+program, and returns the first-stage decision.
 
 The default `target_component` is `:h_eq_xi`, matching the resource-allocation
 demand scenarios. Other simple fixed-structure problems can pass another
-component, such as `:h_ineq_xi` or `:q_xi`.
+component, such as `:h_ineq_xi` or `:q_xi`, or a tuple such as
+`(:h_eq_xi, :q_xi)`.
 """
 struct LeastSquaresPolicy{
     TCoefficients,
     TTemplate,
+    TTargetComponent,
     TSolver,
     TProgram,
     TDecoder,
@@ -120,7 +122,7 @@ struct LeastSquaresPolicy{
 } <: Policy
     coefficients::TCoefficients
     scenario_template::TTemplate
-    target_component::Symbol
+    target_component::TTargetComponent
     target_length::Int
     solver::TSolver
     program::TProgram
@@ -198,6 +200,7 @@ struct ResidualSampleAverageApproximationPolicy{
     TCoefficients,
     TResiduals,
     TTemplates,
+    TTargetComponent,
     TSolver,
     TProgram,
     TDecoder,
@@ -209,7 +212,7 @@ struct ResidualSampleAverageApproximationPolicy{
     coefficients::TCoefficients
     residuals::TResiduals
     scenario_templates::TTemplates
-    target_component::Symbol
+    target_component::TTargetComponent
     target_length::Int
     solver::TSolver
     program::TProgram
@@ -392,7 +395,7 @@ function _fit_scenario_target_regression(
     )
 end
 
-function _scenario_target_observations(contextual_data_set, target_component::Symbol)
+function _scenario_target_observations(contextual_data_set, target_component)
     _check_nonempty_data_set(contextual_data_set)
 
     context_vectors = Vector{Vector{Float64}}()
@@ -459,13 +462,28 @@ function _predict_target(coefficients::AbstractMatrix, context)
 end
 
 function _checked_target_component(target_component)
-    component = Symbol(target_component)
-    component in PARAMETRIC_SCENARIO_COMPONENTS ||
-        throw(ArgumentError(
-            "target_component must be one of $(PARAMETRIC_SCENARIO_COMPONENTS); got $(repr(component)).",
-        ))
+    components = _target_component_tuple(target_component)
+    isempty(components) &&
+        throw(ArgumentError("target_component must contain at least one component."))
+    length(unique(components)) == length(components) ||
+        throw(ArgumentError("target_component must not contain duplicate components."))
 
-    return component
+    for component in components
+        component in PARAMETRIC_SCENARIO_COMPONENTS ||
+            throw(ArgumentError(
+                "target_component must use components from $(PARAMETRIC_SCENARIO_COMPONENTS); got $(repr(component)).",
+            ))
+    end
+
+    return length(components) == 1 ? only(components) : components
+end
+
+function _target_component_tuple(target_component)
+    if target_component isa Symbol || target_component isa AbstractString
+        return (Symbol(target_component),)
+    end
+
+    return Tuple(Symbol(component) for component in target_component)
 end
 
 function _target_feature_vector(scenario, target_component::Symbol)
@@ -474,6 +492,15 @@ function _target_feature_vector(scenario, target_component::Symbol)
     isempty(vector) &&
         throw(ArgumentError("target component $(target_component) must not be empty."))
     return vector
+end
+
+function _target_feature_vector(scenario, target_component)
+    components = _target_component_tuple(target_component)
+    vectors = [
+        _target_feature_vector(scenario, component)
+        for component in components
+    ]
+    return reduce(vcat, vectors)
 end
 
 function _numeric_feature_vector(value; name)
@@ -499,31 +526,59 @@ end
 
 function _scenario_from_target_vector(
     scenario_template,
-    target_component::Symbol,
+    target_component,
     target_vector::AbstractVector,
 )
-    replacement = _reshape_target_vector(
-        target_vector,
-        getproperty(scenario_template, target_component),
+    replacements = _scenario_component_replacements(
+        scenario_template,
         target_component,
+        target_vector,
     )
 
     return ContextualDFL.ParametricScenario(;
-        W_eq_xi=target_component == :W_eq_xi ? replacement :
-                _copy_scenario_component(scenario_template.W_eq_xi),
-        W_ineq_xi=target_component == :W_ineq_xi ? replacement :
-                  _copy_scenario_component(scenario_template.W_ineq_xi),
-        T_eq_xi=target_component == :T_eq_xi ? replacement :
-                _copy_scenario_component(scenario_template.T_eq_xi),
-        T_ineq_xi=target_component == :T_ineq_xi ? replacement :
-                  _copy_scenario_component(scenario_template.T_ineq_xi),
-        h_eq_xi=target_component == :h_eq_xi ? replacement :
-                _copy_scenario_component(scenario_template.h_eq_xi),
-        h_ineq_xi=target_component == :h_ineq_xi ? replacement :
-                  _copy_scenario_component(scenario_template.h_ineq_xi),
-        q_xi=target_component == :q_xi ? replacement :
-             _copy_scenario_component(scenario_template.q_xi),
+        W_eq_xi=_scenario_component_value(scenario_template, replacements, :W_eq_xi),
+        W_ineq_xi=_scenario_component_value(scenario_template, replacements, :W_ineq_xi),
+        T_eq_xi=_scenario_component_value(scenario_template, replacements, :T_eq_xi),
+        T_ineq_xi=_scenario_component_value(scenario_template, replacements, :T_ineq_xi),
+        h_eq_xi=_scenario_component_value(scenario_template, replacements, :h_eq_xi),
+        h_ineq_xi=_scenario_component_value(scenario_template, replacements, :h_ineq_xi),
+        q_xi=_scenario_component_value(scenario_template, replacements, :q_xi),
     )
+end
+
+function _scenario_component_replacements(
+    scenario_template,
+    target_component,
+    target_vector::AbstractVector,
+)
+    components = _target_component_tuple(target_component)
+    replacements = Dict{Symbol,Any}()
+    offset = 1
+
+    for component in components
+        template_value = getproperty(scenario_template, component)
+        component_length = length(_numeric_feature_vector(template_value; name=component))
+        next_offset = offset + component_length
+        replacements[component] = _reshape_target_vector(
+            view(target_vector, offset:(next_offset - 1)),
+            template_value,
+            component,
+        )
+        offset = next_offset
+    end
+
+    offset == length(target_vector) + 1 ||
+        throw(DimensionMismatch(
+            "target vector has length $(length(target_vector)); expected $(offset - 1).",
+        ))
+
+    return replacements
+end
+
+function _scenario_component_value(scenario_template, replacements, component::Symbol)
+    return haskey(replacements, component) ?
+           replacements[component] :
+           _copy_scenario_component(getproperty(scenario_template, component))
 end
 
 function _reshape_target_vector(target_vector, template_value, target_component)
@@ -553,11 +608,12 @@ end
 _copy_scenario_component(value::AbstractArray) = copy(value)
 _copy_scenario_component(value) = value
 
-function _check_fixed_scenario_components(scenario_templates, target_component::Symbol)
+function _check_fixed_scenario_components(scenario_templates, target_component)
+    target_components = _target_component_tuple(target_component)
     base_scenario = first(scenario_templates)
     for scenario in Iterators.drop(scenario_templates, 1)
         for component in PARAMETRIC_SCENARIO_COMPONENTS
-            component == target_component && continue
+            component in target_components && continue
             isequal(getproperty(base_scenario, component), getproperty(scenario, component)) ||
                 throw(ArgumentError(
                     "Least-squares baselines require fixed non-target scenario components; $(component) varies.",

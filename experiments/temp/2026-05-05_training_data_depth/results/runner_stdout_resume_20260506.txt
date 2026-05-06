@@ -1,0 +1,181 @@
+      From worker 2:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 2:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 2:	  !!! This code may malfunction under Revise.
+      From worker 2:	  !!! This code will error in future versions of Julia.
+      From worker 2:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 2:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 16:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 16:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 16:	  !!! This code may malfunction under Revise.
+      From worker 16:	  !!! This code will error in future versions of Julia.
+      From worker 16:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 16:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 3:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 3:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 3:	  !!! This code may malfunction under Revise.
+      From worker 3:	  !!! This code will error in future versions of Julia.
+      From worker 3:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 3:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 6:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 6:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 6:	  !!! This code may malfunction under Revise.
+      From worker 6:	  !!! This code will error in future versions of Julia.
+      From worker 6:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 6:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 22:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 22:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 22:	  !!! This code may malfunction under Revise.
+      From worker 22:	  !!! This code will error in future versions of Julia.
+      From worker 22:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 22:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 5:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 5:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 5:	  !!! This code may malfunction under Revise.
+      From worker 5:	  !!! This code will error in future versions of Julia.
+      From worker 5:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 5:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 7:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 7:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 7:	  !!! This code may malfunction under Revise.
+      From worker 7:	  !!! This code will error in future versions of Julia.
+      From worker 7:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 7:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 21:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 21:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 21:	  !!! This code may malfunction under Revise.
+      From worker 21:	  !!! This code will error in future versions of Julia.
+      From worker 21:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 21:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 4:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 4:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 4:	  !!! This code may malfunction under Revise.
+      From worker 4:	  !!! This code will error in future versions of Julia.
+      From worker 4:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 4:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 26:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 26:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 26:	  !!! This code may malfunction under Revise.
+      From worker 26:	  !!! This code will error in future versions of Julia.
+      From worker 26:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 26:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 27:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 27:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 27:	  !!! This code may malfunction under Revise.
+      From worker 27:	  !!! This code will error in future versions of Julia.
+      From worker 27:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 27:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 15:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 15:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 15:	  !!! This code may malfunction under Revise.
+      From worker 15:	  !!! This code will error in future versions of Julia.
+      From worker 15:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 15:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 13:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 13:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 13:	  !!! This code may malfunction under Revise.
+      From worker 13:	  !!! This code will error in future versions of Julia.
+      From worker 13:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 13:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 19:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 19:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 19:	  !!! This code may malfunction under Revise.
+      From worker 19:	  !!! This code will error in future versions of Julia.
+      From worker 19:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 19:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 31:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 31:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 31:	  !!! This code may malfunction under Revise.
+      From worker 31:	  !!! This code will error in future versions of Julia.
+      From worker 31:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 31:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 11:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 11:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 11:	  !!! This code may malfunction under Revise.
+      From worker 11:	  !!! This code will error in future versions of Julia.
+      From worker 11:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 11:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 18:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 18:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 18:	  !!! This code may malfunction under Revise.
+      From worker 18:	  !!! This code will error in future versions of Julia.
+      From worker 18:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 18:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 12:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 12:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 12:	  !!! This code may malfunction under Revise.
+      From worker 12:	  !!! This code will error in future versions of Julia.
+      From worker 12:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 12:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 23:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 23:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 23:	  !!! This code may malfunction under Revise.
+      From worker 23:	  !!! This code will error in future versions of Julia.
+      From worker 23:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 23:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 30:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 30:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 30:	  !!! This code may malfunction under Revise.
+      From worker 30:	  !!! This code will error in future versions of Julia.
+      From worker 30:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 30:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 10:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 10:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 10:	  !!! This code may malfunction under Revise.
+      From worker 10:	  !!! This code will error in future versions of Julia.
+      From worker 10:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 10:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 25:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 25:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 25:	  !!! This code may malfunction under Revise.
+      From worker 25:	  !!! This code will error in future versions of Julia.
+      From worker 25:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 25:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 8:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 8:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 8:	  !!! This code may malfunction under Revise.
+      From worker 8:	  !!! This code will error in future versions of Julia.
+      From worker 8:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 8:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 24:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 24:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 24:	  !!! This code may malfunction under Revise.
+      From worker 24:	  !!! This code will error in future versions of Julia.
+      From worker 24:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 24:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 14:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 14:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 14:	  !!! This code may malfunction under Revise.
+      From worker 14:	  !!! This code will error in future versions of Julia.
+      From worker 14:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 14:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 29:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 29:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 29:	  !!! This code may malfunction under Revise.
+      From worker 29:	  !!! This code will error in future versions of Julia.
+      From worker 29:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 29:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 9:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 9:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 9:	  !!! This code may malfunction under Revise.
+      From worker 9:	  !!! This code will error in future versions of Julia.
+      From worker 9:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 9:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 28:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 28:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 28:	  !!! This code may malfunction under Revise.
+      From worker 28:	  !!! This code will error in future versions of Julia.
+      From worker 28:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 28:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 17:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 17:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 17:	  !!! This code may malfunction under Revise.
+      From worker 17:	  !!! This code will error in future versions of Julia.
+      From worker 17:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 17:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+      From worker 20:	WARNING: Detected access to binding `Main.Pkg` in a world prior to its definition world.
+      From worker 20:	  Julia 1.12 has introduced more strict world age semantics for global bindings.
+      From worker 20:	  !!! This code may malfunction under Revise.
+      From worker 20:	  !!! This code will error in future versions of Julia.
+      From worker 20:	Hint: Add an appropriate `invokelatest` around the access to this binding.
+      From worker 20:	To make this warning an error, and hence obtain a stack trace, use `julia --depwarn=error`.
+Loading experiment code on 30 worker(s) asynchronously.

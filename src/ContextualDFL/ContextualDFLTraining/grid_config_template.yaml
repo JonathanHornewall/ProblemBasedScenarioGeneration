@@ -54,7 +54,7 @@ run_id_template: null
 base:
   # Core training defaults from src/run_defaults.jl.
   epochs: 10
-  learning_rate: 0.001
+  learning_rate: 0.01
   hidden_size: 64
   depth: 2
   batch_size: 8

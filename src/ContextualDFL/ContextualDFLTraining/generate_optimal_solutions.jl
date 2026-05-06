@@ -42,6 +42,8 @@ function main()
         ContextualDFLTraining.config_value(config, :optimality_evaluation_batches, 1),
         1,
     )
+    optimality_mu = Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0))
+    optimality_rho = Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0))
     generated = Symbol[]
 
     for (split_name, dataset) in splits
@@ -65,8 +67,8 @@ function main()
                 objects.program,
                 objects.reference_scenario_decoder,
                 objects.solver;
-                mu=Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0)),
-                rho=Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0)),
+                mu=optimality_mu,
+                rho=optimality_rho,
                 evaluation_batches=evaluation_batches,
             )
         end
@@ -75,7 +77,12 @@ function main()
             split_name,
             results;
             dataset=dataset,
-            metadata=(; solve_seconds=solve_seconds, evaluation_batches=evaluation_batches),
+            metadata=(;
+                solve_seconds=solve_seconds,
+                evaluation_batches=evaluation_batches,
+                optimality_mu=optimality_mu,
+                optimality_rho=optimality_rho,
+            ),
         )
         println("Wrote optimal results to $path")
 

@@ -1,0 +1,2 @@
+phase,candidate_name,run_count,ok_count,failed_count,mean_average_test_loss,std_average_test_loss,min_average_test_loss,max_average_test_loss
+width,width512,1,1,0,0.9498203599220609,NaN,0.9498203599220609,0.9498203599220609

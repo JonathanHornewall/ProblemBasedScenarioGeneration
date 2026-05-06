@@ -15,6 +15,7 @@ function build_neural_net(
     depth,
     dropout,
     activation=:relu,
+    output_activation=:softplus,
     seed=nothing,
 )
     input_dimension > 0 ||
@@ -38,7 +39,11 @@ function build_neural_net(
 
     dropout > 0 && push!(layers, Dropout(dropout))
     push!(layers, Dense(hidden_size => output_dimension; init=init))
-    push!(layers, x -> Flux.softplus.(x))
+    if Symbol(output_activation) != :identity &&
+       Symbol(output_activation) != :linear &&
+       Symbol(output_activation) != :none
+        push!(layers, x -> activation_function(output_activation).(x))
+    end
 
     return Chain(layers...) |> f64
 end
@@ -48,12 +53,13 @@ function activation_function(activation)
     name == :relu && return Flux.relu
     name in (:silu, :swish) && return Flux.swish
     name in (:gelu, :geelu) && return Flux.gelu
+    name == :softplus && return Flux.softplus
     name == :tanh && return tanh
     name == :sigmoid && return Flux.sigmoid
     name in (:identity, :linear, :none) && return identity
     throw(
         ArgumentError(
-            "unsupported activation $(activation); use relu, silu/swish, gelu/geelu, tanh, sigmoid, or identity.",
+            "unsupported activation $(activation); use relu, silu/swish, gelu/geelu, softplus, tanh, sigmoid, or identity.",
         ),
     )
 end

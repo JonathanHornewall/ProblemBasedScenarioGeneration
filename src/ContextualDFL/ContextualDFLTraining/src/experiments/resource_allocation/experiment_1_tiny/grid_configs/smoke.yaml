@@ -1,0 +1,24 @@
+version: 1
+name: resource_allocation_experiment_1_smoke
+description: Small smoke grid for validating grid-search plumbing.
+
+base:
+  epochs: 2
+
+fixed:
+  learning_rate: 0.001
+  hidden_size: 16
+  depth: 1
+  batch_size: 4
+  dropout: 0.0
+
+grid:
+  seed: [1]
+
+schedules:
+  mu:
+    kind: geometric
+    start: 1.0
+    stop: 0.01
+  mu_ref:
+    kind: match_input

@@ -1,4 +1,5 @@
 import CSV
+import JSON3
 
 if !isdefined(@__MODULE__, :unix_milliseconds)
     # Explicit Unix epoch milliseconds, independent of the local timezone.
@@ -44,6 +45,27 @@ function write_grid_results(
     end
 
     return output_dir
+end
+
+function write_incremental_grid_result(output_dir, result)
+    mkpath(output_dir)
+    append_jsonl(joinpath(output_dir, "runs.jsonl"), run_result_row(result))
+
+    for row in epoch_result_rows((result,))
+        append_jsonl(joinpath(output_dir, "epochs.jsonl"), row)
+    end
+
+    if getproperty(result, :status) != "ok"
+        append_jsonl(joinpath(output_dir, "failures.jsonl"), run_result_row(result))
+    end
+
+    return nothing
+end
+
+function write_incremental_config_result(output_dir, result)
+    mkpath(output_dir)
+    append_jsonl(joinpath(output_dir, "config_aggregates.jsonl"), config_aggregate_row(result))
+    return nothing
 end
 
 function run_result_row(result)
@@ -205,4 +227,51 @@ function write_csv(path, rows)
     end
     CSV.write(path, (; columns...); missingstring="")
     return path
+end
+
+function append_jsonl(path, row)
+    mkpath(dirname(path))
+    open(path, "a") do io
+        JSON3.write(io, jsonl_ready_value(row))
+        write(io, "\n")
+    end
+    return path
+end
+
+function jsonl_ready_value(value::AbstractDict)
+    output = Dict{String,Any}()
+    for (key, child) in value
+        output[string(key)] = jsonl_ready_value(child)
+    end
+    return output
+end
+
+function jsonl_ready_value(value::NamedTuple)
+    output = Dict{String,Any}()
+    for (key, child) in pairs(value)
+        output[string(key)] = jsonl_ready_value(child)
+    end
+    return output
+end
+
+function jsonl_ready_value(value::Tuple)
+    return Any[jsonl_ready_value(child) for child in value]
+end
+
+function jsonl_ready_value(value::AbstractArray)
+    return Any[jsonl_ready_value(child) for child in value]
+end
+
+function jsonl_ready_value(value)
+    value === missing && return nothing
+    value === nothing && return nothing
+    value isa AbstractString && return value
+    value isa Bool && return value
+    value isa Integer && return value
+    if value isa AbstractFloat
+        return isfinite(value) ? value : string(value)
+    end
+    value isa Number && return value
+    value isa Symbol && return string(value)
+    return string(value)
 end

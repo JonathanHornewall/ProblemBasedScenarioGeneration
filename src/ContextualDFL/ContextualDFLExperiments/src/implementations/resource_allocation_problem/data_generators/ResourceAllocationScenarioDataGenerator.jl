@@ -76,3 +76,58 @@ function (generator::ResourceAllocationScenarioDataGenerator)(context)
         q_xi=Float64[],
     )
 end
+
+function generate_benchmark_contexts(
+    problem::ResourceAllocationProblem;
+    n_contexts,
+    rng=Random.default_rng(),
+)
+    context_count = _checked_positive_integer(n_contexts, :n_contexts)
+    context_generator = ResourceAllocationContextDataGenerator(rng=rng)
+    return [Vector{Float64}(context_generator()) for _ in 1:context_count]
+end
+
+function generate_benchmark_scenarios(
+    problem::ResourceAllocationProblem,
+    context;
+    n_scenarios,
+    rng=Random.default_rng(),
+)
+    scenario_count = _checked_positive_integer(n_scenarios, :n_scenarios)
+    context_vector = _checked_context_vector(context, 3)
+    scenario_generator = ResourceAllocationScenarioDataGenerator(
+        problem;
+        sigma=5.0,
+        p=2.0,
+        L=3,
+        rng=rng,
+    )
+    return [scenario_generator(context_vector) for _ in 1:scenario_count]
+end
+
+function generate_benchmark_dataset(
+    problem::ResourceAllocationProblem;
+    n_contexts,
+    scenarios_per_context,
+    seed=1,
+    rng=Random.MersenneTwister(seed),
+)
+    context_count = _checked_positive_integer(n_contexts, :n_contexts)
+    scenario_count = _checked_positive_integer(scenarios_per_context, :scenarios_per_context)
+    context_generator = ResourceAllocationContextDataGenerator(rng=rng)
+    scenario_generator = ResourceAllocationScenarioDataGenerator(
+        problem;
+        sigma=5.0,
+        p=2.0,
+        L=3,
+        rng=rng,
+    )
+
+    contexts = [Vector{Float64}(context_generator()) for _ in 1:context_count]
+    scenario_collections = [
+        [scenario_generator(context) for _ in 1:scenario_count]
+        for context in contexts
+    ]
+
+    return generate_contextual_data_set(contexts, scenario_collections)
+end

@@ -6,7 +6,7 @@ function generate_benchmark_contexts(
     rng=Random.default_rng(),
 )
     context_count = _checked_positive_integer(n_contexts, :n_contexts)
-    return [randn(rng, problem.context_dim) for _ in 1:context_count]
+    return [abs.(randn(rng, problem.context_dim)) for _ in 1:context_count]
 end
 
 function generate_benchmark_scenarios(

@@ -15,6 +15,14 @@ const SUITE_VERSION = "resource-allocation-annealing-method-sweep-v1"
 const TEST_SEED = 20_260_505
 const TRAINING_SEED_BASE = 95_000
 const REPLICATES = 6
+const SCREENING_REPLICATES = 2
+const FINALIST_REPLICATES = 6
+const FINALIST_COUNT = 2
+const SCREENING_BASE_TOTAL_EPOCHS = 50
+const EARLY_STOP_CHECK_EPOCH = 25
+const EARLY_STOP_DOMINANCE_FACTOR = 3.0
+const QUICK_VALIDATION_CONTEXTS = 20
+const QUICK_VALIDATION_SEED_BASE = 80_000
 
 const BASE_TRAINING_CONTEXTS = 100
 const BASE_TEST_CONTEXTS = 100
@@ -49,6 +57,36 @@ const PHASES = (
     :piecewise_linear,
 )
 
+const TEST_SCENARIO_HEADERS = (
+    :sample_index,
+    :scenario_index,
+    :context_1,
+    :context_2,
+    :context_3,
+    :demand_values,
+)
+
+const TEST_OPTIMUM_HEADERS = (
+    :sample_index,
+    :evaluation_batches,
+    :objective_value,
+    :objective_values,
+)
+
+const TEST_METADATA_HEADERS = (
+    :version,
+    :smoke,
+    :seed,
+    :contexts,
+    :scenarios_per_context,
+    :solve_seconds,
+    :worker_id,
+    :hostname,
+    :pid,
+    :started_at,
+    :finished_at,
+)
+
 const WORKER_TEST_CACHE = Ref{Any}(nothing)
 
 function unix_milliseconds()
@@ -78,6 +116,7 @@ function result_paths(; smoke=false)
         epochs=joinpath(dir, "epochs.csv"),
         runs=joinpath(dir, "runs.csv"),
         test_samples=joinpath(dir, "test_per_sample.csv"),
+        early_checks=joinpath(dir, "early_checks.csv"),
         decisions=joinpath(dir, "decisions.csv"),
         final_selection=joinpath(dir, "final_selection.csv"),
     )
@@ -94,7 +133,7 @@ function csv_escape(value)
         value = join(string.(value), "|")
     end
 
-    text = string(value)
+    text = replace(string(value), "\r\n" => "\\n", "\n" => "\\n", "\r" => "\\r")
     if occursin(",", text) || occursin("\"", text) || occursin("\n", text) || occursin("\r", text)
         return "\"" * replace(text, "\"" => "\"\"") * "\""
     end
@@ -173,6 +212,44 @@ function parse_csv_line(line)
     return fields
 end
 
+function csv_record_complete(text)
+    in_quotes = false
+    index = firstindex(text)
+    while index <= lastindex(text)
+        char = text[index]
+        if in_quotes
+            if char == '"'
+                next_index = nextind(text, index)
+                if next_index <= lastindex(text) && text[next_index] == '"'
+                    index = next_index
+                else
+                    in_quotes = false
+                end
+            end
+        elseif char == '"'
+            in_quotes = true
+        end
+        index = nextind(text, index)
+    end
+    return !in_quotes
+end
+
+function csv_records(lines)
+    records = String[]
+    current = ""
+    for line in lines
+        current = isempty(current) ? line : current * "\n" * line
+        if csv_record_complete(current)
+            push!(records, current)
+            current = ""
+        else
+            continue
+        end
+    end
+    isempty(current) || error("CSV file ended inside a quoted record.")
+    return records
+end
+
 function parse_csv_value(text)
     isempty(text) && return missing
     lower = lowercase(text)
@@ -189,13 +266,13 @@ end
 
 function read_csv_rows(path)
     isfile(path) || return Any[]
-    lines = readlines(path)
-    isempty(lines) && return Any[]
-    headers = Symbol.(parse_csv_line(first(lines)))
+    records = csv_records(readlines(path))
+    isempty(records) && return Any[]
+    headers = Symbol.(parse_csv_line(first(records)))
     rows = NamedTuple[]
-    for line in Iterators.drop(lines, 1)
-        isempty(line) && continue
-        values = parse_csv_line(line)
+    for record in Iterators.drop(records, 1)
+        isempty(record) && continue
+        values = parse_csv_line(record)
         length(values) == length(headers) ||
             error("CSV row in $(path) has $(length(values)) fields; expected $(length(headers)).")
         push!(rows, NamedTuple{Tuple(headers)}(Tuple(parse_csv_value.(values))))
@@ -300,7 +377,6 @@ function scenario_rows_from_dataset(dataset)
     for (sample_index, data_point) in enumerate(dataset)
         context = Float64.(data_point.context)
         for (scenario_index, scenario) in enumerate(data_point.scenario_parameters)
-            demand = Float64.(scenario.h_eq_xi)
             push!(
                 rows,
                 (;
@@ -309,12 +385,7 @@ function scenario_rows_from_dataset(dataset)
                     context_1=context[1],
                     context_2=context[2],
                     context_3=context[3],
-                    demand_1=demand[1],
-                    demand_2=demand[2],
-                    demand_3=demand[3],
-                    demand_4=demand[4],
-                    demand_5=demand[5],
-                    demand_6=demand[6],
+                    demand_values=Float64.(collect(scenario.h_eq_xi)),
                 ),
             )
         end
@@ -379,42 +450,10 @@ end
 
 function write_test_cache_csv!(cache; smoke=false)
     paths = test_cache_paths(smoke=smoke)
-    scenario_headers = (
-        :sample_index,
-        :scenario_index,
-        :context_1,
-        :context_2,
-        :context_3,
-        :demand_1,
-        :demand_2,
-        :demand_3,
-        :demand_4,
-        :demand_5,
-        :demand_6,
-    )
-    optimum_headers = (
-        :sample_index,
-        :evaluation_batches,
-        :objective_value,
-        :objective_values,
-    )
-    metadata_headers = (
-        :version,
-        :smoke,
-        :seed,
-        :contexts,
-        :scenarios_per_context,
-        :solve_seconds,
-        :worker_id,
-        :hostname,
-        :pid,
-        :started_at,
-        :finished_at,
-    )
 
-    write_csv_file(paths.scenarios, scenario_headers, cache.scenario_rows)
-    write_csv_file(paths.optima, optimum_headers, cache.optimum_rows)
-    write_csv_file(paths.metadata, metadata_headers, [cache.metadata])
+    write_csv_file(paths.scenarios, TEST_SCENARIO_HEADERS, cache.scenario_rows)
+    write_csv_file(paths.optima, TEST_OPTIMUM_HEADERS, cache.optimum_rows)
+    write_csv_file(paths.metadata, TEST_METADATA_HEADERS, [cache.metadata])
     return paths
 end
 
@@ -429,41 +468,59 @@ function load_test_cache_from_csv(; smoke=false)
     test_cache_exists(smoke=smoke) ||
         error("Missing test cache CSV files in $(paths.dir).")
 
+    metadata_rows = read_csv_rows(paths.metadata)
+    metadata = isempty(metadata_rows) ? (;) : first(metadata_rows)
     scenario_rows = read_csv_rows(paths.scenarios)
-    grouped = Dict{Int,Vector{Any}}()
-    for row in scenario_rows
-        sample_index = Int(row.sample_index)
-        push!(get!(grouped, sample_index, Any[]), row)
-    end
+    legacy_scenarios =
+        !isempty(scenario_rows) && !(:demand_values in propertynames(first(scenario_rows)))
 
-    dataset = ContextualDFL.ContextualDataPoint[]
-    for sample_index in sort(collect(keys(grouped)))
-        rows = sort(grouped[sample_index]; by=row -> Int(row.scenario_index))
-        first_row = first(rows)
-        context = Float64[
-            first_row.context_1,
-            first_row.context_2,
-            first_row.context_3,
-        ]
-        scenarios = [
-            ContextualDFL.ParametricScenario(;
-                W_eq_xi=Float64[],
-                W_ineq_xi=Float64[],
-                T_eq_xi=Float64[],
-                T_ineq_xi=Float64[],
-                h_eq_xi=Float64[
-                    row.demand_1,
-                    row.demand_2,
-                    row.demand_3,
-                    row.demand_4,
-                    row.demand_5,
-                    row.demand_6,
-                ],
-                h_ineq_xi=Float64[],
-                q_xi=Float64[],
-            ) for row in rows
-        ]
-        push!(dataset, ContextualDFL.ContextualDataPoint(context, scenarios))
+    dataset = if legacy_scenarios
+        seed = Int(row_value(metadata, :seed, TEST_SEED))
+        context_count = Int(row_value(metadata, :contexts, test_shape(smoke=smoke).contexts))
+        scenarios_per_context = Int(
+            row_value(
+                metadata,
+                :scenarios_per_context,
+                test_shape(smoke=smoke).scenarios_per_context,
+            ),
+        )
+        regenerated = generate_resource_allocation_dataset(
+            seed=seed,
+            context_count=context_count,
+            scenarios_per_context=scenarios_per_context,
+        )
+        write_csv_file(paths.scenarios, TEST_SCENARIO_HEADERS, scenario_rows_from_dataset(regenerated))
+        regenerated
+    else
+        grouped = Dict{Int,Vector{Any}}()
+        for row in scenario_rows
+            sample_index = Int(row.sample_index)
+            push!(get!(grouped, sample_index, Any[]), row)
+        end
+
+        parsed_dataset = ContextualDFL.ContextualDataPoint[]
+        for sample_index in sort(collect(keys(grouped)))
+            rows = sort(grouped[sample_index]; by=row -> Int(row.scenario_index))
+            first_row = first(rows)
+            context = Float64[
+                first_row.context_1,
+                first_row.context_2,
+                first_row.context_3,
+            ]
+            scenarios = [
+                ContextualDFL.ParametricScenario(;
+                    W_eq_xi=Float64[],
+                    W_ineq_xi=Float64[],
+                    T_eq_xi=Float64[],
+                    T_ineq_xi=Float64[],
+                    h_eq_xi=parse_vector_cell(row.demand_values),
+                    h_ineq_xi=Float64[],
+                    q_xi=Float64[],
+                ) for row in rows
+            ]
+            push!(parsed_dataset, ContextualDFL.ContextualDataPoint(context, scenarios))
+        end
+        parsed_dataset
     end
 
     optima_rows = sort(read_csv_rows(paths.optima); by=row -> Int(row.sample_index))
@@ -475,8 +532,6 @@ function load_test_cache_from_csv(; smoke=false)
         ) for row in optima_rows
     ]
 
-    metadata_rows = read_csv_rows(paths.metadata)
-    metadata = isempty(metadata_rows) ? (;) : first(metadata_rows)
     return (; dataset=dataset, optimal_results=optimal_results, metadata=metadata)
 end
 
@@ -494,10 +549,13 @@ function replicate_seed(replicate)
     return TRAINING_SEED_BASE + Int(replicate)
 end
 
-function normalized_epochs(training_contexts; smoke=false)
+function normalized_epochs(training_contexts; smoke=false, base_epochs=BASE_TOTAL_EPOCHS)
     smoke && return 1
-    return max(1, round(Int, BASE_TOTAL_EPOCHS * BASE_TRAINING_CONTEXTS / Int(training_contexts)))
+    return max(1, round(Int, Int(base_epochs) * BASE_TRAINING_CONTEXTS / Int(training_contexts)))
 end
+
+screening_epochs(training_contexts; smoke=false) =
+    normalized_epochs(training_contexts; smoke=smoke, base_epochs=SCREENING_BASE_TOTAL_EPOCHS)
 
 function fine_tuning_epochs(total_epochs; smoke=false)
     smoke && return 0
@@ -528,15 +586,33 @@ function safe_path_part(text)
     return replace(String(text), r"[^A-Za-z0-9_.=-]" => "_")
 end
 
-function run_id(phase, candidate_name, replicate; smoke=false)
+function run_id(phase, candidate_name, replicate; smoke=false, stage=:exhaustive)
     return join(
         (
             smoke ? "smoke" : "full",
             string(phase),
+            safe_path_part(stage),
             safe_path_part(candidate_name),
             "rep" * lpad(string(Int(replicate)), 2, "0"),
         ),
         "_",
+    )
+end
+
+function early_stop_overrides(thresholds=nothing)
+    thresholds === nothing && return (;)
+    return (;
+        early_stop_enabled=true,
+        early_stop_epoch=Int(row_value(thresholds, :epoch, EARLY_STOP_CHECK_EPOCH)),
+        early_stop_training_loss_threshold=Float64(
+            row_value(thresholds, :training_loss_threshold, Inf),
+        ),
+        early_stop_display_loss_threshold=Float64(
+            row_value(thresholds, :display_loss_threshold, Inf),
+        ),
+        early_stop_quick_validation_loss_threshold=Float64(
+            row_value(thresholds, :quick_validation_loss_threshold, Inf),
+        ),
     )
 end
 
@@ -546,6 +622,7 @@ function base_run_config(; phase, candidate_name, replicate, smoke=false, overri
         (;
             version=SUITE_VERSION,
             smoke=Bool(smoke),
+            stage=:exhaustive,
             phase=Symbol(phase),
             candidate_name=String(candidate_name),
             replicate=Int(replicate),
@@ -567,13 +644,26 @@ function base_run_config(; phase, candidate_name, replicate, smoke=false, overri
             batch_size=BASE_BATCH_SIZE,
             learning_rate=BASE_LEARNING_RATE,
             reset_optimizer_each_epoch=true,
+            early_stop_enabled=false,
+            early_stop_epoch=EARLY_STOP_CHECK_EPOCH,
+            early_stop_training_loss_threshold=Inf,
+            early_stop_display_loss_threshold=Inf,
+            early_stop_quick_validation_loss_threshold=Inf,
+            quick_validation_contexts=QUICK_VALIDATION_CONTEXTS,
+            quick_validation_seed=QUICK_VALIDATION_SEED_BASE + Int(replicate),
         ),
         NamedTuple(overrides),
     )
     return merge(
         config,
         (;
-            run_id=run_id(Symbol(phase), String(candidate_name), replicate; smoke=smoke),
+            run_id=run_id(
+                Symbol(phase),
+                String(candidate_name),
+                replicate;
+                smoke=smoke,
+                stage=Symbol(config.stage),
+            ),
         ),
     )
 end
@@ -601,24 +691,56 @@ function config_from_selection(; phase, candidate_name, replicate, selection, sm
     )
 end
 
-function data_amount_configs(selection; smoke=false)
-    reps = smoke ? 1 : REPLICATES
+function data_amount_configs(
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    reps = replicates === nothing ? (1:(smoke ? 1 : REPLICATES)) : replicates
     amounts = smoke ? (2, 3, 4) : (100, 500, 1000)
+    if candidate_names !== nothing
+        keep = Set(String.(candidate_names))
+        amounts = tuple([amount for amount in amounts if "n$(amount)" in keep]...)
+    end
     return [
         base_run_config(;
             phase=:data_amount,
             candidate_name="n$(amount)",
             replicate=replicate,
             smoke=smoke,
+            stage=stage,
             training_contexts=amount,
-            epochs=normalized_epochs(amount; smoke=smoke),
-            final_epochs=fine_tuning_epochs(normalized_epochs(amount; smoke=smoke); smoke=smoke),
-        ) for amount in amounts for replicate in 1:reps
+            epochs=screening ? screening_epochs(amount; smoke=smoke) :
+                   normalized_epochs(amount; smoke=smoke),
+            final_epochs=fine_tuning_epochs(
+                screening ? screening_epochs(amount; smoke=smoke) :
+                normalized_epochs(amount; smoke=smoke);
+                smoke=smoke,
+            ),
+            early_stop_overrides(early_stop_thresholds)...,
+        ) for amount in amounts for replicate in reps
     ]
 end
 
-function depth_configs(selection; smoke=false)
-    reps = smoke ? 1 : REPLICATES
+function depth_configs(
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    reps = replicates === nothing ? (1:(smoke ? 1 : REPLICATES)) : replicates
+    depths = (3, 4, 5, 10, 20)
+    if candidate_names !== nothing
+        keep = Set(String.(candidate_names))
+        depths = tuple([depth for depth in depths if "depth$(depth)" in keep]...)
+    end
     return [
         config_from_selection(;
             phase=:depth,
@@ -626,13 +748,34 @@ function depth_configs(selection; smoke=false)
             replicate=replicate,
             selection=selection,
             smoke=smoke,
+            stage=stage,
+            epochs=screening ? screening_epochs(selection.training_contexts; smoke=smoke) :
+                   selection.epochs,
+            final_epochs=screening ? fine_tuning_epochs(
+                screening_epochs(selection.training_contexts; smoke=smoke);
+                smoke=smoke,
+            ) : selection.final_epochs,
             depth=depth,
-        ) for depth in (3, 4, 5, 10, 20) for replicate in 1:reps
+            early_stop_overrides(early_stop_thresholds)...,
+        ) for depth in depths for replicate in reps
     ]
 end
 
-function width_configs(selection; smoke=false)
-    reps = smoke ? 1 : REPLICATES
+function width_configs(
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    reps = replicates === nothing ? (1:(smoke ? 1 : REPLICATES)) : replicates
+    widths = (32, 64, 128, 256, 512)
+    if candidate_names !== nothing
+        keep = Set(String.(candidate_names))
+        widths = tuple([width for width in widths if "width$(width)" in keep]...)
+    end
     return [
         config_from_selection(;
             phase=:width,
@@ -640,13 +783,29 @@ function width_configs(selection; smoke=false)
             replicate=replicate,
             selection=selection,
             smoke=smoke,
+            stage=stage,
+            epochs=screening ? screening_epochs(selection.training_contexts; smoke=smoke) :
+                   selection.epochs,
+            final_epochs=screening ? fine_tuning_epochs(
+                screening_epochs(selection.training_contexts; smoke=smoke);
+                smoke=smoke,
+            ) : selection.final_epochs,
             hidden_size=width,
-        ) for width in (32, 64, 128, 256, 512) for replicate in 1:reps
+            early_stop_overrides(early_stop_thresholds)...,
+        ) for width in widths for replicate in reps
     ]
 end
 
-function schedule_shape_configs(selection; smoke=false)
-    reps = smoke ? 1 : REPLICATES
+function schedule_shape_configs(
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    reps = replicates === nothing ? (1:(smoke ? 1 : REPLICATES)) : replicates
     shapes = (
         :piecewise_linear,
         :linear,
@@ -655,6 +814,10 @@ function schedule_shape_configs(selection; smoke=false)
         :delayed_quadratic,
         :early_quadratic,
     )
+    if candidate_names !== nothing
+        keep = Set(String.(candidate_names))
+        shapes = tuple([shape for shape in shapes if String(shape) in keep]...)
+    end
     return [
         config_from_selection(;
             phase=:schedule_shape,
@@ -662,8 +825,16 @@ function schedule_shape_configs(selection; smoke=false)
             replicate=replicate,
             selection=selection,
             smoke=smoke,
+            stage=stage,
+            epochs=screening ? screening_epochs(selection.training_contexts; smoke=smoke) :
+                   selection.epochs,
+            final_epochs=screening ? fine_tuning_epochs(
+                screening_epochs(selection.training_contexts; smoke=smoke);
+                smoke=smoke,
+            ) : selection.final_epochs,
             schedule_kind=shape,
-        ) for shape in shapes for replicate in 1:reps
+            early_stop_overrides(early_stop_thresholds)...,
+        ) for shape in shapes for replicate in reps
     ]
 end
 
@@ -744,10 +915,22 @@ function piecewise_candidate_specs()
     )
 end
 
-function piecewise_linear_configs(selection; smoke=false)
-    reps = smoke ? 1 : REPLICATES
+function piecewise_linear_configs(
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    reps = replicates === nothing ? (1:(smoke ? 1 : REPLICATES)) : replicates
+    keep = candidate_names === nothing ? nothing : Set(String.(candidate_names))
     configs = NamedTuple[]
-    for spec in piecewise_candidate_specs(), replicate in 1:reps
+    for spec in piecewise_candidate_specs(), replicate in reps
+        keep === nothing || spec.name in keep || continue
+        epoch_count = screening ? screening_epochs(selection.training_contexts; smoke=smoke) :
+                      selection.epochs
         push!(
             configs,
             config_from_selection(;
@@ -756,6 +939,10 @@ function piecewise_linear_configs(selection; smoke=false)
                 replicate=replicate,
                 selection=selection,
                 smoke=smoke,
+                stage=stage,
+                epochs=epoch_count,
+                final_epochs=screening ? fine_tuning_epochs(epoch_count; smoke=smoke) :
+                             selection.final_epochs,
                 schedule_kind=:piecewise_linear,
                 starting_mu=spec.starting_mu,
                 ending_mu=spec.ending_mu,
@@ -763,18 +950,36 @@ function piecewise_linear_configs(selection; smoke=false)
                 nr_pieces=spec.nr_pieces,
                 starting_phase_length=spec.starting_phase_length,
                 fine_tuning_phase_length=spec.fine_tuning_phase_length,
+                early_stop_overrides(early_stop_thresholds)...,
             ),
         )
     end
     return configs
 end
 
-function phase_configs(phase, selection; smoke=false)
-    phase == :data_amount && return data_amount_configs(selection; smoke=smoke)
-    phase == :depth && return depth_configs(selection; smoke=smoke)
-    phase == :width && return width_configs(selection; smoke=smoke)
-    phase == :schedule_shape && return schedule_shape_configs(selection; smoke=smoke)
-    phase == :piecewise_linear && return piecewise_linear_configs(selection; smoke=smoke)
+function phase_configs(
+    phase,
+    selection;
+    smoke=false,
+    replicates=nothing,
+    stage=:exhaustive,
+    screening=false,
+    candidate_names=nothing,
+    early_stop_thresholds=nothing,
+)
+    kwargs = (;
+        smoke=smoke,
+        replicates=replicates,
+        stage=stage,
+        screening=screening,
+        candidate_names=candidate_names,
+        early_stop_thresholds=early_stop_thresholds,
+    )
+    phase == :data_amount && return data_amount_configs(selection; kwargs...)
+    phase == :depth && return depth_configs(selection; kwargs...)
+    phase == :width && return width_configs(selection; kwargs...)
+    phase == :schedule_shape && return schedule_shape_configs(selection; kwargs...)
+    phase == :piecewise_linear && return piecewise_linear_configs(selection; kwargs...)
     throw(ArgumentError("unsupported phase: $(phase)"))
 end
 
@@ -903,6 +1108,7 @@ function config_row(config)
         version=config.version,
         run_id=config.run_id,
         smoke=config.smoke,
+        stage=String(config.stage),
         phase=String(config.phase),
         candidate_name=config.candidate_name,
         replicate=config.replicate,
@@ -927,6 +1133,13 @@ function config_row(config)
         batch_size=config.batch_size,
         learning_rate=config.learning_rate,
         reset_optimizer_each_epoch=config.reset_optimizer_each_epoch,
+        early_stop_enabled=config.early_stop_enabled,
+        early_stop_epoch=config.early_stop_epoch,
+        early_stop_training_loss_threshold=config.early_stop_training_loss_threshold,
+        early_stop_display_loss_threshold=config.early_stop_display_loss_threshold,
+        early_stop_quick_validation_loss_threshold=
+            config.early_stop_quick_validation_loss_threshold,
+        quick_validation_contexts=config.quick_validation_contexts,
         mu_in_preview=schedule_preview(mu_in),
         mu_ref_preview=schedule_preview(mu_ref),
     )
@@ -936,6 +1149,7 @@ const CONFIG_HEADERS = (
     :version,
     :run_id,
     :smoke,
+    :stage,
     :phase,
     :candidate_name,
     :replicate,
@@ -959,6 +1173,12 @@ const CONFIG_HEADERS = (
     :batch_size,
     :learning_rate,
     :reset_optimizer_each_epoch,
+    :early_stop_enabled,
+    :early_stop_epoch,
+    :early_stop_training_loss_threshold,
+    :early_stop_display_loss_threshold,
+    :early_stop_quick_validation_loss_threshold,
+    :quick_validation_contexts,
     :mu_in_preview,
     :mu_ref_preview,
 )
@@ -1058,6 +1278,26 @@ const TEST_SAMPLE_HEADERS = (
     :gap_values,
 )
 
+const EARLY_CHECK_HEADERS = (
+    :attempt_id,
+    :run_id,
+    :phase,
+    :candidate_name,
+    :replicate,
+    :epoch,
+    :training_loss,
+    :display_loss,
+    :quick_validation_loss,
+    :training_loss_threshold,
+    :display_loss_threshold,
+    :quick_validation_loss_threshold,
+    :stopped,
+    :reason,
+    :worker_id,
+    :hostname,
+    :created_at,
+)
+
 const SUMMARY_HEADERS = (
     :phase,
     :candidate_name,
@@ -1092,11 +1332,29 @@ const DECISION_HEADERS = (
     :decided_at,
 )
 
+const FINALIST_HEADERS = (
+    :phase,
+    :rank,
+    :candidate_name,
+    :screening_run_count,
+    :screening_ok_count,
+    :screening_failed_count,
+    :screening_mean_average_test_loss,
+    :screening_std_average_test_loss,
+    :selected_at,
+)
+
 function put_log!(logger, kind::Symbol, row)
     logger === nothing && return nothing
     put!(logger, (; kind=kind, row=row))
     return nothing
 end
+
+struct EarlyStopException <: Exception
+    message::String
+end
+
+Base.showerror(io::IO, error::EarlyStopException) = print(io, error.message)
 
 function epoch_row(config, attempt_id, local_epoch, loss_value, display_loss, metadata)
     return (;
@@ -1121,6 +1379,89 @@ function epoch_row(config, attempt_id, local_epoch, loss_value, display_loss, me
         hidden_size=Int(config.hidden_size),
         schedule_kind=String(config.schedule_kind),
         seed=Int(config.seed),
+        worker_id=Distributed.myid(),
+        hostname=Sockets.gethostname(),
+        created_at=unix_milliseconds(),
+    )
+end
+
+function quick_validation_dataset(config)
+    context_count = Int(config.quick_validation_contexts)
+    context_count <= 0 && return nothing
+    return generate_resource_allocation_dataset(
+        seed=Int(config.quick_validation_seed),
+        context_count=context_count,
+        scenarios_per_context=1,
+    )
+end
+
+function quick_validation_loss(model, loss, validation_dataset, config, mu_in, mu_ref)
+    validation_dataset === nothing && return NaN
+    values = Float64[]
+    for point in validation_dataset
+        value = loss(
+            model(point.context),
+            point.scenario_parameters,
+            mu_in,
+            mu_ref;
+            nr_scenarios=Int(config.nr_scenarios),
+        )
+        push!(values, Float64(value))
+    end
+    isempty(values) && return NaN
+    return Statistics.mean(values)
+end
+
+function early_stop_threshold(value)
+    parsed = numeric_or_inf(value)
+    return isfinite(parsed) ? parsed : Inf
+end
+
+function early_stop_decision(config, training_loss, display_loss, quick_loss)
+    training_threshold = early_stop_threshold(config.early_stop_training_loss_threshold)
+    display_threshold = early_stop_threshold(config.early_stop_display_loss_threshold)
+    quick_threshold = early_stop_threshold(config.early_stop_quick_validation_loss_threshold)
+
+    reasons = String[]
+    if isfinite(training_threshold) && Float64(training_loss) > training_threshold
+        push!(
+            reasons,
+            "training_loss $(Float64(training_loss)) > threshold $(training_threshold)",
+        )
+    end
+    if isfinite(display_threshold) && Float64(display_loss) > display_threshold
+        push!(
+            reasons,
+            "display_loss $(Float64(display_loss)) > threshold $(display_threshold)",
+        )
+    end
+    if isfinite(quick_threshold) && isfinite(Float64(quick_loss)) &&
+       Float64(quick_loss) > quick_threshold
+        push!(
+            reasons,
+            "quick_validation_loss $(Float64(quick_loss)) > threshold $(quick_threshold)",
+        )
+    end
+
+    return (; stopped=!isempty(reasons), reason=join(reasons, "; "))
+end
+
+function early_check_row(config, attempt_id, epoch, training_loss, display_loss, quick_loss, decision)
+    return (;
+        attempt_id=attempt_id,
+        run_id=config.run_id,
+        phase=String(config.phase),
+        candidate_name=config.candidate_name,
+        replicate=Int(config.replicate),
+        epoch=Int(epoch),
+        training_loss=Float64(training_loss),
+        display_loss=Float64(display_loss),
+        quick_validation_loss=Float64(quick_loss),
+        training_loss_threshold=config.early_stop_training_loss_threshold,
+        display_loss_threshold=config.early_stop_display_loss_threshold,
+        quick_validation_loss_threshold=config.early_stop_quick_validation_loss_threshold,
+        stopped=Bool(decision.stopped),
+        reason=decision.reason,
         worker_id=Distributed.myid(),
         hostname=Sockets.gethostname(),
         created_at=unix_milliseconds(),
@@ -1283,6 +1624,8 @@ function run_sweep_config(config, logger)
         data_set_training = generate_training_dataset(config)
         loss = build_loss(objects, config)
         mu_in, mu_ref = mu_schedules_for_config(config)
+        validation_dataset = Bool(config.early_stop_enabled) ?
+                             quick_validation_dataset(config) : nothing
 
         training_seconds = @elapsed begin
             ContextualDFL.train!(
@@ -1307,8 +1650,41 @@ function run_sweep_config(config, logger)
                     put_log!(
                         logger,
                         :epoch,
-                        epoch_row(config, attempt_id, epoch, loss_value, display_loss, metadata),
+                            epoch_row(config, attempt_id, epoch, loss_value, display_loss, metadata),
                     )
+                    if Bool(config.early_stop_enabled) &&
+                       Int(epoch) == Int(config.early_stop_epoch)
+                        quick_loss = quick_validation_loss(
+                            model,
+                            loss,
+                            validation_dataset,
+                            config,
+                            metadata.mu_in,
+                            metadata.mu_ref,
+                        )
+                        decision = early_stop_decision(
+                            config,
+                            loss_value,
+                            display_loss,
+                            quick_loss,
+                        )
+                        put_log!(
+                            logger,
+                            :early_check,
+                            early_check_row(
+                                config,
+                                attempt_id,
+                                epoch,
+                                loss_value,
+                                display_loss,
+                                quick_loss,
+                                decision,
+                            ),
+                        )
+                        if decision.stopped
+                            throw(EarlyStopException(decision.reason))
+                        end
+                    end
                 end,
             )
         end
@@ -1335,10 +1711,11 @@ function run_sweep_config(config, logger)
     catch error
         finished_at = unix_milliseconds()
         text = sprint(showerror, error, catch_backtrace())
+        status = error isa EarlyStopException ? "early_stopped" : "failed"
         result = run_result_row(
             config,
             attempt_id,
-            "failed",
+            status,
             started_at,
             finished_at;
             error=text,
@@ -1379,9 +1756,19 @@ function latest_ok_runs_by_id(run_rows)
     return by_id
 end
 
+function terminal_runs_by_id(run_rows)
+    by_id = Dict{String,Any}()
+    for row in run_rows
+        status = string(row_value(row, :status, ""))
+        status in ("ok", "early_stopped") || continue
+        by_id[string(row_value(row, :run_id, ""))] = row
+    end
+    return by_id
+end
+
 function completed_run_ids(; smoke=false)
     rows = read_csv_rows(result_paths(smoke=smoke).runs)
-    return Set(keys(latest_ok_runs_by_id(rows)))
+    return Set(keys(terminal_runs_by_id(rows)))
 end
 
 function summarize_phase(configs; smoke=false)
@@ -1420,6 +1807,71 @@ function choose_candidate(summary_rows)
     isempty(complete_rows) &&
         error("No candidate has all required replicates completed successfully.")
     return first(sort(complete_rows; by=row -> Float64(row.mean_average_test_loss)))
+end
+
+function choose_finalists(summary_rows; count=FINALIST_COUNT)
+    usable_rows = [
+        row for row in summary_rows if Int(row.ok_count) > 0 &&
+                                    isfinite(Float64(row.mean_average_test_loss))
+    ]
+    isempty(usable_rows) &&
+        error("No screening candidate has a completed run.")
+    return first(
+        sort(usable_rows; by=row -> Float64(row.mean_average_test_loss)),
+        min(Int(count), length(usable_rows)),
+    )
+end
+
+function finalist_rows(phase, finalists)
+    return [
+        (;
+            phase=String(phase),
+            rank=index,
+            candidate_name=row.candidate_name,
+            screening_run_count=row.run_count,
+            screening_ok_count=row.ok_count,
+            screening_failed_count=row.failed_count,
+            screening_mean_average_test_loss=row.mean_average_test_loss,
+            screening_std_average_test_loss=row.std_average_test_loss,
+            selected_at=unix_milliseconds(),
+        ) for (index, row) in enumerate(finalists)
+    ]
+end
+
+function early_stop_thresholds_from_checks(configs; smoke=false)
+    check_rows = read_csv_rows(result_paths(smoke=smoke).early_checks)
+    isempty(check_rows) && return nothing
+
+    run_ids = Set(config.run_id for config in configs)
+    rows = [
+        row for row in check_rows if string(row_value(row, :run_id, "")) in run_ids &&
+                                  Int(row_value(row, :epoch, 0)) == EARLY_STOP_CHECK_EPOCH
+    ]
+    isempty(rows) && return nothing
+
+    training_values = [
+        numeric_or_inf(row_value(row, :training_loss, Inf)) for row in rows
+    ]
+    display_values = [
+        numeric_or_inf(row_value(row, :display_loss, Inf)) for row in rows
+    ]
+    quick_values = [
+        numeric_or_inf(row_value(row, :quick_validation_loss, Inf)) for row in rows
+    ]
+
+    finite_training = [value for value in training_values if isfinite(value)]
+    finite_display = [value for value in display_values if isfinite(value)]
+    finite_quick = [value for value in quick_values if isfinite(value)]
+    isempty(finite_training) && isempty(finite_display) && isempty(finite_quick) &&
+        return nothing
+
+    factor = EARLY_STOP_DOMINANCE_FACTOR
+    return (;
+        epoch=EARLY_STOP_CHECK_EPOCH,
+        training_loss_threshold=isempty(finite_training) ? Inf : minimum(finite_training) * factor,
+        display_loss_threshold=isempty(finite_display) ? Inf : minimum(finite_display) * factor,
+        quick_validation_loss_threshold=isempty(finite_quick) ? Inf : minimum(finite_quick) * factor,
+    )
 end
 
 function config_for_candidate(configs, candidate_name)

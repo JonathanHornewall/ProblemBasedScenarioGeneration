@@ -19,6 +19,7 @@ using ContextualDFL
 using ContextualDFLExperiments
 using Dates
 using Printf
+using Random
 using Serialization
 
 const RUN_ROOT = @__DIR__
@@ -34,6 +35,16 @@ const SMOKE_CONFIG = (;
     test_scenarios_per_context=1,
     seed=20260505,
     knn_k=1,
+)
+
+const PROPER_CONFIG = (;
+    profile="proper",
+    train_contexts=100,
+    train_scenarios_per_context=1,
+    test_contexts=30,
+    test_scenarios_per_context=1000,
+    seed=20260505,
+    knn_k=10,
 )
 
 const CSV_COLUMNS = (
@@ -67,25 +78,41 @@ function main(args=ARGS)
     mkpath(CACHE_DIR)
     mkpath(RESULTS_DIR)
 
-    refresh_cache = any(arg -> arg in ("--refresh-cache", "--fresh"), args)
-    config = SMOKE_CONFIG
+    options = parse_options(args)
+    config = options.config
+    refresh_cache = options.refresh_cache
     solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
     timestamp = Dates.format(now(), dateformat"yyyymmdd_HHMMSS")
 
     rows = NamedTuple[]
+    timestamped_path = joinpath(RESULTS_DIR, "baseline_results_$(timestamp).csv")
+    latest_path = joinpath(RESULTS_DIR, "baseline_results_latest.csv")
+    write_csv(timestamped_path, rows)
+    write_csv(latest_path, rows)
+
+    function record_row(row)
+        push!(rows, row)
+        write_csv(timestamped_path, rows)
+        write_csv(latest_path, rows)
+        return nothing
+    end
+
     println("Running $(config.profile) benchmark baseline check")
     println("Cache directory: $(CACHE_DIR)")
     println("Results directory: $(RESULTS_DIR)")
     refresh_cache && println("Refreshing cached test data and optima")
 
-    for spec in benchmark_specs()
-        append!(rows, run_benchmark(spec, solver, config, timestamp; refresh_cache))
+    for spec in selected_benchmark_specs(options.benchmark_names)
+        run_benchmark(
+            spec,
+            solver,
+            config,
+            timestamp;
+            refresh_cache,
+            policy_names=options.policy_names,
+            on_row=record_row,
+        )
     end
-
-    timestamped_path = joinpath(RESULTS_DIR, "baseline_results_$(timestamp).csv")
-    latest_path = joinpath(RESULTS_DIR, "baseline_results_latest.csv")
-    write_csv(timestamped_path, rows)
-    write_csv(latest_path, rows)
 
     println("Wrote $(length(rows)) policy rows")
     println("Latest results: $(latest_path)")
@@ -94,13 +121,127 @@ function main(args=ARGS)
     return rows
 end
 
+function parse_options(args)
+    profile = "smoke"
+    refresh_cache = false
+    overrides = Dict{Symbol,Int}()
+    benchmark_names = nothing
+    policy_names = nothing
+
+    index = 1
+    while index <= length(args)
+        arg = args[index]
+        if arg in ("--refresh-cache", "--fresh")
+            refresh_cache = true
+        elseif arg == "--profile"
+            index += 1
+            index <= length(args) || throw(ArgumentError("--profile requires a value."))
+            profile = args[index]
+        elseif startswith(arg, "--profile=")
+            profile = split(arg, "=", limit=2)[2]
+        elseif arg in ("--train-contexts", "--train-data")
+            index += 1
+            overrides[:train_contexts] = parse(Int, args[index])
+        elseif startswith(arg, "--train-contexts=")
+            overrides[:train_contexts] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif startswith(arg, "--train-data=")
+            overrides[:train_contexts] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg == "--train-scenarios"
+            index += 1
+            overrides[:train_scenarios_per_context] = parse(Int, args[index])
+        elseif startswith(arg, "--train-scenarios=")
+            overrides[:train_scenarios_per_context] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg in ("--test-contexts", "--validation-contexts")
+            index += 1
+            overrides[:test_contexts] = parse(Int, args[index])
+        elseif startswith(arg, "--test-contexts=")
+            overrides[:test_contexts] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif startswith(arg, "--validation-contexts=")
+            overrides[:test_contexts] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg in ("--test-scenarios", "--validation-scenarios")
+            index += 1
+            overrides[:test_scenarios_per_context] = parse(Int, args[index])
+        elseif startswith(arg, "--test-scenarios=")
+            overrides[:test_scenarios_per_context] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif startswith(arg, "--validation-scenarios=")
+            overrides[:test_scenarios_per_context] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg == "--seed"
+            index += 1
+            overrides[:seed] = parse(Int, args[index])
+        elseif startswith(arg, "--seed=")
+            overrides[:seed] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg == "--knn-k"
+            index += 1
+            overrides[:knn_k] = parse(Int, args[index])
+        elseif startswith(arg, "--knn-k=")
+            overrides[:knn_k] = parse(Int, split(arg, "=", limit=2)[2])
+        elseif arg == "--benchmarks"
+            index += 1
+            benchmark_names = split_names(args[index])
+        elseif startswith(arg, "--benchmarks=")
+            benchmark_names = split_names(split(arg, "=", limit=2)[2])
+        elseif arg == "--policies"
+            index += 1
+            policy_names = split_names(args[index])
+        elseif startswith(arg, "--policies=")
+            policy_names = split_names(split(arg, "=", limit=2)[2])
+        else
+            throw(ArgumentError("Unknown argument: $(arg)"))
+        end
+        index += 1
+    end
+
+    base_config = if profile == "smoke"
+        SMOKE_CONFIG
+    elseif profile == "proper"
+        PROPER_CONFIG
+    else
+        throw(ArgumentError("Unknown profile $(repr(profile)); expected smoke or proper."))
+    end
+
+    config = (;
+        profile=profile,
+        train_contexts=get(overrides, :train_contexts, base_config.train_contexts),
+        train_scenarios_per_context=get(
+            overrides,
+            :train_scenarios_per_context,
+            base_config.train_scenarios_per_context,
+        ),
+        test_contexts=get(overrides, :test_contexts, base_config.test_contexts),
+        test_scenarios_per_context=get(
+            overrides,
+            :test_scenarios_per_context,
+            base_config.test_scenarios_per_context,
+        ),
+        seed=get(overrides, :seed, base_config.seed),
+        knn_k=get(overrides, :knn_k, base_config.knn_k),
+    )
+
+    return (;
+        config=config,
+        refresh_cache=refresh_cache,
+        benchmark_names=benchmark_names,
+        policy_names=policy_names,
+    )
+end
+
+function split_names(value)
+    names = Set{String}()
+    for raw_name in split(value, ",")
+        name = strip(raw_name)
+        isempty(name) || push!(names, name)
+    end
+    isempty(names) && throw(ArgumentError("Name filters must not be empty."))
+    return names
+end
+
 function benchmark_specs()
     return [
         (;
             name="shipment_h",
             variant="h_only",
             make_problem=() -> ShipmentPlanningProblem(),
-            make_decoder=problem -> ShipmentPlanningParametricDecoder(problem),
+            make_decoder=problem -> compact_shipment_decoder(problem),
         ),
         (;
             name="transshipment_q",
@@ -129,7 +270,27 @@ function benchmark_specs()
     ]
 end
 
-function run_benchmark(spec, solver, config, timestamp; refresh_cache=false)
+function selected_benchmark_specs(benchmark_names)
+    specs = benchmark_specs()
+    isnothing(benchmark_names) && return specs
+
+    selected = [spec for spec in specs if spec.name in benchmark_names]
+    found = Set(spec.name for spec in selected)
+    missing = setdiff(benchmark_names, found)
+    isempty(missing) ||
+        throw(ArgumentError("Unknown benchmark(s): $(join(sort(collect(missing)), ", "))."))
+    return selected
+end
+
+function run_benchmark(
+    spec,
+    solver,
+    config,
+    timestamp;
+    refresh_cache=false,
+    policy_names=nothing,
+    on_row=row -> nothing,
+)
     println()
     println("== $(spec.name) ==")
     problem = spec.make_problem()
@@ -152,25 +313,42 @@ function run_benchmark(spec, solver, config, timestamp; refresh_cache=false)
     )
 
     rows = NamedTuple[]
-    for policy_spec in policy_specs(spec, problem, data_bundle.train_data, solver, program, decoder, config)
+    policies = selected_policy_specs(
+        policy_specs(spec, problem, data_bundle.train_data, solver, program, decoder, config),
+        policy_names,
+        spec.name,
+    )
+    for policy_spec in policies
         println("  policy: $(policy_spec.name)")
-        push!(
-            rows,
-            run_policy(
-                spec,
-                policy_spec,
-                data_bundle,
-                solver,
-                program,
-                decoder,
-                config,
-                timestamp,
-                loaded_from_cache,
-                data_seconds,
-            ),
+        row = run_policy(
+            spec,
+            policy_spec,
+            data_bundle,
+            solver,
+            program,
+            decoder,
+            config,
+            timestamp,
+            loaded_from_cache,
+            data_seconds,
         )
+        push!(rows, row)
+        on_row(row)
     end
     return rows
+end
+
+function selected_policy_specs(policies, policy_names, benchmark_name)
+    isnothing(policy_names) && return policies
+
+    selected = [policy for policy in policies if policy.name in policy_names]
+    found = Set(policy.name for policy in selected)
+    missing = setdiff(policy_names, found)
+    isempty(missing) ||
+        throw(ArgumentError(
+            "Benchmark $(benchmark_name) does not have policy/policies: $(join(sort(collect(missing)), ", ")).",
+        ))
+    return selected
 end
 
 function cached_data_bundle(
@@ -191,13 +369,15 @@ function cached_data_bundle(
 
     bundle = nothing
     elapsed = @elapsed begin
-        train_data = generate_benchmark_dataset(
+        train_data = generate_dataset_for_spec(
+            spec,
             problem;
             n_contexts=config.train_contexts,
             scenarios_per_context=config.train_scenarios_per_context,
             seed=config.seed,
         )
-        test_data = generate_benchmark_dataset(
+        test_data = generate_dataset_for_spec(
+            spec,
             problem;
             n_contexts=config.test_contexts,
             scenarios_per_context=config.test_scenarios_per_context,
@@ -217,6 +397,76 @@ function cached_data_bundle(
         serialize(path, bundle)
     end
     return bundle, false, elapsed
+end
+
+function generate_dataset_for_spec(
+    spec,
+    problem;
+    n_contexts,
+    scenarios_per_context,
+    seed,
+)
+    if spec.name == "shipment_h"
+        return generate_compact_shipment_dataset(
+            problem;
+            n_contexts,
+            scenarios_per_context,
+            seed,
+        )
+    end
+
+    return generate_benchmark_dataset(
+        problem;
+        n_contexts,
+        scenarios_per_context,
+        seed,
+    )
+end
+
+function compact_shipment_decoder(problem::ShipmentPlanningProblem)
+    base = base_scenario(problem)
+    return ContextualDFL.ParametricDecoder(
+        (:h_eq,);
+        base_W_eq=base.W_eq,
+        base_W_ineq=base.W_ineq,
+        base_T_eq=base.T_eq,
+        base_T_ineq=base.T_ineq,
+        base_h_ineq=base.h_ineq,
+        base_q=base.q,
+    )
+end
+
+function generate_compact_shipment_dataset(
+    problem::ShipmentPlanningProblem;
+    n_contexts,
+    scenarios_per_context,
+    seed,
+)
+    rng = Random.MersenneTwister(seed)
+    contexts = [randn(rng, problem.context_dim) for _ in 1:n_contexts]
+    scenario_collections = [
+        [
+            ContextualDFL.ParametricScenario(;
+                h_eq_xi=compact_shipment_h_eq(problem, context, rng),
+            ) for _ in 1:scenarios_per_context
+        ] for context in contexts
+    ]
+    return generate_contextual_data_set(contexts, scenario_collections)
+end
+
+function compact_shipment_h_eq(
+    problem::ShipmentPlanningProblem,
+    context,
+    rng::Random.AbstractRNG,
+)
+    features = Float64.(context) .^ problem.p
+    h_eq = zeros(Float64, problem.demand_count + problem.warehouse_count)
+    for j in 1:problem.demand_count
+        signal = problem.demand_intercepts[j] +
+                 sum(problem.demand_slopes[j, term] * features[term] for term in 1:problem.context_dim)
+        h_eq[j] = max(1e-6, signal + problem.sigma * randn(rng))
+    end
+    return h_eq
 end
 
 function cache_key(spec, config)

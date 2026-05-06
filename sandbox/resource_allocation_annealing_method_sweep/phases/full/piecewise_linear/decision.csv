@@ -1,0 +1,2 @@
+phase,selected_candidate,selected_mean_average_test_loss,selected_ok_count,selected_run_count,training_contexts,epochs,final_epochs,depth,hidden_size,activation,schedule_kind,starting_mu,ending_mu,piece_length,nr_pieces,starting_phase_length,fine_tuning_phase_length,decided_at
+piecewise_linear,higher_end_mu,0.04934499454919036,6,6,100,130,10,3,32,relu,piecewise_linear,1.0,0.05,10,11,20,10,1778032964298

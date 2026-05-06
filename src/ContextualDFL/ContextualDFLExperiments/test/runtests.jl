@@ -84,6 +84,28 @@ function shortage_scenario_with_q(demand, q)
     )
 end
 
+function fixed_two_recourse_program()
+    return ContextualDFL.StochasticProgram(
+        A_eq=reshape([1.0], 1, 1),
+        A_ineq=zeros(0, 1),
+        b_eq=[1.0],
+        b_ineq=Float64[],
+        c=[2.0],
+    )
+end
+
+function fixed_two_recourse_scenario()
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=Matrix{Float64}(I, 2, 2),
+        W_ineq_xi=-Matrix{Float64}(I, 2, 2),
+        T_eq_xi=reshape([1.0, 0.0], 2, 1),
+        T_ineq_xi=zeros(2, 1),
+        h_eq_xi=[4.0, 5.0],
+        h_ineq_xi=zeros(2),
+        q_xi=[7.0, 11.0],
+    )
+end
+
 function small_resource_allocation_ad_problem()
     data = ResourceAllocationProblemData(
         [1.0 0.8 1.2; 0.7 1.1 0.9],
@@ -92,6 +114,16 @@ function small_resource_allocation_ad_problem()
         [1.0, 1.0],
     )
     return data, ResourceAllocationProblem(data)
+end
+
+function assert_decoded_shapes_match_base(arrays, base)
+    @test size(arrays[1]) == (size(base.W_eq)..., 1)
+    @test size(arrays[2]) == (size(base.W_ineq)..., 1)
+    @test size(arrays[3]) == (size(base.T_eq)..., 1)
+    @test size(arrays[4]) == (size(base.T_ineq)..., 1)
+    @test size(arrays[5]) == (length(base.h_eq), 1)
+    @test size(arrays[6]) == (length(base.h_ineq), 1)
+    @test size(arrays[7]) == (length(base.q), 1)
 end
 
 @testset "ContextualDFLExperiments" begin
@@ -214,6 +246,20 @@ end
     @test only(split_comparison.per_sample).gap_std ≈ 0.0
     @test split_comparison.metrics.test_regret_mean ≈ 0.0
 
+    partition_data_set = generate_contextual_data_set(
+        [[0.0]],
+        [[tiny_scenario(Float64(index)) for index in 1:10000]],
+    )
+    partition_ranges =
+        ContextualDFLExperiments._scenario_collection_ranges(first(partition_data_set), 50)
+    partition_indices = collect(Iterators.flatten(partition_ranges))
+    @test length(partition_ranges) == 50
+    @test all(==(200), length.(partition_ranges))
+    @test first(partition_ranges) == 1:200
+    @test last(partition_ranges) == 9801:10000
+    @test partition_indices == collect(1:10000)
+    @test length(unique(partition_indices)) == 10000
+
     replication_data_set = generate_contextual_data_set(
         [[0.0]],
         [[shortage_scenario(2.0), shortage_scenario(8.0)]],
@@ -243,6 +289,42 @@ end
     @test only(replication_comparison.per_sample).gap_values ≈ [6.0, 0.0] atol = 1e-6
     @test only(replication_comparison.per_sample).regret ≈ 3.0 atol = 1e-6
     @test only(replication_comparison.per_sample).gap_stderr ≈ 3.0 atol = 1e-6
+    @test minimum(only(replication_comparison.per_sample).gap_values) >= -1e-5
+
+    replication_full_optimal_results = solve_dataset_to_optimality(
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        evaluation_batches=1,
+    )
+    @test only(replication_optimal_results).objective_value <=
+          only(replication_full_optimal_results).objective_value + 1e-6
+    @test evaluate_policy(
+        replication_decision_set,
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        evaluation_batches=2,
+    ) ≈ evaluate_policy(
+        replication_decision_set,
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        evaluation_batches=1,
+    ) atol = 1e-6
+
+    @test_throws ArgumentError evaluate_policy_against_optimum(
+        replication_decision_set,
+        replication_data_set,
+        shortage_program(),
+        ContextualDFL.ParametricDecoder(),
+        solver;
+        optimal_results=[(; objective_values=[9.0, 9.0], objective_value=9.0)],
+        split_name=:test,
+    )
 
     @test_throws ArgumentError solve_dataset_to_optimality(
         split_data_set,
@@ -260,6 +342,19 @@ end
         optimal_results=[
             (; objective_values=[1.0, 2.0], objective_value=1.5),
             (; objective_values=[1.0], objective_value=1.0),
+        ],
+        split_name=:test,
+    )
+
+    @test_throws ArgumentError evaluate_policy_against_optimum(
+        decision_set,
+        data_set,
+        program,
+        decoder,
+        solver;
+        optimal_results=[
+            (; objective_values=[14.0], objective_value=15.0),
+            (; objective_values=[17.0], objective_value=17.0),
         ],
         split_name=:test,
     )
@@ -528,6 +623,211 @@ end
         @test scenario_tangent.q_xi isa ChainRulesCore.NoTangent
     end
 
+    @testset "first-pass vector decoders" begin
+        @testset "resource allocation q decoders" begin
+            data, problem = small_resource_allocation_ad_problem()
+            base = base_scenario(problem)
+            I, J = size(data.service_rate_parameters)
+
+            original_epsilon = 0.25
+            original_decoder = ResourceAllocationOriginalCostVectorDecoder(
+                problem;
+                epsilon=original_epsilon,
+                scale=2.0,
+            )
+            original_raw = collect(range(-1.0, 1.0; length=J))
+            original_arrays = ContextualDFL.decode_scenario_collection(
+                original_decoder,
+                original_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(original_arrays, base)
+            original_q = original_arrays[7][:, 1]
+            @test all(original_q[1:J] .>= original_epsilon)
+            @test original_q[(J + 1):end] == base.q[(J + 1):end]
+            @test original_arrays[5][:, 1] == base.h_eq
+
+            economic_epsilon = 0.1
+            economic_decoder = ResourceAllocationEconomicCostVectorDecoder(
+                problem;
+                epsilon=economic_epsilon,
+                allocation_scale=1.5,
+                unmet_scale=2.0,
+            )
+            economic_raw = collect(range(-2.0, 2.0; length=J + I * J))
+            economic_arrays = ContextualDFL.decode_scenario_collection(
+                economic_decoder,
+                economic_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(economic_arrays, base)
+            economic_q = economic_arrays[7][:, 1]
+            @test all(economic_q[1:J] .>= economic_epsilon)
+            for i in 1:I, j in 1:J
+                q_index = J + J * (i - 1) + j
+                lower = -data.first_stage_costs[i] / data.yield_parameters[i]
+                @test economic_q[q_index] >= lower + economic_epsilon
+            end
+            slack_start = J + I * J + 1
+            @test economic_q[slack_start:end] == base.q[slack_start:end]
+            @test economic_arrays[5][:, 1] == base.h_eq
+        end
+
+        @testset "shipment planning decoders" begin
+            problem = ShipmentPlanningProblem()
+            base = base_scenario(problem)
+            I = problem.warehouse_count
+            J = problem.demand_count
+            shipment_range = (I + 1):(I + I * J)
+            demand_slack_range = (I + I * J + 1):(I + I * J + J)
+            supply_slack_range = (I + I * J + J + 1):(I + I * J + J + I)
+
+            demand_decoder = ShipmentPlanningDemandVectorDecoder(problem)
+            demand_raw = collect(range(-1.0, 1.0; length=J))
+            demand_arrays = ContextualDFL.decode_scenario_collection(
+                demand_decoder,
+                demand_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(demand_arrays, base)
+            @test demand_arrays[5][1:J, 1] ≈ problem.demand_intercepts .+ 10.0 .* demand_raw
+            @test demand_arrays[5][(J + 1):end, 1] == base.h_eq[(J + 1):end]
+            @test demand_arrays[7][:, 1] == base.q
+
+            positive_demand_epsilon = 0.2
+            positive_demand_decoder = ShipmentPlanningPositiveDemandVectorDecoder(
+                problem;
+                epsilon=positive_demand_epsilon,
+            )
+            positive_demand_arrays = ContextualDFL.decode_scenario_collection(
+                positive_demand_decoder,
+                demand_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(positive_demand_arrays, base)
+            @test all(positive_demand_arrays[5][1:J, 1] .>= positive_demand_epsilon)
+            @test positive_demand_arrays[5][(J + 1):end, 1] == base.h_eq[(J + 1):end]
+            @test positive_demand_arrays[7][:, 1] == base.q
+
+            shipping_raw = collect(range(-1.0, 1.0; length=I * J))
+            positive_shipping_epsilon = 0.3
+            positive_shipping_decoder = ShipmentPlanningPositiveShippingCostVectorDecoder(
+                problem;
+                epsilon=positive_shipping_epsilon,
+                scale=2.0,
+            )
+            positive_shipping_arrays = ContextualDFL.decode_scenario_collection(
+                positive_shipping_decoder,
+                shipping_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(positive_shipping_arrays, base)
+            positive_shipping_q = positive_shipping_arrays[7][:, 1]
+            @test all(positive_shipping_q[shipment_range] .>= positive_shipping_epsilon)
+            @test positive_shipping_q[1:I] == base.q[1:I]
+            @test positive_shipping_q[demand_slack_range] == base.q[demand_slack_range]
+            @test positive_shipping_q[supply_slack_range] == base.q[supply_slack_range]
+            @test positive_shipping_arrays[5][:, 1] == base.h_eq
+
+            economic_shipping_epsilon = 0.4
+            economic_shipping_decoder = ShipmentPlanningEconomicShippingCostVectorDecoder(
+                problem;
+                epsilon=economic_shipping_epsilon,
+                scale=1.5,
+            )
+            economic_shipping_arrays = ContextualDFL.decode_scenario_collection(
+                economic_shipping_decoder,
+                shipping_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(economic_shipping_arrays, base)
+            economic_shipping_q = economic_shipping_arrays[7][:, 1]
+            for j in 1:J, i in 1:I
+                q_index = I + (j - 1) * I + i
+                lower = -min(stochastic_program(problem).c[i], base.q[i])
+                @test economic_shipping_q[q_index] >= lower + economic_shipping_epsilon
+            end
+            @test economic_shipping_q[1:I] == base.q[1:I]
+            @test economic_shipping_q[demand_slack_range] == base.q[demand_slack_range]
+            @test economic_shipping_q[supply_slack_range] == base.q[supply_slack_range]
+            @test economic_shipping_arrays[5][:, 1] == base.h_eq
+        end
+
+        @testset "transshipment positive decoders" begin
+            problem = TransShipmentExperimentProblem()
+            base = base_scenario(problem)
+            mean_parameters = ContextualDFL.transshipment_mean_parameters(problem.core_problem)
+            h_indices = [entry.index for entry in problem.core_problem.data.random_rhs_entries]
+            q_indices = [entry.index for entry in problem.core_problem.data.random_objective_entries]
+
+            q_decoder = TransShipmentPositiveQVectorDecoder(problem; epsilon=0.2, scale=1.5)
+            q_raw = collect(range(-1.0, 1.0; length=length(mean_parameters.q)))
+            q_arrays = ContextualDFL.decode_scenario_collection(
+                q_decoder,
+                q_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(q_arrays, base)
+            q = q_arrays[7][:, 1]
+            @test all(q[q_indices] .> 0.0)
+            @test q[setdiff(1:length(q), q_indices)] == base.q[setdiff(1:length(q), q_indices)]
+            @test q_arrays[5][:, 1] == base.h_eq
+
+            h_decoder = TransShipmentPositiveHVectorDecoder(problem; epsilon=0.2, scale=1.5)
+            h_raw = collect(range(-1.0, 1.0; length=length(mean_parameters.rhs)))
+            h_arrays = ContextualDFL.decode_scenario_collection(
+                h_decoder,
+                h_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(h_arrays, base)
+            h = h_arrays[5][:, 1]
+            @test all(h[h_indices] .> 0.0)
+            @test h[setdiff(1:length(h), h_indices)] == base.h_eq[setdiff(1:length(h), h_indices)]
+            @test h_arrays[7][:, 1] == base.q
+
+            hq_decoder = TransShipmentPositiveHQVectorDecoder(problem; epsilon_h=0.2, epsilon_q=0.3)
+            hq_raw = vcat(h_raw, q_raw)
+            hq_arrays = ContextualDFL.decode_scenario_collection(
+                hq_decoder,
+                hq_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(hq_arrays, base)
+            @test all(hq_arrays[5][h_indices, 1] .> 0.0)
+            @test all(hq_arrays[7][q_indices, 1] .> 0.0)
+        end
+
+        @testset "random yield decoders" begin
+            problem = RandomYieldProblem(; r=5, a=10, K_support=5)
+            base = base_scenario(problem)
+
+            q_decoder = RandomYieldPositiveQVectorDecoder(problem)
+            q_raw = collect(range(-1.0, 1.0; length=length(base.q)))
+            q_arrays = ContextualDFL.decode_scenario_collection(
+                q_decoder,
+                q_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(q_arrays, base)
+            @test q_arrays[1][:, :, 1] == base.W_eq
+            @test q_arrays[5][:, 1] == base.h_eq
+            @test all(q_arrays[7][:, 1] .> 0.0)
+
+            h_decoder = RandomYieldHVectorDecoder(problem)
+            h_raw = collect(range(-1.0, 1.0; length=length(base.h_eq)))
+            h_arrays = ContextualDFL.decode_scenario_collection(
+                h_decoder,
+                h_raw;
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(h_arrays, base)
+            @test h_arrays[1][:, :, 1] == base.W_eq
+            @test h_arrays[5][:, 1] ≈ base.h_eq .+ h_raw
+            @test h_arrays[7][:, 1] == base.q
+        end
+    end
+
     @testset "ResourceAllocationDemandVectorDecoder real AD" begin
         data, problem = small_resource_allocation_ad_problem()
         decoder = ResourceAllocationDemandVectorDecoder(problem)
@@ -685,6 +985,108 @@ end
         @test abs(fd) > 1e-8
         @test !all(iszero, g)
         @test dot(g, direction) ≈ fd atol = 5e-3 rtol = 5e-2
+    end
+
+    @testset "extensive objective matches cost function" begin
+        _, problem = small_resource_allocation_ad_problem()
+        solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+        decoder = ResourceAllocationDemandParametricDecoder(problem)
+        scenarios = [
+            ContextualDFL.ParametricScenario(; h_eq_xi=[5.5, 6.0, 7.5]),
+            ContextualDFL.ParametricScenario(; h_eq_xi=[4.0, 6.8, 8.2]),
+        ]
+        W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+            ContextualDFL.decode_scenario_collection(decoder, scenarios)
+        sp = stochastic_program(problem)
+        for (mu, rho) in ((0.0, 0.0), (0.05, 0.02))
+            _, _, _, solve_result = ContextualDFL._solve_stochastic_extensive(
+                solver,
+                sp,
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_eq,
+                h_ineq,
+                q;
+                μ=mu,
+                ρ=rho,
+            )
+            z = solve_result.z[1:length(sp.first_stage_lp.c)]
+            recomputed_value = ContextualDFL.cost_function(
+                sp,
+                solver,
+                z,
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_eq,
+                h_ineq,
+                q;
+                μ=mu,
+                ρ=rho,
+            )
+            old_z = ContextualDFL.solve(
+                solver,
+                sp,
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_eq,
+                h_ineq,
+                q;
+                μ=mu,
+                ρ=rho,
+            )[1]
+            old_value = ContextualDFL.cost_function(
+                sp,
+                solver,
+                old_z,
+                W_eq,
+                W_ineq,
+                T_eq,
+                T_ineq,
+                h_eq,
+                h_ineq,
+                q;
+                μ=mu,
+                ρ=rho,
+            )
+            @test string(solve_result.status) in ("OPTIMAL", "LOCALLY_SOLVED")
+            @test solve_result.objective_value ≈ recomputed_value atol = 1e-6 rtol = 1e-6
+            @test solve_result.objective_value ≈ old_value atol = 1e-6 rtol = 1e-6
+        end
+    end
+
+    @testset "general second-stage q ordering" begin
+        solver = ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
+        program = fixed_two_recourse_program()
+        scenario = fixed_two_recourse_scenario()
+        arrays = ContextualDFL.decode_scenario_collection(
+            ContextualDFL.ParametricDecoder(),
+            [scenario],
+        )
+        _, _, _, solve_result = ContextualDFL._solve_stochastic_extensive(
+            solver,
+            program,
+            arrays...;
+            μ=0.0,
+            ρ=0.0,
+        )
+        z = solve_result.z[1:length(program.first_stage_lp.c)]
+        recomputed_value = ContextualDFL.cost_function(
+            program,
+            solver,
+            z,
+            arrays...;
+            μ=0.0,
+            ρ=0.0,
+        )
+        @test arrays[7][:, 1] == [7.0, 11.0]
+        @test solve_result.objective_value ≈ recomputed_value atol = 1e-6 rtol = 1e-6
+        @test solve_result.objective_value ≈ 78.0 atol = 1e-6
     end
 
     resource_data_set = generate_contextual_data_set(

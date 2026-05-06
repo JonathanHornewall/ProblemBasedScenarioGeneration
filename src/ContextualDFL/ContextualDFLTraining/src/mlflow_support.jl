@@ -2,21 +2,59 @@ import MLFlowClient
 
 const RunStatus = MLFlowClient.RunStatus
 const MLFLOW_RETRY_ATTEMPTS = 8
+const MLFLOW_TRANSIENT_RETRY_ATTEMPTS = 30
 const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
 const MLFLOW_RETRY_BACKOFF = 1.5
+const MLFLOW_RETRY_MAX_DELAY_SECONDS = 30.0
 
 function with_mlflow_retry(callback, operation)
     delay = MLFLOW_RETRY_INITIAL_DELAY_SECONDS
-    for attempt in 1:MLFLOW_RETRY_ATTEMPTS
+    for attempt in 1:MLFLOW_TRANSIENT_RETRY_ATTEMPTS
         try
             return callback()
         catch error
-            attempt == MLFLOW_RETRY_ATTEMPTS && rethrow()
+            if operation == "log inputs" && mlflow_duplicate_dataset_error(error)
+                @warn "MLflow log inputs hit an existing dataset; skipping duplicate dataset input logging" error=sprint(
+                    showerror,
+                    error,
+                )
+                return nothing
+            end
+            max_attempts = mlflow_transient_tracking_error(error) ?
+                MLFLOW_TRANSIENT_RETRY_ATTEMPTS :
+                MLFLOW_RETRY_ATTEMPTS
+            attempt == max_attempts && rethrow()
             @warn "MLflow $operation failed; retrying" attempt error=sprint(showerror, error)
-            sleep(delay)
-            delay *= MLFLOW_RETRY_BACKOFF
+            sleep(delay * (0.75 + 0.5 * rand()))
+            delay = min(delay * MLFLOW_RETRY_BACKOFF, MLFLOW_RETRY_MAX_DELAY_SECONDS)
         end
     end
+end
+
+function mlflow_transient_tracking_error(error)
+    message = sprint(showerror, error)
+    return any(
+        pattern -> occursin(pattern, message),
+        (
+            "QueuePool limit",
+            "connection timed out",
+            "Read timed out",
+            "ConnectTimeout",
+            "Connection refused",
+            "Max retries exceeded",
+            "RemoteDisconnected",
+            "temporarily unavailable",
+            "database is locked",
+        ),
+    )
+end
+
+function mlflow_duplicate_dataset_error(error)
+    message = sprint(showerror, error)
+    return occursin(
+        "UNIQUE constraint failed: datasets.experiment_id, datasets.name, datasets.digest",
+        message,
+    )
 end
 
 mutable struct NamedMLFlowClient

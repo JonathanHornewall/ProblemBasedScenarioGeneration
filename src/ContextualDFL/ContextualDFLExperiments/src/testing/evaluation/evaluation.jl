@@ -3,7 +3,9 @@ Compute benchmark optima for a contextual data set.
 
 `evaluation_batches` is the number of independent scenario collections stored
 contiguously in each data point. For each context, every collection is solved to
-optimality separately and the returned objective value is their average.
+optimality separately and the returned objective value is their average. This is
+an average batch oracle, not the optimum of the union of all scenarios in the
+data point.
 """
 function solve_dataset_to_optimality(
     contextual_data_set,
@@ -13,6 +15,8 @@ function solve_dataset_to_optimality(
     mu=0,
     rho=0,
     evaluation_batches=1,
+    progress_io=nothing,
+    progress_label="",
     kwargs...,
 )
     batch_count = _checked_evaluation_batches(evaluation_batches)
@@ -20,38 +24,42 @@ function solve_dataset_to_optimality(
         throw(ArgumentError("evaluation_batches > 1 expects equally weighted scenario collections; omit explicit probabilities."))
 
     results = NamedTuple[]
-    for data_point in contextual_data_set
+    total_contexts = length(contextual_data_set)
+    total_batches = total_contexts * batch_count
+    completed_batches = 0
+    progress_start = time()
+    progress_prefix = isempty(String(progress_label)) ?
+        "optimality" :
+        "optimality[$(String(progress_label))]"
+
+    for (data_point_index, data_point) in enumerate(contextual_data_set)
         objective_values = Float64[]
 
-        for scenario_range in _scenario_collection_ranges(data_point, batch_count)
-            W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
-                ContextualDFL.decode_scenario_collection(
-                    parametric_decoder,
-                    view(data_point.scenario_parameters, scenario_range),
-                )
-
-            solution = ContextualDFL.solve(
-                solver,
-                program,
-                W_eq,
-                W_ineq,
-                T_eq,
-                T_ineq,
-                h_eq,
-                h_ineq,
-                q;
-                μ=mu,
-                ρ=rho,
-                kwargs...,
+        for (batch_index, scenario_range) in
+            enumerate(_scenario_collection_ranges(data_point, batch_count))
+            progress_io !== nothing && _print_batch_progress(
+                progress_io,
+                progress_prefix,
+                "start";
+                data_point_index=data_point_index,
+                total_contexts=total_contexts,
+                batch_index=batch_index,
+                batch_count=batch_count,
+                completed_batches=completed_batches,
+                total_batches=total_batches,
             )
-            z = solution[1]
 
-            push!(
-                objective_values,
-                ContextualDFL.cost_function(
-                    program,
+            objective_value = Ref{Float64}()
+            batch_seconds = @elapsed begin
+                W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+                    ContextualDFL.decode_scenario_collection(
+                        parametric_decoder,
+                        view(data_point.scenario_parameters, scenario_range),
+                    )
+
+                _, _, _, solve_result = ContextualDFL._solve_stochastic_extensive(
                     solver,
-                    z,
+                    program,
                     W_eq,
                     W_ineq,
                     T_eq,
@@ -62,20 +70,122 @@ function solve_dataset_to_optimality(
                     μ=mu,
                     ρ=rho,
                     kwargs...,
-                ),
+                )
+                objective_value[] = _checked_solve_result_objective(
+                    solve_result;
+                    data_point_index=data_point_index,
+                    batch_index=batch_index,
+                )
+            end
+
+            push!(
+                objective_values,
+                objective_value[],
+            )
+            completed_batches += 1
+            progress_io !== nothing && _print_batch_progress(
+                progress_io,
+                progress_prefix,
+                "finish";
+                data_point_index=data_point_index,
+                total_contexts=total_contexts,
+                batch_index=batch_index,
+                batch_count=batch_count,
+                completed_batches=completed_batches,
+                total_batches=total_batches,
+                batch_seconds=batch_seconds,
+                average_seconds=(time() - progress_start) / completed_batches,
             )
         end
 
         push!(
             results,
-            (;
-                evaluation_batches=batch_count,
-                objective_values=objective_values,
-                objective_value=summary_mean(objective_values),
+            _checked_optimality_result(
+                (;
+                    evaluation_batches=batch_count,
+                    objective_values=objective_values,
+                    objective_value=summary_mean(objective_values),
+                );
+                source="solve_dataset_to_optimality context $data_point_index",
             ),
         )
     end
     return results
+end
+
+function _checked_solve_result_objective(
+    solve_result;
+    data_point_index,
+    batch_index,
+)
+    hasproperty(solve_result, :status) ||
+        throw(ArgumentError("optimal solve result is missing solver status."))
+    status_name = string(solve_result.status)
+    status_name in ("OPTIMAL", "LOCALLY_SOLVED") ||
+        throw(ArgumentError(
+            "optimal solve failed for context $(Int(data_point_index)), batch $(Int(batch_index)): status=$status_name.",
+        ))
+    if hasproperty(solve_result, :metadata) &&
+       hasproperty(solve_result.metadata, :primal_status)
+        primal_status_name = string(solve_result.metadata.primal_status)
+        primal_status_name in ("FEASIBLE_POINT", "NEARLY_FEASIBLE_POINT") ||
+            throw(ArgumentError(
+                "optimal solve failed for context $(Int(data_point_index)), batch $(Int(batch_index)): primal_status=$primal_status_name.",
+            ))
+    end
+
+    hasproperty(solve_result, :z) ||
+        throw(ArgumentError("optimal solve result is missing primal solution."))
+    all(isfinite, solve_result.z) ||
+        throw(DomainError(
+            solve_result.z,
+            "optimal solve returned a non-finite primal solution for context $(Int(data_point_index)), batch $(Int(batch_index)).",
+        ))
+
+    hasproperty(solve_result, :objective_value) ||
+        throw(ArgumentError("optimal solve result is missing objective_value."))
+    objective_value = Float64(solve_result.objective_value)
+    isfinite(objective_value) ||
+        throw(DomainError(
+            solve_result.objective_value,
+            "optimal solve returned a non-finite objective for context $(Int(data_point_index)), batch $(Int(batch_index)).",
+        ))
+
+    return objective_value
+end
+
+function _print_batch_progress(
+    io,
+    prefix::AbstractString,
+    event::AbstractString;
+    data_point_index::Integer,
+    total_contexts::Integer,
+    batch_index::Integer,
+    batch_count::Integer,
+    completed_batches::Integer,
+    total_batches::Integer,
+    batch_seconds=nothing,
+    average_seconds=nothing,
+)
+    fields = [
+        prefix,
+        event,
+        "context=$(Int(data_point_index))/$(Int(total_contexts))",
+        "batch=$(Int(batch_index))/$(Int(batch_count))",
+        "completed=$(Int(completed_batches))/$(Int(total_batches))",
+    ]
+    if batch_seconds !== nothing
+        push!(fields, "batch_seconds=$(round(Float64(batch_seconds); digits=3))")
+    end
+    if average_seconds !== nothing
+        remaining_batches = Int(total_batches) - Int(completed_batches)
+        eta_seconds = Float64(average_seconds) * remaining_batches
+        push!(fields, "average_seconds=$(round(Float64(average_seconds); digits=3))")
+        push!(fields, "eta_seconds=$(round(eta_seconds; digits=3))")
+    end
+    println(io, join(fields, " "))
+    flush(io)
+    return nothing
 end
 
 """
@@ -170,24 +280,24 @@ function _evaluate_decision_on_collections(
                 view(data_point.scenario_parameters, scenario_range),
             )
 
-        push!(
-            values,
-            ContextualDFL.cost_function(
-                program,
-                solver,
-                z,
-                W_eq,
-                W_ineq,
-                T_eq,
-                T_ineq,
-                h_eq,
-                h_ineq,
-                q;
-                μ=mu,
-                ρ=rho,
-                kwargs...,
-            ),
+        value = ContextualDFL.cost_function(
+            program,
+            solver,
+            z,
+            W_eq,
+            W_ineq,
+            T_eq,
+            T_ineq,
+            h_eq,
+            h_ineq,
+            q;
+            μ=mu,
+            ρ=rho,
+            kwargs...,
         )
+        isfinite(Float64(value)) ||
+            throw(DomainError(value, "policy evaluation returned a non-finite value."))
+        push!(values, value)
     end
     return values
 end
@@ -283,6 +393,7 @@ function evaluate_policy_against_optimum(
     split_name=:test,
     mu=0,
     rho=0,
+    negative_gap_tolerance=1e-5,
     kwargs...,
 )
     @assert length(optimal_results) == length(contextual_data_set) "optimal_results must have one entry per data point"
@@ -327,6 +438,13 @@ function evaluate_policy_against_optimum(
         Float64.(optimal_values_by_collection[index])
         for index in eachindex(policy_values)
     ]
+    _assert_no_significant_negative_gaps(
+        gap_values_by_collection,
+        policy_values_by_collection,
+        optimal_values_by_collection;
+        tolerance=Float64(negative_gap_tolerance),
+        split_name=split_name,
+    )
     regrets = [summary_mean(values) for values in gap_values_by_collection]
     relative_regrets = [
         regret / max(abs(Float64(optimal_value)), eps(Float64)) for
@@ -382,18 +500,87 @@ end
 function _optimal_objective_values(result)
     if hasproperty(result, :objective_values)
         values = Float64.(collect(result.objective_values))
-        isempty(values) &&
-            throw(ArgumentError("optimal_results must contain at least one objective value per sample."))
+        _checked_objective_values!(values; source="optimal_results")
+        _check_stored_objective_mean(result, values; source="optimal_results")
+        _check_stored_evaluation_batches(result, values; source="optimal_results")
         return values
     elseif hasproperty(result, :batch_objective_values)
         throw(ArgumentError(
             "optimal_results contain batch_objective_values from the old evaluation protocol; regenerate them with solve_dataset_to_optimality.",
         ))
     elseif hasproperty(result, :objective_value)
-        return [Float64(result.objective_value)]
+        values = [Float64(result.objective_value)]
+        _checked_objective_values!(values; source="optimal_results")
+        _check_stored_evaluation_batches(result, values; source="optimal_results")
+        return values
     end
 
     throw(ArgumentError("optimal_results entries must contain objective_values."))
+end
+
+function _checked_optimality_result(result; source)
+    values = _optimal_objective_values(result)
+    _check_stored_objective_mean(result, values; source=source)
+    _check_stored_evaluation_batches(result, values; source=source)
+    return result
+end
+
+function _checked_objective_values!(values; source)
+    isempty(values) &&
+        throw(ArgumentError("$source must contain at least one objective value."))
+    all(isfinite, values) ||
+        throw(DomainError(values, "$source contains non-finite objective values."))
+    return values
+end
+
+function _check_stored_objective_mean(result, values; source)
+    hasproperty(result, :objective_value) || return nothing
+    objective_value = Float64(result.objective_value)
+    isfinite(objective_value) ||
+        throw(DomainError(result.objective_value, "$source has a non-finite objective_value."))
+    mean_value = summary_mean(values)
+    isapprox(objective_value, mean_value; rtol=1e-10, atol=1e-10) ||
+        throw(ArgumentError(
+            "$source objective_value=$objective_value does not equal mean(objective_values)=$mean_value.",
+        ))
+    return nothing
+end
+
+function _check_stored_evaluation_batches(result, values; source)
+    hasproperty(result, :evaluation_batches) || return nothing
+    batch_count = Int(result.evaluation_batches)
+    batch_count == length(values) ||
+        throw(ArgumentError(
+            "$source declares evaluation_batches=$batch_count but has $(length(values)) objective_values.",
+        ))
+    return nothing
+end
+
+function _assert_no_significant_negative_gaps(
+    gap_values_by_collection,
+    policy_values_by_collection,
+    optimal_values_by_collection;
+    tolerance,
+    split_name,
+)
+    tolerance >= 0.0 ||
+        throw(ArgumentError("negative_gap_tolerance must be nonnegative."))
+    for sample_index in eachindex(gap_values_by_collection)
+        gaps = gap_values_by_collection[sample_index]
+        for batch_index in eachindex(gaps)
+            gap = Float64(gaps[batch_index])
+            if gap < -tolerance
+                throw(ArgumentError(
+                    "negative policy-optimum gap for split $(Symbol(split_name)), " *
+                    "sample $sample_index, batch $batch_index: " *
+                    "policy_value=$(policy_values_by_collection[sample_index][batch_index]), " *
+                    "optimal_value=$(optimal_values_by_collection[sample_index][batch_index]), " *
+                    "gap=$gap.",
+                ))
+            end
+        end
+    end
+    return nothing
 end
 
 function _uncertainty(values)

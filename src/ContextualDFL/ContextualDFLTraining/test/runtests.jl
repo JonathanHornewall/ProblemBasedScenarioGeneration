@@ -71,6 +71,18 @@ end
 
     @test flattened_trainables(first_model) == flattened_trainables(same_seed_model)
     @test flattened_trainables(first_model) != flattened_trainables(different_seed_model)
+
+    identity_output_model = ContextualDFLTraining.build_neural_net(
+        3,
+        2;
+        hidden_size=4,
+        depth=1,
+        dropout=0.0,
+        output_activation=:identity,
+        seed=13,
+    )
+    dense_output = identity_output_model[2](identity_output_model[1](ones(Float64, 3, 1)))
+    @test identity_output_model(ones(Float64, 3, 1)) == dense_output
 end
 
 @testset "ContextualDFLTraining Flux checkpoints" begin
@@ -226,6 +238,17 @@ end
         @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(
             toy_spec,
             :train;
+            dataset=dataset,
+        )
+        open(path, "w") do io
+            Serialization.serialize(
+                io,
+                [(; objective_values=[1.0, 2.0], objective_value=5.0)],
+            )
+        end
+        @test_throws ArgumentError ContextualDFLTraining.load_optimal_results(
+            toy_spec,
+            :test;
             dataset=dataset,
         )
     end
@@ -464,6 +487,15 @@ end
             :test;
             dataset=combined_dataset[2:4],
         )
+        @test_throws ArgumentError ContextualDFLTraining.save_test_data!(
+            spec,
+            11,
+            [
+                (; context=[1.0], scenario_parameters=[1.0, 2.0]),
+                (; context=[2.0, 3.0], scenario_parameters=[3.0, 4.0]),
+            ];
+            data_set_size=2,
+        )
 
         missing_optimal_dataset = [
             (; context=[Float64(index)], scenario_parameters=[Float64(index + 1)]) for
@@ -488,6 +520,82 @@ end
             data_set_size=3,
         )
         @test_throws ArgumentError ContextualDFLTraining.load_test_data(spec)
+    end
+
+    mktempdir() do dir
+        config_dir = joinpath(dir, "toy_batched_generated")
+        mkpath(config_dir)
+        config_path = joinpath(config_dir, "Config.jl")
+        write(
+            config_path,
+            """
+            experiment_id() = "toy/batched_generated"
+            experiment_name() = "toy_batched_generated"
+            experiment_module_name() = :ToyBatchedGeneratedExperiment
+            artifact_dir() = joinpath(@__DIR__, "artifacts")
+            test_data_dir() = joinpath(artifact_dir(), "test_data")
+            test_data_path(seed::Integer) =
+                joinpath(test_data_dir(), "test_data_seed\$(Int(seed)).jls")
+            test_optimal_results_path(seed::Integer) =
+                joinpath(test_data_dir(), "optimal_solutions_seed\$(Int(seed)).jls")
+            base_config() = (; experiment_id=experiment_id())
+            training_objects(config) = nothing
+            optimality_splits(objects, config) = Pair{Symbol,Any}[]
+            optimal_results_path(split_name::Symbol) =
+                joinpath(artifact_dir(), "legacy", string(split_name) * ".jls")
+            """,
+        )
+
+        spec = ContextualDFLTraining.load_experiment(config_path)
+        dataset = [
+            (; context=[1.0, 2.0], scenario_parameters=[1.0, 2.0, 3.0, 4.0]),
+            (; context=[3.0, 4.0], scenario_parameters=[5.0, 6.0, 7.0, 8.0]),
+        ]
+        results = [
+            (; evaluation_batches=2, objective_values=[10.0, 12.0], objective_value=11.0),
+            (; evaluation_batches=2, objective_values=[20.0, 22.0], objective_value=21.0),
+        ]
+
+        data_path = ContextualDFLTraining.save_test_data!(
+            spec,
+            21,
+            dataset;
+            data_set_size=2,
+        )
+        optimal_path = ContextualDFLTraining.save_test_optimal_results!(
+            spec,
+            21,
+            results;
+            dataset=dataset,
+            data_set_size=2,
+            metadata=(; optimality_mu=0.0, optimality_rho=0.0),
+        )
+
+        data_payload = Serialization.deserialize(data_path)
+        optimal_payload = Serialization.deserialize(optimal_path)
+        @test data_payload.context_dimension == 2
+        @test data_payload.scenarios_per_context == 4
+        @test optimal_payload.evaluation_batches == 2
+        @test optimal_payload.optimality_mu == 0.0
+        @test optimal_payload.optimality_rho == 0.0
+        batched_artifact = ContextualDFLTraining.load_test_data_artifact(spec)
+        @test batched_artifact.metadata.context_dimension == 2
+        @test batched_artifact.metadata.scenarios_per_context == 4
+        @test batched_artifact.dataset == dataset
+        @test ContextualDFLTraining.load_test_data(spec) == dataset
+        @test ContextualDFLTraining.load_optimal_results(spec, :test) == results
+
+        bad_results = [
+            (; evaluation_batches=2, objective_values=[10.0, 12.0], objective_value=12.0),
+            (; evaluation_batches=2, objective_values=[20.0, 22.0], objective_value=21.0),
+        ]
+        @test_throws ArgumentError ContextualDFLTraining.save_test_optimal_results!(
+            spec,
+            22,
+            bad_results;
+            dataset=dataset,
+            data_set_size=2,
+        )
     end
 end
 
@@ -1099,6 +1207,38 @@ end
         @test summary.mean == 2.0
         @test summary.std ≈ sqrt(2.0)
         @test summary.stderr == 1.0
+
+        partial_child_results = [
+            child_results[1],
+            merge(
+                child_results[2],
+                (; status="failed", final_metrics=NamedTuple(), error="failed repeat"),
+            ),
+        ]
+        partial_config_result = only(parent_results(parents, partial_child_results))
+
+        @test partial_config_result.status == "ok"
+        @test partial_config_result.error == ""
+        @test partial_config_result.final_metrics.validation_mse == 1.0
+        @test partial_config_result.final_metrics.repeat_successful_count == 1.0
+        @test partial_config_result.final_metrics.repeat_failed_count == 1.0
+
+        failed_child_results = [
+            merge(
+                child_results[1],
+                (; status="failed", final_metrics=NamedTuple(), error="first failed"),
+            ),
+            merge(
+                child_results[2],
+                (; status="failed", final_metrics=NamedTuple(), error="second failed"),
+            ),
+        ]
+        failed_config_result = only(parent_results(parents, failed_child_results))
+
+        @test failed_config_result.status == "failed"
+        @test failed_config_result.final_metrics.repeat_successful_count == 0.0
+        @test failed_config_result.final_metrics.repeat_failed_count == 2.0
+        @test !isempty(failed_config_result.error)
     end
 
     @testset "policy inference smoothing defaults" begin

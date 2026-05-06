@@ -103,12 +103,23 @@ end
         base = base_scenario(problem)
         decoder = ShipmentPlanningParametricDecoder(problem)
 
-        @test size(program.A_ineq) == (5, 5)
-        @test size(base.W_eq) == (17, 82)
-        @test size(base.W_ineq) == (82, 82)
-        @test size(base.T_eq) == (17, 5)
-        @test length(base.h_eq) == 17
-        @test length(base.q) == 82
+        @test problem.warehouse_count == 4
+        @test problem.demand_count == 12
+        @test size(program.A_ineq) == (4, 4)
+        @test size(base.W_eq) == (16, 68)
+        @test size(base.W_ineq) == (68, 68)
+        @test size(base.T_eq) == (16, 4)
+        @test length(base.h_eq) == 16
+        @test length(base.q) == 68
+        @test all(base.q[1:problem.warehouse_count] .== 100.0)
+        shipment_stop = problem.warehouse_count +
+                        problem.warehouse_count * problem.demand_count
+        @test base.q[(problem.warehouse_count + 1):shipment_stop] ==
+              vec(ContextualDFLExperiments.SHIPMENT_PLANNING_SHIPMENT_COSTS)
+        @test all(base.q[(end - problem.warehouse_count - problem.demand_count + 1):end] .== 0.0)
+        demand_slack_start = problem.warehouse_count +
+                             problem.warehouse_count * problem.demand_count
+        @test base.W_eq[1, demand_slack_start + 1] == -1.0
 
         context = generate_benchmark_contexts(
             problem;
@@ -122,9 +133,9 @@ end
             rng=Random.MersenneTwister(2),
         )[1]
         arrays = ContextualDFL.decode_scenario_collection(decoder, [scenario])
-        @test size(arrays[1]) == (17, 82, 1)
-        @test size(arrays[3]) == (17, 5, 1)
-        @test size(arrays[5]) == (17, 1)
+        @test size(arrays[1]) == (16, 68, 1)
+        @test size(arrays[3]) == (16, 4, 1)
+        @test size(arrays[5]) == (16, 1)
         @test all(>=(1e-6), scenario.h_eq_xi[1:problem.demand_count])
 
         assert_one_scenario_solve(problem, decoder; seed=3)
@@ -174,6 +185,49 @@ end
             @test size(arrays[5]) == (35, 1)
             @test size(arrays[7]) == (77, 1)
             @test size(program.A_ineq) == (7, 7)
+
+            mean_arrays = ContextualDFL.decode_scenario_collection(
+                decoder,
+                [(; rhs=mean_parameters.rhs, q=mean_parameters.q)],
+            )
+            q_decoder = TransShipmentComponentVectorDecoder(problem; learned_components=(:q,))
+            q_arrays = ContextualDFL.decode_scenario_collection(
+                q_decoder,
+                mean_parameters.q .+ 1.0;
+                nr_scenarios=1,
+            )
+            @test q_arrays[5] == mean_arrays[5]
+            @test count(!iszero, vec(q_arrays[7] - mean_arrays[7])) == 7
+
+            h_decoder = TransShipmentComponentVectorDecoder(problem; learned_components=:h)
+            h_arrays = ContextualDFL.decode_scenario_collection(
+                h_decoder,
+                mean_parameters.rhs .+ 1.0;
+                nr_scenarios=1,
+            )
+            @test count(!iszero, vec(h_arrays[5] - mean_arrays[5])) == 7
+            @test h_arrays[7] == mean_arrays[7]
+
+            both_decoder = TransShipmentComponentVectorDecoder(
+                problem;
+                learned_components=(:h_eq, :q),
+            )
+            both_arrays = ContextualDFL.decode_scenario_collection(
+                both_decoder,
+                vcat(mean_parameters.rhs .+ 1.0, mean_parameters.q .+ 1.0);
+                nr_scenarios=1,
+            )
+            @test count(!iszero, vec(both_arrays[5] - mean_arrays[5])) == 7
+            @test count(!iszero, vec(both_arrays[7] - mean_arrays[7])) == 7
+            @test_throws DimensionMismatch ContextualDFL.decode_scenario_collection(
+                q_decoder,
+                vcat(mean_parameters.q, 1.0);
+                nr_scenarios=1,
+            )
+            @test_throws ArgumentError TransShipmentComponentVectorDecoder(
+                problem;
+                learned_components=(:q, :h_eq),
+            )
 
             if variant == :q_only
                 scenarios = generate_benchmark_scenarios(
@@ -240,5 +294,64 @@ end
 
         assert_one_scenario_solve(problem, decoder; seed=23)
         smoke_saa_knn(problem, decoder; seed=24)
+    end
+
+    @testset "unreliable newsvendor" begin
+        problem = UnreliableNewsvendorProblem()
+        program = stochastic_program(problem)
+        base = base_scenario(problem)
+        decoder = UnreliableNewsvendorParametricDecoder(problem)
+
+        @test size(program.A_ineq) == (1, 1)
+        @test size(base.W_eq) == (2, 3)
+        @test size(base.W_ineq) == (3, 3)
+        @test size(base.T_eq) == (2, 1)
+        @test length(base.h_eq) == 2
+        @test length(base.q) == 3
+
+        context = generate_benchmark_contexts(
+            problem;
+            n_contexts=1,
+            rng=Random.MersenneTwister(31),
+        )[1]
+        scenario = generate_benchmark_scenarios(
+            problem,
+            context;
+            n_scenarios=1,
+            rng=Random.MersenneTwister(32),
+        )[1]
+        demand, reliability = scenario.h_eq_xi
+        arrays = ContextualDFL.decode_scenario_collection(decoder, [scenario])
+
+        @test length(context) == 1
+        @test 0.0 <= demand <= problem.demand_upper_bound
+        @test 0.0 <= reliability <= 1.0
+        @test size(arrays[1]) == (2, 3, 1)
+        @test size(arrays[2]) == (3, 3, 1)
+        @test size(arrays[3]) == (2, 1, 1)
+        @test size(arrays[5]) == (2, 1)
+        @test size(arrays[7]) == (3, 1)
+        @test arrays[3][:, :, 1] == reshape([0.0, -reliability], 2, 1)
+        @test arrays[5][:, 1] == [-demand, 0.0]
+
+        @test_throws ArgumentError unreliable_newsvendor_scenario(problem, -0.1, 0.5)
+        @test_throws ArgumentError unreliable_newsvendor_scenario(problem, 0.5, 1.1)
+
+        assert_one_scenario_solve(problem, decoder; seed=33)
+        smoke_saa_knn(problem, decoder; seed=34)
+
+        newsvendor_postprocess = target -> begin
+            values = Float64.(target)
+            values[1] = clamp(values[1], 0.0, problem.demand_upper_bound)
+            values[2] = clamp(values[2], 0.0, 1.0)
+            values
+        end
+        smoke_regression_policies(
+            problem,
+            decoder;
+            seed=35,
+            target_component=:h_eq_xi,
+            postprocess_prediction=newsvendor_postprocess,
+        )
     end
 end

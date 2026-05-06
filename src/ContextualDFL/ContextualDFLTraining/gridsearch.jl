@@ -19,8 +19,10 @@ const DEFAULT_REMOTE_PROJECT =
     "/home/rwl/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLTraining"
 const DEFAULT_REMOTE_JULIA = "/home/rwl/.juliaup/bin/julia"
 const MLFLOW_RETRY_ATTEMPTS = 8
+const MLFLOW_TRANSIENT_RETRY_ATTEMPTS = 30
 const MLFLOW_RETRY_INITIAL_DELAY_SECONDS = 1.0
 const MLFLOW_RETRY_BACKOFF = 1.5
+const MLFLOW_RETRY_MAX_DELAY_SECONDS = 30.0
 const GRID_CANDIDATE_START_STAGGER_SECONDS = 0.25
 const GRID_TRAINING_DATA_SEED_MAX = typemax(Int32) - 1
 
@@ -60,10 +62,17 @@ end
 
 function remote_worker_specs()
     return [
-        ("rwl@gcp-8c-1", env_worker_count("GCP_8C_1_WORKERS", :auto)),
-        ("rwl@gcp-4c-1", env_worker_count("GCP_4C_1_WORKERS", :auto)),
-        ("rwl@gcp-8c-2", env_worker_count("GCP_8C_2_WORKERS", :auto)),
-        ("rwl@gcp-4c-2", env_worker_count("GCP_4C_2_WORKERS", :auto)),
+#        ("rwl@gcp-4c-1", env_worker_count("GCP_4C_1_WORKERS", :auto)),
+#        ("rwl@gcp-4c-2", env_worker_count("GCP_4C_2_WORKERS", :auto)),
+#        ("rwl@gcp-4c-3", env_worker_count("GCP_4C_3_WORKERS", :auto)),
+#        ("rwl@gcp-4c-5", env_worker_count("GCP_4C_5_WORKERS", :auto)),
+#        ("rwl@gcp-8c-1", env_worker_count("GCP_8C_1_WORKERS", :auto)),
+#        ("rwl@gcp-8c-2", env_worker_count("GCP_8C_2_WORKERS", :auto)),
+#        ("rwl@gcp-8c-3", env_worker_count("GCP_8C_3_WORKERS", :auto)),
+#        ("rwl@gcp-8c-5", env_worker_count("GCP_8C_5_WORKERS", :auto)),
+        ("rwl@gcp-16c-4", env_worker_count("GCP_16C_4_WORKERS", :auto)),
+        ("rwl@ibm-96c-1", env_worker_count("IBM_96C_1_WORKERS", :auto)),
+        ("rwl@ibm-96c-2", env_worker_count("IBM_96C_2_WORKERS", :auto)),
     ]
 end
 
@@ -84,15 +93,16 @@ end
 
 function grid_mlflow_settings(experiment)
     deterministic_id = deterministic_mlflow_experiment_id(experiment.id)
+    enabled = env_flag("MLFLOW_ENABLED", true)
     return (;
-        enabled=true,
+        enabled=enabled,
         experiment_id=deterministic_id,
         deterministic_experiment_id=deterministic_id,
         experiment_name=deterministic_mlflow_experiment_name(experiment),
         contextualdfl_experiment_id=experiment.id,
         contextualdfl_experiment_name=experiment.name,
         tracking_uri=get(ENV, "MLFLOW_TRACKING_URI", ""),
-        upload_model_artifact=env_flag("MLFLOW_UPLOAD_MODEL_ARTIFACTS", false),
+        upload_model_artifact=enabled && env_flag("MLFLOW_UPLOAD_MODEL_ARTIFACTS", true),
     )
 end
 
@@ -168,18 +178,23 @@ end
 function add_remote_workers!()
     remote_project = get(ENV, "REMOTE_CONTEXTUAL_DFL_TRAINING_PROJECT", DEFAULT_REMOTE_PROJECT)
     remote_julia = get(ENV, "REMOTE_JULIA", DEFAULT_REMOTE_JULIA)
+    machines = [
+        (host, count) for (host, count) in remote_worker_specs() if
+        !(count isa Integer && count <= 0)
+    ]
+    isempty(machines) && error("No remote worker machines were enabled.")
 
-    for (host, count) in remote_worker_specs()
-        count isa Integer && count <= 0 && continue
+    for (host, count) in machines
         println("Adding $count worker(s) on $host")
-        addprocs(
-            [(host, count)];
-            exename=remote_julia,
-            exeflags="--project=$(remote_project)",
-            dir=remote_project,
-            tunnel=true,
-        )
     end
+    addprocs(
+        machines;
+        exename=remote_julia,
+        exeflags="--project=$(remote_project)",
+        dir=remote_project,
+        tunnel=true,
+        max_parallel=length(machines),
+    )
 
     remote_worker_ids = setdiff(workers(), [1])
     isempty(remote_worker_ids) && error("No remote workers were added.")
@@ -187,23 +202,25 @@ function add_remote_workers!()
 end
 
 function load_worker_stdlibs!()
-    for process_id in procs()
-        remotecall_fetch(process_id) do
+    tasks = [
+        @async remotecall_fetch(process_id) do
             Core.eval(Main, :(using Dates))
             Core.eval(Main, :(using Distributed))
             Core.eval(Main, :(using Pkg))
             Core.eval(Main, :(using Sockets))
             return nothing
-        end
-    end
+        end for process_id in procs()
+    ]
+    foreach(fetch, tasks)
 end
 
 function assert_remote_only_workers!(remote_worker_ids)
     local_hostname = Sockets.gethostname()
-    worker_hosts = Dict(
-        worker => remotecall_fetch(() -> Sockets.gethostname(), worker) for
+    host_tasks = Dict(
+        worker => @async remotecall_fetch(() -> Sockets.gethostname(), worker) for
         worker in remote_worker_ids
     )
+    worker_hosts = Dict(worker => fetch(task) for (worker, task) in host_tasks)
     local_workers = [
         worker for (worker, hostname) in worker_hosts if hostname == local_hostname
     ]
@@ -219,10 +236,16 @@ function assert_remote_only_workers!(remote_worker_ids)
     return worker_hosts
 end
 
-function load_training_project_on_workers!(remote_worker_ids)
-    println("Instantiating and loading ContextualDFLTraining on remote workers")
-    for worker in remote_worker_ids
-        metadata = remotecall_fetch(worker) do
+function load_training_project_on_workers!(remote_worker_ids, worker_hosts)
+    first_worker_by_host = Dict{String,Int}()
+    for worker in sort(remote_worker_ids)
+        host = worker_hosts[worker]
+        haskey(first_worker_by_host, host) || (first_worker_by_host[host] = worker)
+    end
+
+    println("Instantiating ContextualDFLTraining once per remote host")
+    instantiate_tasks = [
+        @async remotecall_fetch(worker) do
             Pkg.instantiate()
             Core.eval(Main, :(using ContextualDFLTraining))
             return (;
@@ -230,7 +253,23 @@ function load_training_project_on_workers!(remote_worker_ids)
                 hostname=Sockets.gethostname(),
                 pid=getpid(),
             )
-        end
+        end for worker in values(first_worker_by_host)
+    ]
+    foreach(fetch, instantiate_tasks)
+
+    println("Loading ContextualDFLTraining on remote workers")
+    load_tasks = [
+        @async remotecall_fetch(worker) do
+            Core.eval(Main, :(using ContextualDFLTraining))
+            return (;
+                worker_id=Distributed.myid(),
+                hostname=Sockets.gethostname(),
+                pid=getpid(),
+            )
+        end for worker in remote_worker_ids
+    ]
+    for task in load_tasks
+        metadata = fetch(task)
         println("Loaded worker $(metadata.worker_id) on $(metadata.hostname), pid $(metadata.pid)")
     end
 end
@@ -263,9 +302,7 @@ function define_remote_eval!()
         end
     end
 
-    for worker in workers()
-        remotecall_fetch(Core.eval, worker, Main, definition)
-    end
+    foreach(fetch, [@async remotecall_fetch(Core.eval, worker, Main, definition) for worker in workers()])
 end
 
 function coordinator_error_result(config, worker, worker_hosts, status, error, backtrace, elapsed_seconds)
@@ -294,7 +331,7 @@ function transport_failure(error)
         error isa Base.IOError
 end
 
-function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
+function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts; on_result=nothing)
     results = Vector{Any}(undef, length(configs))
     pending = Tuple{Int,Any}[(index, config) for (index, config) in enumerate(configs)]
     pending_lock = ReentrantLock()
@@ -307,6 +344,22 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
         finally
             unlock(pending_lock)
         end
+    end
+
+    function record_result!(index, result)
+        results[index] = result
+        on_result === nothing && return result
+
+        try
+            on_result(index, result)
+        catch error
+            @warn "Grid result callback failed" run_id=getproperty(result, :run_id) error=sprint(
+                showerror,
+                error,
+                catch_backtrace(),
+            )
+        end
+        return result
     end
 
     tasks = [
@@ -324,10 +377,13 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
                             mod(index - 1, length(remote_worker_ids)),
                         )
                     end
-                    results[index] = remotecall_fetch(
-                        _contextualdfltraining_remote_eval,
-                        worker,
-                        config,
+                    record_result!(
+                        index,
+                        remotecall_fetch(
+                            _contextualdfltraining_remote_eval,
+                            worker,
+                            config,
+                        ),
                     )
                 catch error
                     elapsed_seconds = time() - started
@@ -336,26 +392,32 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
                             "Worker $worker exited while running $(config.run_id); recording worker_lost and continuing.",
                         )
                         mark_mlflow_run_failed(config, "worker_lost")
-                        results[index] = coordinator_error_result(
-                            config,
-                            worker,
-                            worker_hosts,
-                            "worker_lost",
-                            error,
-                            catch_backtrace(),
-                            elapsed_seconds,
+                        record_result!(
+                            index,
+                            coordinator_error_result(
+                                config,
+                                worker,
+                                worker_hosts,
+                                "worker_lost",
+                                error,
+                                catch_backtrace(),
+                                elapsed_seconds,
+                            ),
                         )
                         break
                     end
 
-                    results[index] = coordinator_error_result(
-                        config,
-                        worker,
-                        worker_hosts,
-                        "coordinator_error",
-                        error,
-                        catch_backtrace(),
-                        elapsed_seconds,
+                    record_result!(
+                        index,
+                        coordinator_error_result(
+                            config,
+                            worker,
+                            worker_hosts,
+                            "coordinator_error",
+                            error,
+                            catch_backtrace(),
+                            elapsed_seconds,
+                        ),
                     )
                 end
             end
@@ -366,17 +428,20 @@ function run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
 
     for (index, config) in enumerate(configs)
         if !isassigned(results, index)
-            results[index] = (;
-                status="not_started",
-                run_id=config.run_id,
-                config=config,
-                worker=NamedTuple(),
-                final_metrics=NamedTuple(),
-                epoch_history=Dict{Symbol,Any}[],
-                error="No remote worker remained available for this configuration.",
-                started_at=unix_milliseconds(),
-                finished_at=unix_milliseconds(),
-                elapsed_seconds=0.0,
+            record_result!(
+                index,
+                (;
+                    status="not_started",
+                    run_id=config.run_id,
+                    config=config,
+                    worker=NamedTuple(),
+                    final_metrics=NamedTuple(),
+                    epoch_history=Dict{Symbol,Any}[],
+                    error="No remote worker remained available for this configuration.",
+                    started_at=unix_milliseconds(),
+                    finished_at=unix_milliseconds(),
+                    elapsed_seconds=0.0,
+                ),
             )
         end
     end
@@ -516,8 +581,16 @@ function close_mlflow_grid_parent_run(parent, config_parent_results; child_resul
     parent === nothing && return nothing
 
     success = all(result -> getproperty(result, :status) == "ok", config_parent_results)
-    mark_failed_mlflow_candidates!(child_results)
-    log_grid_aggregate_metrics!(parent.client, parent.run, config_parent_results)
+    try
+        mark_failed_mlflow_candidates!(child_results)
+    catch error
+        @warn "Failed to mark failed MLflow child runs" error=sprint(showerror, error)
+    end
+    try
+        log_grid_aggregate_metrics!(parent.client, parent.run, config_parent_results)
+    catch error
+        @warn "Failed to log grid aggregate metrics" error=sprint(showerror, error)
+    end
     with_mlflow_retry("update grid parent run") do
         MLFlowClient.updaterun(
             parent.client,
@@ -598,9 +671,26 @@ function log_config_parent_params!(mlf, run, config)
     return nothing
 end
 
-function close_mlflow_config_parent_runs(config_parent_runs, config_parent_results)
+function close_mlflow_config_parent_runs(
+    config_parent_runs,
+    config_parent_results;
+    skip_names=Set{String}(),
+)
     for (parent, result) in zip(config_parent_runs, config_parent_results)
-        close_mlflow_config_parent_run(parent, result)
+        config = getproperty(result, :config)
+        parent_name = config isa NamedTuple && hasproperty(config, :candidate_name) ?
+            string(config.candidate_name) :
+            result_config_parent_name(config)
+        parent_name in skip_names && continue
+
+        try
+            close_mlflow_config_parent_run(parent, result)
+        catch error
+            println(
+                "Could not close config parent MLflow run for $parent_name: ",
+                sprint(showerror, error),
+            )
+        end
     end
     return nothing
 end
@@ -609,7 +699,14 @@ function close_mlflow_config_parent_run(parent, result)
     parent === nothing && return nothing
 
     success = getproperty(result, :status) == "ok"
-    log_config_parent_aggregate_metrics!(parent.client, parent.run, result)
+    try
+        log_config_parent_aggregate_metrics!(parent.client, parent.run, result)
+    catch error
+        @warn "Failed to log config parent aggregate metrics" run_id=getproperty(result, :run_id) error=sprint(
+            showerror,
+            error,
+        )
+    end
     with_mlflow_retry("update config parent run") do
         MLFlowClient.updaterun(
             parent.client,
@@ -845,16 +942,37 @@ end
 
 function with_mlflow_retry(callback, operation)
     delay = MLFLOW_RETRY_INITIAL_DELAY_SECONDS
-    for attempt in 1:MLFLOW_RETRY_ATTEMPTS
+    for attempt in 1:MLFLOW_TRANSIENT_RETRY_ATTEMPTS
         try
             return callback()
         catch error
-            attempt == MLFLOW_RETRY_ATTEMPTS && rethrow()
+            max_attempts = mlflow_transient_tracking_error(error) ?
+                MLFLOW_TRANSIENT_RETRY_ATTEMPTS :
+                MLFLOW_RETRY_ATTEMPTS
+            attempt == max_attempts && rethrow()
             @warn "MLflow $operation failed; retrying" attempt error=sprint(showerror, error)
-            sleep(delay)
-            delay *= MLFLOW_RETRY_BACKOFF
+            sleep(delay * (0.75 + 0.5 * rand()))
+            delay = min(delay * MLFLOW_RETRY_BACKOFF, MLFLOW_RETRY_MAX_DELAY_SECONDS)
         end
     end
+end
+
+function mlflow_transient_tracking_error(error)
+    message = sprint(showerror, error)
+    return any(
+        pattern -> occursin(pattern, message),
+        (
+            "QueuePool limit",
+            "connection timed out",
+            "Read timed out",
+            "ConnectTimeout",
+            "Connection refused",
+            "Max retries exceeded",
+            "RemoteDisconnected",
+            "temporarily unavailable",
+            "database is locked",
+        ),
+    )
 end
 
 function mlflow_parent_run_id(parent)
@@ -1093,6 +1211,8 @@ function annotate_grid_config_parent(
             mlflow_deterministic_experiment_id=mlflow_settings.deterministic_experiment_id,
             mlflow_tracking_uri=mlflow_settings.tracking_uri,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
+            checkpoint_upload_mlflow=mlflow_settings.enabled &&
+                                     Bool(grid_config_value(config, :checkpoint_upload_mlflow, true)),
             mlflow_parent_run_id=grid_parent_run_id,
             mlflow_run_name=candidate_name,
             coordinator_hostname=coordinator_hostname,
@@ -1194,6 +1314,9 @@ function annotate_repeat_config(
             write_training_data_artifact=false,
             mlflow_enabled=mlflow_settings.enabled,
             mlflow_upload_model_artifact=mlflow_settings.upload_model_artifact,
+            checkpoint_upload_mlflow=mlflow_settings.enabled && Bool(
+                grid_config_value(config_parent, :checkpoint_upload_mlflow, true),
+            ),
             mlflow_parent_run_id=config_parent_run_id,
             mlflow_run_name=child_name,
             mlflow_tags=tags,
@@ -1261,7 +1384,7 @@ function config_parent_result(config_parent, child_results)
     expected_repeats = Int(config_parent.repeat_count)
     successful_repeats = count(result -> getproperty(result, :status) == "ok", child_results)
     failed_repeats = length(child_results) - successful_repeats
-    success = length(child_results) == expected_repeats && failed_repeats == 0
+    success = successful_repeats > 0
     summaries = aggregate_metric_summaries(child_results)
     metrics = merge(
         aggregate_mean_metrics(summaries),
@@ -1321,7 +1444,7 @@ function main()
     remote_worker_ids = add_remote_workers!()
     load_worker_stdlibs!()
     worker_hosts = assert_remote_only_workers!(remote_worker_ids)
-    load_training_project_on_workers!(remote_worker_ids)
+    load_training_project_on_workers!(remote_worker_ids, worker_hosts)
     define_remote_eval!()
 
     timestamp = result_timestamp()
@@ -1376,27 +1499,130 @@ function main()
         println(
             "MLflow experiment id: $(mlflow_settings.experiment_id) ($(mlflow_settings.experiment_name))",
         )
+    else
+        println("MLflow disabled; writing grid-search results to local CSV/JSONL only.")
     end
     println(
         "Running $(length(configs)) configuration(s) on $(length(remote_worker_ids)) remote worker(s)",
     )
 
+    output_root = joinpath(@__DIR__, "results")
+    output_dir = joinpath(output_root, timestamp)
+    mkpath(output_dir)
+    println("Incremental result JSONL path: $output_dir")
+
+    config_parent_by_name =
+        Dict(string(config.candidate_name) => config for config in config_parent_configs)
+    config_parent_run_by_name = Dict(
+        string(config.candidate_name) => run for
+        (config, run) in zip(config_parent_configs, config_parent_runs)
+    )
+    child_results_by_config_parent = Dict{String,Vector{Any}}()
+    closed_config_parent_names = Set{String}()
+    config_parent_close_lock = ReentrantLock()
+    incremental_result_lock = ReentrantLock()
+
+    function close_config_parent_if_complete!(_, result)
+        parent_name = result_config_parent_name(getproperty(result, :config))
+        isempty(parent_name) && return nothing
+        haskey(config_parent_by_name, parent_name) || return nothing
+
+        parent = nothing
+        parent_result = nothing
+        lock(config_parent_close_lock)
+        try
+            parent_name in closed_config_parent_names && return nothing
+
+            child_results = get!(
+                () -> Any[],
+                child_results_by_config_parent,
+                parent_name,
+            )
+            push!(child_results, result)
+
+            expected_repeats = Int(config_parent_by_name[parent_name].repeat_count)
+            length(child_results) < expected_repeats && return nothing
+
+            push!(closed_config_parent_names, parent_name)
+            parent = config_parent_run_by_name[parent_name]
+            parent_result = config_parent_result(
+                config_parent_by_name[parent_name],
+                child_results,
+            )
+        finally
+            unlock(config_parent_close_lock)
+        end
+
+        try
+            lock(incremental_result_lock)
+            try
+                write_incremental_config_result(output_dir, parent_result)
+            catch error
+                @warn "Could not write incremental config result" run_id=getproperty(
+                    parent_result,
+                    :run_id,
+                ) error=sprint(showerror, error, catch_backtrace())
+            finally
+                unlock(incremental_result_lock)
+            end
+            close_mlflow_config_parent_run(parent, parent_result)
+        catch error
+            lock(config_parent_close_lock)
+            try
+                delete!(closed_config_parent_names, parent_name)
+            finally
+                unlock(config_parent_close_lock)
+            end
+            println(
+                "Could not close completed config parent MLflow run for $parent_name: ",
+                sprint(showerror, error),
+            )
+        end
+
+        return nothing
+    end
+
+    function record_completed_repeat!(index, result)
+        lock(incremental_result_lock)
+        try
+            write_incremental_grid_result(output_dir, result)
+        catch error
+            @warn "Could not write incremental repeat result" run_id=getproperty(
+                result,
+                :run_id,
+            ) error=sprint(showerror, error, catch_backtrace())
+        finally
+            unlock(incremental_result_lock)
+        end
+        close_config_parent_if_complete!(index, result)
+        return nothing
+    end
+
     results = try
-        run_grid_on_remote_workers(remote_worker_ids, configs, worker_hosts)
+        run_grid_on_remote_workers(
+            remote_worker_ids,
+            configs,
+            worker_hosts;
+            on_result=record_completed_repeat!,
+        )
     catch error
         fail_mlflow_config_parent_runs(config_parent_runs)
         fail_mlflow_grid_parent_run(parent_run)
         rethrow()
     end
     config_results = config_parent_results(config_parent_configs, results)
-    close_mlflow_config_parent_runs(config_parent_runs, config_results)
+    close_mlflow_config_parent_runs(
+        config_parent_runs,
+        config_results;
+        skip_names=closed_config_parent_names,
+    )
     close_mlflow_grid_parent_run(parent_run, config_results; child_results=results)
 
     output_dir = write_grid_results(
         results;
         configs=configs,
         config_results=config_results,
-        output_root=joinpath(@__DIR__, "results"),
+        output_root=output_root,
         timestamp=timestamp,
     )
     println("Wrote grid-search CSV results to $output_dir")

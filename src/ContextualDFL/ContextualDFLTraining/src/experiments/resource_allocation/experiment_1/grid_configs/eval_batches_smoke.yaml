@@ -24,12 +24,12 @@ base:
   policy_inference_mu: 0.01
   policy_inference_rho: null
   optimality_evaluation: true
-  optimality_test_sample_count: 2
+  optimality_test_sample_count: 1
   optimality_train_sample_count: 0
   optimality_validation_sample_count: 0
   optimality_mu: 0.0
   optimality_rho: 0.0
-  optimality_evaluation_batches: 4
+  optimality_evaluation_batches: 1
   training_context_count: 8
   training_scenarios_per_context: 1
   collection_duplicates_per_context: 1

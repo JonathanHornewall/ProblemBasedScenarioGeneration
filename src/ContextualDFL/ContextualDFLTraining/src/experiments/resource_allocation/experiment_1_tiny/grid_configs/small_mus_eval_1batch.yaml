@@ -1,0 +1,40 @@
+version: 1
+name: resource_allocation_experiment_1_search_2_eval_1batch
+description: Small mu grid with 30-point generated test evaluation using one 1000-scenario batch per point.
+
+base:
+  epochs: 50
+  repeat_count: 6
+  optimality_evaluation: true
+  optimality_test_sample_count: 30
+  optimality_train_sample_count: 0
+  optimality_validation_sample_count: 0
+  optimality_evaluation_batches: 1
+  mlflow_upload_model_artifact: true
+  checkpoint_upload_mlflow: true
+  checkpoint_required: true
+
+grid:
+  activation: [silu]
+  depth: [4]
+  learning_rate: [0.01,0.01]
+  schedules:
+    mu:
+      - kind: constant
+        value: 0.0
+      - kind: constant
+        value: 0.0003
+      - kind: constant
+        value: 0.0001
+      - kind: constant
+        value: 0.00003
+    mu_ref:
+      - kind: match_input
+      - kind: constant
+        value: 0
+    rho:
+      - kind: constant
+        value: 0
+    rho_ref:
+      - kind: constant
+        value: 0

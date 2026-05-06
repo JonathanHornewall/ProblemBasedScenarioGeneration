@@ -9,17 +9,54 @@ const DRIVER_TRAINING_PROJECT_DIR =
     joinpath(DRIVER_REPO_ROOT, "src", "ContextualDFL", "ContextualDFLTraining")
 const DRIVER_COMMON_PATH = joinpath(DRIVER_SUITE_DIR, "suite_common.jl")
 
+function requested_jobs(args, available_workers)
+    requested = available_workers
+    index = 1
+    while index <= length(args)
+        if args[index] == "--jobs"
+            index += 1
+            index <= length(args) || error("--jobs requires an integer")
+            requested = parse(Int, args[index])
+        end
+        index += 1
+    end
+    return max(1, min(requested, available_workers))
+end
+
+const DRIVER_REQUESTED_JOBS = requested_jobs(ARGS, nworkers())
+if DRIVER_REQUESTED_JOBS < nworkers()
+    rmprocs(workers()[(DRIVER_REQUESTED_JOBS + 1):end])
+end
+
 @everywhere begin
     import Pkg
     Pkg.activate($DRIVER_TRAINING_PROJECT_DIR; io=devnull)
-    include($DRIVER_COMMON_PATH)
 end
+
+for worker_id in copy(workers())
+    try
+        remotecall_fetch(worker_id, DRIVER_COMMON_PATH) do common_path
+            include(common_path)
+            return true
+        end
+    catch error
+        @warn "Removing worker that failed to load the suite code" worker_id error
+        try
+            rmprocs(worker_id; waitfor=0)
+        catch remove_error
+            @warn "Failed to remove unhealthy worker" worker_id remove_error
+        end
+    end
+end
+
+include(DRIVER_COMMON_PATH)
 
 function parse_args(args)
     parsed = Dict{String,Any}(
         "smoke" => false,
         "dry-run" => false,
         "force-test-data" => false,
+        "ignore-existing-decisions" => false,
         "jobs" => nworkers(),
     )
 
@@ -32,6 +69,8 @@ function parse_args(args)
             parsed["dry-run"] = true
         elseif arg == "--force-test-data"
             parsed["force-test-data"] = true
+        elseif arg == "--ignore-existing-decisions"
+            parsed["ignore-existing-decisions"] = true
         elseif arg == "--jobs"
             index += 1
             index <= length(args) || error("--jobs requires an integer")
@@ -49,6 +88,10 @@ function parse_args(args)
               3. width: 32, 64, 128, 256, 512 hidden units
               4. schedule shape
               5. piecewise-linear schedule parameters
+
+            Staged mode screens each candidate with $(SCREENING_REPLICATES) short replicate(s),
+            keeps $(FINALIST_COUNT) finalist(s), then runs $(FINALIST_REPLICATES) full-budget
+            replicate(s) per finalist.
 
             CSV artifacts stay under:
               $(DRIVER_SUITE_DIR)
@@ -95,6 +138,8 @@ function start_csv_logger(; smoke=false)
                 append_csv_row(paths.runs, RUN_HEADERS, row)
             elseif kind == :test_sample
                 append_csv_row(paths.test_samples, TEST_SAMPLE_HEADERS, row)
+            elseif kind == :early_check
+                append_csv_row(paths.early_checks, EARLY_CHECK_HEADERS, row)
             else
                 @warn "Ignoring unknown logger message kind" kind
             end
@@ -160,7 +205,25 @@ function run_configs!(configs, logger; smoke=false, jobs=nworkers())
     pool = CachingPool(worker_ids)
     println("Running $(length(pending)) pending config(s) on $(length(worker_ids)) worker(s).")
     flush(stdout)
-    results = pmap(config -> run_sweep_config(config, logger.channel), pool, pending)
+    log_channel = logger.channel
+    heartbeat_done = Ref(false)
+    heartbeat = @async begin
+        while !heartbeat_done[]
+            sleep(60)
+            heartbeat_done[] && break
+            println(
+                "Still running $(length(pending)) config(s) on " *
+                "$(length(worker_ids)) worker(s).",
+            )
+            flush(stdout)
+        end
+    end
+    results = try
+        pmap(config -> run_sweep_config(config, log_channel), pool, pending)
+    finally
+        heartbeat_done[] = true
+        wait(heartbeat)
+    end
     flush(stdout)
     return results
 end
@@ -171,6 +234,148 @@ function write_phase_outputs!(phase, configs, decision_rows; smoke=false)
 
     decision = choose_candidate(summary_rows)
     selected_config = config_for_candidate(configs, decision.candidate_name)
+    row = decision_row(phase, decision, selected_config)
+    push!(decision_rows, row)
+    write_csv_file(phase_path(phase, "decision.csv"; smoke=smoke), DECISION_HEADERS, [row])
+    write_csv_file(result_paths(smoke=smoke).decisions, DECISION_HEADERS, decision_rows)
+
+    return (; decision=decision, selected_config=selected_config, row=row)
+end
+
+function existing_phase_decision(phase; smoke=false)
+    path = phase_path(phase, "decision.csv"; smoke=smoke)
+    rows = read_csv_rows(path)
+    isempty(rows) && return nothing
+    row = last(rows)
+    ok_count = Int(row_value(row, :selected_ok_count, 0))
+    run_count = Int(row_value(row, :selected_run_count, 0))
+    ok_count == run_count && run_count > 0 || return nothing
+    return row
+end
+
+function update_selection_from_decision(selection, phase, row)
+    if phase == :data_amount
+        return merge(
+            selection,
+            (;
+                training_contexts=Int(row.training_contexts),
+                epochs=Int(row.epochs),
+                final_epochs=Int(row.final_epochs),
+            ),
+        )
+    elseif phase == :depth
+        return merge(selection, (; depth=Int(row.depth)))
+    elseif phase == :width
+        return merge(selection, (; hidden_size=Int(row.hidden_size)))
+    elseif phase == :schedule_shape
+        return merge(selection, (; schedule_kind=Symbol(row.schedule_kind)))
+    elseif phase == :piecewise_linear
+        return merge(
+            selection,
+            (;
+                schedule_kind=:piecewise_linear,
+                starting_mu=Float64(row.starting_mu),
+                ending_mu=Float64(row.ending_mu),
+                piece_length=Int(row.piece_length),
+                nr_pieces=Int(row.nr_pieces),
+                starting_phase_length=Int(row.starting_phase_length),
+                fine_tuning_phase_length=Int(row.fine_tuning_phase_length),
+            ),
+        )
+    end
+    return selection
+end
+
+function run_screening_wave!(phase, selection, replicate, thresholds, logger; smoke=false, jobs=nworkers())
+    configs = phase_configs(
+        phase,
+        selection;
+        smoke=smoke,
+        replicates=replicate:replicate,
+        stage=:screen,
+        screening=true,
+        early_stop_thresholds=thresholds,
+    )
+    write_csv_file(
+        phase_path(phase, "screening_rep$(replicate)_configs.csv"; smoke=smoke),
+        CONFIG_HEADERS,
+        [config_row(config) for config in configs],
+    )
+    run_configs!(configs, logger; smoke=smoke, jobs=jobs)
+    return configs
+end
+
+function run_staged_phase!(phase, selection, logger, decision_rows; smoke=false, jobs=nworkers())
+    screening_configs = NamedTuple[]
+    first_wave_configs = NamedTuple[]
+
+    for replicate in 1:(smoke ? 1 : SCREENING_REPLICATES)
+        thresholds = replicate == 1 ? nothing :
+                     early_stop_thresholds_from_checks(first_wave_configs; smoke=smoke)
+        wave_configs = run_screening_wave!(
+            phase,
+            selection,
+            replicate,
+            thresholds,
+            logger;
+            smoke=smoke,
+            jobs=jobs,
+        )
+        append!(screening_configs, wave_configs)
+        replicate == 1 && append!(first_wave_configs, wave_configs)
+        write_csv_file(
+            phase_path(phase, "screening_summary.csv"; smoke=smoke),
+            SUMMARY_HEADERS,
+            summarize_phase(screening_configs; smoke=smoke),
+        )
+    end
+
+    write_csv_file(
+        phase_path(phase, "screening_configs.csv"; smoke=smoke),
+        CONFIG_HEADERS,
+        [config_row(config) for config in screening_configs],
+    )
+    screening_summary = summarize_phase(screening_configs; smoke=smoke)
+    write_csv_file(
+        phase_path(phase, "screening_summary.csv"; smoke=smoke),
+        SUMMARY_HEADERS,
+        screening_summary,
+    )
+
+    finalists = choose_finalists(screening_summary; count=smoke ? 1 : FINALIST_COUNT)
+    finalist_names = [String(row.candidate_name) for row in finalists]
+    write_csv_file(
+        phase_path(phase, "finalists.csv"; smoke=smoke),
+        FINALIST_HEADERS,
+        finalist_rows(phase, finalists),
+    )
+
+    final_configs = phase_configs(
+        phase,
+        selection;
+        smoke=smoke,
+        replicates=1:(smoke ? 1 : FINALIST_REPLICATES),
+        stage=:final,
+        screening=false,
+        candidate_names=finalist_names,
+    )
+    write_csv_file(
+        phase_path(phase, "final_configs.csv"; smoke=smoke),
+        CONFIG_HEADERS,
+        [config_row(config) for config in final_configs],
+    )
+    write_csv_file(
+        phase_path(phase, "configs.csv"; smoke=smoke),
+        CONFIG_HEADERS,
+        [config_row(config) for config in vcat(screening_configs, final_configs)],
+    )
+
+    run_configs!(final_configs, logger; smoke=smoke, jobs=jobs)
+    final_summary = summarize_phase(final_configs; smoke=smoke)
+    write_csv_file(phase_path(phase, "summary.csv"; smoke=smoke), SUMMARY_HEADERS, final_summary)
+
+    decision = choose_candidate(final_summary)
+    selected_config = config_for_candidate(final_configs, decision.candidate_name)
     row = decision_row(phase, decision, selected_config)
     push!(decision_rows, row)
     write_csv_file(phase_path(phase, "decision.csv"; smoke=smoke), DECISION_HEADERS, [row])
@@ -219,20 +424,37 @@ function main()
         for phase in PHASES
             println()
             println("Starting phase $(phase).")
-            configs = phase_configs(phase, selection; smoke=smoke)
-            write_phase_config_csv!(phase, configs; smoke=smoke)
-            run_configs!(configs, logger; smoke=smoke, jobs=Int(args["jobs"]))
-            output = write_phase_outputs!(phase, configs, decision_rows; smoke=smoke)
-            selection = update_selection(
-                selection,
-                phase,
-                output.decision,
-                output.selected_config,
-            )
-            println(
-                "Phase $(phase) selected $(output.decision.candidate_name) " *
-                "with mean average_test_loss $(output.decision.mean_average_test_loss).",
-            )
+            existing = Bool(args["ignore-existing-decisions"]) ? nothing :
+                       existing_phase_decision(phase; smoke=smoke)
+            if existing !== nothing
+                push!(decision_rows, existing)
+                write_csv_file(result_paths(smoke=smoke).decisions, DECISION_HEADERS, decision_rows)
+                selection = update_selection_from_decision(selection, phase, existing)
+                println(
+                    "Reusing existing phase $(phase) decision: " *
+                    "$(existing.selected_candidate) with mean average_test_loss " *
+                    "$(existing.selected_mean_average_test_loss).",
+                )
+            else
+                output = run_staged_phase!(
+                    phase,
+                    selection,
+                    logger,
+                    decision_rows;
+                    smoke=smoke,
+                    jobs=Int(args["jobs"]),
+                )
+                selection = update_selection(
+                    selection,
+                    phase,
+                    output.decision,
+                    output.selected_config,
+                )
+                println(
+                    "Phase $(phase) selected $(output.decision.candidate_name) " *
+                    "with mean average_test_loss $(output.decision.mean_average_test_loss).",
+                )
+            end
             flush(stdout)
         end
 

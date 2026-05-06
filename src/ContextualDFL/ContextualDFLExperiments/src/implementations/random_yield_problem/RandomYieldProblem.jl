@@ -1,6 +1,9 @@
 import LinearAlgebra
 import Random
 
+# Synthetic random-recourse-matrix stress test.
+# This is not a literature data instance. It is used to test the setting
+# where W is random and the scenario generator learns vector data q instead.
 struct RandomYieldProblem <: ProgramInstance
     product_count::Int
     activity_count::Int

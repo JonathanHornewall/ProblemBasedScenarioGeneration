@@ -1,5 +1,9 @@
 import ChainRulesCore
 
+# STANDARD for resource allocation h-learning.
+# Learns the demand rows of h_eq. Use with output_activation=:identity.
+# h is intentionally unconstrained; the equality-form model has slack variables
+# so generated h can leave the physical nonnegative demand support.
 struct ResourceAllocationDemandVectorDecoder{TBaseScenario} <: ContextualDFL.VectorDecoder
     base_scenario::TBaseScenario
 end

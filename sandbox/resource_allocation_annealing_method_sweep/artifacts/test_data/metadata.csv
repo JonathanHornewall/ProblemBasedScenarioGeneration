@@ -1,0 +1,2 @@
+version,smoke,seed,contexts,scenarios_per_context,solve_seconds,worker_id,hostname,pid,started_at,finished_at
+resource-allocation-annealing-method-sweep-v1,false,20260505,100,100,280.785223745,3,instance-20260504-202505,706302,1777993500892,1777993781696

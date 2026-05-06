@@ -213,7 +213,7 @@ function train_with_contextualdfl_mlflow(objects, config)
             reset_optimizer_each_epoch=Bool(
                 config_value(config, :reset_optimizer_each_epoch, false),
             ),
-            save_model=upload_model_artifact,
+            save_model=false,
             model_save_path=model_save_path,
             on_epoch_end=(epoch, loss_value, display_loss, metadata) -> log_mlflow_epoch!(
                 mlf,
@@ -238,13 +238,31 @@ function train_with_contextualdfl_mlflow(objects, config)
         )
         log_mlflow_checkpoint_artifact!(mlf, run, checkpoint, mlflow_config)
 
-        if upload_model_artifact && isfile(model_save_path)
-            upload_mlflow_artifact!(
-                mlf,
-                run,
-                model_save_path;
-                artifact_path="models/" * basename(model_save_path),
-            )
+        if upload_model_artifact
+            temp_model_save_path = ""
+            try
+                mkpath(dirname(model_save_path))
+                temp_model_save_path = tempname(dirname(model_save_path))
+                open(temp_model_save_path, "w") do io
+                    Serialization.serialize(io, trained_model)
+                end
+                mv(temp_model_save_path, model_save_path; force=true)
+                println("Model saved to: $model_save_path")
+                upload_mlflow_artifact!(
+                    mlf,
+                    run,
+                    model_save_path;
+                    artifact_path="models/" * basename(model_save_path),
+                )
+            catch error
+                if !isempty(temp_model_save_path) && isfile(temp_model_save_path)
+                    rm(temp_model_save_path; force=true)
+                end
+                @warn "Failed to save/upload MLflow model artifact" path=model_save_path error=exception_text(
+                    error,
+                    catch_backtrace(),
+                )
+            end
         end
 
         metrics = evaluate_model_for_reporting(trained_model, objects, config)
@@ -1099,6 +1117,8 @@ function evaluate_optimality_on_splits(model, objects, config)
     for (split_name, dataset) in optimality_splits_for_config(objects, config)
         isempty(dataset) && continue
         optimal_results = load_optimal_results(spec, split_name; dataset=dataset)
+        dataset, optimal_results =
+            limit_optimality_evaluation_batches(dataset, optimal_results, config)
         result = ContextualDFLExperiments.evaluate_policy_against_optimum(
             policy,
             dataset,
@@ -1114,6 +1134,70 @@ function evaluate_optimality_on_splits(model, objects, config)
     end
 
     return metrics
+end
+
+function limit_optimality_evaluation_batches(dataset, optimal_results, config)
+    batch_limit = config_value(config, :optimality_evaluation_batches, nothing)
+    batch_limit === nothing && return dataset, optimal_results
+
+    batch_limit = Int(batch_limit)
+    batch_limit > 0 ||
+        throw(ArgumentError("optimality_evaluation_batches must be positive."))
+
+    limited_dataset = similar(dataset, 0)
+    limited_results = NamedTuple[]
+    for (data_point, result) in zip(dataset, optimal_results)
+        objective_values = optimality_objective_values(result)
+        source_batch_count = length(objective_values)
+        batch_limit <= source_batch_count || throw(
+            ArgumentError(
+                "optimality_evaluation_batches=$batch_limit exceeds available optimality batches $source_batch_count.",
+            ),
+        )
+
+        scenario_count = length(data_point.scenario_parameters)
+        scenario_count % source_batch_count == 0 || throw(
+            ArgumentError(
+                "scenario count $scenario_count is not divisible by stored optimality batches $source_batch_count.",
+            ),
+        )
+
+        scenarios_per_batch = scenario_count ÷ source_batch_count
+        scenario_limit = batch_limit * scenarios_per_batch
+        selected_objective_values = objective_values[1:batch_limit]
+        push!(
+            limited_dataset,
+            ContextualDFL.ContextualDataPoint(
+                data_point.context,
+                data_point.scenario_parameters[1:scenario_limit],
+            ),
+        )
+        push!(
+            limited_results,
+            merge(
+                result,
+                (;
+                    evaluation_batches=batch_limit,
+                    objective_values=selected_objective_values,
+                    objective_value=mean(Float64.(selected_objective_values)),
+                ),
+            ),
+        )
+    end
+    return limited_dataset, limited_results
+end
+
+function optimality_objective_values(result)
+    if hasproperty(result, :objective_values)
+        values = Float64.(collect(result.objective_values))
+        isempty(values) &&
+            throw(ArgumentError("optimality objective_values must not be empty."))
+        return values
+    elseif hasproperty(result, :objective_value)
+        return [Float64(result.objective_value)]
+    end
+
+    throw(ArgumentError("optimality results must contain objective_values."))
 end
 
 function optimality_policy(model, objects, config)

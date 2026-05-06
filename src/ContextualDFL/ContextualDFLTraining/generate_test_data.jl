@@ -67,6 +67,8 @@ function main()
         data_set_size=data_set_size,
         overrides...,
     )
+    optimality_mu = Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0))
+    optimality_rho = Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0))
     bundle = ContextualDFLTraining.experiment_test_data_bundle(
         experiment;
         seed=seed,
@@ -93,9 +95,11 @@ function main()
             bundle.program,
             bundle.reference_scenario_decoder,
             bundle.solver;
-            mu=Float64(ContextualDFLTraining.config_value(config, :optimality_mu, 0.0)),
-            rho=Float64(ContextualDFLTraining.config_value(config, :optimality_rho, 0.0)),
+            mu=optimality_mu,
+            rho=optimality_rho,
             evaluation_batches=evaluation_batches,
+            progress_io=stdout,
+            progress_label="seed=$seed",
         )
     end
 
@@ -108,6 +112,8 @@ function main()
         metadata=(;
             solve_seconds=solve_seconds,
             evaluation_batches=evaluation_batches,
+            optimality_mu=optimality_mu,
+            optimality_rho=optimality_rho,
         ),
     )
     println("Wrote optimal solutions to $optimal_results_path")

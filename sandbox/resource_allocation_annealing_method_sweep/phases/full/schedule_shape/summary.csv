@@ -1,0 +1,3 @@
+phase,candidate_name,run_count,ok_count,failed_count,mean_average_test_loss,std_average_test_loss,min_average_test_loss,max_average_test_loss
+schedule_shape,cosine,6,6,0,0.12334500273831406,0.1374304672810705,0.025369053165125877,0.37951773770169983
+schedule_shape,geometric,6,6,0,0.038311062835604405,0.013027976689349898,0.026509079783806153,0.058333647747766545

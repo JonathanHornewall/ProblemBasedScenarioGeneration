@@ -1,0 +1,7 @@
+phase,candidate_name,run_count,ok_count,failed_count,mean_average_test_loss,std_average_test_loss,min_average_test_loss,max_average_test_loss
+schedule_shape,cosine,1,1,0,0.9497197742451376,NaN,0.9497197742451376,0.9497197742451376
+schedule_shape,delayed_quadratic,1,1,0,0.9498809964710703,NaN,0.9498809964710703,0.9498809964710703
+schedule_shape,early_quadratic,1,1,0,0.9494977318469264,NaN,0.9494977318469264,0.9494977318469264
+schedule_shape,geometric,1,1,0,0.9498407167805114,NaN,0.9498407167805114,0.9498407167805114
+schedule_shape,linear,1,1,0,0.9499114632875694,NaN,0.9499114632875694,0.9499114632875694
+schedule_shape,piecewise_linear,1,1,0,0.9498544969518454,NaN,0.9498544969518454,0.9498544969518454

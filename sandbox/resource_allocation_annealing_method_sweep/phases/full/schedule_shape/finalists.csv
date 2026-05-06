@@ -1,0 +1,3 @@
+phase,rank,candidate_name,screening_run_count,screening_ok_count,screening_failed_count,screening_mean_average_test_loss,screening_std_average_test_loss,selected_at
+schedule_shape,1,cosine,2,2,0,0.0433753217471316,0.007862578135501756,1778023600748
+schedule_shape,2,geometric,2,2,0,0.05809153166205089,0.010779913725814848,1778023600748

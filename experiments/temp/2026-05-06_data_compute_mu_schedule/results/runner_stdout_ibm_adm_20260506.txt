@@ -1,0 +1,179 @@
+ERROR: SystemError: opening file "/home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/~/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/machines_no_ibm96c1_10workers.txt": No such file or directory
+Stacktrace:
+  [1] systemerror(p::String, errno::Int32; extrainfo::Nothing)
+    @ Base ./error.jl:186
+  [2] open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)
+    @ Base ./iostream.jl:317
+  [3] open
+    @ ./iostream.jl:296 [inlined]
+  [4] open(f::Base.var"#read##2#read##3"{String}, args::String; kwargs::@Kwargs{})
+    @ Base ./io.jl:410
+  [5] open
+    @ ./io.jl:409 [inlined]
+  [6] read
+    @ ./io.jl:509 [inlined]
+  [7] load_machine_file(path::String)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1413
+  [8] process_opts(opts::Base.JLOptions)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1405
+  [9] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:263
+ [10] _start()
+    @ Base ./client.jl:550
+Loading experiment code on 8 worker(s).
+Loaded 8 worker(s) on 2 host(s): instance-20260504-202505, instance-20260505-143121
+Loading packaged test artifacts on 8 worker(s).
+Worker 2 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 7 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 8 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 9 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 4 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 3 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 5 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 6 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Sandbox: /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule
+Results: /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/results
+Active workers: 8 / 8
+Wave 1 standard_n100_base_schedule: running 10 pending run(s) on 8 worker(s).
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+Worker 2 terminated.
+UNHANDLED TASK ERROR: EOFError: read end of file
+Stacktrace:
+ [1] (::Base.var"#wait_locked#unsafe_read##0")(s::Sockets.TCPSocket, buf::IOBuffer, nb::Int64)
+   @ Base ./stream.jl:980
+ [2] unsafe_read(s::Sockets.TCPSocket, p::Ptr{UInt8}, nb::UInt64)
+   @ Base ./stream.jl:988
+ [3] unsafe_read
+   @ ./io.jl:892 [inlined]
+ [4] unsafe_read(s::Sockets.TCPSocket, p::Base.RefValue{NTuple{4, Int64}}, n::Int64)
+   @ Base ./io.jl:891
+ [5] read!
+   @ ./io.jl:896 [inlined]
+ [6] deserialize_hdr_raw
+   @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/messages.jl:167 [inlined]
+ [7] message_handler_loop(r_stream::Sockets.TCPSocket, w_stream::Sockets.TCPSocket, incoming::Bool)
+   @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:172
+ [8] process_tcp_streams(r_stream::Sockets.TCPSocket, w_stream::Sockets.TCPSocket, incoming::Bool)
+   @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:133
+ [9] (::Distributed.var"#process_messages##0#process_messages##1"{Sockets.TCPSocket, Sockets.TCPSocket, Bool})()
+   @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:121
+Worker 9 terminated.
+UNHANDLED TASK ERROR: IOError: read: connection reset by peer (ECONNRESET)
+Stacktrace:
+  [1] wait_readnb(x::Sockets.TCPSocket, nb::Int64)
+    @ Base ./stream.jl:410
+  [2] (::Base.var"#wait_locked#unsafe_read##0")(s::Sockets.TCPSocket, buf::IOBuffer, nb::Int64)
+    @ Base ./stream.jl:982
+  [3] unsafe_read(s::Sockets.TCPSocket, p::Ptr{UInt8}, nb::UInt64)
+    @ Base ./stream.jl:988
+  [4] unsafe_read
+    @ ./io.jl:892 [inlined]
+  [5] unsafe_read(s::Sockets.TCPSocket, p::Base.RefValue{NTuple{4, Int64}}, n::Int64)
+    @ Base ./io.jl:891
+  [6] read!
+    @ ./io.jl:896 [inlined]
+  [7] deserialize_hdr_raw
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/messages.jl:167 [inlined]
+  [8] message_handler_loop(r_stream::Sockets.TCPSocket, w_stream::Sockets.TCPSocket, incoming::Bool)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:172
+  [9] process_tcp_streams(r_stream::Sockets.TCPSocket, w_stream::Sockets.TCPSocket, incoming::Bool)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:133
+ [10] (::Distributed.var"#process_messages##0#process_messages##1"{Sockets.TCPSocket, Sockets.TCPSocket, Bool})()
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:121
+ERROR: LoadError: ProcessExitedException(2)
+Stacktrace:
+  [1] try_yieldto(undo::typeof(Base.ensure_rescheduled))
+    @ Base ./task.jl:1157
+  [2] wait()
+    @ Base ./task.jl:1229
+  [3] wait(c::Base.GenericCondition{ReentrantLock}; first::Bool)
+    @ Base ./condition.jl:141
+  [4] wait
+    @ ./condition.jl:136 [inlined]
+  [5] take_buffered(c::Channel{Any})
+    @ Base ./channels.jl:532
+  [6] take!(c::Channel{Any})
+    @ Base ./channels.jl:526
+  [7] take!(::Distributed.RemoteValue)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:726
+  [8] remotecall_fetch(::Function, ::Distributed.Worker, ::Tuple{var"#101#102"{RemoteChannel{Channel{Any}}}, RemoteChannel{Channel{Any}}}, ::Vararg{Any}; kwargs::@Kwargs{})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:461
+  [9] remotecall_fetch(::Function, ::Distributed.Worker, ::Tuple{var"#101#102"{RemoteChannel{Channel{Any}}}, RemoteChannel{Channel{Any}}}, ::Vararg{Any})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:454
+ [10] remotecall_fetch(::Function, ::Int64, ::Tuple{var"#101#102"{RemoteChannel{Channel{Any}}}, RemoteChannel{Channel{Any}}}, ::Vararg{Any}; kwargs::@Kwargs{})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/remotecall.jl:492
+ [11] remotecall_pool(rc_f::typeof(remotecall_fetch), f::Function, pool::CachingPool, args::@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}; kwargs::@Kwargs{})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:399
+ [12] remotecall_pool
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:393 [inlined]
+ [13] remotecall_fetch
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:261 [inlined]
+ [14] #remote##4
+    @ ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:321 [inlined]
+ [15] (::Base.var"#938#939"{Distributed.var"#remote##4#remote##5"{Distributed.var"#remote##6#remote##7"{CachingPool, var"#101#102"{RemoteChannel{Channel{Any}}}}}})(r::Base.RefValue{Any}, args::Tuple{@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}})
+    @ Base ./asyncmap.jl:96
+ [16] (::Base.var"#start_worker_task!##0#start_worker_task!##1"{Base.var"#938#939"{Distributed.var"#remote##4#remote##5"{Distributed.var"#remote##6#remote##7"{CachingPool, var"#101#102"{RemoteChannel{Channel{Any}}}}}}, Channel{Any}, Nothing})()
+    @ Base ./asyncmap.jl:230
+Stacktrace:
+  [1] (::Base.var"#maptwice##0#maptwice##1")(x::Task)
+    @ Base ./asyncmap.jl:173
+  [2] foreach(f::Base.var"#maptwice##0#maptwice##1", itr::Vector{Any})
+    @ Base ./abstractarray.jl:3188
+  [3] maptwice(wrapped_f::Function, chnl::Channel{Any}, worker_tasks::Vector{Any}, c::Vector{@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}})
+    @ Base ./asyncmap.jl:173
+  [4] wrap_n_exec_twice
+    @ ./asyncmap.jl:149 [inlined]
+  [5] #async_usemap#924
+    @ ./asyncmap.jl:99 [inlined]
+  [6] async_usemap
+    @ ./asyncmap.jl:80 [inlined]
+  [7] #asyncmap#923
+    @ ./asyncmap.jl:77 [inlined]
+  [8] asyncmap
+    @ ./asyncmap.jl:76 [inlined]
+  [9] pmap(f::Function, p::CachingPool, c::Vector{@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}}; distributed::Bool, batch_size::Int64, on_error::Nothing, retry_delays::Vector{Any}, retry_check::Nothing)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/pmap.jl:126
+ [10] pmap(f::Function, p::CachingPool, c::Vector{@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/pmap.jl:99
+ [11] run_wave!(wave::@NamedTuple{wave_index::Int64, phase::Symbol, wave_name::String, configs::Vector{@NamedTuple{version::String, smoke::Bool, wave_index::Int64, phase::Symbol, candidate_name::String, schedule_name::Symbol, replicate::Int64, seed::Int64, training_data_seed::Int64, training_contexts::Int64, epochs::Int64, epoch_fraction::String, depth::Int64, hidden_size::Int64, activation::Symbol, output_activation::Symbol, dropout::Float64, batch_size::Int64, learning_rate::Float64, checkpoint_every_epochs::Int64, policy_inference_mu::Float64, run_id::String}}}, worker_ids::Vector{Int64}, logger::@NamedTuple{channel::RemoteChannel{Channel{Any}}, task::Task}; smoke::Bool)
+    @ Main ~/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:244
+ [12] main()
+    @ Main ~/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:314
+ [13] top-level scope
+    @ ~/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:326
+ [14] include(mod::Module, _path::String)
+    @ Base ./Base.jl:306
+ [15] exec_options(opts::Base.JLOptions)
+    @ Base ./client.jl:317
+ [16] _start()
+    @ Base ./client.jl:550
+in expression starting at /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:325
+┌ Warning: Forcibly interrupting busy workers
+│   exception = rmprocs: pids [3, 4, 5, 6, 7, 8] not terminated after 5.0 seconds.
+└ @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1269
+┌ Warning: rmprocs: process 1 not removed
+└ @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1065

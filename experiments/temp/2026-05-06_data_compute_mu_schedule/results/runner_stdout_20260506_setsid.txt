@@ -1,0 +1,56 @@
+Loading experiment code on 8 worker(s).
+Loaded 8 worker(s) on 2 host(s): instance-20260504-202505, instance-20260505-143121
+Loading packaged test artifacts on 8 worker(s).
+Worker 4 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 5 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 2 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 6 on instance-20260505-143121 loaded 30 test context(s), 5 batch(es).
+Worker 9 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 3 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 8 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Worker 7 on instance-20260504-202505 loaded 30 test context(s), 5 batch(es).
+Sandbox: /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule
+Results: /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/results
+Active workers: 8 / 8
+Wave 1 standard_n100_base_schedule: running 10 pending run(s) on 8 worker(s).
+Wave 1 standard_n100_base_schedule: still running; 0 completed run(s) recorded so far.
+
+[1573669] signal 15: Terminated
+in expression starting at /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:325
+unknown function (ip: 0x7f0ae5498d6f) at /lib/x86_64-linux-gnu/libc.so.6
+pthread_cond_wait at /lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/scheduler.c:523
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+wait at ./condition.jl:136 [inlined]
+_trywait at ./asyncevent.jl:185
+profile_printing_listener at ./Base.jl:332
+#start_profile_listener##0 at ./Base.jl:352
+jfptr_YY.start_profile_listenerYY.YY.0_16003.1 at /home/rwl/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+epoll_pwait at /lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv__io_poll at /workspace/srcdir/libuv/src/unix/linux.c:1404
+uv_run at /workspace/srcdir/libuv/src/unix/core.c:430
+ijl_task_get_next at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/scheduler.c:457
+poptask at ./task.jl:1216
+wait at ./task.jl:1228
+#wait#398 at ./condition.jl:141
+wait at ./condition.jl:136 [inlined]
+_trywait at ./asyncevent.jl:185
+wait at ./asyncevent.jl:202 [inlined]
+sleep at ./asyncevent.jl:312 [inlined]
+#99 at /home/rwl/ProblemBasedScenarioGeneration/experiments/temp/2026-05-06_data_compute_mu_schedule/run_experiments.jl:232
+unknown function (ip: 0x7f0acf999307) at (unknown file)
+jl_apply at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/julia.h:2391 [inlined]
+start_task at /cache/build/builder-amdci5-4/julialang/julia-release-1-dot-12/src/task.c:1252
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 39466778 (Pool: 39466134; Big: 644); GC: 15
+┌ Warning: Forcibly interrupting busy workers
+│   exception = rmprocs: pids [2, 3, 4, 5, 6, 7, 8, 9] not terminated after 5.0 seconds.
+└ @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1269
+┌ Warning: rmprocs: process 1 not removed
+└ @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/cluster.jl:1065

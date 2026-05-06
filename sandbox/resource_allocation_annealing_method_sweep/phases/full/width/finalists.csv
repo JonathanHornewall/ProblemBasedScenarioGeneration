@@ -1,0 +1,3 @@
+phase,rank,candidate_name,screening_run_count,screening_ok_count,screening_failed_count,screening_mean_average_test_loss,screening_std_average_test_loss,selected_at
+width,1,width512,2,2,0,0.03408868082941721,0.010801999426116498,1778017957728
+width,2,width32,2,2,0,0.04992619539955952,0.012206908298413715,1778017957728

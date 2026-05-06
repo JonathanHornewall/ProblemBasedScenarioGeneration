@@ -779,6 +779,8 @@ function save_test_data!(
 
     path = test_data_path(spec, seed)
     mkpath(dirname(path))
+    context_dimension = dataset_context_dimension(dataset)
+    scenarios_per_context = dataset_scenarios_per_context(dataset)
     payload = merge(
         metadata,
         (;
@@ -789,6 +791,8 @@ function save_test_data!(
             generated_at=Dates.format(now(UTC), dateformat"yyyy-mm-ddTHH:MM:SS.sZ"),
             test_data_seed=seed,
             data_set_size=data_set_size,
+            context_dimension=context_dimension,
+            scenarios_per_context=scenarios_per_context,
             dataset_digest=experiment_dataset_digest(dataset),
             dataset=dataset,
         ),
@@ -824,8 +828,8 @@ function load_test_data_artifact(spec::ExperimentSpec)
         seed in seeds &&
             throw(ArgumentError("duplicate test data artifact for seed $seed."))
         data_set_size = Int(payload.data_set_size)
-        context_dimension = length(first(dataset).context)
-        scenarios_per_context = length(first(dataset).scenario_parameters)
+        context_dimension = dataset_context_dimension(dataset)
+        scenarios_per_context = dataset_scenarios_per_context(dataset)
 
         if expected_data_set_size === nothing
             expected_data_set_size = data_set_size
@@ -859,6 +863,8 @@ function load_test_data_artifact(spec::ExperimentSpec)
             data_set_sizes=data_set_sizes,
             dataset_digest=experiment_dataset_digest(dataset),
             dataset_digests=dataset_digests,
+            context_dimension=expected_context_dimension,
+            scenarios_per_context=expected_scenarios_per_context,
         ),
     )
 end
@@ -887,12 +893,16 @@ function save_test_optimal_results!(
     seed = Int(seed)
     data_set_size = Int(data_set_size)
     data_set_size > 0 || throw(ArgumentError("data_set_size must be positive."))
+    length(dataset) == data_set_size ||
+        throw(ArgumentError("test dataset length $(length(dataset)) != data_set_size $data_set_size."))
     length(results) == data_set_size ||
         throw(ArgumentError("optimal results length $(length(results)) != data_set_size $data_set_size."))
+    optimal_metadata = optimal_results_metadata(results)
     path = test_optimal_results_path(spec, seed)
     mkpath(dirname(path))
     payload = merge(
         metadata,
+        optimal_metadata,
         (;
             format_version=OPTIMAL_RESULTS_FORMAT_VERSION,
             experiment_id=spec.id,
@@ -916,10 +926,15 @@ function save_optimal_results!(
     dataset=nothing,
     metadata=NamedTuple(),
 )
+    if dataset !== nothing && length(results) != length(dataset)
+        throw(ArgumentError("optimal results length $(length(results)) != dataset length $(length(dataset))."))
+    end
+    optimal_metadata = optimal_results_metadata(results)
     path = optimal_results_path(spec, split_name)
     mkpath(dirname(path))
     payload = merge(
         metadata,
+        optimal_metadata,
         (;
             format_version=OPTIMAL_RESULTS_FORMAT_VERSION,
             experiment_id=spec.id,
@@ -981,6 +996,14 @@ function validate_test_data_payload(
     expected = experiment_dataset_digest(dataset)
     String(payload.dataset_digest) == expected ||
         throw(ArgumentError("test data artifact $path has an invalid dataset digest."))
+    if hasproperty(payload, :context_dimension)
+        Int(payload.context_dimension) == dataset_context_dimension(dataset) ||
+            throw(ArgumentError("test data artifact $path has the wrong context_dimension."))
+    end
+    if hasproperty(payload, :scenarios_per_context)
+        Int(payload.scenarios_per_context) == dataset_scenarios_per_context(dataset) ||
+            throw(ArgumentError("test data artifact $path has the wrong scenarios_per_context."))
+    end
 
     return nothing
 end
@@ -999,7 +1022,10 @@ function validate_optimal_results_payload(
     payload,
     path::AbstractString,
 )
-    payload isa NamedTuple || return nothing
+    if !(payload isa NamedTuple)
+        validate_optimal_results_collection(optimal_results_from_payload(payload), path)
+        return nothing
+    end
 
     if hasproperty(payload, :format_version)
         payload.format_version == OPTIMAL_RESULTS_FORMAT_VERSION ||
@@ -1019,6 +1045,14 @@ function validate_optimal_results_payload(
         String(payload.dataset_digest) == expected ||
             throw(ArgumentError("optimal-results artifact $path does not match the current dataset for split $(split_name). Regenerate it with generate_optimal_solutions.jl."))
     end
+    results = optimal_results_from_payload(payload)
+    validate_optimal_results_collection(results, path)
+    if hasproperty(payload, :evaluation_batches)
+        payload_batches = Int(payload.evaluation_batches)
+        result_batches = optimal_results_evaluation_batches(results)
+        payload_batches == result_batches ||
+            throw(ArgumentError("optimal-results artifact $path declares evaluation_batches=$payload_batches, but results contain $result_batches batches."))
+    end
 
     return nothing
 end
@@ -1027,4 +1061,86 @@ function experiment_dataset_digest(dataset)
     io = IOBuffer()
     Serialization.serialize(io, dataset)
     return "sha1:" * bytes2hex(sha1(take!(io)))
+end
+
+function dataset_context_dimension(dataset)
+    isempty(dataset) && return 0
+    dimension = length(first(dataset).context)
+    for (index, data_point) in enumerate(dataset)
+        length(data_point.context) == dimension ||
+            throw(ArgumentError(
+                "dataset row $index has context dimension $(length(data_point.context)), expected $dimension.",
+            ))
+    end
+    return dimension
+end
+
+function dataset_scenarios_per_context(dataset)
+    isempty(dataset) && return 0
+    scenario_count = length(first(dataset).scenario_parameters)
+    for (index, data_point) in enumerate(dataset)
+        length(data_point.scenario_parameters) == scenario_count ||
+            throw(ArgumentError(
+                "dataset row $index has $(length(data_point.scenario_parameters)) scenarios, expected $scenario_count.",
+            ))
+    end
+    return scenario_count
+end
+
+function optimal_results_metadata(results)
+    validate_optimal_results_collection(results, "optimal results")
+    return (; evaluation_batches=optimal_results_evaluation_batches(results))
+end
+
+function validate_optimal_results_collection(results, source)
+    results isa AbstractVector ||
+        throw(ArgumentError("$source must contain an AbstractVector of optimal results."))
+    isempty(results) && return nothing
+
+    expected_batches = nothing
+    for (index, result) in enumerate(results)
+        values = optimal_result_objective_values(result, "$source row $index")
+        batch_count = length(values)
+        if expected_batches === nothing
+            expected_batches = batch_count
+        elseif batch_count != expected_batches
+            throw(ArgumentError("$source contains mixed evaluation batch counts."))
+        end
+    end
+    return nothing
+end
+
+function optimal_results_evaluation_batches(results)
+    isempty(results) && return 0
+    return length(optimal_result_objective_values(first(results), "optimal results row 1"))
+end
+
+function optimal_result_objective_values(result, source)
+    values = if hasproperty(result, :objective_values)
+        Float64.(collect(result.objective_values))
+    elseif hasproperty(result, :objective_value)
+        [Float64(result.objective_value)]
+    else
+        throw(ArgumentError("$source must contain objective_values or objective_value."))
+    end
+
+    isempty(values) &&
+        throw(ArgumentError("$source must contain at least one objective value."))
+    all(isfinite, values) ||
+        throw(DomainError(values, "$source contains non-finite objective values."))
+
+    if hasproperty(result, :objective_value)
+        objective_value = Float64(result.objective_value)
+        isfinite(objective_value) ||
+            throw(DomainError(result.objective_value, "$source has a non-finite objective_value."))
+        mean_value = sum(values) / length(values)
+        isapprox(objective_value, mean_value; rtol=1e-10, atol=1e-10) ||
+            throw(ArgumentError("$source objective_value=$objective_value does not equal mean(objective_values)=$mean_value."))
+    end
+    if hasproperty(result, :evaluation_batches)
+        Int(result.evaluation_batches) == length(values) ||
+            throw(ArgumentError("$source declares evaluation_batches=$(result.evaluation_batches), but has $(length(values)) objective_values."))
+    end
+
+    return values
 end
