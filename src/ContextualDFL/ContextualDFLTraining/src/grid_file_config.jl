@@ -67,6 +67,7 @@ const GRID_INT_KEYS = Set(
         :hidden_size,
         :Nr_contexts,
         :optimality_evaluation_batches,
+        :optimality_evaluation_concurrency,
         :optimality_test_sample_count,
         :optimality_train_sample_count,
         :optimality_validation_sample_count,

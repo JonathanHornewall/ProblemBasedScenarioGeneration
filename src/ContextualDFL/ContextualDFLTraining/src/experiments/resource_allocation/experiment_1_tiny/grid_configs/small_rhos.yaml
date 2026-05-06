@@ -10,6 +10,7 @@ base:
   optimality_train_sample_count: 0
   optimality_validation_sample_count: 0
   optimality_evaluation_batches: 1
+  optimality_evaluation_concurrency: 4
   mlflow_upload_model_artifact: true
   checkpoint_upload_mlflow: true
   checkpoint_required: true

@@ -30,6 +30,7 @@ base:
   optimality_mu: 0.0
   optimality_rho: 0.0
   optimality_evaluation_batches: 1
+  optimality_evaluation_concurrency: 1
   training_context_count: 8
   training_scenarios_per_context: 1
   collection_duplicates_per_context: 1

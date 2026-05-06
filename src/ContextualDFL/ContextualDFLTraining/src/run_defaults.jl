@@ -35,6 +35,7 @@ const DEFAULT_RUN_SETTINGS = (;
     optimality_mu=0.0,
     optimality_rho=0.0,
     optimality_evaluation_batches=nothing,
+    optimality_evaluation_concurrency=nothing,
     policy_inference_rho=nothing,
     loss=:dfl_scen,
     display_smooth=false,

@@ -1,0 +1,29 @@
+version: 1
+name: transshipment_experiment_1_tiny_q_smoke
+description: Small smoke grid for validating q-learning transshipment grid-search plumbing.
+
+base:
+  epochs: 2
+  optimality_evaluation: true
+  optimality_test_sample_count: 30
+  optimality_train_sample_count: 0
+  optimality_validation_sample_count: 0
+  optimality_evaluation_batches: 1
+
+fixed:
+  learning_rate: 0.001
+  hidden_size: 16
+  depth: 1
+  batch_size: 4
+  dropout: 0.0
+
+grid:
+  seed: [1]
+
+schedules:
+  mu:
+    kind: geometric
+    start: 1.0
+    stop: 0.01
+  mu_ref:
+    kind: match_input

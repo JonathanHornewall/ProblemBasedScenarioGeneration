@@ -1100,7 +1100,12 @@ end
 function evaluate_model_for_reporting(model, objects, config)
     metrics = evaluate_model_on_splits(model, objects.data, objects, config)
     Bool(config_value(config, :optimality_evaluation, false)) || return metrics
-    return merge(metrics, evaluate_optimality_on_splits(model, objects, config))
+    GC.gc()
+    optimality_metrics = with_optimality_evaluation_slot(config) do
+        evaluate_optimality_on_splits(model, objects, config)
+    end
+    GC.gc()
+    return merge(metrics, optimality_metrics)
 end
 
 function evaluate_optimality_on_splits(model, objects, config)
@@ -1134,6 +1139,119 @@ function evaluate_optimality_on_splits(model, objects, config)
     end
 
     return metrics
+end
+
+function with_optimality_evaluation_slot(callback, config)
+    concurrency = optimality_evaluation_concurrency(config)
+    concurrency === nothing && return callback()
+
+    slot_path, slot_index = acquire_optimality_evaluation_slot(config, concurrency)
+    try
+        println(
+            "Acquired optimality evaluation slot $slot_index/$concurrency for ",
+            config_value(config, :run_id, ""),
+        )
+        return callback()
+    finally
+        release_optimality_evaluation_slot(slot_path)
+        println(
+            "Released optimality evaluation slot $slot_index/$concurrency for ",
+            config_value(config, :run_id, ""),
+        )
+    end
+end
+
+function optimality_evaluation_concurrency(config)
+    value = config_value(
+        config,
+        :optimality_evaluation_concurrency,
+        get(ENV, "CONTEXTUAL_DFL_OPTIMALITY_EVAL_CONCURRENCY", nothing),
+    )
+    value === nothing && return nothing
+    text = strip(string(value))
+    isempty(text) && return nothing
+    parsed = tryparse(Int, text)
+    parsed === nothing &&
+        throw(ArgumentError("optimality_evaluation_concurrency must be an integer."))
+    parsed <= 0 && return nothing
+    return parsed
+end
+
+function optimality_evaluation_lock_root(config)
+    root = string(
+        config_value(
+            config,
+            :optimality_evaluation_lock_dir,
+            get(
+                ENV,
+                "CONTEXTUAL_DFL_OPTIMALITY_EVAL_LOCK_DIR",
+                joinpath(tempdir(), "contextualdfl_optimality_eval"),
+            ),
+        ),
+    )
+    grid_id = string(config_value(config, :gridsearch_id, "default"))
+    safe_grid_id = replace(grid_id, r"[^A-Za-z0-9_.-]" => "_")
+    return joinpath(root, safe_grid_id)
+end
+
+function acquire_optimality_evaluation_slot(config, concurrency::Integer)
+    root = optimality_evaluation_lock_root(config)
+    mkpath(root)
+    owner_text = join(
+        [
+            "pid=$(getpid())",
+            "host=$(Sockets.gethostname())",
+            "run_id=$(config_value(config, :run_id, ""))",
+            "started_at=$(unix_milliseconds())",
+        ],
+        "\n",
+    ) * "\n"
+
+    while true
+        for slot_index in 1:concurrency
+            slot_path = joinpath(root, "slot_$slot_index")
+            cleanup_stale_optimality_evaluation_slot!(slot_path)
+            try
+                mkdir(slot_path)
+                write(joinpath(slot_path, "owner.txt"), owner_text)
+                return slot_path, slot_index
+            catch error
+                isdir(slot_path) && continue
+                rethrow()
+            end
+        end
+        sleep(1.0 + 0.5 * rand())
+    end
+end
+
+function release_optimality_evaluation_slot(slot_path)
+    isempty(string(slot_path)) && return nothing
+    rm(slot_path; recursive=true, force=true)
+    return nothing
+end
+
+function cleanup_stale_optimality_evaluation_slot!(slot_path)
+    isdir(slot_path) || return nothing
+    owner_path = joinpath(slot_path, "owner.txt")
+    isfile(owner_path) || return nothing
+
+    owner = read(owner_path, String)
+    match_result = match(r"pid=(\d+)", owner)
+    match_result === nothing && return nothing
+    pid = parse(Int, match_result.captures[1])
+    process_alive(pid) && return nothing
+
+    rm(slot_path; recursive=true, force=true)
+    return nothing
+end
+
+function process_alive(pid::Integer)
+    try
+        run(pipeline(`kill -0 $pid`; stdout=devnull, stderr=devnull))
+        return true
+    catch
+        return false
+    end
 end
 
 function limit_optimality_evaluation_batches(dataset, optimal_results, config)
