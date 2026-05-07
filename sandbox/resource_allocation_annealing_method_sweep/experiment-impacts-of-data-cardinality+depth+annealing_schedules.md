@@ -1,5 +1,7 @@
 # Impacts of Data Cardinality, Network Depth, Width, and Annealing Schedules
 
+Codex session: 019df867-3663-7ff3-aeaf-ee6710167683
+
 This report summarizes the completed resource-allocation annealing sweep in:
 
 `/home/rwl/ProblemBasedScenarioGeneration/sandbox/resource_allocation_annealing_method_sweep`

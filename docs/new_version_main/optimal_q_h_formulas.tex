@@ -1,0 +1,72 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\newcommand{\E}{\mathbb{E}}
+
+\title{Optimal Cost and Demand Formulas}
+\date{}
+
+\begin{document}
+\maketitle
+
+\paragraph{Common multiplier notation.}
+\[
+\lambda_\mu^{\#,x}:=\lambda_\mu^x\!\left(z_\mu^\#(x)\right),
+\qquad
+\widetilde\lambda_\mu^x
+:=
+\hat\lambda_\mu\!\left(z_\mu^\#(x),\tilde\xi\right).
+\]
+
+\paragraph{Optimal cost vector.}
+For a reference scenario \(\tilde\xi=(\widetilde W,\widetilde h,\widetilde q)\),
+\[
+q_\mu^{\#,\tilde\xi}(x)
+:=
+\widetilde q
++
+\widetilde W^\top
+\left(
+\lambda_\mu^{\#,x}-\widetilde\lambda_\mu^x
+\right).
+\]
+
+\paragraph{Optimal demand vector.}
+Assume deterministic recourse \(W(\xi)=W\). First define
+\[
+q_\delta^{\max}[i]
+:=
+\max_{\xi'\in\Xi}\left(q(\xi')[i]+\delta\right),
+\qquad i=1,\ldots,n_2,\quad \delta>0.
+\]
+
+\[
+r_\mu^{\#,x,\delta}
+:=
+q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}.
+\]
+
+\[
+y_\mu^{\#,\delta}(x)
+:=
+\mu\left(r_\mu^{\#,x,\delta}\right)^{-1}.
+\]
+
+\[
+h_\mu^{\#,\delta}(x)
+:=
+Tz_\mu^\#(x)+Wy_\mu^{\#,\delta}(x).
+\]
+
+For \(\mu=0\), the central-path limit gives
+\[
+y_0^{\#,\delta}(x)=0,
+\qquad
+h_0^{\#,\delta}(x)=Tz^\#(x).
+\]
+
+\end{document}

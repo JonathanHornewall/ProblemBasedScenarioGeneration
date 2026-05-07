@@ -1,0 +1,363 @@
+\subsection{Proof of theorem 2}
+\label{app:no-vanishing-gradients-proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:no-vanishing-gradients}]
+Fix $x\in\mathcal X$ and $\mu>0$. Fix a recourse matrix $W_f$ and consider the decision-focused loss
+\[
+L_\mu((W_f,h,q),x)
+=
+G_\mu(\hat z_\mu^\#(W_f,h,q),x).
+\]
+We prove that this loss has no spurious stationary points in the learned scenario components $h$ and $q$. The componentwise invexity statement then follows from the standard characterization of continuously differentiable invex functions: a continuously differentiable function is invex precisely when every stationary point is globally optimal.
+
+All gradients below are taken on the relative interior of the synthetic scenario domain where the single-scenario barrier problem is well defined and the derivative formulas from Appendix~\ref{app:closed-form-derivatives} apply.
+
+\paragraph{The rank-condition case.}
+Consider the following generalized single-scenario smoothed problem:
+\[
+\hat z_\mu(h,q)
+=
+\argmin_z
+\left\{
+F(z)+Q_\mu(z;W_f,h,q)
+\right\},
+\]
+where $F$ is a differentiable convex first-stage objective on the relative interior of a polytope $Z$, and
+\[
+Q_\mu(z;W_f,h,q)
+=
+\min_{y>0}
+\left\{
+q^\top y-\mu\sum_k\log y_k:
+W_fy=h-Tz
+\right\}.
+\]
+Let the corresponding true downstream objective be $G_\mu(z,x)$, assumed convex and differentiable on the same relative interior, with unique optimizer $z_\mu^\#(x)$. Define
+\[
+L_\mu(h,q,x):=G_\mu(\hat z_\mu(h,q),x).
+\]
+Assume that $T$ has no nonzero feasible-direction kernel, meaning
+\[
+d\in\operatorname{lin}(Z-Z)
+\quad\text{and}\quad
+Td=0
+\quad\Longrightarrow\quad
+d=0.
+\]
+Equivalently, every nonzero feasible first-stage movement changes the second-stage right-hand side.
+
+We show that
+\[
+\nabla_q L_\mu(h,q,x)=0
+\quad\text{and}\quad
+\nabla_h L_\mu(h,q,x)=0
+\]
+if and only if
+\[
+\hat z_\mu(h,q)=z_\mu^\#(x).
+\]
+In fact, under the rank condition, $\nabla_hL_\mu(h,q,x)=0$ alone already implies $\hat z_\mu(h,q)=z_\mu^\#(x)$.
+
+Let
+\[
+\hat z=\hat z_\mu(h,q),
+\qquad
+v=\nabla_zG_\mu(\hat z,x).
+\]
+By the chain rule,
+\[
+\nabla_h L_\mu(h,q,x)
+=
+\left(\frac{\partial\hat z}{\partial h}\right)^\top v.
+\]
+From the derivative formula established earlier, the $h$-Jacobian has the form
+\[
+\frac{\partial\hat z}{\partial h}
+=
+PT^\top S^{-1},
+\]
+where $P$ is the projected inverse-Hessian operator for the first-stage feasible directions, and $S$ is the positive definite sensitivity matrix arising from the coupled first- and second-stage KKT system. Therefore,
+\[
+\nabla_h L_\mu(h,q,x)=0
+\]
+implies
+\[
+S^{-1}TPv=0.
+\]
+Since $S$ is invertible,
+\[
+TPv=0.
+\]
+Now $Pv$ is a feasible first-stage direction: $P$ maps into $\operatorname{lin}(Z-Z)$. By the rank assumption on $T$, the equality $TPv=0$ implies
+\[
+Pv=0.
+\]
+The operator $P$ is positive definite on the feasible-direction space $\operatorname{lin}(Z-Z)$, and its null space is the orthogonal complement of that feasible-direction space. Hence $Pv=0$ means exactly that $v$ has no component along any feasible first-stage direction. Equivalently,
+\[
+d^\top\nabla_zG_\mu(\hat z,x)=0
+\qquad
+\text{for every feasible direction }d\in\operatorname{lin}(Z-Z).
+\]
+Thus $\hat z$ satisfies the first-order optimality condition for minimizing the convex function $G_\mu(\cdot,x)$ over $Z$. Since $\mu>0$ and the smoothed problem has a unique optimizer,
+\[
+\hat z=z_\mu^\#(x).
+\]
+This proves the forward direction.
+
+Conversely, suppose
+\[
+\hat z=z_\mu^\#(x).
+\]
+Then $\hat z$ minimizes $G_\mu(\cdot,x)$ over $Z$. Hence
+\[
+d^\top\nabla_zG_\mu(\hat z,x)=0
+\qquad
+\text{for every feasible direction }d\in\operatorname{lin}(Z-Z).
+\]
+Both Jacobians $\partial\hat z/\partial h$ and $\partial\hat z/\partial q$ take values in the feasible-direction space $\operatorname{lin}(Z-Z)$, because differentiating the equality constraints defining $Z$ gives $A\,d\hat z=0$. Therefore,
+\[
+\left(\frac{\partial\hat z}{\partial h}\right)^\top
+\nabla_zG_\mu(\hat z,x)=0,
+\qquad
+\left(\frac{\partial\hat z}{\partial q}\right)^\top
+\nabla_zG_\mu(\hat z,x)=0.
+\]
+By the chain rule,
+\[
+\nabla_h L_\mu(h,q,x)=0,
+\qquad
+\nabla_q L_\mu(h,q,x)=0.
+\]
+Thus, under the rank condition on $T$,
+\[
+\nabla_q L_\mu(h,q,x)=0
+\quad\text{and}\quad
+\nabla_h L_\mu(h,q,x)=0
+\]
+if and only if
+\[
+\hat z_\mu(h,q)=z_\mu^\#(x).
+\]
+Finally, since
+\[
+L_\mu(h,q,x)=G_\mu(\hat z_\mu(h,q),x),
+\]
+and $G_\mu(\cdot,x)$ is minimized uniquely at $z_\mu^\#(x)$, we also have
+\[
+\hat z_\mu(h,q)=z_\mu^\#(x)
+\]
+if and only if
+\[
+(W_f,h,q)\in\argmin L_\mu((W,h,q),x).
+\]
+This proves the rank-condition case.
+
+\paragraph{The general case.}
+We now remove the rank condition on $T$ by projecting away the part of $z$ that does not affect the second stage.
+
+Let
+\[
+Z=\{z\geq 0:\;Az=b\},
+\qquad
+Z^\circ=Z\cap\R^{n_1}_{++}
+\]
+denote the barrier domain. Let
+\[
+V=\operatorname{lin}(Z-Z)
+\]
+be the feasible-direction space of the first-stage polytope. The obstruction to the rank condition is the subspace
+\[
+K=V\cap\ker T.
+\]
+These are precisely the feasible first-stage directions along which $z$ can move without changing the second-stage right-hand side $h-Tz$.
+
+We quotient out these directions. Equivalently, identify two feasible first-stage points $z_1,z_2\in Z$ whenever
+\[
+Tz_1=Tz_2.
+\]
+Let
+\[
+u=Tz
+\]
+be the reduced first-stage variable, and define the reduced feasible set
+\[
+Z_{\mathrm{red}}:=T(Z).
+\]
+Since $Z$ is a polytope and $T$ is linear, $Z_{\mathrm{red}}$ is also a polytope. Its relative interior is the image of the relative interior of $Z$ under $T$.
+
+For $u\in Z_{\mathrm{red}}$, define the fiber
+\[
+Z(u):=\{z\in Z:\;Tz=u\}.
+\]
+Now define the reduced first-stage cost by partial minimization over the fiber:
+\[
+F_\mu(u)
+:=
+\min_{z\in Z(u)\cap\R^{n_1}_{++}}
+\left\{
+c^\top z-\mu\sum_j\log z_j
+\right\}.
+\]
+The function $F_\mu$ is convex. Indeed, it is the value function obtained by partially minimizing a jointly convex function over affine slices. More explicitly, if $u_1,u_2\in Z_{\mathrm{red}}$ and $\alpha\in[0,1]$, then feasible fiber points over $u_1$ and $u_2$ convexly combine to a feasible fiber point over $\alpha u_1+(1-\alpha)u_2$, and convexity of the objective gives
+\[
+F_\mu(\alpha u_1+(1-\alpha)u_2)
+\leq
+\alpha F_\mu(u_1)+(1-\alpha)F_\mu(u_2).
+\]
+Because $\mu>0$, the fiber minimizer is unique whenever the fiber has nonempty barrier-relative interior. Denote this unique fiber minimizer by
+\[
+\phi_\mu(u)
+:=
+\argmin_{z\in Z(u)\cap\R^{n_1}_{++}}
+\left\{
+c^\top z-\mu\sum_j\log z_j
+\right\}.
+\]
+
+Now observe that the second-stage value depends on $z$ only through $Tz$. Therefore, for every fixed scenario $(W,h,q)$,
+\[
+Q_\mu(z;W,h,q)=Q_\mu^{\mathrm{red}}(u;W,h,q),
+\qquad
+u=Tz,
+\]
+where
+\[
+Q_\mu^{\mathrm{red}}(u;W,h,q)
+=
+\min_{y>0}
+\left\{
+q^\top y-\mu\sum_k\log y_k:
+Wy=h-u
+\right\}.
+\]
+Hence the original single-scenario optimization problem
+\[
+\min_{z\in Z^\circ}
+\left\{
+c^\top z-\mu\sum_j\log z_j+Q_\mu(z;W_f,h,q)
+\right\}
+\]
+is equivalent to the reduced problem
+\[
+\min_{u\in Z_{\mathrm{red}}}
+\left\{
+F_\mu(u)+Q_\mu^{\mathrm{red}}(u;W_f,h,q)
+\right\}.
+\]
+If $\hat u_\mu(h,q)$ denotes the unique optimizer of the reduced problem, then the original optimizer is recovered by
+\[
+\hat z_\mu(W_f,h,q)=\phi_\mu(\hat u_\mu(h,q)).
+\]
+
+The same reduction applies to the true stochastic objective. Define
+\[
+G_\mu^{\mathrm{red}}(u,x)
+:=
+F_\mu(u)
++
+\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
+\left[
+Q_\mu^{\mathrm{red}}(u;W(\boldsymbol\xi),h(\boldsymbol\xi),q(\boldsymbol\xi))
+\right].
+\]
+Then, for every $z\in Z^\circ$ with $u=Tz$,
+\[
+G_\mu(z,x)\geq G_\mu^{\mathrm{red}}(u,x),
+\]
+with equality precisely when $z=\phi_\mu(u)$. Therefore the original stochastic optimizer satisfies
+\[
+z_\mu^\#(x)=\phi_\mu(u_\mu^\#(x)),
+\]
+where
+\[
+u_\mu^\#(x)
+=
+\argmin_{u\in Z_{\mathrm{red}}}G_\mu^{\mathrm{red}}(u,x).
+\]
+Likewise, the original decision-focused loss can be written entirely in reduced coordinates:
+\[
+\begin{aligned}
+L_\mu((W_f,h,q),x)
+&=G_\mu(\hat z_\mu(W_f,h,q),x)\\
+&=G_\mu^{\mathrm{red}}(\hat u_\mu(h,q),x).
+\end{aligned}
+\]
+Thus the original scenario-parametrized loss is exactly the reduced scenario-parametrized loss, composed with the fiber minimizer $\phi_\mu$.
+
+Now consider the reduced problem. Its decision variable is $u$, and the second-stage right-hand side is $h-u$. Therefore the reduced technology map is the identity map on the reduced feasible-direction space. In particular, it satisfies the rank condition from the rank-condition case automatically: there is no nonzero reduced direction $du$ with $du=0$.
+
+The reduced problem also has a convex first-stage cost $F_\mu$, exactly of the type allowed above. Therefore, applying the rank-condition case to the reduced problem gives
+\[
+\nabla_q L_\mu((W_f,h,q),x)=0
+\quad\text{and}\quad
+\nabla_h L_\mu((W_f,h,q),x)=0
+\]
+if and only if
+\[
+\hat u_\mu(h,q)=u_\mu^\#(x).
+\]
+Using the recovery map $\phi_\mu$, this is equivalent to
+\[
+\hat z_\mu(W_f,h,q)
+=
+\phi_\mu(\hat u_\mu(h,q))
+=
+\phi_\mu(u_\mu^\#(x))
+=
+z_\mu^\#(x).
+\]
+Thus
+\[
+\nabla_q L_\mu((W_f,h,q),x)=0
+\quad\text{and}\quad
+\nabla_h L_\mu((W_f,h,q),x)=0
+\]
+if and only if
+\[
+\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
+\]
+
+It remains to identify the global minimizers over the synthetic scenario domain. Since
+\[
+L_\mu((W_f,h,q),x)
+=
+G_\mu(\hat z_\mu(W_f,h,q),x),
+\]
+and $G_\mu(\cdot,x)$ has unique minimizer $z_\mu^\#(x)$, every scenario satisfying
+\[
+\hat z_\mu(W_f,h,q)=z_\mu^\#(x)
+\]
+is globally optimal for the scenario-parametrized loss.
+
+Conversely, by Theorem~\ref{thm:realizability}, there exists at least one synthetic scenario with recourse matrix $W_f$ whose induced decision is $z_\mu^\#(x)$. Hence the minimum achievable scenario-parametrized loss is exactly
+\[
+G_\mu(z_\mu^\#(x),x).
+\]
+Therefore, if $(W_f,h,q)$ is a global minimizer of $L_\mu$, then
+\[
+G_\mu(\hat z_\mu(W_f,h,q),x)
+=
+G_\mu(z_\mu^\#(x),x).
+\]
+By uniqueness of $z_\mu^\#(x)$, this implies
+\[
+\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
+\]
+Combining the above implications gives the equivalence
+\[
+\nabla_q L_\mu((W_f,h,q),x)=0
+\quad\text{and}\quad
+\nabla_h L_\mu((W_f,h,q),x)=0
+\]
+if and only if
+\[
+(W_f,h,q)\in\argmin L_\mu((W,h,q),x)
+\]
+if and only if
+\[
+\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
+\]
+This is exactly the claim of Theorem~\ref{thm:no-vanishing-gradients}.
+
+Since $L_\mu$ is continuously differentiable in $q$ and $h$ on the relevant synthetic domain, and every stationary point is globally optimal, the standard first-order characterization of invexity gives componentwise invexity in the learned scenario components $q$ and $h$.
+\end{proof}

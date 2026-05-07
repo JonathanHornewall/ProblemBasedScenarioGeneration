@@ -1,0 +1,95 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\title{Preliminary Definitions and Results}
+\date{}
+
+\begin{document}
+\maketitle
+
+Throughout, we will repeatedly make use of the dual of the second stage problem, as defined by a scenario
+\(\xi \in \Xi^{\mathrm{synthetic}}\) and a first stage decision \(z \in Z\).
+
+\[
+Q_\mu(z,\xi)
+=
+\mu n_2(1-\log\mu)
++
+\max_{\lambda\in\mathbb R^{m_2}}
+\left\{
+\lambda^\top(h(\xi)-Tz)
++
+\mu\sum_{k=1}^{n_2}
+\log\bigl(q(\xi)-W(\xi)^\top\lambda\bigr)_k
+:
+q(\xi)-W(\xi)^\top\lambda>0
+\right\}.
+\]
+
+As in the primal case, for \(\mu > 0\), the solution is guaranteed to be unique.
+
+\[
+\hat\lambda_\mu(z,\xi)
+:=
+\operatorname*{arg\,max}_{\lambda\in\mathbb R^{m_2}}
+\left\{
+\lambda^\top(h(\xi)-Tz)
++
+\mu\sum_{k=1}^{n_2}
+\log\bigl(q(\xi)-W(\xi)^\top\lambda\bigr)_k
+:
+q(\xi)-W(\xi)^\top\lambda>0
+\right\}.
+\]
+
+\paragraph{KKT conditions.}
+
+Classical theory provides a useful optimality condition in terms of the dual multipliers. Here \(N_Z(z)\) denotes the normal cone to \(Z\) at \(z\).
+
+Likewise, for a single scenario \(\xi\),
+\(z\in\arg\min \widehat G_\mu(\cdot,\xi)\) if and only if
+
+\[
+z\in Z\cap \mathbb R^{n_1}_{++},
+\qquad
+0
+\in
+c-\mu z^{-1}
+-
+T^\top\hat\lambda_\mu(z,\xi)
++
+N_Z(z).
+\]
+
+For any \(x\) and any \(\mu>0\),
+\(z\in \arg\min G_\mu(\cdot,x)\) if and only if
+
+\[
+z\in Z\cap \mathbb R^{n_1}_{++},
+\qquad
+0
+\in
+c-\mu z^{-1}
+-
+T^\top
+\mathbb E_{\xi\sim P(\cdot\mid x)}
+\left[
+\hat\lambda_\mu(z,\xi)
+\right]
++
+N_Z(z).
+\]
+
+In particular, for \(\mu>0\),
+
+\[
+\nabla_z Q_\mu(z,\xi)
+=
+-T^\top\hat\lambda_\mu(z,\xi).
+\]
+
+\end{document}

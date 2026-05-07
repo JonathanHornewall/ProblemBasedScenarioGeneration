@@ -7,6 +7,7 @@ using Test
 
 import ChainRulesCore
 import ContextualDFLExperiments: infer
+import MathOptInterface
 
 struct ConstantPolicy <: Policy
     z::Vector{Float64}
@@ -421,6 +422,40 @@ end
     )
     @test_throws DimensionMismatch infer(knn_policy, [1.0, 2.0])
 
+    ad_tree_data_set = generate_contextual_data_set(
+        [[-2.0], [-1.0], [1.0], [2.0]],
+        [
+            [shortage_scenario(2.0)],
+            [shortage_scenario(2.0)],
+            [shortage_scenario(8.0)],
+            [shortage_scenario(8.0)],
+        ],
+    )
+    ad_tree_policy = AdaptiveDecisionTreePolicy(
+        ad_tree_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        depth=1,
+        min_leaf=1,
+    )
+    @test ad_tree_policy.metadata.depth == 1
+    @test ad_tree_policy.metadata.min_leaf == 1
+    @test ad_tree_policy.metadata.termination_status == MathOptInterface.OPTIMAL
+    @test infer(ad_tree_policy, [-2.0]) ≈ [2.0] atol = 1e-6
+    @test infer(ad_tree_policy, [2.0]) ≈ [8.0] atol = 1e-6
+    @test generate_decision_set(ad_tree_policy, ad_tree_data_set) ≈
+        reshape([2.0, 2.0, 8.0, 8.0], 1, 4) atol = 1e-6
+    @test_throws ArgumentError AdaptiveDecisionTreePolicy(
+        ad_tree_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        depth=2,
+        min_leaf=2,
+    )
+    @test_throws DimensionMismatch infer(ad_tree_policy, [1.0, 2.0])
+
     residual_data_set = generate_contextual_data_set(
         [[-1.0], [1.0]],
         [
@@ -452,6 +487,27 @@ end
     @test residual_policy.residuals[:, 1] ≈ [1.0, -1.0, 1.0, -1.0]
     @test residual_policy.residuals[:, 2] ≈ zeros(4)
     @test infer(residual_policy, [2.0]) ≈ [8.0] atol = 1e-6
+
+    ad_no_opt_policy = DecisionFocusedLinearPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        optimize=false,
+    )
+    @test ad_no_opt_policy.initial_coefficients ≈ least_squares_policy.coefficients
+    @test ad_no_opt_policy.coefficients ≈ least_squares_policy.coefficients
+    @test isnothing(ad_no_opt_policy.optimization_result)
+    @test infer(ad_no_opt_policy, [2.0]) ≈ infer(least_squares_policy, [2.0]) atol = 1e-6
+
+    penalty_transform = nonnegative_prediction_penalty_transform(
+        lower_bound=0.0,
+        penalty_weight=10.0,
+    )
+    penalty_result = penalty_transform([-2.0, 3.0])
+    @test penalty_result.target ≈ [0.0, 3.0]
+    @test penalty_result.penalty ≈ 20.0
 
     clipped_policy = LeastSquaresPolicy(
         residual_data_set,
@@ -486,6 +542,88 @@ end
         [[shortage_scenario_with_q(2.0, 10.0)], [shortage_scenario_with_q(3.0, 12.0)]],
     )
     @test_throws ArgumentError LeastSquaresPolicy(
+        varying_structure_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+    )
+
+    cart_policy = CARTPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        min_samples_leaf=1,
+        test_size=nothing,
+    )
+    @test cart_policy.metadata.min_samples_leaf == 1
+    @test cart_policy.metadata.effective_min_samples_leaf == 1
+    @test isnothing(cart_policy.metadata.score)
+    @test infer(cart_policy, [-1.0]) ≈ [4.0] atol = 1e-6
+    @test infer(cart_policy, [1.0]) ≈ [6.0] atol = 1e-6
+
+    cart_split_policy = CARTPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        min_samples_leaf=25,
+        test_size=0.25,
+    )
+    @test cart_split_policy.metadata.effective_min_samples_leaf <=
+          cart_split_policy.metadata.min_samples_leaf
+    @test !isnothing(cart_split_policy.metadata.score)
+
+    cart_clipped_policy = CARTPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        min_samples_leaf=1,
+        test_size=nothing,
+        postprocess_prediction=target -> max.(target, [-3.0, 0.0]),
+    )
+    @test infer(cart_clipped_policy, [-1.0]) ≈ [3.0] atol = 1e-6
+
+    m5ad_policy = M5ADPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        min_samples_leaf=1,
+        test_size=nothing,
+        optimize=false,
+    )
+    @test m5ad_policy.metadata.leaf_count >= 1
+    @test all(>(0), values(m5ad_policy.metadata.leaf_sample_counts))
+    @test infer(m5ad_policy, [-1.0]) ≈ infer(least_squares_policy, [-1.0]) atol = 1e-6
+    @test infer(m5ad_policy, [1.0]) ≈ infer(least_squares_policy, [1.0]) atol = 1e-6
+    @test generate_decision_set(m5ad_policy, residual_data_set) ≈
+        generate_decision_set(least_squares_policy, residual_data_set) atol = 1e-6
+    @test_throws DimensionMismatch infer(m5ad_policy, [1.0, 2.0])
+
+    @test_throws ArgumentError CARTPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        min_samples_leaf=0,
+    )
+    @test_throws ArgumentError CARTPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        test_size=1.5,
+    )
+    @test_throws ArgumentError CARTPolicy(
         varying_structure_data_set,
         solver,
         shortage_program(),
@@ -826,6 +964,26 @@ end
             @test h_arrays[5][:, 1] ≈ base.h_eq .+ h_raw
             @test h_arrays[7][:, 1] == base.q
         end
+
+        @testset "unreliable newsvendor decoder" begin
+            problem = UnreliableNewsvendorProblem()
+            base = base_scenario(problem)
+            decoder = UnreliableNewsvendorParameterVectorDecoder(problem)
+            arrays = ContextualDFL.decode_scenario_collection(
+                decoder,
+                [0.0, 0.0];
+                nr_scenarios=1,
+            )
+            assert_decoded_shapes_match_base(arrays, base)
+            @test vec(arrays[3][:, :, 1]) ≈ [0.0, -0.5]
+            @test arrays[5][:, 1] ≈ [-0.5, 0.0]
+            @test arrays[7][:, 1] == base.q
+            @test_throws DimensionMismatch ContextualDFL.decode_scenario_collection(
+                decoder,
+                [0.0, 0.0, 0.0];
+                nr_scenarios=1,
+            )
+        end
     end
 
     @testset "ResourceAllocationDemandVectorDecoder real AD" begin
@@ -1106,3 +1264,4 @@ end
 end
 
 include("benchmark_instances/runtests.jl")
+include("decision_optimal_q_conversion/runtests.jl")

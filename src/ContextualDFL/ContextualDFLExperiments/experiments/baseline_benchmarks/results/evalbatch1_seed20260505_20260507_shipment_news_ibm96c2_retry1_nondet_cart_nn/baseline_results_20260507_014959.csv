@@ -1,0 +1,143 @@
+timestamp,profile,benchmark,variant,policy,status,worker_id,hostname,train_contexts,train_scenarios_per_context,test_contexts,test_scenarios_per_context,evaluation_batches,seed,cache_key,loaded_from_cache,data_seconds,fit_seconds,eval_seconds,sample_count,policy_value_mean,optimal_value_mean,regret_mean,relative_regret_mean,gap_stderr_mean,policy_eval_seconds,error
+20260507_014959,proper,shipment_planning,shipment_planning,cart,error,2,ibm-96c-2,100,1,30,1000,1,20260505,v3__proper__shipment_planning__shipment_planning__train100x1__test30x1000__batches1__seed20260505__solver_ipopt_highs__generated_test_optima,true,0.033463153,0.0,0.0,,,,,,,,"ArgumentError: CARTPolicy requires Python scikit-learn. Install it on the active PyCall Python, for example `sudo apt install -y python3-sklearn` when PyCall uses system Python. Import failed for sklearn.model_selection: PyError (PyImport_ImportModule
+
+The Python package sklearn.model_selection could not be imported by pyimport. Usually this means
+that you did not install sklearn.model_selection in the Python version being used by PyCall.
+
+PyCall is currently configured to use the Python version at:
+
+/usr/bin/python3
+
+and you should use whatever mechanism you usually use (apt-get, pip, conda,
+etcetera) to install the Python package containing the sklearn.model_selection module.
+
+One alternative is to re-configure PyCall to use a different Python
+version on your system: set ENV[""PYTHON""] to the path/name of the python
+executable you want to use, run Pkg.build(""PyCall""), and re-launch Julia.
+
+Another alternative is to configure PyCall to use a Julia-specific Python
+distribution via the Conda.jl package (which installs a private Anaconda
+Python distribution), which has the advantage that packages can be installed
+and kept up-to-date via Julia.  As explained in the PyCall documentation,
+set ENV[""PYTHON""]="""", run Pkg.build(""PyCall""), and re-launch Julia. Then,
+To install the sklearn.model_selection module, you can use `pyimport_conda(""sklearn.model_selection"", PKG)`,
+where PKG is the Anaconda package that contains the module sklearn.model_selection,
+or alternatively you can use the Conda package directly (via
+`using Conda` followed by `Conda.add` etcetera).
+
+) <class 'ImportError'>
+ImportError('numpy.core.multiarray failed to import')
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/__init__.py"", line 73, in <module>
+    from .base import clone  # noqa: E402
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/base.py"", line 19, in <module>
+    from .utils._metadata_requests import _MetadataRequester, _routing_enabled
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/__init__.py"", line 9, in <module>
+    from ._chunking import gen_batches, gen_even_slices
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/_chunking.py"", line 11, in <module>
+    from ._param_validation import Interval, validate_params
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/_param_validation.py"", line 14, in <module>
+    from scipy.sparse import csr_matrix, issparse
+  File ""/usr/lib/python3/dist-packages/scipy/sparse/__init__.py"", line 267, in <module>
+    from ._csr import *
+  File ""/usr/lib/python3/dist-packages/scipy/sparse/_csr.py"", line 10, in <module>
+    from ._sparsetools import (csr_tocsc, csr_tobsr, csr_count_blocks,
+
+Stacktrace:
+  [1] _cart_sklearn_module(module_name::String)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1613
+  [2] _cart_train_test_split(contexts::Matrix{Float64}, targets::Matrix{Float64}, test_size::Float64, random_state::Int64)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1513
+  [3] _fit_cart_target_regressor(contextual_data_set::Vector{ContextualDataPoint}, target_component::Symbol; validate_fixed_components::Bool, min_samples_leaf::Int64, test_size::Float64, random_state::Int64)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1464
+  [4] _fit_cart_target_regressor
+    @ ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1445 [inlined]
+  [5] CARTPolicy(contextual_data_set::Vector{ContextualDataPoint}, solver::Solver{IpoptSolver, HiGHSSolver}, program::StochasticProgram{LP{Matrix{Float64}, Matrix{Float64}, Vector{Float64}, Vector{Float64}, Vector{Float64}}}, parametric_decoder::ParametricDecoder{Tuple{Symbol}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, Nothing, Vector{Float64}, Vector{Float64}}; target_component::Symbol, postprocess_prediction::Function, validate_fixed_components::Bool, min_samples_leaf::Int64, test_size::Float64, random_state::Int64, mu::Int64, rho::Int64, kwargs::@Kwargs{})
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1022
+  [6] make_policy(policy_name::String, benchmark::String, problem::ShipmentPlanningProblem, train_data::Vector{ContextualDataPoint}, solver::Solver{IpoptSolver, HiGHSSolver}, program::StochasticProgram{LP{Matrix{Float64}, Matrix{Float64}, Vector{Float64}, Vector{Float64}, Vector{Float64}}}, decoder::ParametricDecoder{Tuple{Symbol}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, Nothing, Vector{Float64}, Vector{Float64}}, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}; cache_dir::String, data_cache_key::String, refresh_policy_cache::Bool)
+    @ Main ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/experiments/baseline_benchmarks/run_baselines.jl:1354
+  [7] macro expansion
+    @ ./timing.jl:461 [inlined]
+  [8] run_policy_job(job::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String})
+    @ Main ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/experiments/baseline_benchmarks/run_baselines.jl:1228
+  [9] exec_from_cache(f_ref::Tuple{typeof(run_policy_job), RemoteChannel{Channel{Any}}}, args::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String}; kwargs::@Kwargs{})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:390
+ [10] exec_from_cache(f_ref::Tuple{typeof(run_policy_job), RemoteChannel{Channel{Any}}}, args::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:388
+ [11] (::Distributed.var""#handle_msg##4#handle_msg##5""{Distributed.CallMsg{:call_fetch}})()
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:287
+ [12] run_work_thunk(thunk::Distributed.var""#handle_msg##4#handle_msg##5""{Distributed.CallMsg{:call_fetch}}, print_error::Bool)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:70
+ [13] (::Distributed.var""#handle_msg##2#handle_msg##3""{Distributed.CallMsg{:call_fetch}, Distributed.MsgHeader, TCPSocket})()
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:287"
+20260507_014959,proper,shipment_planning,shipment_planning,nn,ok,3,ibm-96c-2,100,1,30,1000,1,20260505,v3__proper__shipment_planning__shipment_planning__train100x1__test30x1000__batches1__seed20260505__solver_ipopt_highs__generated_test_optima__policy_nn__nnv1_seed20260505_epochs20_scenarios3_batch1_hidden128_depth3_lr0.001_mu0.01_rho0.0,true,0.03380794,22.254775277,182.090643646,30,7526.223457524758,7034.901527724386,491.3219298003724,0.06895791118196724,0.0,179.904108205,
+20260507_014959,proper,unreliable_newsvendor,unreliable_newsvendor,cart,error,4,ibm-96c-2,100,1,30,1000,1,20260505,v3__proper__unreliable_newsvendor__unreliable_newsvendor__train100x1__test30x1000__batches1__seed20260505__solver_ipopt_highs__generated_test_optima,true,0.330030103,0.0,0.0,,,,,,,,"ArgumentError: CARTPolicy requires Python scikit-learn. Install it on the active PyCall Python, for example `sudo apt install -y python3-sklearn` when PyCall uses system Python. Import failed for sklearn.model_selection: PyError (PyImport_ImportModule
+
+The Python package sklearn.model_selection could not be imported by pyimport. Usually this means
+that you did not install sklearn.model_selection in the Python version being used by PyCall.
+
+PyCall is currently configured to use the Python version at:
+
+/usr/bin/python3
+
+and you should use whatever mechanism you usually use (apt-get, pip, conda,
+etcetera) to install the Python package containing the sklearn.model_selection module.
+
+One alternative is to re-configure PyCall to use a different Python
+version on your system: set ENV[""PYTHON""] to the path/name of the python
+executable you want to use, run Pkg.build(""PyCall""), and re-launch Julia.
+
+Another alternative is to configure PyCall to use a Julia-specific Python
+distribution via the Conda.jl package (which installs a private Anaconda
+Python distribution), which has the advantage that packages can be installed
+and kept up-to-date via Julia.  As explained in the PyCall documentation,
+set ENV[""PYTHON""]="""", run Pkg.build(""PyCall""), and re-launch Julia. Then,
+To install the sklearn.model_selection module, you can use `pyimport_conda(""sklearn.model_selection"", PKG)`,
+where PKG is the Anaconda package that contains the module sklearn.model_selection,
+or alternatively you can use the Conda package directly (via
+`using Conda` followed by `Conda.add` etcetera).
+
+) <class 'ImportError'>
+ImportError('numpy.core.multiarray failed to import')
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/__init__.py"", line 73, in <module>
+    from .base import clone  # noqa: E402
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/base.py"", line 19, in <module>
+    from .utils._metadata_requests import _MetadataRequester, _routing_enabled
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/__init__.py"", line 9, in <module>
+    from ._chunking import gen_batches, gen_even_slices
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/_chunking.py"", line 11, in <module>
+    from ._param_validation import Interval, validate_params
+  File ""/home/rwl/.local/lib/python3.10/site-packages/sklearn/utils/_param_validation.py"", line 14, in <module>
+    from scipy.sparse import csr_matrix, issparse
+  File ""/usr/lib/python3/dist-packages/scipy/sparse/__init__.py"", line 267, in <module>
+    from ._csr import *
+  File ""/usr/lib/python3/dist-packages/scipy/sparse/_csr.py"", line 10, in <module>
+    from ._sparsetools import (csr_tocsc, csr_tobsr, csr_count_blocks,
+
+Stacktrace:
+  [1] _cart_sklearn_module(module_name::String)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1613
+  [2] _cart_train_test_split(contexts::Matrix{Float64}, targets::Matrix{Float64}, test_size::Float64, random_state::Int64)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1513
+  [3] _fit_cart_target_regressor(contextual_data_set::Vector{ContextualDataPoint}, target_component::Symbol; validate_fixed_components::Bool, min_samples_leaf::Int64, test_size::Float64, random_state::Int64)
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1464
+  [4] _fit_cart_target_regressor
+    @ ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1445 [inlined]
+  [5] CARTPolicy(contextual_data_set::Vector{ContextualDataPoint}, solver::Solver{IpoptSolver, HiGHSSolver}, program::StochasticProgram{LP{Matrix{Float64}, Matrix{Float64}, Vector{Float64}, Vector{Float64}, Vector{Float64}}}, parametric_decoder::UnreliableNewsvendorParametricDecoder{@NamedTuple{W_eq::Matrix{Float64}, W_ineq::Matrix{Float64}, T_eq::Matrix{Float64}, T_ineq::Matrix{Float64}, h_eq::Vector{Float64}, h_ineq::Vector{Float64}, q::Vector{Float64}}}; target_component::Symbol, postprocess_prediction::Function, validate_fixed_components::Bool, min_samples_leaf::Int64, test_size::Float64, random_state::Int64, mu::Int64, rho::Int64, kwargs::@Kwargs{})
+    @ ContextualDFLExperiments ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/src/testing/policies/BaselinePolicies.jl:1022
+  [6] make_policy(policy_name::String, benchmark::String, problem::UnreliableNewsvendorProblem, train_data::Vector{ContextualDataPoint}, solver::Solver{IpoptSolver, HiGHSSolver}, program::StochasticProgram{LP{Matrix{Float64}, Matrix{Float64}, Vector{Float64}, Vector{Float64}, Vector{Float64}}}, decoder::UnreliableNewsvendorParametricDecoder{@NamedTuple{W_eq::Matrix{Float64}, W_ineq::Matrix{Float64}, T_eq::Matrix{Float64}, T_ineq::Matrix{Float64}, h_eq::Vector{Float64}, h_ineq::Vector{Float64}, q::Vector{Float64}}}, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}; cache_dir::String, data_cache_key::String, refresh_policy_cache::Bool)
+    @ Main ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/experiments/baseline_benchmarks/run_baselines.jl:1354
+  [7] macro expansion
+    @ ./timing.jl:461 [inlined]
+  [8] run_policy_job(job::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String})
+    @ Main ~/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/experiments/baseline_benchmarks/run_baselines.jl:1228
+  [9] exec_from_cache(f_ref::Tuple{typeof(run_policy_job), RemoteChannel{Channel{Any}}}, args::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String}; kwargs::@Kwargs{})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:390
+ [10] exec_from_cache(f_ref::Tuple{typeof(run_policy_job), RemoteChannel{Channel{Any}}}, args::@NamedTuple{benchmark::String, policy::String, config::@NamedTuple{profile::String, train_contexts::Int64, train_scenarios_per_context::Int64, test_contexts::Int64, test_scenarios_per_context::Int64, evaluation_batches::Int64, seed::Int64, knn_k::Int64, ad_tree_depth::Int64, ad_tree_min_leaf::Int64, resource_allocation_test_source::String}, cache_dir::String, refresh_cache::Bool, refresh_policy_cache::Bool, timestamp::String, data_artifact_dir::String})
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/workerpool.jl:388
+ [11] (::Distributed.var""#handle_msg##4#handle_msg##5""{Distributed.CallMsg{:call_fetch}})()
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:287
+ [12] run_work_thunk(thunk::Distributed.var""#handle_msg##4#handle_msg##5""{Distributed.CallMsg{:call_fetch}}, print_error::Bool)
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:70
+ [13] (::Distributed.var""#handle_msg##2#handle_msg##3""{Distributed.CallMsg{:call_fetch}, Distributed.MsgHeader, TCPSocket})()
+    @ Distributed ~/.julia/juliaup/julia-1.12.6+0.x64.linux.gnu/share/julia/stdlib/v1.12/Distributed/src/process_messages.jl:287"
+20260507_014959,proper,unreliable_newsvendor,unreliable_newsvendor,nn,ok,5,ibm-96c-2,100,1,30,1000,1,20260505,v3__proper__unreliable_newsvendor__unreliable_newsvendor__train100x1__test30x1000__batches1__seed20260505__solver_ipopt_highs__generated_test_optima__policy_nn__nnv1_seed20260505_epochs20_scenarios3_batch1_hidden128_depth3_lr0.001_mu0.01_rho0.0,true,0.305508293,22.625844738,157.336358672,30,-1.5226925795600046,-1.6830129984160758,0.16032041885607123,0.08844846969365479,0.0,155.133935057,

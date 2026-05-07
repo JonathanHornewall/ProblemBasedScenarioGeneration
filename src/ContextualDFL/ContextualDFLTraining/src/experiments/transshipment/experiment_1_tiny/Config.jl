@@ -20,9 +20,11 @@ const DEFAULT_TRAINING_DATA_SEED = 1
 
 const TRANSSHIPMENT_VARIANT = :h_only
 const CONTEXT_DIMENSION = 3
-const SIGMA_H = 0.20
-const SIGMA_Q = 0.20
 const PARAMETER_SEED = 1
+const CONTEXT_NOISE = 0.25
+const SCENARIO_NOISE = 0.10
+const SIGNAL_SCALE = 1.0
+const MAX_MULTIPLIER = 8.0
 
 experiment_id() = EXPERIMENT_ID
 experiment_name() = EXPERIMENT_NAME
@@ -59,9 +61,11 @@ function problem_identity_config()
         problem=:transshipment,
         transshipment_variant=TRANSSHIPMENT_VARIANT,
         context_dim=CONTEXT_DIMENSION,
-        sigma_h=SIGMA_H,
-        sigma_q=SIGMA_Q,
         parameter_seed=PARAMETER_SEED,
+        context_noise=CONTEXT_NOISE,
+        scenario_noise=SCENARIO_NOISE,
+        signal_scale=SIGNAL_SCALE,
+        max_multiplier=MAX_MULTIPLIER,
     )
 end
 
@@ -109,9 +113,11 @@ function problem(config=base_config())
     return ContextualDFLExperiments.TransShipmentExperimentProblem(;
         variant=checked_variant(config),
         context_dim=Int(ContextualDFLTraining.config_value(config, :context_dim, CONTEXT_DIMENSION)),
-        sigma_h=Float64(ContextualDFLTraining.config_value(config, :sigma_h, SIGMA_H)),
-        sigma_q=Float64(ContextualDFLTraining.config_value(config, :sigma_q, SIGMA_Q)),
         parameter_seed=Int(ContextualDFLTraining.config_value(config, :parameter_seed, PARAMETER_SEED)),
+        context_noise=Float64(ContextualDFLTraining.config_value(config, :context_noise, CONTEXT_NOISE)),
+        scenario_noise=Float64(ContextualDFLTraining.config_value(config, :scenario_noise, SCENARIO_NOISE)),
+        signal_scale=Float64(ContextualDFLTraining.config_value(config, :signal_scale, SIGNAL_SCALE)),
+        max_multiplier=Float64(ContextualDFLTraining.config_value(config, :max_multiplier, MAX_MULTIPLIER)),
     )
 end
 
@@ -355,10 +361,10 @@ function problem_instance_id(problem_instance)
     return serialized_digest((
         variant=problem_instance.variant,
         context_dim=problem_instance.context_dim,
-        sigma_h=problem_instance.sigma_h,
-        sigma_q=problem_instance.sigma_q,
-        B_h=problem_instance.B_h,
-        B_q=problem_instance.B_q,
+        context_noise=problem_instance.context_noise,
+        scenario_noise=problem_instance.scenario_noise,
+        signal_scale=problem_instance.signal_scale,
+        max_multiplier=problem_instance.max_multiplier,
         mean_parameters=ContextualDFL.transshipment_mean_parameters(problem_instance.core_problem),
     ))
 end
@@ -407,8 +413,10 @@ function problem_metadata(problem_instance)
         first_stage_variables=length(problem_instance.core_problem.data.first_stage_variables),
         second_stage_variables=length(problem_instance.core_problem.data.second_stage_variables),
         second_stage_rows=length(problem_instance.core_problem.data.second_stage_rows),
-        sigma_h=problem_instance.sigma_h,
-        sigma_q=problem_instance.sigma_q,
+        context_noise=problem_instance.context_noise,
+        scenario_noise=problem_instance.scenario_noise,
+        signal_scale=problem_instance.signal_scale,
+        max_multiplier=problem_instance.max_multiplier,
     )
 end
 

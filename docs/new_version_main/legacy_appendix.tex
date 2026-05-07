@@ -1,0 +1,188 @@
+\section{Details on experiments and benchmarks}
+
+\begin{center}
+{\Large\bfseries Extended appendix}
+\end{center}
+
+\section{Introduction}
+\label{app:introduction}
+
+This appendix collects material that supports the main paper without being necessary for following its primary argument. Section~\ref{app:extended-literature-review} contains an extended literature review. Section~\ref{app:theory} contains theoretical background, problem-formulation details, proofs, generalizations, and counterexamples. Section~\ref{app:experimental-details} contains experimental details and additional benchmarks.
+
+The main paper is reserved for the main problem formulation, core results, method, and headline empirical evidence. The appendix contains extended motivation, technical conditions, complete derivations, counterexamples, theoretically relevant extensions, and additional empirical material.
+
+\section{Extended literature review}
+\label{app:extended-literature-review}
+\label{app:additional-literature-review}
+
+This section will contain an extended literature review in a later version.
+
+\section{Theory}
+\label{app:theory}
+
+\subsection{Background and problem formulation}
+\label{app:background-problem-formulation}
+
+\subsubsection{Sufficient conditions for the smoothed problem to be well defined}
+\label{app:smoothed-problem-well-defined}
+
+\subsubsection{Constraints on synthetic scenarios}
+\label{app:synthetic-scenario-constraints}
+
+\subsubsection{Decision focused scenario learning contra direct policy learning}
+\label{app:dfl-vs-direct}
+
+This section is intentionally left blank for now.
+
+\subsection{Proofs of theorems and generalizations}
+\label{app:proofs-generalizations}
+
+\subsubsection{Realizability and single-scenario optimality}
+\label{app:realizability}
+
+\paragraph{Closed form expressions for $h^\#$ and $q^\#$ in terms of $z^\#$.}
+\label{app:realizability-proof-extended}
+
+For a fixed recourse matrix $\widetilde W$, we may use the projection of $\Xi^{\mathrm{synthetic}}$ onto the $(q,h)$ components with recourse matrix $\widetilde W$:
+\begin{equation}
+\label{eq:appendix-Xi-synthetic-W}
+\Xi^{\mathrm{synthetic},\widetilde W}
+:=
+\left\{
+(q,h)\in\R^{n_2}\times\R^{m_2}:\;(\widetilde W,h,q)\in \Xi^{\mathrm{synthetic}}
+\right\}.
+\end{equation}
+
+Let $x\in\mathcal X$ and $\mu\in[0,\infty)$ be fixed. For compactness, write
+\[
+\lambda_\mu^{\#,x}:=\lambda_\mu^{x}(z_\mu^\#(x)),
+\qquad
+\tilde\lambda_\mu^{x}:=\hat\lambda_\mu(z_\mu^\#(x),\tilde\xi),
+\]
+with $\mu=0$ interpreted by the central-path limit.
+
+\paragraph{Learning $q$.}
+For any $\tilde\xi\in\Xi$, the decision-optimal cost vector in Theorem~\ref{thm:realizability} is
+\begin{equation}
+\label{eq:q-construct}
+q_\mu^{\#,\tilde\xi}(x)
+:=
+\tilde q+\tilde W^\top\!\left(\lambda_\mu^{\#,x}-\tilde\lambda_\mu^{x}\right).
+\end{equation}
+Thus the synthetic scenario is
+\begin{equation}
+\label{eq:q-scenario-appendix}
+\xi_\mu^{\#,x,\tilde\xi}
+:=
+\bigl(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x)\bigr).
+\end{equation}
+
+\paragraph{Learning $h$.}
+When $W(\xi)=W$ for all $\xi\in\Xi$, the decision-optimal right-hand side is
+\begin{equation}
+\label{eq:h-construct}
+h_\mu^{\#,\delta}(x):=
+Tz_\mu^\#(x)+W y_\mu^{\#,\delta}(x),
+\qquad
+y_\mu^{\#,\delta}(x):=
+\begin{cases}
+\mu\left(q^{\max,\delta}-W^\top\lambda_\mu^{\#,x}\right)^{-1}, & \mu>0,\\
+0, & \mu=0.
+\end{cases}
+\end{equation}
+The corresponding synthetic scenario is
+\begin{equation}
+\label{eq:h-scenario-appendix}
+\xi_\mu^{\#,x,\delta}
+:=
+\bigl(W,h_\mu^{\#,\delta}(x),q^{\max,\delta}\bigr).
+\end{equation}
+
+\paragraph{Proof of realizability theorem and closed form expression for optimal scenarios.}
+
+\paragraph{Tightness of Theorem~\ref{thm:realizability}.}
+
+\subparagraph{Counter example showing the problem of restricting scenario component to zero.}
+\label{app:restricted-scenario-counterexample}
+
+\paragraph{Theoretically relevant extensions.}
+\label{app:random-WT-extension}
+
+\subparagraph{General decision-optimal scenario existence.}
+\label{app:general-decision-optimal-scenario-existence}
+
+\subparagraph{Extension of theorem 1 to random $T$.}
+\label{app:random-T-extension}
+
+\subparagraph{Learning demand component while $W$ is random.}
+\label{app:learning-h-random-W}
+
+\subsubsection{Log-barrier smoothing theory}
+\label{app:logbarrier-theory}
+
+\paragraph{Background theory.}
+\label{app:logbarrier-background}
+
+\subparagraph{Sufficient conditions for the log-barrier problem to be well-posed.}
+\label{app:logbarrier-well-posed}
+
+\subparagraph{Recession direction condition.}
+\label{app:recession-direction-condition}
+
+\subparagraph{Convergence of the cost function and the optimal solutions.}
+\label{app:logbarrier-convergence}
+
+\paragraph{Closed form expressions for derivatives of $G$ and the optimization map.}
+\label{app:closed-form-derivatives-extended}
+
+Fix $\mu>0$ and a synthetic scenario $\xi=(W,h,q)$ for which the single-scenario smoothed problem is well defined. Let
+\[
+\hat z_\mu^\#:=\hat z_\mu^\#(\xi),
+\qquad
+\hat\lambda_\mu^\#:=\hat\lambda_\mu(\hat z_\mu^\#,\xi)
+\]
+denote the scenario-specific solution and its associated second-stage dual multiplier. For $z$ in the relative interior of $Z$,
+\[
+\partial_z G_\mu(z,x)
+=
+c-\mu z^{-1}
+-T^\top\E_{\boldsymbol{\xi}\sim P(\cdot\mid x)}
+\!\left[\hat\lambda_\mu(z,\boldsymbol{\xi})\right]
++N_Z(z),
+\]
+with the scenario-specific expression
+\[
+\partial_z \hat G_\mu(z,\xi)
+=
+c-\mu z^{-1}-T^\top\hat\lambda_\mu(z,\xi)+N_Z(z).
+\]
+Whenever the displayed inverses exist,
+\[
+\begin{aligned}
+\frac{\partial \hat z_\mu^\#(\xi)}{\partial h}
+&=
+P_\mu(\xi)T^\top S_\mu(\xi)^{-1},
+\\
+\frac{\partial \hat z_\mu^\#(\xi)}{\partial q}
+&=
+P_\mu(\xi)T^\top S_\mu(\xi)^{-1}\mu W D_\mu(\xi),
+\end{aligned}
+\]
+where
+\[
+\begin{aligned}
+H_\mu(\xi)&:=\diag\!\big((\hat z_\mu^\#)^2\big),\\
+P_\mu(\xi)&:=\frac1\mu\left(H_\mu(\xi)-H_\mu(\xi)A^\top(AH_\mu(\xi)A^\top)^{-1}AH_\mu(\xi)\right),\\
+D_\mu(\xi)&:=\diag\!\left((q-W^\top\hat\lambda_\mu^\#)^{-2}\right),\\
+S_\mu(\xi)&:=TP_\mu(\xi)T^\top+\mu W D_\mu(\xi)W^\top.
+\end{aligned}
+\]
+
+\paragraph{Proof of Theorem~\ref{thm:no-vanishing-gradients}.}
+The proof is given in the core appendix, Appendix~\ref{app:no-vanishing-gradients-proof}.
+
+\paragraph{Proof for results on generalization and training loss.}
+\label{app:generalization-training-loss-proof}
+
+\section{Experimental details and additional benchmarks}
+\label{app:experimental-details}

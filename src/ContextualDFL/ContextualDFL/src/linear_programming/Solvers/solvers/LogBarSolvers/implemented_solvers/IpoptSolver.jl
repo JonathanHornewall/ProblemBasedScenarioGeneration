@@ -9,7 +9,7 @@ function solve(
     μ=nothing,
     ρ=0,
     rho=ρ,
-    slack_lower_bound=1e-9,
+    slack_lower_bound=1e-12,
     constraint_tolerance=1e-6,
     kwargs...,
 )
@@ -38,6 +38,8 @@ function solve(
 
     n_variables = length(bound_lp.c)
     n_general_inequalities = length(bound_lp.b_ineq)
+    eq_basis, A_eq_basis = _independent_constraint_rows(bound_lp.A_eq)
+    b_eq_basis = bound_lp.b_eq[eq_basis]
 
     JuMP.@variable(model, z[1:n_variables])
     _set_variable_bounds!(z, bound_lp.lower_bounds, bound_lp.upper_bounds)
@@ -56,7 +58,7 @@ function solve(
             JuMP.@constraint(model, bound_lp.A_ineq * z .+ s .== bound_lp.b_ineq)
     end
 
-    eq_constraints = JuMP.@constraint(model, bound_lp.A_eq * z .== bound_lp.b_eq)
+    eq_constraints = JuMP.@constraint(model, A_eq_basis * z .== b_eq_basis)
 
     positive_general_positions = [
         k for k in eachindex(bound_map.general_rows) if !iszero(μ_vector[bound_map.general_rows[k]])
@@ -87,18 +89,23 @@ function solve(
     )
     JuMP.optimize!(model)
 
-    status =
-        _assert_successful_solve(model, solver; accepted_statuses=("OPTIMAL", "LOCALLY_SOLVED"))
+    status = _assert_successful_solve(
+        model,
+        solver;
+        accepted_statuses=("OPTIMAL", "LOCALLY_SOLVED", "ALMOST_LOCALLY_SOLVED"),
+    )
     z_value = JuMP.value.(z)
     _assert_lp_solution_feasible(lp, z_value; atol=constraint_tolerance)
 
     lower_bound_dual, upper_bound_dual =
         _normalized_variable_bound_duals(z, bound_lp.lower_bounds, bound_lp.upper_bounds)
+    dual_eq = zeros(Float64, length(bound_lp.b_eq))
+    dual_eq[eq_basis] .= JuMP.dual.(eq_constraints)
     raw_result = BoundFormSolveResult(
         z_value,
         n_general_inequalities == 0 ? similar(z_value, 0) : JuMP.value.(s),
         n_general_inequalities == 0 ? similar(z_value, 0) : -JuMP.dual.(slack_constraints),
-        JuMP.dual.(eq_constraints),
+        dual_eq,
         lower_bound_dual,
         upper_bound_dual,
         JuMP.objective_value(model),

@@ -1,3 +1,4 @@
+import LinearAlgebra: rank
 import SparseArrays: findnz, issparse
 
 struct ExtractedBoundRow{T}
@@ -61,7 +62,7 @@ end
 function _extract_variable_bounds(
     lp::LP;
     μ_vector=nothing,
-    slack_lower_bound::Real=1e-9,
+    slack_lower_bound::Real=1e-12,
     coefficient_atol::Real=0.0,
     convert_zero_barrier_rows::Bool=true,
 )
@@ -217,6 +218,25 @@ function _extract_variable_bounds_for_solver(solver, lp::LP; kwargs...)
         end
         rethrow()
     end
+end
+
+function _independent_constraint_rows(A)
+    dense = Matrix(A)
+    basis = Int[]
+    F = zeros(eltype(dense), 0, size(dense, 2))
+    current_rank = 0
+
+    for row_index in axes(dense, 1)
+        candidate = [F; dense[row_index:row_index, :]]
+        candidate_rank = rank(candidate)
+        if candidate_rank > current_rank
+            push!(basis, Int(row_index))
+            F = candidate
+            current_rank = candidate_rank
+        end
+    end
+
+    return basis, F
 end
 
 function _reconstruct_original_inequality_info(

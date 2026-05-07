@@ -48,7 +48,7 @@ function _stochastic_crash_file()
     mkpath(root)
 
     timestamp = Dates.format(Dates.now(), "yyyymmddTHHMMSSsss")
-    crash_dir = mktempdir(root; prefix="crashed_$(timestamp)_")
+    crash_dir = mktempdir(root; prefix="crashed_$(timestamp)_", cleanup=false)
     return joinpath(crash_dir, "stochastic_program_failure.jls")
 end
 
