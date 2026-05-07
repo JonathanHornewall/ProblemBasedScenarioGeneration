@@ -22,9 +22,10 @@ struct ResourceAllocationOriginalCostVectorDecoder{TBaseScenario} <:
     scale::Float64
 end
 
-struct ResourceAllocationEconomicCostVectorDecoder{TProblem} <:
+struct ResourceAllocationEconomicCostVectorDecoder{TProblem,TH} <:
        ContextualDFL.VectorDecoder
     problem::TProblem
+    fixed_h_eq::TH
     epsilon::Float64
     allocation_scale::Float64
     unmet_scale::Float64
@@ -80,12 +81,19 @@ end
 
 function ResourceAllocationEconomicCostVectorDecoder(
     problem::ResourceAllocationProblem;
+    fixed_h_eq=nothing,
+    fixed_demand=nothing,
     epsilon=1e-4,
     allocation_scale=1.0,
     unmet_scale=1.0,
 )
     return ResourceAllocationEconomicCostVectorDecoder(
         problem,
+        _resource_allocation_fixed_h_eq(
+            base_scenario(problem),
+            fixed_h_eq,
+            fixed_demand,
+        ),
         Float64(epsilon),
         Float64(allocation_scale),
         Float64(unmet_scale),
@@ -159,6 +167,11 @@ function _resource_allocation_full_cost_width(decoder)
     return length(decoder.base_scenario.q)
 end
 
+function _resource_allocation_economic_cost_width(decoder)
+    resource_count, demand_count = size(decoder.problem.problem_data.service_rate_parameters)
+    return demand_count + resource_count * demand_count
+end
+
 function (decoder::ResourceAllocationOriginalCostVectorDecoder)(raw::AbstractVector{<:Real})
     demand_count = decoder.demand_count
     length(raw) == demand_count ||
@@ -220,7 +233,7 @@ function (decoder::ResourceAllocationEconomicCostVectorDecoder)(raw::AbstractVec
         scenario.W_ineq,
         scenario.T_eq,
         scenario.T_ineq,
-        scenario.h_eq,
+        decoder.fixed_h_eq,
         scenario.h_ineq,
         q,
     )
@@ -321,6 +334,27 @@ function _resource_allocation_full_raw_cost_pullback(decoder, raw_cost, dq)
     gradient .=
         view(dq, 1:expected_length) .*
         _resource_allocation_softplus_derivative.(view(raw_cost, 1:expected_length))
+    return gradient
+end
+
+function _resource_allocation_economic_raw_cost_pullback(decoder, raw_cost, dq)
+    data = decoder.problem.problem_data
+    resource_count, demand_count = size(data.service_rate_parameters)
+    expected_length = demand_count + resource_count * demand_count
+    gradient = zeros(promote_type(eltype(raw_cost), eltype(dq)), expected_length)
+
+    unmet_range = 1:demand_count
+    allocation_range = (demand_count + 1):expected_length
+
+    gradient[unmet_range] .=
+        decoder.unmet_scale .*
+        view(dq, unmet_range) .*
+        _resource_allocation_softplus_derivative.(view(raw_cost, unmet_range))
+    gradient[allocation_range] .=
+        decoder.allocation_scale .*
+        view(dq, allocation_range) .*
+        _resource_allocation_softplus_derivative.(view(raw_cost, allocation_range))
+
     return gradient
 end
 
@@ -440,6 +474,65 @@ function ChainRulesCore.rrule(
     end
 
     return output, full_cost_decode_pullback
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(ContextualDFL.decode_scenario_collection),
+    decoder::ResourceAllocationEconomicCostVectorDecoder,
+    raw_cost_vector::AbstractVector{<:Real};
+    nr_scenarios=nothing,
+)
+    isnothing(nr_scenarios) &&
+        throw(ArgumentError(
+            "ResourceAllocationEconomicCostVectorDecoder rrule requires explicit nr_scenarios.",
+        ))
+    nr_scenarios isa Integer && nr_scenarios > 0 ||
+        throw(ArgumentError("nr_scenarios must be a positive integer."))
+
+    scenario_width = _resource_allocation_economic_cost_width(decoder)
+    _resource_allocation_check_decoded_cost_length(
+        raw_cost_vector,
+        scenario_width,
+        nr_scenarios,
+    )
+    output = ContextualDFL.decode_scenario_collection(
+        decoder,
+        raw_cost_vector;
+        nr_scenarios=nr_scenarios,
+    )
+    project_raw_cost = ChainRulesCore.ProjectTo(raw_cost_vector)
+
+    function economic_cost_decode_pullback(output_tangent)
+        dq_array = ContextualDFL._array_cotangent(
+            output_tangent,
+            7,
+            output[7];
+            name=:q_array,
+        )
+        raw_matrix = reshape(raw_cost_vector, scenario_width, Int(nr_scenarios))
+        draw_matrix = zeros(
+            promote_type(eltype(raw_cost_vector), eltype(dq_array)),
+            scenario_width,
+            Int(nr_scenarios),
+        )
+
+        for scenario_index in 1:Int(nr_scenarios)
+            draw_matrix[:, scenario_index] =
+                _resource_allocation_economic_raw_cost_pullback(
+                    decoder,
+                    view(raw_matrix, :, scenario_index),
+                    view(dq_array, :, scenario_index),
+                )
+        end
+
+        return (
+            ChainRulesCore.NoTangent(),
+            ChainRulesCore.NoTangent(),
+            project_raw_cost(vec(draw_matrix)),
+        )
+    end
+
+    return output, economic_cost_decode_pullback
 end
 
 function _resource_allocation_check_decoded_cost_length(raw_cost_vector, scenario_width, nr_scenarios)

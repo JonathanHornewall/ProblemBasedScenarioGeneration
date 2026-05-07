@@ -105,12 +105,22 @@ const DETERMINISTIC_POLICY_NAMES = ("saa", "knn", "least_squares", "er_saa")
 const REPLICATED_POLICY_NAMES = ("cart", "nn", "ad", "ad_tree", "m5_ad")
 const DFL_RHO_VALUES = (0.1, 0.01, 0.001)
 const DFL_POLICY_NAMES = Tuple("dfl_mu0_rho$(rho)" for rho in DFL_RHO_VALUES)
+const CONVERTED_Q_POLICY_NAMES = ("spoplus_qconv", "dfl_qconv")
+const RESOURCE_ALLOCATION_DECODER_POLICY_NAMES = (
+    "dfl_ra_physical_cost",
+    "dfl_ra_full_cost",
+    "dfl_ra_economic_cost",
+)
 const CORE_POLICY_NAMES = (
     DETERMINISTIC_POLICY_NAMES...,
     REPLICATED_POLICY_NAMES...,
     DFL_POLICY_NAMES...,
 )
-const OPT_IN_POLICY_NAMES = ("lex_spo",)
+const OPT_IN_POLICY_NAMES = (
+    "lex_spo",
+    CONVERTED_Q_POLICY_NAMES...,
+    RESOURCE_ALLOCATION_DECODER_POLICY_NAMES...,
+)
 const POLICY_NAMES = (
     CORE_POLICY_NAMES...,
     OPT_IN_POLICY_NAMES...,
@@ -122,6 +132,8 @@ const DEFAULT_POLICY_NAMES = (
 const FULL_BASELINE_POLICY_NAMES = CORE_POLICY_NAMES
 const NN_BASELINE_VERSION = "nnv1"
 const DFL_BASELINE_VERSION = "dflrho_v1"
+const CONVERTED_Q_BASELINE_VERSION = "qconv_v1"
+const RESOURCE_ALLOCATION_DECODER_BASELINE_VERSION = "ra_cost_decoder_v1"
 const DEFAULT_REPLICA_SEEDS = (20260505, 20260506, 20260507)
 
 const CSV_COLUMNS = (
@@ -641,7 +653,7 @@ function configure_workers!(options)
     return nothing
 end
 
-pmap_or_map(f, jobs) = nworkers() == 0 ? map(f, jobs) : pmap(f, jobs)
+pmap_or_map(f, jobs) = nworkers() <= 1 ? map(f, jobs) : pmap(f, jobs)
 
 function policy_jobs(benchmarks, policies, options, timestamp)
     jobs = NamedTuple[]
@@ -686,9 +698,15 @@ function replica_specs_for_policy(policy, options)
 end
 
 is_replicated_policy(policy_name) =
-    policy_name in REPLICATED_POLICY_NAMES || is_dfl_policy(policy_name)
+    policy_name in REPLICATED_POLICY_NAMES ||
+    is_dfl_policy(policy_name) ||
+    is_converted_q_policy(policy_name) ||
+    is_resource_allocation_decoder_policy(policy_name)
 
 is_dfl_policy(policy_name) = policy_name in DFL_POLICY_NAMES
+is_converted_q_policy(policy_name) = policy_name in CONVERTED_Q_POLICY_NAMES
+is_resource_allocation_decoder_policy(policy_name) =
+    policy_name in RESOURCE_ALLOCATION_DECODER_POLICY_NAMES
 
 function dfl_rho_for_policy(policy_name)
     for rho in DFL_RHO_VALUES
@@ -788,6 +806,18 @@ function benchmark_solver()
     return ContextualDFL.Solver(ContextualDFL.IpoptSolver(), ContextualDFL.HiGHSSolver())
 end
 
+function full_parametric_scenario(base)
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=copy(base.W_eq),
+        W_ineq_xi=copy(base.W_ineq),
+        T_eq_xi=copy(base.T_eq),
+        T_ineq_xi=copy(base.T_ineq),
+        h_eq_xi=copy(base.h_eq),
+        h_ineq_xi=copy(base.h_ineq),
+        q_xi=copy(base.q),
+    )
+end
+
 function resource_artifact_cache_tag(name, config)
     name == "resource_allocation" || return "generated_test_optima"
     config.resource_allocation_test_source == "generated" && return "generated_test_optima"
@@ -823,6 +853,10 @@ function policy_result_cache_key(policy_name, data_cache_key, config, replica_se
         return join((data_cache_key, "policy_nn", neural_network_cache_tag(config; seed=replica_seed)), "__")
     is_dfl_policy(policy_name) &&
         return join((data_cache_key, "policy_dfl", dfl_cache_tag(policy_name, config, replica_seed)), "__")
+    is_converted_q_policy(policy_name) &&
+        return join((data_cache_key, "policy_qconv", converted_q_cache_tag(policy_name, config, replica_seed)), "__")
+    is_resource_allocation_decoder_policy(policy_name) &&
+        return join((data_cache_key, "policy_ra_decoder", resource_allocation_decoder_cache_tag(policy_name, config, replica_seed)), "__")
     policy_name == "lex_spo" &&
         return join((data_cache_key, "policy_lex_spo", lex_spo_cache_tag()), "__")
     policy_name in REPLICATED_POLICY_NAMES &&
@@ -2104,6 +2138,43 @@ function make_policy(
         policy_seed=policy_seed,
     )
 
+    is_converted_q_policy(policy_name) && return converted_q_policy(
+        policy_name,
+        benchmark,
+        problem,
+        train_data,
+        solver,
+        program,
+        decoder,
+        config;
+        cache_dir=cache_dir,
+        data_cache_key=data_cache_key,
+        refresh_policy_cache=refresh_policy_cache,
+        policy_seed=policy_seed,
+        history_dir=history_dir,
+        timestamp=timestamp,
+        replica_index=replica_index,
+    )
+
+    is_resource_allocation_decoder_policy(policy_name) &&
+        return resource_allocation_decoder_policy(
+            policy_name,
+            benchmark,
+            problem,
+            train_data,
+            solver,
+            program,
+            decoder,
+            config;
+            cache_dir=cache_dir,
+            data_cache_key=data_cache_key,
+            refresh_policy_cache=refresh_policy_cache,
+            policy_seed=policy_seed,
+            history_dir=history_dir,
+            timestamp=timestamp,
+            replica_index=replica_index,
+        )
+
     is_dfl_policy(policy_name) && return dfl_policy(
         policy_name,
         benchmark,
@@ -2724,6 +2795,597 @@ function train_resource_allocation_nn!(
     return model
 end
 
+struct LossWithSolverKwargs{TLoss,TKwargs}
+    loss::TLoss
+    solver_kwargs::TKwargs
+end
+
+function (wrapped::LossWithSolverKwargs)(
+    input_scenario_parameter_collection,
+    reference_scenario_parameter_collection,
+    mu_in=0,
+    mu_ref=mu_in;
+    kwargs...,
+)
+    return wrapped.loss(
+        input_scenario_parameter_collection,
+        reference_scenario_parameter_collection,
+        mu_in,
+        mu_ref;
+        merge((; kwargs...), wrapped.solver_kwargs)...,
+    )
+end
+
+struct SolverKwargScenarioGenerationPolicy{
+    TGenerator<:ContextualDFL.ScenarioGenerator,
+    TSolver,
+    TProgram,
+    TMu,
+    TRho,
+    TKwargs,
+} <: Policy
+    scenario_generator::TGenerator
+    solver::TSolver
+    program::TProgram
+    mu::TMu
+    rho::TRho
+    nr_scenarios::Int
+    solver_kwargs::TKwargs
+end
+
+function SolverKwargScenarioGenerationPolicy(
+    scenario_generator,
+    solver,
+    program;
+    mu=0,
+    rho=0,
+    nr_scenarios=1,
+    solver_kwargs=NamedTuple(),
+)
+    nr_scenarios isa Integer && nr_scenarios > 0 ||
+        throw(ArgumentError("nr_scenarios must be a positive integer."))
+    return SolverKwargScenarioGenerationPolicy(
+        scenario_generator,
+        solver,
+        program,
+        mu,
+        rho,
+        Int(nr_scenarios),
+        solver_kwargs,
+    )
+end
+
+function ContextualDFLExperiments.infer(
+    policy::SolverKwargScenarioGenerationPolicy,
+    context,
+)
+    scenario_parameters = policy.scenario_generator.neural_net(context)
+    W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+        ContextualDFL.decode_scenario_collection(
+            policy.scenario_generator.scenario_decoder,
+            scenario_parameters;
+            nr_scenarios=policy.nr_scenarios,
+        )
+
+    z, _, _, _, _, _ = ContextualDFL.solve(
+        policy.solver,
+        policy.program,
+        W_eq,
+        W_ineq,
+        T_eq,
+        T_ineq,
+        h_eq,
+        h_ineq,
+        q;
+        μ=policy.mu,
+        ρ=policy.rho,
+        policy.solver_kwargs...,
+    )
+
+    return z
+end
+
+function dfl_standard_schedule(epochs::Integer; rho::Real=0.0)
+    anneal_values = exp.(range(log(1e-1), log(1e-4); length=11))
+    epoch_counts = vcat(20, fill(10, length(anneal_values) - 1), 10)
+    rho_value = Float64(rho)
+    rows = NamedTuple[]
+    global_epoch = 0
+    for (stage_index, mu_value) in enumerate(anneal_values)
+        for _ in 1:epoch_counts[stage_index]
+            global_epoch += 1
+            push!(
+                rows,
+                (;
+                    epoch=global_epoch,
+                    mu_in=Float64(mu_value),
+                    mu_ref=Float64(mu_value),
+                    rho_in=rho_value,
+                    rho_ref=rho_value,
+                ),
+            )
+        end
+    end
+
+    final_mu = Float64(last(anneal_values))
+    for _ in 1:last(epoch_counts)
+        global_epoch += 1
+        push!(
+            rows,
+            (;
+                epoch=global_epoch,
+                mu_in=final_mu,
+                mu_ref=0.0,
+                rho_in=rho_value,
+                rho_ref=rho_value,
+            ),
+        )
+    end
+
+    epochs <= length(rows) ||
+        throw(ArgumentError("standard DFL schedule supports at most $(length(rows)) epochs."))
+    return rows[1:Int(epochs)]
+end
+
+function converted_q_baseline_settings(policy_name, config; seed)
+    return (;
+        version=CONVERTED_Q_BASELINE_VERSION,
+        policy_name=policy_name,
+        seed=Int(seed),
+        epochs=env_int("CDFL_BASELINE_QCONV_EPOCHS", config_value(config, :qconv_epochs, 50)),
+        scenarios=1,
+        batchsize=env_int("CDFL_BASELINE_QCONV_BATCHSIZE", 1),
+        hidden_dim=env_int("CDFL_BASELINE_QCONV_HIDDEN_DIM", 128),
+        depth=env_int("CDFL_BASELINE_QCONV_DEPTH", 3),
+        learning_rate=env_float("CDFL_BASELINE_QCONV_LEARNING_RATE", 1e-3),
+        rho=env_float("CDFL_BASELINE_QCONV_RHO", 1e-3),
+        conversion_mu=env_float("CDFL_BASELINE_QCONV_CONVERSION_MU", 1e-4),
+        conversion_rho=env_float("CDFL_BASELINE_QCONV_CONVERSION_RHO", 0.0),
+        lower_bound_margin=env_float("CDFL_BASELINE_QCONV_LOWER_BOUND_MARGIN", 1e-4),
+        constraint_tolerance=env_float("CDFL_BASELINE_QCONV_CONSTRAINT_TOLERANCE", 1e-8),
+        ipopt_max_iter=env_int("CDFL_BASELINE_QCONV_IPOPT_MAX_ITER", 10000),
+    )
+end
+
+function converted_q_cache_tag(policy_name, config, replica_seed)
+    settings = converted_q_baseline_settings(policy_name, config; seed=replica_seed)
+    return join(
+        (
+            settings.version,
+            policy_name,
+            "seed$(settings.seed)",
+            "epochs$(settings.epochs)",
+            "batch$(settings.batchsize)",
+            "hidden$(settings.hidden_dim)",
+            "depth$(settings.depth)",
+            "lr$(settings.learning_rate)",
+            "rho$(settings.rho)",
+            "convmu$(settings.conversion_mu)",
+            "convrho$(settings.conversion_rho)",
+            "lbmargin$(settings.lower_bound_margin)",
+            "maxiter$(settings.ipopt_max_iter)",
+        ),
+        "_",
+    )
+end
+
+function converted_q_model_cache_path(cache_dir, data_cache_key, settings; benchmark, policy_name)
+    key_material = join(
+        (
+            data_cache_key,
+            settings.version,
+            policy_name,
+            "seed$(settings.seed)",
+            "epochs$(settings.epochs)",
+            "batch$(settings.batchsize)",
+            "hidden$(settings.hidden_dim)",
+            "depth$(settings.depth)",
+            "lr$(settings.learning_rate)",
+            "rho$(settings.rho)",
+            "convmu$(settings.conversion_mu)",
+            "convrho$(settings.conversion_rho)",
+            "lbmargin$(settings.lower_bound_margin)",
+            "maxiter$(settings.ipopt_max_iter)",
+        ),
+        "__",
+    )
+    digest = bytes2hex(SHA.sha1(Vector{UInt8}(codeunits(key_material))))
+    safe_benchmark = replace(String(benchmark), r"[^A-Za-z0-9_]+" => "_")
+    safe_policy = replace(String(policy_name), r"[^A-Za-z0-9_]+" => "_")
+    return joinpath(cache_dir, "models", "$(safe_benchmark)_$(safe_policy)_$(digest).jls")
+end
+
+function converted_q_policy(
+    policy_name,
+    benchmark,
+    problem,
+    train_data,
+    solver,
+    program,
+    reference_decoder,
+    config;
+    cache_dir,
+    data_cache_key,
+    refresh_policy_cache=false,
+    policy_seed=Int(config.seed),
+    history_dir=nothing,
+    timestamp="",
+    replica_index=1,
+)
+    benchmark == "random_yield" ||
+        throw(ArgumentError("$(policy_name) is only defined for random_yield."))
+    settings = converted_q_baseline_settings(policy_name, config; seed=policy_seed)
+    base = full_parametric_scenario(base_scenario(problem))
+    model, q_lower_bound, history, loaded_from_cache, policy_cache_path =
+        load_or_train_converted_q_model(
+            policy_name,
+            benchmark,
+            train_data,
+            solver,
+            program,
+            reference_decoder,
+            base,
+            settings;
+            cache_dir=cache_dir,
+            data_cache_key=data_cache_key,
+            refresh_cache=refresh_policy_cache,
+        )
+    policy_history_path = write_dfl_policy_history(
+        history_dir,
+        timestamp,
+        benchmark,
+        policy_name,
+        replica_index,
+        policy_seed,
+        history,
+    )
+    decision_decoder = LowerBoundedQDecoder(base, q_lower_bound)
+    scenario_generator = ContextualDFL.ScenarioGenerator(
+        neural_net=model,
+        scenario_decoder=decision_decoder,
+    )
+    policy_mu = policy_name == "dfl_qconv" ?
+        last(dfl_standard_schedule(settings.epochs; rho=settings.rho)).mu_in :
+        0.0
+    policy = SolverKwargScenarioGenerationPolicy(
+        scenario_generator,
+        solver,
+        program;
+        mu=policy_mu,
+        rho=settings.rho,
+        nr_scenarios=settings.scenarios,
+        solver_kwargs=(;
+            max_iter=settings.ipopt_max_iter,
+            constraint_tolerance=settings.constraint_tolerance,
+        ),
+    )
+    return (;
+        policy=policy,
+        metadata=(;
+            loaded_policy_from_cache=loaded_from_cache,
+            policy_cache_path=policy_cache_path,
+            policy_history_path=policy_history_path,
+            mu_train=policy_name == "dfl_qconv" ? "standard" : 0.0,
+            rho_train=settings.rho,
+            mu_eval=0.0,
+            rho_eval=0.0,
+        ),
+    )
+end
+
+function load_or_train_converted_q_model(
+    policy_name,
+    benchmark,
+    train_data,
+    solver,
+    program,
+    reference_decoder,
+    base_scenario,
+    settings;
+    cache_dir,
+    data_cache_key,
+    refresh_cache=false,
+)
+    isnothing(cache_dir) &&
+        throw(ArgumentError("cache_dir must be provided for converted-q baselines."))
+    path = converted_q_model_cache_path(
+        cache_dir,
+        data_cache_key,
+        settings;
+        benchmark=benchmark,
+        policy_name=policy_name,
+    )
+    if isfile(path) && !refresh_cache
+        payload = open(Serialization.deserialize, path)
+        return payload.model,
+               payload.q_lower_bound,
+               hasproperty(payload, :history) ? payload.history : NamedTuple[],
+               true,
+               path
+    end
+
+    Random.seed!(settings.seed)
+    converted_dataset = convert_dataset_to_q(
+        train_data,
+        solver,
+        program,
+        reference_decoder,
+        base_scenario;
+        μ=settings.conversion_mu,
+        ρ=settings.conversion_rho,
+        max_iter=settings.ipopt_max_iter,
+        constraint_tolerance=settings.constraint_tolerance,
+    )
+    q_lower_bound = q_lower_bound_from_converted_dataset(
+        converted_dataset;
+        margin=settings.lower_bound_margin,
+    )
+    decision_decoder = LowerBoundedQDecoder(base_scenario, q_lower_bound)
+    model = build_generic_nn(
+        context_dimension_per_point(train_data),
+        length(q_lower_bound) * settings.scenarios;
+        hidden_dim=settings.hidden_dim,
+        depth=settings.depth,
+    )
+    history = train_converted_q_model!(
+        policy_name,
+        model,
+        decision_decoder,
+        solver,
+        program,
+        converted_dataset,
+        settings,
+    )
+    mkpath(dirname(path))
+    open(path, "w") do io
+        Serialization.serialize(
+            io,
+            (;
+                model=model,
+                q_lower_bound=q_lower_bound,
+                history=history,
+                settings=settings,
+                benchmark=benchmark,
+                policy_name=policy_name,
+            ),
+        )
+    end
+    return model, q_lower_bound, history, false, path
+end
+
+function train_converted_q_model!(
+    policy_name,
+    model,
+    decision_decoder,
+    solver,
+    program,
+    converted_dataset,
+    settings,
+)
+    settings.epochs == 0 && return NamedTuple[]
+    reference_decoder = ContextualDFL.ParametricDecoder()
+    solver_kwargs = (;
+        max_iter=settings.ipopt_max_iter,
+        constraint_tolerance=settings.constraint_tolerance,
+    )
+    rng = Random.MersenneTwister(settings.seed)
+
+    if policy_name == "spoplus_qconv"
+        base_loss = ContextualDFL.SPOPlusLoss(
+            decision_decoder,
+            reference_decoder,
+            solver,
+            program;
+            nr_scenarios=settings.scenarios,
+        )
+        loss = LossWithSolverKwargs(base_loss, solver_kwargs)
+        result = ContextualDFL.train!(
+            model,
+            loss,
+            nothing,
+            fill(0.0, settings.epochs),
+            converted_dataset;
+            optimizer_type=Flux.Adam,
+            learning_rate=settings.learning_rate,
+            epochs=settings.epochs,
+            batchsize=settings.batchsize,
+            display_iterations=false,
+            verbose=false,
+            display_plot=false,
+            shuffle=false,
+            rng=rng,
+            reset_optimizer_each_epoch=true,
+            nr_scenarios=settings.scenarios,
+            rho_in_schedule=fill(settings.rho, settings.epochs),
+            rho_ref_schedule=fill(settings.rho, settings.epochs),
+        )
+        return result.history
+    elseif policy_name == "dfl_qconv"
+        base_loss = ContextualDFL.DflScenLoss(
+            decision_decoder,
+            reference_decoder,
+            solver,
+            program;
+            nr_scenarios=settings.scenarios,
+        )
+        loss = LossWithSolverKwargs(base_loss, solver_kwargs)
+        schedule = dfl_standard_schedule(settings.epochs; rho=settings.rho)
+        result = ContextualDFL.train!(
+            model,
+            loss,
+            nothing,
+            Float64[row.mu_in for row in schedule],
+            converted_dataset;
+            mu_ref_schedule=Float64[row.mu_ref for row in schedule],
+            optimizer_type=Flux.Adam,
+            learning_rate=settings.learning_rate,
+            epochs=settings.epochs,
+            batchsize=settings.batchsize,
+            display_iterations=false,
+            verbose=false,
+            display_plot=false,
+            shuffle=false,
+            rng=rng,
+            reset_optimizer_each_epoch=true,
+            nr_scenarios=settings.scenarios,
+            rho_in_schedule=Float64[row.rho_in for row in schedule],
+            rho_ref_schedule=Float64[row.rho_ref for row in schedule],
+        )
+        return result.history
+    end
+
+    throw(ArgumentError("Unknown converted-q policy $(repr(policy_name))."))
+end
+
+function resource_allocation_decoder_settings(policy_name; seed)
+    return (;
+        version=RESOURCE_ALLOCATION_DECODER_BASELINE_VERSION,
+        policy_name=policy_name,
+        seed=Int(seed),
+        rho=env_float("CDFL_BASELINE_RA_DECODER_RHO", 1e-3),
+        epochs=env_int(
+            "CDFL_BASELINE_RA_DECODER_EPOCHS",
+            env_int("CDFL_BASELINE_DFL_EPOCHS", 50),
+        ),
+        scenarios=env_int("CDFL_BASELINE_RA_DECODER_SCENARIOS", 1),
+        batchsize=env_int("CDFL_BASELINE_RA_DECODER_BATCHSIZE", 1),
+        hidden_dim=env_int("CDFL_BASELINE_RA_DECODER_HIDDEN_DIM", 128),
+        depth=env_int("CDFL_BASELINE_RA_DECODER_DEPTH", 3),
+        learning_rate=env_float("CDFL_BASELINE_RA_DECODER_LEARNING_RATE", 1e-3),
+        constraint_tolerance=env_float("CDFL_BASELINE_RA_DECODER_CONSTRAINT_TOLERANCE", 1e-8),
+        ipopt_max_iter=env_int("CDFL_BASELINE_RA_DECODER_IPOPT_MAX_ITER", 10000),
+    )
+end
+
+function resource_allocation_decoder_cache_tag(policy_name, config, replica_seed)
+    settings = resource_allocation_decoder_settings(policy_name; seed=replica_seed)
+    return join(
+        (
+            settings.version,
+            policy_name,
+            "seed$(settings.seed)",
+            "epochs$(settings.epochs)",
+            "scenarios$(settings.scenarios)",
+            "batch$(settings.batchsize)",
+            "hidden$(settings.hidden_dim)",
+            "depth$(settings.depth)",
+            "lr$(settings.learning_rate)",
+            "rho$(settings.rho)",
+            "maxiter$(settings.ipopt_max_iter)",
+        ),
+        "_",
+    )
+end
+
+function resource_allocation_decoder_input_spec(policy_name, problem)
+    resource_count, demand_count = size(problem.problem_data.service_rate_parameters)
+    allocation_count = resource_count * demand_count
+    fixed_demand = ones(Float64, demand_count)
+
+    if policy_name == "dfl_ra_physical_cost"
+        return (;
+            decoder=ResourceAllocationPhysicalCostVectorDecoder(
+                problem;
+                fixed_demand=fixed_demand,
+            ),
+            width=demand_count + allocation_count,
+        )
+    elseif policy_name == "dfl_ra_full_cost"
+        return (;
+            decoder=ResourceAllocationFullCostVectorDecoder(
+                problem;
+                fixed_demand=fixed_demand,
+            ),
+            width=length(base_scenario(problem).q),
+        )
+    elseif policy_name == "dfl_ra_economic_cost"
+        return (;
+            decoder=ResourceAllocationEconomicCostVectorDecoder(
+                problem;
+                fixed_demand=fixed_demand,
+            ),
+            width=demand_count + allocation_count,
+        )
+    end
+
+    throw(ArgumentError("Unknown resource-allocation decoder policy $(repr(policy_name))."))
+end
+
+function resource_allocation_decoder_policy(
+    policy_name,
+    benchmark,
+    problem,
+    train_data,
+    solver,
+    program,
+    reference_decoder,
+    config;
+    cache_dir,
+    data_cache_key,
+    refresh_policy_cache=false,
+    policy_seed=Int(config.seed),
+    history_dir=nothing,
+    timestamp="",
+    replica_index=1,
+)
+    benchmark == "resource_allocation" ||
+        throw(ArgumentError("$(policy_name) is only defined for resource_allocation."))
+    settings = resource_allocation_decoder_settings(policy_name; seed=policy_seed)
+    input_spec = resource_allocation_decoder_input_spec(policy_name, problem)
+    model, history, loaded_from_cache, policy_cache_path = load_or_train_dfl_model(
+        policy_name,
+        benchmark,
+        problem,
+        train_data,
+        solver,
+        program,
+        reference_decoder,
+        input_spec.decoder,
+        input_spec.width,
+        settings;
+        cache_dir=cache_dir,
+        data_cache_key=data_cache_key,
+        refresh_cache=refresh_policy_cache,
+    )
+    policy_history_path = write_dfl_policy_history(
+        history_dir,
+        timestamp,
+        benchmark,
+        policy_name,
+        replica_index,
+        policy_seed,
+        history,
+    )
+    scenario_generator = ContextualDFL.ScenarioGenerator(
+        neural_net=model,
+        scenario_decoder=input_spec.decoder,
+    )
+    policy = SolverKwargScenarioGenerationPolicy(
+        scenario_generator,
+        solver,
+        program;
+        mu=0.0,
+        rho=settings.rho,
+        nr_scenarios=settings.scenarios,
+        solver_kwargs=(;
+            max_iter=settings.ipopt_max_iter,
+            constraint_tolerance=settings.constraint_tolerance,
+        ),
+    )
+    return (;
+        policy=policy,
+        metadata=(;
+            loaded_policy_from_cache=loaded_from_cache,
+            policy_cache_path=policy_cache_path,
+            policy_history_path=policy_history_path,
+            mu_train=0.0,
+            rho_train=settings.rho,
+            mu_eval=0.0,
+            rho_eval=0.0,
+        ),
+    )
+end
+
 function dfl_policy(
     policy_name,
     benchmark,
@@ -2952,6 +3614,7 @@ function dfl_model_cache_path(cache_dir, data_cache_key, settings; benchmark, po
             "depth$(settings.depth)",
             "lr$(settings.learning_rate)",
             "rho$(settings.rho)",
+            dfl_model_cache_extra_tags(settings)...,
         ),
         "__",
     )
@@ -2959,6 +3622,24 @@ function dfl_model_cache_path(cache_dir, data_cache_key, settings; benchmark, po
     safe_benchmark = replace(String(benchmark), r"[^A-Za-z0-9_]+" => "_")
     safe_policy = replace(String(policy_name), r"[^A-Za-z0-9_]+" => "_")
     return joinpath(cache_dir, "models", "$(safe_benchmark)_$(safe_policy)_$(digest).jls")
+end
+
+function dfl_model_cache_extra_tags(settings)
+    tags = String[]
+    hasproperty(settings, :constraint_tolerance) &&
+        push!(tags, "ctol$(settings.constraint_tolerance)")
+    hasproperty(settings, :ipopt_max_iter) &&
+        push!(tags, "maxiter$(settings.ipopt_max_iter)")
+    return Tuple(tags)
+end
+
+function solver_kwargs_from_settings(settings)
+    pairs = Pair{Symbol,Any}[]
+    hasproperty(settings, :constraint_tolerance) &&
+        push!(pairs, :constraint_tolerance => settings.constraint_tolerance)
+    hasproperty(settings, :ipopt_max_iter) &&
+        push!(pairs, :max_iter => settings.ipopt_max_iter)
+    return (; pairs...)
 end
 
 function train_dfl_model!(
@@ -2978,6 +3659,10 @@ function train_dfl_model!(
         program;
         nr_scenarios=settings.scenarios,
     )
+    solver_kwargs = solver_kwargs_from_settings(settings)
+    if !isempty(keys(solver_kwargs))
+        loss = LossWithSolverKwargs(loss, solver_kwargs)
+    end
     rng = Random.MersenneTwister(settings.seed)
     result = ContextualDFL.train!(
         model,

@@ -10,6 +10,7 @@ RUNNER="${SCRIPT_DIR}/run_baselines.jl"
 AGGREGATOR="${SCRIPT_DIR}/aggregate_tiny_full_baselines.jl"
 ARTIFACT_DIR="${ARTIFACT_DIR:-${SCRIPT_DIR}/artifacts/tiny_30ctx_5x100_seed20260505}"
 RESULT_DIR="${RESULT_DIR:-${SCRIPT_DIR}/results/tiny_30ctx_5x100_full_baselines_20260507}"
+QCONV_RESULT_DIR="${QCONV_RESULT_DIR:-${SCRIPT_DIR}/results/tiny_30ctx_5x100_qconv_and_ra_decoders_20260507}"
 CACHE_DIR="${CACHE_DIR:-${SCRIPT_DIR}/cache_tiny_30ctx_5x100_seed20260505}"
 LOCAL_WORKERS="${LOCAL_WORKERS:-50}"
 REPLICA_SEEDS="${REPLICA_SEEDS:-20260505,20260506,20260507}"
@@ -28,10 +29,12 @@ Commands:
   smoke                run the three required smoke rows
   full-ibm96c1         run resource/shipment/newsvendor full grid
   full-ibm96c2         run transshipment/random-yield full grid
+  qconv-ibm96c1        run converted-q random-yield rows
+  qconv-ibm96c2        run resource-allocation cost-decoder rows
   aggregate            merge and validate final result CSVs
 
 Environment:
-  JULIA, ARTIFACT_DIR, RESULT_DIR, CACHE_DIR, LOCAL_WORKERS, REPLICA_SEEDS, HOSTS
+  JULIA, ARTIFACT_DIR, RESULT_DIR, QCONV_RESULT_DIR, CACHE_DIR, LOCAL_WORKERS, REPLICA_SEEDS, HOSTS
 USAGE
 }
 
@@ -104,6 +107,34 @@ full_ibm96c2() {
     --replica-seeds "$REPLICA_SEEDS"
 }
 
+qconv_ibm96c1() {
+  mkdir -p "$QCONV_RESULT_DIR/ibm-96c-1"
+  CDFL_BASELINE_QCONV_EPOCHS="${CDFL_BASELINE_QCONV_EPOCHS:-50}" \
+  julia_runner \
+    --use-tiny-data-artifacts \
+    --tiny-artifact-dir "$ARTIFACT_DIR" \
+    --cache-dir "$CACHE_DIR" \
+    --output-dir "$QCONV_RESULT_DIR/ibm-96c-1" \
+    --benchmarks random_yield \
+    --policies spoplus_qconv,dfl_qconv \
+    --local-workers "$LOCAL_WORKERS" \
+    --replica-seeds "${QCONV_REPLICA_SEEDS:-20260505,20260506}"
+}
+
+qconv_ibm96c2() {
+  mkdir -p "$QCONV_RESULT_DIR/ibm-96c-2"
+  CDFL_BASELINE_RA_DECODER_EPOCHS="${CDFL_BASELINE_RA_DECODER_EPOCHS:-50}" \
+  julia_runner \
+    --use-tiny-data-artifacts \
+    --tiny-artifact-dir "$ARTIFACT_DIR" \
+    --cache-dir "$CACHE_DIR" \
+    --output-dir "$QCONV_RESULT_DIR/ibm-96c-2" \
+    --benchmarks resource_allocation \
+    --policies dfl_ra_physical_cost,dfl_ra_full_cost,dfl_ra_economic_cost \
+    --local-workers "$LOCAL_WORKERS" \
+    --replica-seeds "${QCONV_REPLICA_SEEDS:-20260505,20260506}"
+}
+
 sync_code() {
   for host in $HOSTS; do
     rsync -az \
@@ -141,6 +172,8 @@ case "$command" in
   smoke) smoke ;;
   full-ibm96c1) full_ibm96c1 ;;
   full-ibm96c2) full_ibm96c2 ;;
+  qconv-ibm96c1) qconv_ibm96c1 ;;
+  qconv-ibm96c2) qconv_ibm96c2 ;;
   aggregate) aggregate ;;
   ""|help|-h|--help) usage ;;
   *) usage >&2; exit 2 ;;
