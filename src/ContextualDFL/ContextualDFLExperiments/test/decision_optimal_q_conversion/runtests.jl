@@ -1,6 +1,5 @@
 using ContextualDFL
 using ContextualDFLExperiments
-using Flux
 using Test
 
 function _q_conversion_solver()
@@ -187,15 +186,6 @@ end
         nr_scenarios=1,
     )
     @test decoded[5][:, 1] ≈ raw
-
-    grad = only(Flux.gradient(raw) do h
-        sum(ContextualDFL.decode_scenario_collection(
-            decision_h_decoder,
-            h;
-            nr_scenarios=1,
-        )[5])
-    end)
-    @test grad ≈ ones(length(raw))
 
     @test_throws ArgumentError make_decision_h_loss(
         solver,

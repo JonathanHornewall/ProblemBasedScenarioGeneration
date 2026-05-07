@@ -498,7 +498,10 @@ struct DecisionOptimalHDecoder{TBase} <: ContextualDFL.VectorDecoder
     base_scenario::TBase
 end
 
-function DecisionOptimalHDecoder(base_scenario; atol::Real=1e-10)
+function DecisionOptimalHDecoder(
+    base_scenario::ContextualDFL.ParametricScenario;
+    atol::Real=1e-10,
+)
     base = _base_scenario_arrays_for_h_conversion(base_scenario; atol=atol)
     return DecisionOptimalHDecoder{typeof(base)}(base)
 end
@@ -604,7 +607,7 @@ function prepare_decision_h_dataset(
     original_decoder,
     base_scenario;
     probabilities_by_datapoint=nothing,
-    loss=:dfl_scen,
+    loss=nothing,
     atol::Real=1e-10,
     solve_kwargs...,
 )

@@ -412,6 +412,155 @@ function infer(policy::DecisionFocusedLinearPolicy, context)
     )
 end
 
+"""
+    LexSPOLinearPolicy(data_set, solver, program, parametric_decoder; kwargs...)
+
+Lex-SPO-style direct empirical linear RHS baseline. The policy starts from the
+same ordinary least-squares RHS predictor as `LeastSquaresPolicy`, then
+optionally refines those coefficients by minimizing realized downstream
+training cost. Predicted single-scenario LPs are solved with deterministic
+lexicographic tie-breaking on first-stage decisions.
+
+This is a rushed direct empirical baseline, not a full Estes-Richard convex
+surrogate or cutting-plane implementation. It supports RHS uncertainty only:
+`:h_eq_xi`, `:h_ineq_xi`, or a tuple containing only those components.
+"""
+struct LexSPOLinearPolicy{
+    TCoefficients,
+    TTemplate,
+    TTargetComponent,
+    TSolver,
+    TProgram,
+    TDecoder,
+    TPostprocess,
+    TTrainingTransform,
+    TOptimizationResult,
+    TKwargs,
+    TMetadata,
+} <: Policy
+    coefficients::TCoefficients
+    initial_coefficients::TCoefficients
+    scenario_template::TTemplate
+    target_component::TTargetComponent
+    target_length::Int
+    solver::TSolver
+    program::TProgram
+    parametric_decoder::TDecoder
+    postprocess_prediction::TPostprocess
+    training_prediction_transform::TTrainingTransform
+    optimization_result::TOptimizationResult
+    lex_objective_atol::Float64
+    lex_objective_rtol::Float64
+    lex_variable_atol::Float64
+    solve_kwargs::TKwargs
+    metadata::TMetadata
+end
+
+function LexSPOLinearPolicy(
+    contextual_data_set::AbstractVector,
+    solver,
+    program,
+    parametric_decoder;
+    target_component=:h_eq_xi,
+    postprocess_prediction=identity,
+    training_prediction_transform=nothing,
+    validate_fixed_components=true,
+    optimize=true,
+    optimizer=Optim.NelderMead(),
+    optimizer_options=Optim.Options(f_reltol=1e-4),
+    lex_objective_atol=1e-7,
+    lex_objective_rtol=1e-7,
+    lex_variable_atol=1e-7,
+    mu=0,
+    rho=0,
+    kwargs...,
+)
+    iszero(mu) && iszero(rho) ||
+        throw(ArgumentError("LexSPOLinearPolicy currently supports only unsmoothed LP solves: mu=0, rho=0."))
+    _check_lex_spo_tolerances(lex_objective_atol, lex_objective_rtol, lex_variable_atol)
+    solve_kwargs = (; kwargs...)
+    _check_lex_spo_solve_kwargs(solve_kwargs)
+    checked_target_component = _checked_lex_spo_target_component(target_component)
+
+    regression = _fit_scenario_target_regression(
+        contextual_data_set,
+        checked_target_component;
+        validate_fixed_components=validate_fixed_components,
+    )
+    active_transform = training_prediction_transform === nothing ?
+        _zero_penalty_training_transform :
+        training_prediction_transform
+
+    coefficients = copy(regression.coefficients)
+    optimization_result = nothing
+    if optimize
+        coefficients, optimization_result = _fit_lex_spo_coefficients(
+            regression.coefficients,
+            regression.contexts,
+            regression.scenario_templates,
+            regression.target_component,
+            regression.target_length,
+            solver,
+            program,
+            parametric_decoder,
+            active_transform;
+            optimizer=optimizer,
+            optimizer_options=optimizer_options,
+            lex_objective_atol=lex_objective_atol,
+            lex_objective_rtol=lex_objective_rtol,
+            lex_variable_atol=lex_variable_atol,
+            solve_kwargs...,
+        )
+    end
+
+    return LexSPOLinearPolicy(
+        coefficients,
+        regression.coefficients,
+        first(regression.scenario_templates),
+        regression.target_component,
+        regression.target_length,
+        solver,
+        program,
+        parametric_decoder,
+        postprocess_prediction,
+        active_transform,
+        optimization_result,
+        Float64(lex_objective_atol),
+        Float64(lex_objective_rtol),
+        Float64(lex_variable_atol),
+        solve_kwargs,
+        (;
+            target_component=regression.target_component,
+            optimize=optimize,
+            rhs_only=true,
+        ),
+    )
+end
+
+function infer(policy::LexSPOLinearPolicy, context)
+    target_vector = _processed_prediction(
+        policy.postprocess_prediction,
+        _predict_target(policy.coefficients, context),
+        policy.target_length,
+    )
+    scenario = _scenario_from_target_vector(
+        policy.scenario_template,
+        policy.target_component,
+        target_vector,
+    )
+
+    return _lex_solve_scenario_collection(
+        policy.solver,
+        policy.program,
+        policy.parametric_decoder,
+        [scenario];
+        lex_objective_atol=policy.lex_objective_atol,
+        lex_objective_rtol=policy.lex_objective_rtol,
+        lex_variable_atol=policy.lex_variable_atol,
+        policy.solve_kwargs...,
+    )
+end
+
 function nonnegative_prediction_penalty_transform(; lower_bound=0.0, penalty_weight=1000.0)
     checked_lower_bound = Float64(lower_bound)
     checked_penalty_weight = Float64(penalty_weight)
@@ -1380,6 +1529,107 @@ function _fit_decision_focused_coefficients(
     return coefficients, optimization_result
 end
 
+function _lex_spo_linear_objective(
+    flat_coefficients,
+    coefficient_size,
+    contexts,
+    scenario_templates,
+    target_component,
+    target_length,
+    solver,
+    program,
+    parametric_decoder,
+    training_prediction_transform;
+    lex_objective_atol,
+    lex_objective_rtol,
+    lex_variable_atol,
+    kwargs...,
+)
+    coefficients = reshape(collect(flat_coefficients), coefficient_size)
+    total = 0.0
+    for index in axes(contexts, 1)
+        raw_prediction = _predict_target(coefficients, view(contexts, index, :))
+        processed_prediction = _processed_training_prediction(
+            training_prediction_transform,
+            raw_prediction,
+            target_length,
+        )
+        predicted_scenario = _scenario_from_target_vector(
+            scenario_templates[index],
+            target_component,
+            processed_prediction.target,
+        )
+        decision = _lex_solve_scenario_collection(
+            solver,
+            program,
+            parametric_decoder,
+            [predicted_scenario];
+            lex_objective_atol=lex_objective_atol,
+            lex_objective_rtol=lex_objective_rtol,
+            lex_variable_atol=lex_variable_atol,
+            kwargs...,
+        )
+        true_cost = _scenario_collection_cost(
+            solver,
+            program,
+            parametric_decoder,
+            decision,
+            [scenario_templates[index]];
+            mu=0,
+            rho=0,
+            kwargs...,
+        )
+        total += true_cost + processed_prediction.penalty
+    end
+    return total / size(contexts, 1)
+end
+
+function _fit_lex_spo_coefficients(
+    initial_coefficients,
+    contexts,
+    scenario_templates,
+    target_component,
+    target_length,
+    solver,
+    program,
+    parametric_decoder,
+    training_prediction_transform;
+    optimizer,
+    optimizer_options,
+    lex_objective_atol,
+    lex_objective_rtol,
+    lex_variable_atol,
+    kwargs...,
+)
+    objective = θ -> _lex_spo_linear_objective(
+        θ,
+        size(initial_coefficients),
+        contexts,
+        scenario_templates,
+        target_component,
+        target_length,
+        solver,
+        program,
+        parametric_decoder,
+        training_prediction_transform;
+        lex_objective_atol=lex_objective_atol,
+        lex_objective_rtol=lex_objective_rtol,
+        lex_variable_atol=lex_variable_atol,
+        kwargs...,
+    )
+    optimization_result = Optim.optimize(
+        objective,
+        vec(copy(initial_coefficients)),
+        optimizer,
+        optimizer_options,
+    )
+    coefficients = reshape(
+        collect(Optim.minimizer(optimization_result)),
+        size(initial_coefficients),
+    )
+    return coefficients, optimization_result
+end
+
 _zero_penalty_training_transform(target) = (; target=target, penalty=0.0)
 
 function _processed_training_prediction(
@@ -1864,6 +2114,19 @@ function _checked_target_component(target_component)
     return length(components) == 1 ? only(components) : components
 end
 
+function _checked_lex_spo_target_component(target_component)
+    checked_target_component = _checked_target_component(target_component)
+    components = _target_component_tuple(checked_target_component)
+    allowed_components = (:h_eq_xi, :h_ineq_xi)
+    unsupported_components = setdiff(components, allowed_components)
+    isempty(unsupported_components) ||
+        throw(ArgumentError(
+            "LexSPOLinearPolicy currently supports only RHS target components " *
+            "(:h_eq_xi, :h_ineq_xi); got $(repr(checked_target_component)).",
+        ))
+    return checked_target_component
+end
+
 function _target_component_tuple(target_component)
     if target_component isa Symbol || target_component isa AbstractString
         return (Symbol(target_component),)
@@ -2109,4 +2372,166 @@ function _solve_scenario_collection(
     )
 
     return collect(z)
+end
+
+function _lex_solve_scenario_collection(
+    solver,
+    program,
+    parametric_decoder,
+    scenario_parameters::AbstractVector{<:ContextualDFL.ParametricScenario};
+    lex_objective_atol=1e-7,
+    lex_objective_rtol=1e-7,
+    lex_variable_atol=1e-7,
+    kwargs...,
+)
+    _check_lex_spo_tolerances(lex_objective_atol, lex_objective_rtol, lex_variable_atol)
+    _check_lex_spo_solve_kwargs((; kwargs...))
+    checked_scenarios = _checked_scenario_collection(scenario_parameters)
+    W_eq, W_ineq, T_eq, T_ineq, h_eq, h_ineq, q =
+        ContextualDFL.decode_scenario_collection(parametric_decoder, checked_scenarios)
+    lp = ContextualDFL.construct_lp(
+        program,
+        W_eq,
+        W_ineq,
+        T_eq,
+        T_ineq,
+        h_eq,
+        h_ineq,
+        q,
+    )
+
+    base_result = _lex_solve_lp_or_throw(solver, lp; kwargs...)
+    base_objective = Float64(base_result.objective_value)
+    isfinite(base_objective) ||
+        throw(ArgumentError("Lex-SPO base LP returned non-finite objective value $(base_objective)."))
+    optimal_ub = base_objective +
+                 Float64(lex_objective_atol) +
+                 Float64(lex_objective_rtol) * abs(base_objective)
+
+    first_stage_count = length(program.first_stage_lp.c)
+    first_stage_count == 0 && return Float64[]
+
+    fixed_z = zeros(Float64, first_stage_count)
+    n_variables = length(lp.c)
+    for coordinate in 1:first_stage_count
+        coordinate_objective = zeros(Float64, n_variables)
+        coordinate_objective[coordinate] = 1.0
+        lex_lp = _lex_lp_with_coordinate_fixes(
+            lp,
+            coordinate_objective,
+            optimal_ub,
+            fixed_z,
+            coordinate - 1,
+            Float64(lex_variable_atol),
+        )
+        lex_result = _lex_solve_lp_or_throw(solver, lex_lp; kwargs...)
+        length(lex_result.z) >= first_stage_count ||
+            throw(ArgumentError(
+                "Lex-SPO LP returned $(length(lex_result.z)) variables; " *
+                "expected at least $(first_stage_count).",
+            ))
+        fixed_z[coordinate] = Float64(lex_result.z[coordinate])
+    end
+
+    return collect(fixed_z)
+end
+
+function _lex_solve_lp_or_throw(solver, lp; kwargs...)
+    try
+        result = ContextualDFL.solve(solver, lp; μ=0, ρ=0, kwargs...)
+        status = hasproperty(result, :status) ? string(result.status) : ""
+        status in ("OPTIMAL", "LOCALLY_SOLVED") ||
+            throw(ArgumentError("Lex-SPO LP solve failed with status $(status)."))
+        return result
+    catch error
+        error isa ArgumentError && rethrow()
+        throw(ArgumentError("Lex-SPO LP solve failed: $(sprint(showerror, error))"))
+    end
+end
+
+function _lex_lp_with_coordinate_fixes(
+    lp,
+    objective,
+    optimal_objective_upper_bound,
+    fixed_z,
+    fixed_count::Integer,
+    lex_variable_atol,
+)
+    n_variables = length(lp.c)
+    objective_row = ContextualDFL.sparse(reshape(Float64.(lp.c), 1, n_variables))
+    fix_rows, fix_rhs = _lex_coordinate_fix_rows(
+        fixed_z,
+        fixed_count,
+        n_variables,
+        lex_variable_atol,
+    )
+
+    return ContextualDFL.LP(
+        ContextualDFL.sparse(lp.A_eq),
+        ContextualDFL.sparse(vcat(
+            ContextualDFL.sparse(lp.A_ineq),
+            objective_row,
+            fix_rows,
+        )),
+        Float64.(lp.b_eq),
+        vcat(Float64.(lp.b_ineq), [Float64(optimal_objective_upper_bound)], fix_rhs),
+        Float64.(objective),
+    )
+end
+
+function _lex_coordinate_fix_rows(
+    fixed_z,
+    fixed_count::Integer,
+    n_variables::Integer,
+    lex_variable_atol,
+)
+    checked_fixed_count = Int(fixed_count)
+    checked_fixed_count >= 0 ||
+        throw(ArgumentError("fixed_count must be non-negative."))
+    checked_fixed_count <= length(fixed_z) ||
+        throw(DimensionMismatch("fixed_count exceeds the number of fixed coordinates."))
+    checked_fixed_count == 0 &&
+        return ContextualDFL.spzeros(Float64, 0, n_variables), Float64[]
+
+    rows = ContextualDFL.spzeros(Float64, 2 * checked_fixed_count, n_variables)
+    rhs = zeros(Float64, 2 * checked_fixed_count)
+
+    for coordinate in 1:checked_fixed_count
+        upper_row = 2 * coordinate - 1
+        lower_row = 2 * coordinate
+
+        rows[upper_row, coordinate] = 1.0
+        rhs[upper_row] = Float64(fixed_z[coordinate]) + Float64(lex_variable_atol)
+        rows[lower_row, coordinate] = -1.0
+        rhs[lower_row] = -Float64(fixed_z[coordinate]) + Float64(lex_variable_atol)
+    end
+
+    return rows, rhs
+end
+
+function _check_lex_spo_tolerances(
+    lex_objective_atol,
+    lex_objective_rtol,
+    lex_variable_atol,
+)
+    for (name, value) in (
+        (:lex_objective_atol, lex_objective_atol),
+        (:lex_objective_rtol, lex_objective_rtol),
+        (:lex_variable_atol, lex_variable_atol),
+    )
+        checked_value = Float64(value)
+        isfinite(checked_value) && checked_value >= 0.0 ||
+            throw(ArgumentError("$(name) must be finite and non-negative."))
+    end
+    return nothing
+end
+
+function _check_lex_spo_solve_kwargs(solve_kwargs)
+    unsupported = [key for key in keys(solve_kwargs) if key in (:mu, :rho, :μ, :ρ)]
+    isempty(unsupported) ||
+        throw(ArgumentError(
+            "LexSPOLinearPolicy currently supports only unsmoothed LP solves; " *
+            "do not pass $(unsupported).",
+        ))
+    return nothing
 end

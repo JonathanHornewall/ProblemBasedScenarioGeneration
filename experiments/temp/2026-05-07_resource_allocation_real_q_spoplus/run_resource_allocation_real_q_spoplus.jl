@@ -1,12 +1,12 @@
 using ContextualDFL
 using ContextualDFLExperiments
 using Dates
-using Flux
 using Random
 using Serialization
 using Sockets
 using Statistics
 
+const Flux = ContextualDFL.Flux
 const DEFAULT_OUTPUT_DIR = joinpath(@__DIR__, "results")
 
 function parse_args(args)
@@ -42,6 +42,8 @@ function parse_args(args)
         depth=parse(Int, get(options, "depth", "3")),
         learning_rate=parse(Float64, get(options, "learning-rate", "1e-3")),
         rho=parse(Float64, get(options, "rho", "0.0")),
+        conversion_mu=parse(Float64, get(options, "conversion-mu", "1e-3")),
+        conversion_rho=parse(Float64, get(options, "conversion-rho", "0.0")),
         lower_bound_margin=parse(Float64, get(options, "lower-bound-margin", "1e-4")),
         constraint_tolerance=parse(Float64, get(options, "constraint-tolerance", "1e-8")),
         output_dir=abspath(get(options, "output-dir", DEFAULT_OUTPUT_DIR)),
@@ -55,6 +57,24 @@ function full_parametric_scenario(base)
         T_eq_xi=copy(base.T_eq),
         T_ineq_xi=copy(base.T_ineq),
         h_eq_xi=copy(base.h_eq),
+        h_ineq_xi=copy(base.h_ineq),
+        q_xi=copy(base.q),
+    )
+end
+
+function unit_demand_base_scenario(problem, base)
+    h_eq = copy(base.h_eq)
+    resource_count = length(problem.problem_data.first_stage_costs)
+    demand_count = length(problem.problem_data.second_stage_costs)
+    h_eq[1:resource_count] .= 0.0
+    h_eq[(resource_count + 1):(resource_count + demand_count)] .= 1.0
+
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=copy(base.W_eq),
+        W_ineq_xi=copy(base.W_ineq),
+        T_eq_xi=copy(base.T_eq),
+        T_ineq_xi=copy(base.T_ineq),
+        h_eq_xi=h_eq,
         h_ineq_xi=copy(base.h_ineq),
         q_xi=copy(base.q),
     )
@@ -211,10 +231,14 @@ function main(args=ARGS)
         ContextualDFLExperiments.default_resource_allocation_problem_data(),
     )
     program = ContextualDFLExperiments.stochastic_program(problem)
-    base = full_parametric_scenario(ContextualDFLExperiments.base_scenario(problem))
+    base = unit_demand_base_scenario(
+        problem,
+        ContextualDFLExperiments.base_scenario(problem),
+    )
     original_decoder = ContextualDFLExperiments.ResourceAllocationDemandParametricDecoder(problem)
 
     logmsg("run_id=$(options.run_id) host=$(Sockets.gethostname()) pid=$(getpid())")
+    logmsg("conversion_mu=$(options.conversion_mu) conversion_rho=$(options.conversion_rho)")
     logmsg("generating train data contexts=$(options.train_contexts) scenarios_per_context=$(options.train_scenarios_per_context)")
     train_data = ContextualDFLExperiments.generate_benchmark_dataset(
         problem;
@@ -231,6 +255,8 @@ function main(args=ARGS)
         original_decoder,
         base;
         lower_bound_margin=options.lower_bound_margin,
+        μ=options.conversion_mu,
+        ρ=options.conversion_rho,
         constraint_tolerance=options.constraint_tolerance,
     )
     q_dim = length(prepared.q_lower_bound)
@@ -369,6 +395,8 @@ function main(args=ARGS)
                 "depth" => string(options.depth),
                 "learning_rate" => string(options.learning_rate),
                 "rho" => string(options.rho),
+                "conversion_mu" => string(options.conversion_mu),
+                "conversion_rho" => string(options.conversion_rho),
                 "q_dim" => string(q_dim),
                 "q_lower_bound_min" => string(minimum(prepared.q_lower_bound)),
                 "q_lower_bound_max" => string(maximum(prepared.q_lower_bound)),

@@ -85,6 +85,28 @@ function shortage_scenario_with_q(demand, q)
     )
 end
 
+function lex_tie_program()
+    return ContextualDFL.StochasticProgram(
+        A_eq=zeros(0, 1),
+        A_ineq=reshape([-1.0, 1.0], 2, 1),
+        b_eq=Float64[],
+        b_ineq=[0.0, 1.0],
+        c=[0.0],
+    )
+end
+
+function lex_tie_scenario()
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=reshape([1.0], 1, 1),
+        W_ineq_xi=zeros(0, 1),
+        T_eq_xi=zeros(1, 1),
+        T_ineq_xi=zeros(0, 1),
+        h_eq_xi=[0.0],
+        h_ineq_xi=Float64[],
+        q_xi=[0.0],
+    )
+end
+
 function fixed_two_recourse_program()
     return ContextualDFL.StochasticProgram(
         A_eq=reshape([1.0], 1, 1),
@@ -500,6 +522,51 @@ end
     @test ad_no_opt_policy.coefficients ≈ least_squares_policy.coefficients
     @test isnothing(ad_no_opt_policy.optimization_result)
     @test infer(ad_no_opt_policy, [2.0]) ≈ infer(least_squares_policy, [2.0]) atol = 1e-6
+
+    lex_policy = LexSPOLinearPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        optimize=false,
+    )
+    @test lex_policy.initial_coefficients ≈ least_squares_policy.coefficients
+    @test lex_policy.coefficients ≈ least_squares_policy.coefficients
+    @test isnothing(lex_policy.optimization_result)
+    @test infer(lex_policy, [2.0]) ≈ infer(least_squares_policy, [2.0]) atol = 1e-6
+
+    @test_throws ArgumentError LexSPOLinearPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:q_xi,
+    )
+    @test_throws ArgumentError LexSPOLinearPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        mu=0.1,
+    )
+    @test_throws ArgumentError LexSPOLinearPolicy(
+        residual_data_set,
+        solver,
+        shortage_program(),
+        shortage_decoder;
+        target_component=:h_ineq_xi,
+        rho=0.1,
+    )
+
+    z_lex = ContextualDFLExperiments._lex_solve_scenario_collection(
+        solver,
+        lex_tie_program(),
+        ContextualDFL.ParametricDecoder(),
+        [lex_tie_scenario()],
+    )
+    @test only(z_lex) ≈ 0.0 atol = 1e-6
 
     penalty_transform = nonnegative_prediction_penalty_transform(
         lower_bound=0.0,

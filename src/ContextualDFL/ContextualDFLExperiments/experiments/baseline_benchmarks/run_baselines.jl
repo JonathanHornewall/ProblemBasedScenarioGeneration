@@ -105,16 +105,21 @@ const DETERMINISTIC_POLICY_NAMES = ("saa", "knn", "least_squares", "er_saa")
 const REPLICATED_POLICY_NAMES = ("cart", "nn", "ad", "ad_tree", "m5_ad")
 const DFL_RHO_VALUES = (0.1, 0.01, 0.001)
 const DFL_POLICY_NAMES = Tuple("dfl_mu0_rho$(rho)" for rho in DFL_RHO_VALUES)
-const POLICY_NAMES = (
+const CORE_POLICY_NAMES = (
     DETERMINISTIC_POLICY_NAMES...,
     REPLICATED_POLICY_NAMES...,
     DFL_POLICY_NAMES...,
+)
+const OPT_IN_POLICY_NAMES = ("lex_spo",)
+const POLICY_NAMES = (
+    CORE_POLICY_NAMES...,
+    OPT_IN_POLICY_NAMES...,
 )
 const DEFAULT_POLICY_NAMES = (
     DETERMINISTIC_POLICY_NAMES...,
     REPLICATED_POLICY_NAMES...,
 )
-const FULL_BASELINE_POLICY_NAMES = POLICY_NAMES
+const FULL_BASELINE_POLICY_NAMES = CORE_POLICY_NAMES
 const NN_BASELINE_VERSION = "nnv1"
 const DFL_BASELINE_VERSION = "dflrho_v1"
 const DEFAULT_REPLICA_SEEDS = (20260505, 20260506, 20260507)
@@ -818,6 +823,8 @@ function policy_result_cache_key(policy_name, data_cache_key, config, replica_se
         return join((data_cache_key, "policy_nn", neural_network_cache_tag(config; seed=replica_seed)), "__")
     is_dfl_policy(policy_name) &&
         return join((data_cache_key, "policy_dfl", dfl_cache_tag(policy_name, config, replica_seed)), "__")
+    policy_name == "lex_spo" &&
+        return join((data_cache_key, "policy_lex_spo", lex_spo_cache_tag()), "__")
     policy_name in REPLICATED_POLICY_NAMES &&
         return join((data_cache_key, "policy_$(policy_name)", replica_tag), "__")
     return data_cache_key
@@ -2133,6 +2140,35 @@ function make_policy(
         postprocess_prediction=postprocess_prediction,
     )
 
+    if policy_name == "lex_spo"
+        benchmark in ("resource_allocation", "shipment_planning", "transshipment_h") ||
+            throw(ArgumentError(
+                "lex_spo currently supports only RHS-only benchmarks: " *
+                "resource_allocation, shipment_planning, transshipment_h.",
+            ))
+        lex_postprocess_prediction, training_prediction_transform =
+            decision_focused_settings(benchmark, problem, postprocess_prediction)
+        settings = lex_spo_baseline_settings()
+        return LexSPOLinearPolicy(
+            train_data,
+            solver,
+            program,
+            decoder;
+            target_component=target_component,
+            postprocess_prediction=lex_postprocess_prediction,
+            training_prediction_transform=training_prediction_transform,
+            optimize=settings.iterations > 0,
+            optimizer_options=Optim.Options(
+                f_reltol=settings.f_reltol,
+                f_abstol=settings.f_tol,
+                iterations=settings.iterations,
+            ),
+            lex_objective_atol=settings.lex_objective_atol,
+            lex_objective_rtol=settings.lex_objective_rtol,
+            lex_variable_atol=settings.lex_variable_atol,
+        )
+    end
+
     policy_name == "cart" && return CARTPolicy(
         train_data,
         solver,
@@ -2233,6 +2269,32 @@ function ad_cache_tag()
             "iters$(settings.iterations)",
             "frtol$(settings.f_reltol)",
             "ftol$(settings.f_tol)",
+        ),
+        "_",
+    )
+end
+
+function lex_spo_baseline_settings()
+    return (;
+        iterations=env_int("CDFL_BASELINE_LEX_SPO_ITERATIONS", 200),
+        f_reltol=env_float("CDFL_BASELINE_LEX_SPO_F_RELTOL", 1e-4),
+        f_tol=env_float("CDFL_BASELINE_LEX_SPO_F_TOL", 1e-4),
+        lex_objective_atol=env_float("CDFL_BASELINE_LEX_SPO_OBJECTIVE_ATOL", 1e-7),
+        lex_objective_rtol=env_float("CDFL_BASELINE_LEX_SPO_OBJECTIVE_RTOL", 1e-7),
+        lex_variable_atol=env_float("CDFL_BASELINE_LEX_SPO_VARIABLE_ATOL", 1e-7),
+    )
+end
+
+function lex_spo_cache_tag()
+    settings = lex_spo_baseline_settings()
+    return join(
+        (
+            "iters$(settings.iterations)",
+            "frtol$(settings.f_reltol)",
+            "ftol$(settings.f_tol)",
+            "objatol$(settings.lex_objective_atol)",
+            "objrtol$(settings.lex_objective_rtol)",
+            "varatol$(settings.lex_variable_atol)",
         ),
         "_",
     )
