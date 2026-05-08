@@ -109,6 +109,7 @@ const CONVERTED_Q_POLICY_NAMES = ("spoplus_qconv", "dfl_qconv")
 const RESOURCE_ALLOCATION_DECODER_POLICY_NAMES = (
     "dfl_ra_physical_cost",
     "dfl_ra_full_cost",
+    "dfl_ra_original_cost",
     "dfl_ra_economic_cost",
 )
 const CORE_POLICY_NAMES = (
@@ -3289,6 +3290,14 @@ function resource_allocation_decoder_input_spec(policy_name, problem)
                 fixed_demand=fixed_demand,
             ),
             width=demand_count + allocation_count,
+        )
+    elseif policy_name == "dfl_ra_original_cost"
+        return (;
+            decoder=ResourceAllocationOriginalCostVectorDecoder(
+                problem;
+                fixed_demand=fixed_demand,
+            ),
+            width=demand_count,
         )
     elseif policy_name == "dfl_ra_full_cost"
         return (;

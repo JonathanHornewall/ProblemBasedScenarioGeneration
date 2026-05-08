@@ -20,6 +20,13 @@ const BENCHMARK_NAMES = (
 const DETERMINISTIC_POLICY_NAMES = ("saa", "knn", "least_squares", "er_saa")
 const REPLICATED_POLICY_NAMES = ("cart", "nn", "ad", "ad_tree", "m5_ad")
 const DFL_POLICY_NAMES = ("dfl_mu0_rho0.1", "dfl_mu0_rho0.01", "dfl_mu0_rho0.001")
+const CONVERTED_Q_POLICY_NAMES = ("spoplus_qconv", "dfl_qconv")
+const RESOURCE_ALLOCATION_DECODER_POLICY_NAMES = (
+    "dfl_ra_physical_cost",
+    "dfl_ra_full_cost",
+    "dfl_ra_original_cost",
+    "dfl_ra_economic_cost",
+)
 const EXPECTED_SUCCESS_ROWS = 196
 
 function main(args=ARGS)
@@ -243,10 +250,12 @@ function summary_row(benchmark, policy, rows)
         benchmark=benchmark,
         policy=policy,
         status_ok_count=length(rows),
-        replica_count=length(unique(row.replica_index for row in rows)),
+        replica_count=length(unique(row.replica_seed for row in rows)),
         regret_mean=mean_value(regrets),
+        regret_var=var_value(regrets),
         regret_std=std_value(regrets),
         relative_regret_mean=mean_value(relative_regrets),
+        relative_regret_var=var_value(relative_regrets),
         relative_regret_std=std_value(relative_regrets),
         fit_seconds_mean=mean_value(fit_seconds),
         eval_seconds_mean=mean_value(eval_seconds),
@@ -264,10 +273,14 @@ end
 
 mean_value(values) = isempty(values) ? NaN : sum(values) / length(values)
 
-function std_value(values)
+function var_value(values)
     length(values) <= 1 && return 0.0
     mean = mean_value(values)
-    return sqrt(sum((value - mean)^2 for value in values) / (length(values) - 1))
+    return sum((value - mean)^2 for value in values) / (length(values) - 1)
+end
+
+function std_value(values)
+    return sqrt(var_value(values))
 end
 
 function write_summary_markdown(path, rows, summary_rows, files)
@@ -299,15 +312,16 @@ function write_summary_markdown(path, rows, summary_rows, files)
         println(io)
         println(io, "## Replicated Policy Summary")
         println(io)
-        println(io, "| Benchmark | Policy | Rows | Regret Mean | Regret Std | Relative Regret Mean | Relative Regret Std |")
-        println(io, "| --- | --- | ---: | ---: | ---: | ---: | ---: |")
+        println(io, "| Benchmark | Policy | Rows | Regret Mean | Regret Var | Regret Std | Relative Regret Mean | Relative Regret Var | Relative Regret Std |")
+        println(io, "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
         for row in summary_rows
             row.policy in DETERMINISTIC_POLICY_NAMES && continue
             println(
                 io,
                 "| $(row.benchmark) | $(row.policy) | $(row.status_ok_count) | " *
-                "$(fmt(row.regret_mean)) | $(fmt(row.regret_std)) | " *
-                "$(fmt(row.relative_regret_mean)) | $(fmt(row.relative_regret_std)) |",
+                "$(fmt(row.regret_mean)) | $(fmt(row.regret_var)) | $(fmt(row.regret_std)) | " *
+                "$(fmt(row.relative_regret_mean)) | $(fmt(row.relative_regret_var)) | " *
+                "$(fmt(row.relative_regret_std)) |",
             )
         end
     end

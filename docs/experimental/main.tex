@@ -1,0 +1,152 @@
+# Experimental setup and implementation details
+
+```latex
+\section{Experimental setup and implementation details}
+
+We evaluate all methods on synthetically generated contextual two-stage stochastic linear programs. Unless otherwise stated, each benchmark instance uses the same small-sample contextual protocol. The training set contains $100$ contexts, with one observed scenario per context. The test set contains $30$ independently generated contexts. For each test context, we generate $500$ conditional scenarios, stored as five independent batches of $100$ scenarios. We evaluate each policy on each $100$-scenario batch and report averages over the resulting $30\times 5 = 150$ test evaluations. This corresponds to the \texttt{tiny} profile in the released codebase, with
+\[
+\texttt{train\_contexts}=100,
+\quad
+\texttt{train\_scenarios\_per\_context}=1,
+\quad
+\texttt{test\_contexts}=30,
+\]
+\[
+\texttt{test\_scenarios\_per\_context}=500,
+\quad
+\texttt{evaluation\_batches}=5.
+\]
+The data-generation seed is fixed to $20260505$.
+
+For each test context and evaluation batch, we compute two quantities: the cost of the candidate policy on the batch, and the cost of an oracle SAA solution computed on the same batch. The reported oracle is therefore an average batch oracle: each $100$-scenario batch is solved separately and the resulting objective values are averaged. It is not the optimum of a single $500$-scenario extensive form.
+
+We report the test policy value, oracle value, regret, relative regret, and the standard error of the estimated optimality gap. For a policy $\pi$, the reported regret is
+\[
+\widehat{\mathrm{Regret}}(\pi)
+=
+\frac{1}{30\cdot 5}
+\sum_{i=1}^{30}
+\sum_{b=1}^{5}
+\left[
+\widehat V_{i,b}(\pi(x_i))
+-
+\widehat V_{i,b}^{\star}
+\right],
+\]
+where $\widehat V_{i,b}^{\star}$ is the oracle SAA value for test context $i$ and batch $b$. The relative regret divides each gap by the corresponding oracle value before averaging.
+
+\subsection{Benchmarks}
+
+The main experiments use the benchmark families shown in Table~\ref{tab:benchmark_dimensions}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+Benchmark & Random component & Learned component & $n_1$ & $n_2$ & $m_2$ \\
+\midrule
+Resource allocation & $h$ & $h$ & $20$ & $680$ & $50$ \\
+Shipment planning & $h$ & $h$ & $4$ & $68$ & $16$ \\
+Transshipment-$h$ & $h$ & $h$ & $7$ & $77$ & $35$ \\
+Transshipment-$q$ & $q$ & $q$ & $7$ & $77$ & $35$ \\
+Transshipment-$(h,q)$ & $h,q$ & $h$, $q$, or $(h,q)$ & $7$ & $77$ & $35$ \\
+Random yield & $W$ & $q$ & $5$ & $20$ & $5$ \\
+\bottomrule
+\end{tabular}
+\caption{Benchmark families and equality-form dimensions.}
+\label{tab:benchmark_dimensions}
+\end{table}
+
+The resource-allocation generator uses three-dimensional contexts. Contexts are generated as folded Gaussian vectors with a randomly generated correlation matrix. Conditional demand is generated from an additive contextual signal with noise level $\sigma=5$ and exponent $p=2$. The demand intercepts are sampled around $50$, and the contextual slopes are centered around $10$, $5$, and $2$, with independent perturbations.
+
+The shipment-planning benchmark uses $4$ warehouses, $12$ demand points, and three-dimensional contexts. The stochastic component is the demand right-hand side. The default generator uses context dimension $3$, demand noise $\sigma=5$, exponent $p=1$, and a fixed parameter seed.
+
+The transshipment benchmarks use three-dimensional contexts generated around four fixed context regimes. Depending on the variant, either the right-hand side, the second-stage cost vector, or both are perturbed by context-dependent multipliers and a shared scenario shock. Each scenario has $7$ random RHS entries and $7$ random objective entries available in the mixed variant.
+
+The random-yield benchmark is a synthetic random-recourse-matrix stress test. It is not intended as a literature data instance. Its purpose is to test the case where the true conditional distribution changes the recourse matrix $W$, while the learned synthetic scenario is restricted to vector-valued data. In the small instance used for the main experiments, we use $r=5$ products, $a=10$ activities, and $K=5$ yield-support regimes, giving a $5\times 20$ recourse matrix.
+
+\subsection{Baselines}
+
+We compare against classical contextual stochastic-optimization baselines and neural baselines implemented in the same codebase. The non-neural baselines are
+\[
+\text{SAA},
+\qquad
+\text{kNN-SAA},
+\qquad
+\text{OLS-CE},
+\qquad
+\text{ER-SAA}.
+\]
+
+SAA is context-free and solves one sample-average approximation using all training scenarios. kNN-SAA uses the $k=10$ nearest training contexts. OLS-CE fits an ordinary least-squares map from context to the relevant scenario component and then solves the induced one-scenario problem. ER-SAA fits the same linear map but evaluates an SAA formed by adding empirical residuals to the predicted component.
+
+When included, the replicated baseline grid also contains CART-CE, a neural certainty-equivalent baseline, a decision-focused linear baseline, adaptive-decision-tree variants, and M5+AD. The decision-focused linear baseline starts from the same OLS coefficients as OLS-CE and refines them with Nelder--Mead on the realized training decision cost.
+
+\subsection{Neural models}
+
+All MLP-based policies use the same architecture and optimization hyperparameters as the annealing training script, except for the smoothing schedules. Each neural scenario generator outputs one synthetic scenario. The hidden architecture has three ReLU hidden layers of width $128$, followed by a benchmark-specific output layer whose dimension is determined by the learned scenario component. For resource allocation, the output is a demand vector. For shipment planning, it is a demand vector. For transshipment, it is either the $h$-vector, the $q$-vector, or the concatenated $(h,q)$-vector. For random yield, the network learns a positive synthetic $q$-vector while the true test distribution varies $W$.
+
+All MLP-based methods are trained with Adam, learning rate $10^{-3}$, minibatch size $1$, and one generated scenario per context. Training uses $130$ epochs in total. The first smoothing stage is trained for $20$ epochs, and each subsequent stage is trained for $10$ epochs.
+
+\subsection{Smoothing schedules}
+
+Our log-barrier method uses a decreasing smoothing schedule. Unless otherwise stated, the barrier schedule is
+\[
+\mu \in
+\{1.0,\ 0.8,\ 0.6,\ 0.4,\ 0.2,\ 0.1,\ 0.08,\ 0.06,\ 0.04,\ 0.02,\ 0.01\}.
+\]
+
+During the annealing stages, we train with
+\[
+(\mu_{\mathrm{in}},\mu_{\mathrm{ref}})=(\mu_s,\mu_s).
+\]
+After the final annealing stage, we run a fine-tuning stage with
+\[
+(\mu_{\mathrm{in}},\mu_{\mathrm{ref}})=(0.01,0).
+\]
+Thus, the network continues to generate decisions through the smoothed single-scenario problem, but the downstream reference loss is evaluated at the unsmoothed objective.
+
+For quadratic-smoothing comparisons, we use the analogous $\rho$-schedule and set the inactive smoothing parameter to zero.
+
+\subsection{Solvers and implementation}
+
+All experiments are implemented in Julia. We use Flux for neural-network training. Optimization problems are solved through a solver wrapper containing Ipopt and HiGHS. Smoothed log-barrier problems are solved with Ipopt, while unsmoothed LP and oracle SAA problems are solved with HiGHS.
+
+All neural-network computations are performed in Float64 precision. Unless otherwise stated, data generation uses seed $20260505$. For replicated neural experiments we use seeds $20260505$, $20260506$, and $20260507$.
+
+The experiments were run on [FILL IN HARDWARE DETAILS].
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+Quantity & Value \\
+\midrule
+Training contexts & $100$ \\
+Training scenarios per context & $1$ \\
+Test contexts & $30$ \\
+Test scenarios per context & $500$ \\
+Evaluation batches per context & $5$ \\
+Scenarios per evaluation batch & $100$ \\
+Total test batches & $150$ \\
+Data seed & $20260505$ \\
+$k$ in kNN-SAA & $10$ \\
+MLP hidden layers & $3$ \\
+MLP hidden width & $128$ \\
+MLP activation & ReLU \\
+Optimizer & Adam \\
+Learning rate & $10^{-3}$ \\
+Training batch size & $1$ \\
+Total MLP epochs & $130$ \\
+First-stage epochs & $20$ \\
+Later-stage epochs & $10$ each \\
+LP solver & HiGHS \\
+Smoothed solver & Ipopt \\
+\bottomrule
+\end{tabular}
+\caption{Default experimental hyperparameters.}
+\label{tab:default_hyperparameters}
+\end{table}
+```

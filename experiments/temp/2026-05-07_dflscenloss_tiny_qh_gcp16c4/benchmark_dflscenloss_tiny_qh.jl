@@ -41,8 +41,8 @@ const DFL_DEFAULT_ARTIFACT_DIR = joinpath(
     "artifacts",
     "tiny_30ctx_5x100_seed20260505",
 )
-const DFL_DEFAULT_OUTPUT_DIR = joinpath(DFL_SANDBOX_DIR, "results")
-const DFL_VERSION = "dflscenloss_tiny_qh_v1"
+const DFL_DEFAULT_OUTPUT_DIR = joinpath(DFL_SANDBOX_DIR, "results_final_eval_once")
+const DFL_VERSION = "dflscenloss_tiny_qh_v3_latest_checkpoint"
 const DFL_FLUX = ContextualDFL.Flux
 
 function main(args=ARGS)
@@ -312,8 +312,12 @@ function run_dfl_job(job)
     out_dir = dfl_run_dir(job)
     result_path = joinpath(out_dir, "final_result.jls")
     if isfile(result_path)
-        row = Serialization.deserialize(result_path)
-        hasproperty(row, :status) && row.status == "ok" && return row
+        try
+            row = Serialization.deserialize(result_path)
+            hasproperty(row, :status) && row.status == "ok" && return row
+        catch error
+            @warn "ignoring unreadable final_result; job will resume" result_path error
+        end
     end
 
     mkpath(out_dir)
@@ -348,8 +352,9 @@ function run_dfl_job_inner(job, out_dir, worker, started)
     schedule = dfl_training_schedule()[1:options.max_epochs]
     state_path = joinpath(out_dir, "state.jls")
     epoch_history_path = joinpath(out_dir, "epoch_history.csv")
-    test_metrics_path = joinpath(out_dir, "test_metrics_by_epoch.csv")
+    test_metrics_path = joinpath(out_dir, "test_metrics_final.csv")
     final_model_path = joinpath(out_dir, "model_final.jls")
+    checkpoint_model_path = joinpath(out_dir, "model_checkpoint_latest.jls")
     final_per_sample_path = joinpath(out_dir, "per_sample_final.csv")
 
     problem = make_problem(job.problem)
@@ -433,25 +438,7 @@ function run_dfl_job_inner(job, out_dir, worker, started)
         model = train_result.model
         train_history = only(train_result.history)
 
-        comparison = nothing
-        test_seconds = @elapsed comparison = dfl_evaluate_model(
-            model,
-            vector_decoder,
-            problem,
-            solver,
-            program,
-            reference_decoder,
-            bundle;
-            policy_mu=item.mu_in,
-        )
-        metrics = comparison.metrics
-        model_epoch_path = joinpath(out_dir, "model_epoch_$(lpad(item.epoch, 3, '0')).jls")
-        Serialization.serialize(model_epoch_path, model)
-        if epoch_index == length(schedule)
-            Serialization.serialize(final_model_path, model)
-            dfl_write_per_sample_csv(final_per_sample_path, comparison.per_sample)
-            Serialization.serialize(joinpath(out_dir, "comparison_final.jls"), comparison)
-        end
+        Serialization.serialize(checkpoint_model_path, model)
 
         row = merge(
             worker,
@@ -478,19 +465,8 @@ function run_dfl_job_inner(job, out_dir, worker, started)
                 train_iterations=train_history.iterations,
                 train_epoch_seconds=train_history.epoch_seconds,
                 train_total_seconds=train_seconds,
-                test_eval_seconds=test_seconds,
-                test_contexts=length(bundle.test_data),
-                test_scenarios_per_context=scenario_count_per_context(bundle.test_data),
-                evaluation_batches=optimal_results_batch_count(bundle.optimal_results),
-                sample_count=metrics.test_sample_count,
-                policy_value_mean=metrics.test_policy_value_mean,
-                optimal_value_mean=metrics.test_optimal_value_mean,
-                regret_mean=metrics.test_regret_mean,
-                relative_regret_mean=metrics.test_relative_regret_mean,
-                gap_stderr_mean=metrics.test_gap_stderr_mean,
-                policy_eval_seconds=metrics.test_policy_eval_seconds,
                 source_artifact_path=data_bundle_artifact_path(options.artifact_dir, job.problem),
-                model_epoch_path=model_epoch_path,
+                model_checkpoint_path=checkpoint_model_path,
                 state_path=state_path,
                 epoch_history_path=epoch_history_path,
                 test_metrics_path=test_metrics_path,
@@ -500,7 +476,6 @@ function run_dfl_job_inner(job, out_dir, worker, started)
         )
         push!(epoch_rows, row)
         dfl_write_namedtuple_csv(epoch_history_path, epoch_rows)
-        dfl_write_namedtuple_csv(test_metrics_path, epoch_rows)
         Serialization.serialize(
             state_path,
             (;
@@ -515,13 +490,12 @@ function run_dfl_job_inner(job, out_dir, worker, started)
         )
         println(
             @sprintf(
-                "epoch done %s/%s seed=%d epoch=%d regret=%g rel=%g",
+                "epoch done %s/%s seed=%d epoch=%d train_loss=%g",
                 job.problem,
                 job.learned_output,
                 job.seed,
                 item.epoch,
-                Float64(metrics.test_regret_mean),
-                Float64(metrics.test_relative_regret_mean),
+                Float64(train_history.loss),
             ),
         )
         GC.gc()
@@ -529,21 +503,42 @@ function run_dfl_job_inner(job, out_dir, worker, started)
 
     isempty(epoch_rows) && throw(ArgumentError("no epochs were completed."))
     final_epoch = last(epoch_rows)
-    if !isfile(final_per_sample_path)
-        comparison = dfl_evaluate_model(
-            model,
-            vector_decoder,
-            problem,
-            solver,
-            program,
-            reference_decoder,
-            bundle;
-            policy_mu=final_epoch.policy_mu,
-        )
-        dfl_write_per_sample_csv(final_per_sample_path, comparison.per_sample)
-        Serialization.serialize(joinpath(out_dir, "comparison_final.jls"), comparison)
-    end
+    comparison = nothing
+    test_seconds = @elapsed comparison = dfl_evaluate_model(
+        model,
+        vector_decoder,
+        problem,
+        solver,
+        program,
+        reference_decoder,
+        bundle;
+        policy_mu=final_epoch.policy_mu,
+    )
+    metrics = comparison.metrics
+    dfl_write_per_sample_csv(final_per_sample_path, comparison.per_sample)
+    Serialization.serialize(joinpath(out_dir, "comparison_final.jls"), comparison)
     Serialization.serialize(final_model_path, model)
+    final_row = merge(
+        final_epoch,
+        (;
+            test_eval_seconds=test_seconds,
+            test_contexts=length(bundle.test_data),
+            test_scenarios_per_context=scenario_count_per_context(bundle.test_data),
+            evaluation_batches=optimal_results_batch_count(bundle.optimal_results),
+            sample_count=metrics.test_sample_count,
+            policy_value_mean=metrics.test_policy_value_mean,
+            optimal_value_mean=metrics.test_optimal_value_mean,
+            regret_mean=metrics.test_regret_mean,
+            relative_regret_mean=metrics.test_relative_regret_mean,
+            gap_stderr_mean=metrics.test_gap_stderr_mean,
+            policy_eval_seconds=metrics.test_policy_eval_seconds,
+            epochs_completed=length(epoch_rows),
+            model_final_path=final_model_path,
+            per_sample_path=final_per_sample_path,
+            total_seconds=time() - started,
+        ),
+    )
+    dfl_write_namedtuple_csv(test_metrics_path, [final_row])
     Serialization.serialize(
         state_path,
         (;
@@ -553,21 +548,14 @@ function run_dfl_job_inner(job, out_dir, worker, started)
             epoch_rows=epoch_rows,
             schedule=collect(schedule),
             settings=dfl_job_settings(job),
+            final_result_row=final_row,
             final_per_sample_path=final_per_sample_path,
             final_model_path=final_model_path,
             updated_at=Dates.format(now(), dateformat"yyyy-mm-ddTHH:MM:SS"),
         ),
     )
 
-    return merge(
-        final_epoch,
-        (;
-            epochs_completed=length(epoch_rows),
-            model_final_path=final_model_path,
-            per_sample_path=final_per_sample_path,
-            total_seconds=time() - started,
-        ),
-    )
+    return final_row
 end
 
 function dfl_evaluate_model(

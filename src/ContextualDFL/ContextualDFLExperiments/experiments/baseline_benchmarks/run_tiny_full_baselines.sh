@@ -117,6 +117,7 @@ qconv_ibm96c1() {
     --output-dir "$QCONV_RESULT_DIR/ibm-96c-1" \
     --benchmarks random_yield \
     --policies spoplus_qconv,dfl_qconv \
+    --full-baseline-grid \
     --local-workers "$LOCAL_WORKERS" \
     --replica-seeds "${QCONV_REPLICA_SEEDS:-20260505,20260506}"
 }
@@ -130,7 +131,8 @@ qconv_ibm96c2() {
     --cache-dir "$CACHE_DIR" \
     --output-dir "$QCONV_RESULT_DIR/ibm-96c-2" \
     --benchmarks resource_allocation \
-    --policies dfl_ra_physical_cost,dfl_ra_full_cost,dfl_ra_economic_cost \
+    --policies dfl_ra_physical_cost,dfl_ra_full_cost,dfl_ra_original_cost,dfl_ra_economic_cost \
+    --full-baseline-grid \
     --local-workers "$LOCAL_WORKERS" \
     --replica-seeds "${QCONV_REPLICA_SEEDS:-20260505,20260506}"
 }
