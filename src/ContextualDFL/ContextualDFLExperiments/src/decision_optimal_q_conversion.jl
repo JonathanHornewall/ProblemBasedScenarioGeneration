@@ -1,7 +1,42 @@
 import LinearAlgebra
 
+# Decision-equivalent dataset conversion
+#
+# This file has a deliberately small public surface and a fairly large internal
+# implementation. Experiment code should usually use `make_decision_equivalent_dataset`
+# and ignore the helper functions unless debugging the conversion itself.
+#
+# The intended workflow is:
+#
+#     payload = make_decision_equivalent_dataset(
+#         :q, # or :h / :rhs / :decision_h
+#         dataset,
+#         solver,
+#         program,
+#         original_decoder,
+#         base_scenario;
+#         equality_form=true,
+#         constraint_tolerance=1e-10,
+#     )
+#
+# Then pass `payload.converted_dataset` and `payload.decoder` to the downstream
+# method. The conversion path is method-agnostic: it does not assume SPO+,
+# DFL-Scen, or any particular training loss. The SPO+/DFL-Scen preparation
+# helpers later in this file are optional conveniences layered on top.
+#
+# With `equality_form=true`, the original scenarios are first decoded and
+# converted to equality-plus-nonnegativity recourse form. General recourse
+# inequalities become equality rows with zero-cost slack variables, while
+# explicit nonnegativity rows `-y_i <= 0` are kept as nonnegativity rows. Free
+# recourse variables are intentionally rejected because supporting them would
+# require variable splitting and would otherwise silently change the model.
+
 const _Q_CONVERSION_UNSUPPORTED_RECOURSE =
     "decision-optimal q conversion currently supports only equality recourse plus nonnegativity."
+
+const _SCENARIO_COMPONENT_FIELDS = (:W_eq, :W_ineq, :T_eq, :T_ineq, :h_eq, :h_ineq, :q)
+const _PARAMETRIC_SCENARIO_COMPONENT_FIELDS =
+    (:W_eq_xi, :W_ineq_xi, :T_eq_xi, :T_ineq_xi, :h_eq_xi, :h_ineq_xi, :q_xi)
 
 function _normalized_probabilities(K::Integer, probabilities)::Vector{Float64}
     K > 0 || throw(ArgumentError("K must be positive."))
@@ -54,6 +89,217 @@ function _assert_supported_recourse_form(
     return nothing
 end
 
+function _scenario_component_arrays(scenario)
+    if all(field -> hasproperty(scenario, field), _SCENARIO_COMPONENT_FIELDS)
+        return (;
+            W_eq=Matrix(getproperty(scenario, :W_eq)),
+            W_ineq=Matrix(getproperty(scenario, :W_ineq)),
+            T_eq=Matrix(getproperty(scenario, :T_eq)),
+            T_ineq=Matrix(getproperty(scenario, :T_ineq)),
+            h_eq=Vector(getproperty(scenario, :h_eq)),
+            h_ineq=Vector(getproperty(scenario, :h_ineq)),
+            q=Vector(getproperty(scenario, :q)),
+        )
+    end
+
+    if all(field -> hasproperty(scenario, field), _PARAMETRIC_SCENARIO_COMPONENT_FIELDS)
+        return (;
+            W_eq=Matrix(getproperty(scenario, :W_eq_xi)),
+            W_ineq=Matrix(getproperty(scenario, :W_ineq_xi)),
+            T_eq=Matrix(getproperty(scenario, :T_eq_xi)),
+            T_ineq=Matrix(getproperty(scenario, :T_ineq_xi)),
+            h_eq=Vector(getproperty(scenario, :h_eq_xi)),
+            h_ineq=Vector(getproperty(scenario, :h_ineq_xi)),
+            q=Vector(getproperty(scenario, :q_xi)),
+        )
+    end
+
+    throw(ArgumentError(
+        "scenario must expose either fields $(_SCENARIO_COMPONENT_FIELDS) or " *
+        "$(_PARAMETRIC_SCENARIO_COMPONENT_FIELDS).",
+    ))
+end
+
+function _scenario_arrays_to_parametric(arrays)::ContextualDFL.ParametricScenario
+    return ContextualDFL.ParametricScenario(;
+        W_eq_xi=copy(arrays.W_eq),
+        W_ineq_xi=copy(arrays.W_ineq),
+        T_eq_xi=copy(arrays.T_eq),
+        T_ineq_xi=copy(arrays.T_ineq),
+        h_eq_xi=copy(arrays.h_eq),
+        h_ineq_xi=copy(arrays.h_ineq),
+        q_xi=copy(arrays.q),
+    )
+end
+
+function _decoded_scenario_arrays(arrays, k::Integer)
+    return (;
+        W_eq=Matrix(arrays.W_eq_array[:, :, k]),
+        W_ineq=Matrix(arrays.W_ineq_array[:, :, k]),
+        T_eq=Matrix(arrays.T_eq_array[:, :, k]),
+        T_ineq=Matrix(arrays.T_ineq_array[:, :, k]),
+        h_eq=Vector(arrays.h_eq_array[:, k]),
+        h_ineq=Vector(arrays.h_ineq_array[:, k]),
+        q=Vector(arrays.q_array[:, k]),
+    )
+end
+
+function _nonnegative_row_variable(W_row, T_row, h_value; atol::Real)
+    isapprox(h_value, 0.0; atol=atol, rtol=0) || return nothing
+    all(value -> isapprox(value, 0.0; atol=atol, rtol=0), T_row) || return nothing
+
+    negative_unit_indices = findall(value -> isapprox(value, -1.0; atol=atol, rtol=0), W_row)
+    length(negative_unit_indices) == 1 || return nothing
+
+    variable_index = only(negative_unit_indices)
+    for j in eachindex(W_row)
+        j == variable_index && continue
+        isapprox(W_row[j], 0.0; atol=atol, rtol=0) || return nothing
+    end
+
+    return variable_index
+end
+
+function _recourse_inequality_row_partition(W_ineq, T_ineq, h_ineq; atol::Real)
+    ny = size(W_ineq, 2)
+    m_ineq = size(W_ineq, 1)
+
+    nonnegative_rows = falses(m_ineq)
+    covered_variables = falses(ny)
+
+    for row_index in 1:m_ineq
+        variable_index = _nonnegative_row_variable(
+            view(W_ineq, row_index, :),
+            view(T_ineq, row_index, :),
+            h_ineq[row_index];
+            atol=atol,
+        )
+        if variable_index !== nothing
+            nonnegative_rows[row_index] = true
+            covered_variables[variable_index] = true
+        end
+    end
+
+    missing_variables = findall(!, covered_variables)
+    isempty(missing_variables) || throw(ArgumentError(
+        "equality-form conversion requires every original recourse variable to have " *
+        "a nonnegativity row -e_i' y <= 0. Missing variable index/indices: " *
+        "$(join(missing_variables, ", ")). Free recourse-variable splitting is not supported.",
+    ))
+
+    return findall(!, nonnegative_rows)
+end
+
+function _convert_scenario_arrays_to_equality_form(arrays; atol::Real=1e-10)
+    W_eq = Matrix(arrays.W_eq)
+    W_ineq = Matrix(arrays.W_ineq)
+    T_eq = Matrix(arrays.T_eq)
+    T_ineq = Matrix(arrays.T_ineq)
+    h_eq = Vector(arrays.h_eq)
+    h_ineq = Vector(arrays.h_ineq)
+    q = Vector(arrays.q)
+
+    ny = length(q)
+    nz = size(T_eq, 2)
+    general_rows = _recourse_inequality_row_partition(W_ineq, T_ineq, h_ineq; atol=atol)
+    slack_count = length(general_rows)
+    ny_new = ny + slack_count
+    m_eq_new = size(W_eq, 1) + slack_count
+
+    T = promote_type(
+        eltype(W_eq),
+        eltype(W_ineq),
+        eltype(T_eq),
+        eltype(T_ineq),
+        eltype(h_eq),
+        eltype(h_ineq),
+        eltype(q),
+        Float64,
+    )
+
+    W_eq_new = zeros(T, m_eq_new, ny_new)
+    T_eq_new = zeros(T, m_eq_new, nz)
+    h_eq_new = zeros(T, m_eq_new)
+
+    original_eq_rows = axes(W_eq, 1)
+    W_eq_new[original_eq_rows, 1:ny] .= W_eq
+    T_eq_new[original_eq_rows, :] .= T_eq
+    h_eq_new[original_eq_rows] .= h_eq
+
+    for (slack_index, original_row) in enumerate(general_rows)
+        converted_row = size(W_eq, 1) + slack_index
+        W_eq_new[converted_row, 1:ny] .= view(W_ineq, original_row, :)
+        W_eq_new[converted_row, ny + slack_index] = one(T)
+        T_eq_new[converted_row, :] .= view(T_ineq, original_row, :)
+        h_eq_new[converted_row] = h_ineq[original_row]
+    end
+
+    return (;
+        W_eq=W_eq_new,
+        W_ineq=-Matrix{T}(LinearAlgebra.I, ny_new, ny_new),
+        T_eq=T_eq_new,
+        T_ineq=zeros(T, ny_new, nz),
+        h_eq=h_eq_new,
+        h_ineq=zeros(T, ny_new),
+        q=vcat(T.(q), zeros(T, slack_count)),
+    )
+end
+
+function convert_base_scenario_to_equality_form(
+    base_scenario;
+    atol::Real=1e-10,
+)::ContextualDFL.ParametricScenario
+    return _scenario_arrays_to_parametric(
+        _convert_scenario_arrays_to_equality_form(
+            _scenario_component_arrays(base_scenario);
+            atol=atol,
+        ),
+    )
+end
+
+function convert_datapoint_to_equality_form(
+    datapoint::ContextualDFL.ContextualDataPoint,
+    original_decoder;
+    atol::Real=1e-10,
+)::ContextualDFL.ContextualDataPoint
+    decoded = ContextualDFL.decode_scenario_collection(
+        original_decoder,
+        datapoint.scenario_parameters,
+    )
+    arrays = (;
+        W_eq_array=decoded[1],
+        W_ineq_array=decoded[2],
+        T_eq_array=decoded[3],
+        T_ineq_array=decoded[4],
+        h_eq_array=decoded[5],
+        h_ineq_array=decoded[6],
+        q_array=decoded[7],
+    )
+    K = size(arrays.q_array, 2)
+    converted_scenarios = [
+        _scenario_arrays_to_parametric(
+            _convert_scenario_arrays_to_equality_form(
+                _decoded_scenario_arrays(arrays, k);
+                atol=atol,
+            ),
+        )
+        for k in 1:K
+    ]
+
+    return ContextualDFL.ContextualDataPoint(datapoint.context, converted_scenarios)
+end
+
+function convert_dataset_to_equality_form(
+    dataset,
+    original_decoder;
+    atol::Real=1e-10,
+)::Vector{<:ContextualDFL.ContextualDataPoint}
+    return [
+        convert_datapoint_to_equality_form(dp, original_decoder; atol=atol)
+        for dp in dataset
+    ]
+end
+
 function decode_q_conversion_arrays(
     decoder,
     scenario_collection;
@@ -85,25 +331,17 @@ function decode_q_conversion_arrays(
     )
 end
 
-function full_base_scenario_arrays(
-    base_scenario::ContextualDFL.ParametricScenario;
-    atol::Real=1e-10,
-)
-    arrays = decode_q_conversion_arrays(
-        ContextualDFL.ParametricDecoder(),
-        [base_scenario];
+function full_base_scenario_arrays(base_scenario; atol::Real=1e-10)
+    base = _scenario_component_arrays(base_scenario)
+
+    _assert_supported_recourse_form(
+        reshape(base.W_ineq, size(base.W_ineq, 1), size(base.W_ineq, 2), 1),
+        reshape(base.T_ineq, size(base.T_ineq, 1), size(base.T_ineq, 2), 1),
+        reshape(base.h_ineq, length(base.h_ineq), 1);
         atol=atol,
     )
 
-    return (;
-        W_eq=Matrix(arrays.W_eq_array[:, :, 1]),
-        W_ineq=Matrix(arrays.W_ineq_array[:, :, 1]),
-        T_eq=Matrix(arrays.T_eq_array[:, :, 1]),
-        T_ineq=Matrix(arrays.T_ineq_array[:, :, 1]),
-        h_eq=Vector(arrays.h_eq_array[:, 1]),
-        h_ineq=Vector(arrays.h_ineq_array[:, 1]),
-        q=Vector(arrays.q_array[:, 1]),
-    )
+    return base
 end
 
 function _weighted_average_equality_dual(λ_h_eq_array)::Vector
@@ -159,7 +397,7 @@ function convert_datapoint_to_q(
     solver,
     program,
     original_decoder,
-    base_scenario::ContextualDFL.ParametricScenario;
+    base_scenario;
     probabilities=nothing,
     atol::Real=1e-10,
     solve_kwargs...,
@@ -211,7 +449,7 @@ function convert_dataset_to_q(
     solver,
     program,
     original_decoder,
-    base_scenario::ContextualDFL.ParametricScenario;
+    base_scenario;
     probabilities_by_datapoint=nothing,
     atol::Real=1e-10,
     solve_kwargs...,
@@ -263,7 +501,7 @@ struct LowerBoundedQDecoder{TBase,TLower} <: ContextualDFL.VectorDecoder
 end
 
 function LowerBoundedQDecoder(
-    base_scenario::ContextualDFL.ParametricScenario,
+    base_scenario,
     q_lower_bound::AbstractVector;
     atol::Real=1e-10,
 )
@@ -274,7 +512,7 @@ function LowerBoundedQDecoder(
         throw(DimensionMismatch("q_lower_bound must have one entry per recourse variable."))
     all(isfinite, q_lb) || throw(ArgumentError("q_lower_bound must be finite."))
 
-    return LowerBoundedQDecoder(base, q_lb)
+    return LowerBoundedQDecoder{typeof(base),typeof(q_lb)}(base, q_lb)
 end
 
 function (decoder::LowerBoundedQDecoder)(raw_q::AbstractVector)
@@ -297,7 +535,7 @@ end
 function make_spoplus_q_loss(
     solver,
     program,
-    base_scenario::ContextualDFL.ParametricScenario,
+    base_scenario,
     q_lower_bound::AbstractVector;
     atol::Real=1e-10,
 )
@@ -322,7 +560,7 @@ function prepare_spoplus_q_dataset(
     solver,
     program,
     original_decoder,
-    base_scenario::ContextualDFL.ParametricScenario;
+    base_scenario;
     probabilities_by_datapoint=nothing,
     lower_bound_margin::Real=1e-6,
     atol::Real=1e-10,
@@ -358,45 +596,10 @@ function prepare_spoplus_q_dataset(
 end
 
 function _base_scenario_arrays_for_h_conversion(
-    base_scenario::ContextualDFL.ParametricScenario;
+    base_scenario;
     atol::Real=1e-10,
 )
     return full_base_scenario_arrays(base_scenario; atol=atol)
-end
-
-function _base_scenario_arrays_for_h_conversion(base_scenario; atol::Real=1e-10)
-    required_fields = (:W_eq, :W_ineq, :T_eq, :T_ineq, :h_eq, :h_ineq, :q)
-    missing_fields = [
-        field for field in required_fields if !hasproperty(base_scenario, field)
-    ]
-    isempty(missing_fields) || throw(ArgumentError(
-        "base_scenario is missing required field(s): $(join(String.(missing_fields), ", ")).",
-    ))
-
-    W_eq = Matrix(base_scenario.W_eq)
-    W_ineq = Matrix(base_scenario.W_ineq)
-    T_eq = Matrix(base_scenario.T_eq)
-    T_ineq = Matrix(base_scenario.T_ineq)
-    h_eq = Vector(base_scenario.h_eq)
-    h_ineq = Vector(base_scenario.h_ineq)
-    q = Vector(base_scenario.q)
-
-    _assert_supported_recourse_form(
-        reshape(W_ineq, size(W_ineq, 1), size(W_ineq, 2), 1),
-        reshape(T_ineq, size(T_ineq, 1), size(T_ineq, 2), 1),
-        reshape(h_ineq, length(h_ineq), 1);
-        atol=atol,
-    )
-
-    return (;
-        W_eq=W_eq,
-        W_ineq=W_ineq,
-        T_eq=T_eq,
-        T_ineq=T_ineq,
-        h_eq=h_eq,
-        h_ineq=h_ineq,
-        q=q,
-    )
 end
 
 function _decision_optimal_h_label(base, z_star)::Vector
@@ -494,6 +697,100 @@ function convert_dataset_to_h(
     return converted
 end
 
+function _canonical_decision_equivalent_target(target::Symbol)
+    target == :q && return :q
+    target in (:h, :rhs, :decision_h) && return :h
+    throw(ArgumentError("unsupported decision-equivalent target $(target); use :q or :h."))
+end
+
+function _materialized_probabilities_by_datapoint(dataset, probabilities_by_datapoint)
+    probabilities_by_datapoint === nothing && return nothing
+    probabilities_by_datapoint isa Function &&
+        return [probabilities_by_datapoint(dp) for dp in dataset]
+    return probabilities_by_datapoint
+end
+
+function _parametric_base_scenario(base_scenario)::ContextualDFL.ParametricScenario
+    base_scenario isa ContextualDFL.ParametricScenario && return base_scenario
+    return _scenario_arrays_to_parametric(_scenario_component_arrays(base_scenario))
+end
+
+"""
+    make_decision_equivalent_dataset(target, dataset, solver, program, original_decoder, base_scenario; ...)
+
+Build a decision-equivalent training dataset for a downstream experiment.
+
+Use `target=:q` for a q-only dataset, or `target=:h`, `:rhs`, or `:decision_h`
+for an h-only dataset. By default, `equality_form=true` first converts the
+decoded input scenarios and base scenario to equality-plus-nonnegativity
+recourse form, then applies the requested decision-equivalent conversion.
+
+Returns a named tuple with:
+
+- `converted_dataset`: the dataset to train/evaluate on.
+- `decoder`: always `ContextualDFL.ParametricDecoder()` for the converted data.
+- `base_scenario`: the converted base scenario to use with the converted data.
+- `target`: canonicalized to `:q` or `:h`.
+- `diagnostics`: small shape/count metadata useful for experiment logs.
+
+The conversion itself is independent of any learning method. After this call,
+the experiment runner can choose SPO+, DFL-Scen, a baseline, or another method.
+"""
+function make_decision_equivalent_dataset(
+    target::Symbol,
+    dataset,
+    solver,
+    program,
+    original_decoder,
+    base_scenario;
+    equality_form::Bool=true,
+    probabilities_by_datapoint=nothing,
+    atol::Real=1e-10,
+    solve_kwargs...,
+)
+    checked_target = _canonical_decision_equivalent_target(target)
+    conversion_probabilities =
+        _materialized_probabilities_by_datapoint(dataset, probabilities_by_datapoint)
+
+    source_dataset, source_decoder, converted_base_scenario = if equality_form
+        (
+            convert_dataset_to_equality_form(dataset, original_decoder; atol=atol),
+            ContextualDFL.ParametricDecoder(),
+            convert_base_scenario_to_equality_form(base_scenario; atol=atol),
+        )
+    else
+        (dataset, original_decoder, _parametric_base_scenario(base_scenario))
+    end
+
+    converted_dataset = convert_dataset_to_decision_optimal(
+        checked_target,
+        source_dataset,
+        solver,
+        program,
+        source_decoder,
+        converted_base_scenario;
+        probabilities_by_datapoint=conversion_probabilities,
+        atol=atol,
+        solve_kwargs...,
+    )
+
+    base_arrays = _scenario_component_arrays(converted_base_scenario)
+
+    return (;
+        converted_dataset=converted_dataset,
+        base_scenario=converted_base_scenario,
+        decoder=ContextualDFL.ParametricDecoder(),
+        target=checked_target,
+        diagnostics=(;
+            equality_form_applied=equality_form,
+            source_datapoints=length(dataset),
+            converted_datapoints=length(converted_dataset),
+            base_recourse_dimension=length(base_arrays.q),
+            base_equality_rows=length(base_arrays.h_eq),
+        ),
+    )
+end
+
 struct DecisionOptimalHDecoder{TBase} <: ContextualDFL.VectorDecoder
     base_scenario::TBase
 end
@@ -572,6 +869,7 @@ function ChainRulesCore.rrule(
 end
 
 function _decision_h_loss_type(loss)
+    isnothing(loss) && return ContextualDFL.DflScenLoss
     name = Symbol(loss)
     name == :dfl_scen && return ContextualDFL.DflScenLoss
     throw(ArgumentError(
@@ -652,7 +950,7 @@ function prepare_decision_optimal_dataset(
     original_decoder,
     base_scenario;
     probabilities_by_datapoint=nothing,
-    loss=:dfl_scen,
+    loss=nothing,
     lower_bound_margin::Real=1e-6,
     atol::Real=1e-10,
     solve_kwargs...,
