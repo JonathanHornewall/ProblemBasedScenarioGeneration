@@ -1,0 +1,21 @@
+candidate_name,error,final_training_loss,group,mean_test_relative_regret,optimality_gap_percent,replicate,run_id,status
+depth5,missing run_result.jls,Inf,07_deep_network,Inf,Inf,1,full_07_deep_network_depth5_rep01,missing
+depth5,missing run_result.jls,Inf,07_deep_network,Inf,Inf,2,full_07_deep_network_depth5_rep02,missing
+depth5,missing run_result.jls,Inf,07_deep_network,Inf,Inf,3,full_07_deep_network_depth5_rep03,missing
+depth5,missing run_result.jls,Inf,07_deep_network,Inf,Inf,4,full_07_deep_network_depth5_rep04,missing
+depth5,missing run_result.jls,Inf,07_deep_network,Inf,Inf,5,full_07_deep_network_depth5_rep05,missing
+depth6,missing run_result.jls,Inf,07_deep_network,Inf,Inf,1,full_07_deep_network_depth6_rep01,missing
+depth6,missing run_result.jls,Inf,07_deep_network,Inf,Inf,2,full_07_deep_network_depth6_rep02,missing
+depth6,missing run_result.jls,Inf,07_deep_network,Inf,Inf,3,full_07_deep_network_depth6_rep03,missing
+depth6,missing run_result.jls,Inf,07_deep_network,Inf,Inf,4,full_07_deep_network_depth6_rep04,missing
+depth6,missing run_result.jls,Inf,07_deep_network,Inf,Inf,5,full_07_deep_network_depth6_rep05,missing
+depth7,missing run_result.jls,Inf,07_deep_network,Inf,Inf,1,full_07_deep_network_depth7_rep01,missing
+depth7,missing run_result.jls,Inf,07_deep_network,Inf,Inf,2,full_07_deep_network_depth7_rep02,missing
+depth7,missing run_result.jls,Inf,07_deep_network,Inf,Inf,3,full_07_deep_network_depth7_rep03,missing
+depth7,missing run_result.jls,Inf,07_deep_network,Inf,Inf,4,full_07_deep_network_depth7_rep04,missing
+depth7,missing run_result.jls,Inf,07_deep_network,Inf,Inf,5,full_07_deep_network_depth7_rep05,missing
+depth8,missing run_result.jls,Inf,07_deep_network,Inf,Inf,1,full_07_deep_network_depth8_rep01,missing
+depth8,missing run_result.jls,Inf,07_deep_network,Inf,Inf,2,full_07_deep_network_depth8_rep02,missing
+depth8,missing run_result.jls,Inf,07_deep_network,Inf,Inf,3,full_07_deep_network_depth8_rep03,missing
+depth8,missing run_result.jls,Inf,07_deep_network,Inf,Inf,4,full_07_deep_network_depth8_rep04,missing
+depth8,missing run_result.jls,Inf,07_deep_network,Inf,Inf,5,full_07_deep_network_depth8_rep05,missing

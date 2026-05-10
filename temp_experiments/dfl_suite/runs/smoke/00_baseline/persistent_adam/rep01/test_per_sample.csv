@@ -1,0 +1,3 @@
+candidate_name,gap_values,group,optimal_collection_values,optimal_value,optimality_gap_percent,policy_collection_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+persistent_adam,2562.1598622374613,00_baseline,647.0645243955232,647.0645243955232,395.9666718911824,3209.2243866329845,3209.2243866329845,2562.1598622374613,3.9596667189118238,1,smoke_00_baseline_persistent_adam_rep01,1
+persistent_adam,4512.915389894681,00_baseline,1130.6773604772934,1130.6773604772934,399.1337889696174,5643.592750371974,5643.592750371974,4512.915389894681,3.991337889696174,1,smoke_00_baseline_persistent_adam_rep01,2

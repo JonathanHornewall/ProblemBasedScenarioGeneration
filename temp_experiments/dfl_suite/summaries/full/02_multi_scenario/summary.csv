@@ -1,0 +1,3 @@
+average_final_training_loss_gap,candidate_name,failed_count,mean_final_training_loss,mean_optimality_gap_percent,mean_test_relative_regret,ok_count,run_count,std_final_training_loss,std_optimality_gap_percent,std_test_relative_regret
+NaN,scenarios2,0,912.6005367751762,5.380434741112031,0.0538043474111203,5,5,29.97494808798395,1.6379303761534425,0.016379303761534427
+NaN,scenarios4,0,911.2163890177571,6.400477022854611,0.0640047702285461,5,5,27.864593088830595,2.19525891883848,0.021952589188384802

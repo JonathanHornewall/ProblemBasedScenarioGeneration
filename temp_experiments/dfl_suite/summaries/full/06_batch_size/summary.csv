@@ -1,0 +1,5 @@
+average_final_training_loss_gap,candidate_name,failed_count,mean_final_training_loss,mean_optimality_gap_percent,mean_test_relative_regret,ok_count,run_count,std_final_training_loss,std_optimality_gap_percent,std_test_relative_regret
+NaN,batch16,4,NaN,NaN,NaN,0,4,NaN,NaN,NaN
+NaN,batch32,4,NaN,NaN,NaN,0,4,NaN,NaN,NaN
+NaN,batch4,4,NaN,NaN,NaN,0,4,NaN,NaN,NaN
+NaN,batch8,4,NaN,NaN,NaN,0,4,NaN,NaN,NaN

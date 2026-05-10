@@ -1,0 +1,13 @@
+candidate_name,controller_status,exitcode,group,launched_at,pid,replicate,run_id,running
+mse,finished,0,01_ablations,1777948037760,46176,1,smoke_01_ablations_mse_rep01,false
+standard,finished,0,00_baseline,1777948036750,46172,1,smoke_00_baseline_standard_rep01,false
+persistent_adam,finished,0,00_baseline,1777948037002,46173,1,smoke_00_baseline_persistent_adam_rep01,false
+no_finetune,finished,0,01_ablations,1777948037255,46174,1,smoke_01_ablations_no_finetune_rep01,false
+no_annealing,finished,0,01_ablations,1777948037508,46175,1,smoke_01_ablations_no_annealing_rep01,false
+scenarios2,finished,0,02_multi_scenario,1777948038013,46177,1,smoke_02_multi_scenario_scenarios2_rep01,false
+rho_0p0001,finished,0,03_quadratic_smoothing,1777948038265,46178,1,smoke_03_quadratic_smoothing_rho_0p0001_rep01,false
+pure_rho_0p0003,finished,0,04_pure_quadratic,1777948038518,46179,1,smoke_04_pure_quadratic_pure_rho_0p0003_rep01,false
+k2,finished,0,05_knn_equilibration,1777948038771,46180,1,smoke_05_knn_equilibration_k2_rep01,false
+batch4,finished,0,06_batch_size,1777948039023,46181,1,smoke_06_batch_size_batch4_rep01,false
+depth5,finished,0,07_deep_network,1777948039276,46182,1,smoke_07_deep_network_depth5_rep01,false
+width64,finished,0,08_wide_network,1777948039529,46183,1,smoke_08_wide_network_width64_rep01,false

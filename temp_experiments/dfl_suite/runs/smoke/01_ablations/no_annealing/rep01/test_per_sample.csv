@@ -1,0 +1,3 @@
+candidate_name,gap_values,group,optimal_collection_values,optimal_value,optimality_gap_percent,policy_collection_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+no_annealing,2562.0533890942725,01_ablations,647.0645243955232,647.0645243955232,395.9502170958452,3209.1179134897957,3209.1179134897957,2562.0533890942725,3.959502170958452,1,smoke_01_ablations_no_annealing_rep01,1
+no_annealing,4512.545388696321,01_ablations,1130.6773604772934,1130.6773604772934,399.1010651165279,5643.222749173615,5643.222749173615,4512.545388696321,3.9910106511652788,1,smoke_01_ablations_no_annealing_rep01,2

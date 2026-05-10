@@ -1,0 +1,26 @@
+created_at=2026-05-07T13:14:58
+hostname=Jonathans-MacBook-Pro.local
+julia=1.12.6
+version=random_yield_q_conversion_spoplus_dfl_v1
+repo_root=/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/
+source_dir=/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/src/ContextualDFL
+script_path=/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/experiments/temp/2026-05-07_random_yield_q_conversion_spoplus_dfl/benchmark_random_yield_q_conversion.jl
+args=--output-dir experiments/temp/2026-05-07_random_yield_q_conversion_spoplus_dfl/smoke_results_dfl --methods dflscen_q_conversion --seeds 20260505 --epochs 1 --local-workers 0
+artifact_dir=/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/src/ContextualDFL/ContextualDFLExperiments/experiments/baseline_benchmarks/artifacts/tiny_30ctx_5x100_seed20260505
+output_dir=/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/experiments/temp/2026-05-07_random_yield_q_conversion_spoplus_dfl/smoke_results_dfl
+problem=random_yield
+methods=dflscen_q_conversion
+seeds=20260505
+epochs=1
+workers=0
+julia_threads=1
+hidden_dim=128
+depth=3
+learning_rate=0.001
+batchsize=1
+lower_bound_margin=1.0e-6
+constraint_tolerance=1.0e-8
+spoplus_rho=0.1
+
+[schedules]
+method=dflscen_q_conversion

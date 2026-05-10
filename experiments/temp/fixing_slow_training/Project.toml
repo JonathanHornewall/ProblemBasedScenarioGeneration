@@ -1,0 +1,15 @@
+name = "FixingSlowTrainingExperiment"
+uuid = "5f7d3f55-ec7f-44d5-8980-e0157b29a090"
+version = "0.1.0"
+
+[deps]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+ContextualDFL = "fb7be6a4-ec32-4ffa-bf2c-2719f68b2b86"
+ContextualDFLExperiments = "493a70ad-eae1-4f8c-a68d-a0865c506b93"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+ProblemBasedScenarioGeneration = "1798cd49-b424-40cc-af70-c698faff1a67"
+
+[sources]
+ContextualDFL = {path = "../../../src/ContextualDFL/ContextualDFL"}
+ContextualDFLExperiments = {path = "../../../src/ContextualDFL/ContextualDFLExperiments"}
+ProblemBasedScenarioGeneration = {path = "../../../src/ProblemBasedScenarioGeneration"}

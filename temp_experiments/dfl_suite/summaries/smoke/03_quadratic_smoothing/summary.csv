@@ -1,0 +1,2 @@
+average_final_training_loss_gap,candidate_name,failed_count,mean_final_training_loss,mean_optimality_gap_percent,mean_test_relative_regret,ok_count,run_count,std_final_training_loss,std_optimality_gap_percent,std_test_relative_regret
+NaN,rho_0p0001,0,3266.1984099191613,397.5248206534764,3.975248206534764,1,1,NaN,NaN,NaN

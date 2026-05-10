@@ -1,0 +1,17 @@
+candidate_name,error,final_training_loss,group,mean_test_relative_regret,optimality_gap_percent,replicate,run_id,status
+batch4,missing run_result.jls,Inf,06_batch_size,Inf,Inf,1,full_06_batch_size_batch4_rep01,missing
+batch4,missing run_result.jls,Inf,06_batch_size,Inf,Inf,2,full_06_batch_size_batch4_rep02,missing
+batch4,missing run_result.jls,Inf,06_batch_size,Inf,Inf,3,full_06_batch_size_batch4_rep03,missing
+batch4,missing run_result.jls,Inf,06_batch_size,Inf,Inf,4,full_06_batch_size_batch4_rep04,missing
+batch8,missing run_result.jls,Inf,06_batch_size,Inf,Inf,1,full_06_batch_size_batch8_rep01,missing
+batch8,missing run_result.jls,Inf,06_batch_size,Inf,Inf,2,full_06_batch_size_batch8_rep02,missing
+batch8,missing run_result.jls,Inf,06_batch_size,Inf,Inf,3,full_06_batch_size_batch8_rep03,missing
+batch8,missing run_result.jls,Inf,06_batch_size,Inf,Inf,4,full_06_batch_size_batch8_rep04,missing
+batch16,missing run_result.jls,Inf,06_batch_size,Inf,Inf,1,full_06_batch_size_batch16_rep01,missing
+batch16,missing run_result.jls,Inf,06_batch_size,Inf,Inf,2,full_06_batch_size_batch16_rep02,missing
+batch16,missing run_result.jls,Inf,06_batch_size,Inf,Inf,3,full_06_batch_size_batch16_rep03,missing
+batch16,missing run_result.jls,Inf,06_batch_size,Inf,Inf,4,full_06_batch_size_batch16_rep04,missing
+batch32,missing run_result.jls,Inf,06_batch_size,Inf,Inf,1,full_06_batch_size_batch32_rep01,missing
+batch32,missing run_result.jls,Inf,06_batch_size,Inf,Inf,2,full_06_batch_size_batch32_rep02,missing
+batch32,missing run_result.jls,Inf,06_batch_size,Inf,Inf,3,full_06_batch_size_batch32_rep03,missing
+batch32,missing run_result.jls,Inf,06_batch_size,Inf,Inf,4,full_06_batch_size_batch32_rep04,missing

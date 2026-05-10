@@ -40,3 +40,14 @@ scripts/resource_allocation_prototype/testing_multiple_scenarios/results/**/pert
 *.jld2
 scripts/resource_allocation_prototype/testing_multiple_scenarios/cached_values/
 scripts/resource_allocation_prototype/testing_multiple_scenarios/smoke_*/
+
+# Local experiment/runtime artifacts
+/temp/
+**/julia_depot/
+*.dylib
+*.dSYM/
+*.ji
+*.pid
+*.err
+*.tar.gz
+CONCATENATEDFULLREPO.jl

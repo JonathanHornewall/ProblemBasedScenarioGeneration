@@ -1,0 +1,3 @@
+candidate_name,gap_values,group,optimal_collection_values,optimal_value,optimality_gap_percent,policy_collection_values,policy_value,regret,relative_regret,replicate,run_id,sample_index
+scenarios2,2562.0886810728575,02_multi_scenario,647.0645243955232,647.0645243955232,395.9556712626639,3209.1532054683807,3209.1532054683807,2562.0886810728575,3.959556712626639,1,smoke_02_multi_scenario_scenarios2_rep01,1
+scenarios2,4512.707635234543,02_multi_scenario,1130.6773604772934,1130.6773604772934,399.1154146156771,5643.384995711836,5643.384995711836,4512.707635234543,3.9911541461567706,1,smoke_02_multi_scenario_scenarios2_rep01,2

@@ -1,0 +1,4 @@
+average_final_training_loss_gap,candidate_name,failed_count,mean_final_training_loss,mean_optimality_gap_percent,mean_test_relative_regret,ok_count,run_count,std_final_training_loss,std_optimality_gap_percent,std_test_relative_regret
+NaN,mse,0,2595.526648437077,397.5221392432289,3.975221392432289,1,1,NaN,NaN,NaN
+NaN,no_annealing,0,3266.200436651396,397.5256411061865,3.9752564110618653,1,1,NaN,NaN,NaN
+NaN,no_finetune,0,3303.4328841126544,397.52564430061864,3.9752564430061863,1,1,NaN,NaN,NaN

@@ -1,0 +1,21 @@
+candidate_name,error,final_training_loss,group,mean_test_relative_regret,optimality_gap_percent,replicate,run_id,status
+width64,missing run_result.jls,Inf,08_wide_network,Inf,Inf,1,full_08_wide_network_width64_rep01,missing
+width64,missing run_result.jls,Inf,08_wide_network,Inf,Inf,2,full_08_wide_network_width64_rep02,missing
+width64,missing run_result.jls,Inf,08_wide_network,Inf,Inf,3,full_08_wide_network_width64_rep03,missing
+width64,missing run_result.jls,Inf,08_wide_network,Inf,Inf,4,full_08_wide_network_width64_rep04,missing
+width64,missing run_result.jls,Inf,08_wide_network,Inf,Inf,5,full_08_wide_network_width64_rep05,missing
+width256,missing run_result.jls,Inf,08_wide_network,Inf,Inf,1,full_08_wide_network_width256_rep01,missing
+width256,missing run_result.jls,Inf,08_wide_network,Inf,Inf,2,full_08_wide_network_width256_rep02,missing
+width256,missing run_result.jls,Inf,08_wide_network,Inf,Inf,3,full_08_wide_network_width256_rep03,missing
+width256,missing run_result.jls,Inf,08_wide_network,Inf,Inf,4,full_08_wide_network_width256_rep04,missing
+width256,missing run_result.jls,Inf,08_wide_network,Inf,Inf,5,full_08_wide_network_width256_rep05,missing
+width512,missing run_result.jls,Inf,08_wide_network,Inf,Inf,1,full_08_wide_network_width512_rep01,missing
+width512,missing run_result.jls,Inf,08_wide_network,Inf,Inf,2,full_08_wide_network_width512_rep02,missing
+width512,missing run_result.jls,Inf,08_wide_network,Inf,Inf,3,full_08_wide_network_width512_rep03,missing
+width512,missing run_result.jls,Inf,08_wide_network,Inf,Inf,4,full_08_wide_network_width512_rep04,missing
+width512,missing run_result.jls,Inf,08_wide_network,Inf,Inf,5,full_08_wide_network_width512_rep05,missing
+width1024,missing run_result.jls,Inf,08_wide_network,Inf,Inf,1,full_08_wide_network_width1024_rep01,missing
+width1024,missing run_result.jls,Inf,08_wide_network,Inf,Inf,2,full_08_wide_network_width1024_rep02,missing
+width1024,missing run_result.jls,Inf,08_wide_network,Inf,Inf,3,full_08_wide_network_width1024_rep03,missing
+width1024,missing run_result.jls,Inf,08_wide_network,Inf,Inf,4,full_08_wide_network_width1024_rep04,missing
+width1024,missing run_result.jls,Inf,08_wide_network,Inf,Inf,5,full_08_wide_network_width1024_rep05,missing

@@ -8,6 +8,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
+\hypersetup{hidelinks,hypertexnames=false}
 \usepackage{url}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -50,45 +51,46 @@
 \maketitle
 
 \begin{abstract}
-Decision-focused scenario learning for contextual two-stage stochastic programming has emerged as a promising research direction, but open questions remain. A general theory for when scenario generators can yield optimal decision policies is currently lacking. Many existing methods require strict assumptions on which second-stage data are allowed to be random. Generally, the non-differentiability of the decision-focused objective is a source of difficulty. This paper makes three theoretical contributions, each aiming to remedy one of these challenges. First, we present a comprehensive theory for when scenario generators can induce optimal policies, showing that learning a single out-of-support scenario component is often sufficient. Second, we demonstrate a theoretical and methodological equivalence result between learning different second-stage data components, relaxing assumptions required for applying existing methods. Third, we study log-barrier smoothing enabled training, presenting generalizability and optimization results. Finally, leveraging the theory, we propose a novel method inspired by interior-point methods from classical optimization, and validate it on standard benchmarks.
+Decision-focused scenario learning for contextual two-stage stochastic programming has emerged as a promising research direction, but open questions remain. A general theory for when scenario generators can yield optimal decision policies is currently lacking. Many existing methods require strict assumptions on which second-stage data are allowed to be random. Generally, the non-differentiability of the decision-focused objective is a source of difficulty. This paper makes three theoretical contributions, each aiming to remedy one of these challenges. First, we present a comprehensive theory for when scenario generators can induce optimal policies, showing that learning a single out-of-support scenario component is often sufficient. Second, we demonstrate a theoretical and methodological equivalence result between learning different second-stage data components, relaxing assumptions required for applying existing methods. Third, we study log-barrier smoothing enabled training, presenting representability and optimization results. Finally, leveraging the theory, we propose a novel method inspired by interior-point methods from classical optimization, and validate it on standard benchmarks.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-Machine learning is increasingly used to support high-stakes decisions in logistics, energy, healthcare, finance, and public planning \citep{rudin2019stop,bertsimas2020predictive,mandi2024decision}. Yet automated decision making is not new. Since the early development of mathematical programming, classically associated with Dantzig's work on linear programming \citep{dantzig1963linear}, computers have solved large constrained optimization problems according to deterministic rules. Today, mathematical programming is essential for the operation of power systems, supply chains, transportation networks, financial systems, and other critical infrastructure \citep{wood2013power,simchi_levi2014logic,ahuja1993network,markowitz1952portfolio}. Its strength is also what makes it difficult to replace with standard deep learning: feasibility, recourse, integrality, and other hard constraints are central to the model \citep{nemhauser1988integer,birge2011introduction}.
+Machine learning is increasingly used to support high-stakes decisions in logistics, energy, healthcare, finance, and public planning \citep{rudin2019stop,bertsimas2020predictive,mandi2024decision}. Yet automated decision making is not new. Since the early development of mathematical programming, classically associated with Dantzig's work on linear programming \citep{dantzig1963linear}, computers have solved large constrained optimization problems according to deterministic rules. Today, mathematical programming is essential for the operation of power systems, supply chains, transportation networks, financial systems, and other critical infrastructure \citep{wood2013power,simchi_levi2014logic,ahuja1993network,markowitz1952portfolio}. Its ability to strictly handle complicated constraints has made it resistant to being replaced by pure machine learning approaches \citep{birge2011introduction}.
 
-This has motivated growing interest in hybrid methods that combine machine learning with optimization. Rather than replacing mathematical programming, these methods use learning to improve the inputs, approximations, or solution procedures of optimization models \citep{bengio2021machine,kotary2021endtoend,mandi2024decision}. A central example is decision-focused learning (DFL), where a predictive model is trained through the downstream optimization problem itself. The model learns to output parameters that produce good decisions, not merely accurate predictions \citep{donti2017task,elmachtoub2022smart,wilder2019melding}.
+This has motivated growing interest in hybrid methods that combine machine learning with optimization. Rather than replacing mathematical programming, these methods use learning to improve the inputs, approximations, or solution procedures of optimization models \citep{bengio2021machine,kotary2021endtoend,mandi2024decision}. A central example is decision-focused learning (DFL), where a predictive model is trained through the downstream optimization problem. The model learns to output parameters that produce good decisions, not merely accurate predictions \citep{donti2017task,elmachtoub2022smart,wilder2019melding}.
 
-We study this idea for contextual two-stage stochastic programming. In a two-stage stochastic program, a first-stage decision is made before uncertainty is realized, and a second-stage recourse decision is made afterward \citep{birge2011introduction,shapiro2014lectures}. For example, an energy operator may commit generation before demand and renewable output are known, and then dispatch reserves after uncertainty is observed. In the contextual setting, the decision maker observes side information, such as weather forecasts, market data, or recent demand, before choosing the first-stage decision. The goal is therefore to learn a map from context to high-quality stochastic-programming decisions.
+We study this idea for contextual two-stage stochastic programming. In a two-stage stochastic program, a first-stage decision is made before uncertainty is realized, and a second-stage recourse decision is made afterward \citep{birge2011introduction,shapiro2014lectures}. For example, an energy operator may commit generation before demand and renewable output are known, and then dispatch reserves after uncertainty is observed. In the contextual setting, the decision maker observes side information, such as weather forecasts, market data, or recent demand, before choosing the first-stage decision. The aim of contextual stochastic programming is to learn a map from context data to high-quality decisions.
 
-Existing approaches to contextual stochastic programming can be grouped into three broad categories, as outlined in the recent survey \citep{sadana2025survey}.
+Following the recent survey of \citet{sadana2025survey}, existing approaches to contextual stochastic programming can be grouped into three broad categories.
 
 \begin{itemize}
-    \item \textbf{Predict-then-optimize.} Learn the conditional distribution, or a sample approximation of it, and then solve the resulting stochastic program. Strength: if the learned distribution is accurate, this can be combined with classical optimization to obtain an exact optimal policy for the estimated problem. Weakness: distribution learning can be data intensive, and small statistical errors can cause large downstream decision errors \citep{elmachtoub2022smart,donti2017task}.
+    \item \textbf{Predict-then-optimize.} Learn the conditional distribution, and then solve the resulting stochastic program. When the learned distribution is accurate, this can be combined with classical optimization to obtain an exact optimal policy for the estimated problem. However, distribution learning can be data intensive, and small statistical errors can cause large downstream decision errors \citep{elmachtoub2022smart,donti2017task}.
 
-    \item \textbf{Direct policy learning.} Learn the map from context to decision directly. Strength: this can be effective when the optimal policy is simpler than the full conditional distribution. Weakness: learned policies often struggle to satisfy complicated constraints, especially in problems with integer variables \citep{kotary2021endtoend,ferber2020mipaal}.
+    \item \textbf{Direct policy learning.} Learn the map from context to decision. This can be effective when the optimal policy is simpler than the full conditional distribution. However, learned policies often struggle to satisfy complicated constraints \citep{kotary2021endtoend}.
 
-    \item \textbf{Decision-focused learning.} Learn scenarios, costs, or other optimization inputs specifically to optimize downstream decision quality. Strength: decisions are produced by solving an optimization problem, so feasibility is naturally respected. The approach also extends naturally to mixed-integer settings by training on continuous relaxations and imposing integrality at inference. Weakness: training requires repeatedly solving optimization problems and differentiating through their solution maps, which can quickly become computationally expensive \citep{amos2017optnet,agrawal2019differentiable,mandi2024decision}.
+    \item \textbf{Decision-focused learning.} Learn scenarios, costs, or other optimization inputs to optimize downstream decision quality. Because decisions are produced by solving an optimization problem, feasibility is naturally respected. The main challenge is that training requires repeatedly solving optimization problems and differentiating through their solution maps, which can quickly become computationally expensive \citep{amos2017optnet,agrawal2019differentiable,mandi2024decision}.
 \end{itemize}
 
-This paper focuses on the third category. Specifically, we study decision-focused learning of single synthetic scenarios. Given a context, a model outputs one scenario, the corresponding single-scenario optimization problem is solved, and the resulting first-stage decision is evaluated on the true downstream stochastic objective. Single-scenario learning is attractive because both training and inference are much faster than solving large sample-average approximations, whose size grows with the number of scenarios \citep{shapiro2014lectures}. The challenge is that linear-programming solution maps are typically non-differentiable, making gradient-based training difficult \citep{wilder2019melding,mandi2020interior}.
+This paper focuses on the third category. Specifically, we study decision-focused learning of single synthetic scenarios. Given a context, a model outputs one scenario, a decision is computed, optimized for the scenario, and then evaluated on the true downstream objective. Single-scenario learning is attractive because both training and inference are much faster than solving large sample-average approximations, whose size grows with the number of scenarios \citep{shapiro2014lectures}. The challenge is that optimal-solution maps are often non-differentiable, making gradient-based training difficult \citep{wilder2019melding,mandi2020interior}.
 
 We make three contributions.
 
 \begin{itemize}
     \item \textbf{Optimal-policy realizability via single-scenario learning.}
-    We prove that, under weak well-posedness assumptions, optimal contextual stochastic-programming policies can be represented by solving carefully chosen single-scenario problems. In particular, a scenario generator does not need to learn a full conditional distribution, or even a realistic scenario. A single synthetic scenario component is often sufficient to induce the optimal first-stage decision.
+    We prove that, under weak well-posedness assumptions, optimal stochastic-programming decisions can be obtained by solving carefully chosen single-scenario problems. In particular, full-scenario predictions are often redundant, and either pure cost or demand predictions are sufficient for representing optimal decisions.
 
-    \item \textbf{Equivalence between scenario components and direct decision learning.}
-    We show that learning different second-stage components can be equivalent in terms of the first-stage decisions they induce. Costs and right-hand sides can encode the same optimal policy. This means that the learned component can be chosen for computational convenience, dimensionality, or feasibility, rather than being dictated by which component is random in the original problem.
+    \item \textbf{Equivalence between learning cost and demand.}
+    We show that under general conditions optimal decisions can be represented with demand forecasts or cost forecasts. For example, a problem with random demand and deterministic cost can be solved by producing a well-tuned cost forecast, just as well as a demand forecast. Which component one chooses can therefore be decided by computational considerations and feasibility, rather than being dictated by the structure of randomness in the original problem.
 
     \item \textbf{Log-barrier smoothing and trainability.}
-    We study log-barrier smoothing of the single-scenario surrogate problem. The smoothing makes the scenario-to-decision map differentiable and yields closed-form implicit derivatives. We further prove that the smoothed decision-focused loss has a favorable geometry: it is componentwise invex, or equivalently has no spurious stationary points, with respect to the relevant learned scenario components. This gives a theoretical explanation for why log-barrier smoothing avoids vanishing-gradient pathologies associated with other smoothing schemes. Motivated by this, we propose an interior-point-inspired training method that starts with a large barrier parameter and gradually decreases it during training.
+    We study the theoretical properties of log-barrier smoothing as a means of enabling decision-focused scenario learning. We show that it induces smoothness in the scenario-parametrized loss, with closed-form derivatives. Additionally, we prove an unexpected generalized convexity property for the same loss function, showing that it is componentwise invex in both the cost and demand. The approach hence avoids a known theoretical pathology associated with quadratic smoothing. Motivated by these results, we propose a neural net training method inspired by classical interior point methods.
+
 \end{itemize}
 
 \paragraph{Closest approaches in the literature.}
-Our work is closest to decision-focused learning for optimization problems with random costs \citep{elmachtoub2022smart,wilder2019melding}, log-barrier smoothing for differentiable optimization layers \citep{mandi2020interior}, and decision-focused methods for stochastic programming \citep{donti2017task,islip2025contextual}. Prior stochastic-programming methods often learn distributions or multiple scenarios, and frequently rely on quadratic smoothing or black-box surrogates \citep{donti2017task,ferber2020mipaal,islip2025contextual}. Other work studies decision-optimal single-scenario forecasts, but usually under restrictions on which second-stage component is random \citep{estes2023smart,homemdemello2024forecasting}. Our contribution is to give a general realizability theory for synthetic single-scenario learning, extend the theory across scenario components, and show that log-barrier smoothing gives a trainable loss landscape for this setting.
+Our work is closest to the random-cost decision-focused learning literature of \citet{elmachtoub2022smart} and \citet{wilder2019melding}, the log-barrier differentiable-optimization approach of \citet{mandi2020interior}, and decision-focused stochastic-optimization methods such as \citet{donti2017task} and \citet{islip2025contextual}. Prior stochastic-programming methods often learn distributions or multiple scenarios, and frequently rely on quadratic smoothing, differentiable relaxations, or black-box surrogates \citep{donti2017task,agrawal2019differentiable,islip2025contextual}. The closest single-scenario and decision-optimal forecasting results are due to \citet{estes2023smart} and \citet{homemdemello2024forecasting}, but these usually impose restrictions on which second-stage component is random. Our contribution is to give a realizability theory for scenario generation as a policy class, extend and connect existing methods, and prove novel theoretical properties for log-barrier smoothing.
 
 \section{Notation and Problem Statement}
 \label{sec:notation-problem}
@@ -158,7 +160,7 @@ For our theoretical analysis, we use the following standing assumptions:
     \item \label{ass:logbarrier-well-posedness} (Log-barrier smoothed well-posedness) For every $x\in\mathcal X$, the problem $\mathcal{P}_\mu^{x}$ has a solution for every value of $\mu\geq 0$.
     \item \label{ass:fixed-technology-matrix} (Fixed technology matrix) General stochastic programs allow the second-stage technology matrix $T$ to depend on randomness. We restrict ourselves to cases where this does not hold.
 \end{enumerate}
-The first three assumptions are non-restrictive and standard in stochastic programming. The log-barrier well-posedness assumption may seem opaque, but any well-posed linear program can generally be reformulated to respect it. This is what allows Interior Point Methods to function as a go-to standard for solving large LPs. See e.g. ?? for an overview of the classic theory.
+The first three assumptions are non-restrictive and standard in stochastic programming. The log-barrier well-posedness assumption may seem opaque, but any well-posed linear program can generally be reformulated to respect it. This is what allows interior-point methods to function as a go-to standard for solving large LPs. See, e.g., \citet{wright1997primal} for an overview of the classic theory.
 
 Throughout, we will use the following equivalent formulation of $\mathcal{P}_\mu^{x}$, in the classical form of a stochastic optimization problem with a random objective:
 \begin{equation}
@@ -263,6 +265,8 @@ We remark that decision focused scenario generation can be viewed as a specific 
 \right\}.
 \end{equation}
 
+A natural question to ask is under which conditions optimal decisions can be represented by scenarios at all. As we shall see in the next section, our standing assumptions are sufficient for guaranteeing this.
+
 \section{Optimal policy realizability via cost vector and demand vector learning}
 \label{sec:optimal-policy-realizability}
 \label{sec:realizability}
@@ -270,6 +274,7 @@ We remark that decision focused scenario generation can be viewed as a specific 
 \begin{theorem}[Optimal policy realizability via cost vector and demand vector learning]
 \label{thm:realizability}
 Fix a context $x\in\mathcal X$ and a scenario $\xi\in\Xi$. Let $\mu \in [0,\infty)$ denote any admissible choice of log-barrier smoothing parameter, including $0$.
+
 \textbf{Case 1: Learning the cost $q$}.
 There exists a cost vector
 $q_\mu^\#(x,\xi)\in\R^{n_2}$ which realizes an optimal first-stage decision, in the sense that
@@ -312,7 +317,7 @@ q_\delta^{\max}[i]:=\max_{\xi'\in\Xi}\left(q(\xi')[i]+\delta\right),
 
 \begin{remark}[Synthetic scenarios]
 \label{rem:synthetic-scenarios}
-While the theorem may seem magic at first, we emphasize that it does not guarantee that the decision optimal scenario will exist in the support of the distribution of $\xi$. The scenario is ``synthetic'', in the sense that it need not correspond to a physically realistic real-life outcome. In such cases, the scenario is best viewed as a parameter for encoding an optimal optimal decison.
+While the theorem may seem magic at first, we emphasize that it does not guarantee that the decision optimal scenario will exist in the support of the distribution of $\xi$. As mentioned, the scenario is ``synthetic'', in the sense that it need not correspond to a physically realistic real-life outcome. It is primarily a decision parameter.
 \end{remark}
 
 \begin{proposition}[Constructive expressions]
@@ -326,7 +331,7 @@ By Proposition~\ref{prop:constructive}, constructive formulas are available for 
 
 Additionally, Proposition~\ref{prop:constructive} and Theorem~\ref{thm:realizability} show that the components you learn do not have to even correspond to the structure of the randomness in the stochastic program. For example, nothing prevents using a method for learning $q$, even if $q$ is deterministic in the original problem.
 
-Generally, the choice of learning $q$ or $h$ via decision focused scenario generation, or $z$ directly through decision policy learning, should be made entirely based on the ease of the learning itself, as determined by dimensionality and complexity of the constraint sets of $\Xi_{\mu,q}^{\mathrm{synthetic}}$, $\Xi_{\mu,h}^{\mathrm{synthetic}}$, and $Z$ respectively.
+Generally, the choice of learning $q$ or $h$ via decision focused scenario generation, or $z$ directly through decision policy learning, should be made entirely based on the ease of the learning itself, as determined by dimensionality and complexity of the constraint sets of $\Xi$ and $Z$ respectively.
 
 \section{Decision focused learning via log-barrier smoothing}
 \label{sec:dfl-logbarrier}
@@ -352,7 +357,7 @@ Differentiating with respect to the generated scenario gives
 \frac{\partial \hat z_\mu^\#(\hat\xi_i)}{\partial \hat\xi_i}.
 \end{equation}
 The first term $\partial \hat G_\mu/\partial z$ can be handled via subgradients due to the convexity of $\hat G_\mu$.
-The second term is the object addressed by log-barrier smoothing; without smoothing, the corresponding solution map is generally piecewise constant in $q$.
+The second factor presents more of an issue. In particular, the solution is generally piecewise constant in the cost $q$. Log-barrier smoothing resolves this pathology.
 
 \begin{proposition}[Closed form derivatives for log-barriers]
 \label{prop:logbarrier-derivatives}
@@ -383,40 +388,23 @@ L_\mu(q,h,W_f,x)
 \]
 is componentwise invex in $q$ and $h$.
 For a pair $(q^\#,h^\#)\in\R^{n_2}\times\R^{m_2}$, the following conditions are equivalent:
-\begin{gather}
+\begin{equation}
+\label{eq:no-vg-equivalences}
+\resizebox{\textwidth}{!}{$
 \nabla_q L_\mu(q^\#,h^\#,W_f,x)=0
-\label{eq:no-vg-q-stationary}
-\\
-\Longleftrightarrow
-\notag
-\\
+\;\Longleftrightarrow\;
 \nabla_h L_\mu(q^\#,h^\#,W_f,x)=0
-\label{eq:no-vg-stationary}
-\\
-\Longleftrightarrow
-\notag
-\\
-(q^\#,h^\#)
-\in
-\argmin_{\{(q,h):\;(W_f,h,q)\in\Xi_\mu^{\mathrm{synthetic}}\}}
-L_\mu(q,h,W_f,x)
-\label{eq:no-vg-loss-min}
-\\
-\Longleftrightarrow
-\notag
-\\
-\hat z_\mu^\#(q^\#,h^\#,W_f)
-=
-\argmin_{z\in\R^{n_1}}G_\mu(z,x)
-\label{eq:no-vg-decision-opt}
-\end{gather}
+\;\Longleftrightarrow\;
+\hat z_\mu^\#(q^\#,h^\#,W_f)=\argmin_{z\in\R^{n_1}}G_\mu(z,x).
+$}
+\end{equation}
 \end{theorem}
 
 The theorem implies that the loss landscape over the neural net cost and demand output is ``trap free''.
 Training may still get stuck in local minima, as is generally the risk in deep learning, but only due to non-convexities in the net itself, not in the loss function.
 The result is unexpected and has a non-trivial proof. In particular, it shows that log-barrier smoothing is theoretically distinct from quadratic smoothing.
 
-In connection with Theorem~\ref{thm:realizability}, the equivalence between \eqref{eq:no-vg-loss-min} and \eqref{eq:no-vg-decision-opt} also provides an interesting certificate for the existence of an optimal $h$ in cases with random recourse $W$. A demand vector that solves the demand-parametrized decision problem exists if and only if that demand vector realizes an optimal scenario.
+In connection with Theorem~\ref{thm:realizability}, the equivalence in \eqref{eq:no-vg-equivalences} also provides an interesting certificate for the existence of an optimal $h$ in cases with random recourse $W$. A demand vector that solves the demand-parametrized decision problem exists if and only if that demand vector realizes an optimal scenario.
 
 \section{An interior point inspired method for decision focused scenario generation}
 \label{sec:interior-point-method}
@@ -468,23 +456,61 @@ Back-propagation through the unsmoothed loss $\hat G$ is handled via subgradient
 
 We emphasize that this method can be applied for decision focused learning of the cost $q$, the demand $h$, or both, regardless of which components of $W$, $T$, $h$, and $q$ are random in the underlying stochastic program. Assumptions made previously in the paper are required for guarantees, but not for applicability. Empirical validation will determine which learning strategy works best for problems in practice.
 
+
 \section{Experiments}
 \label{sec:experiments}
+
+The experiments are intended as a modest validation of the theory and algorithm. We use three contextual two-stage stochastic LP benchmarks chosen to isolate the three second-stage uncertainty regimes relevant to our theory. The resource-allocation benchmark is inherited from the application-driven pointwise forecasting literature and represents the fixed-recourse, fixed-cost case where uncertainty enters through the second-stage right-hand side. The transshipment benchmark is based on the multilocation transshipment literature and on random-cost stochastic-programming instances, and tests the mixed case where both demand and second-stage costs vary. Finally, the random-yield benchmark is a controlled synthetic stress test for random recourse matrices, motivated by production settings with uncertain yields. Together, these instances are not intended as an exhaustive empirical benchmark suite; rather, they validate the central modeling claim that the learned synthetic component can be chosen for computational and statistical convenience, rather than forced to match the physical source of uncertainty.
+
+We focus on two questions. First, can the proposed log-barrier single-scenario generator be trained stably and achieve reasonable decision quality? Second, how much does the choice of learned scenario component matter in finite-sample training?
+
+For each context $x$, the learned generator outputs a single synthetic scenario. The associated single-scenario problem is solved to obtain a first-stage decision $z(x)$, which is then evaluated on held-out scenarios. We report relative regret against a per-context sample-average oracle:
+\[
+\mathrm{RelRegret}
+=
+100\cdot
+\frac{
+\widehat G(z(x),x)-\widehat G(z^\star(x),x)
+}{
+|\widehat G(z^\star(x),x)|
+}.
+\]
+Lower is better. The numbers below should be read as exploratory evidence that the theoretical construction leads to a trainable method, not as a comprehensive benchmark study.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Effect of the learned scenario component. Entries are relative regret in percent. The true randomness indicates which part of the real stochastic problem varies; the learned component indicates which vector the neural generator outputs.}
+\label{tab:component-choice}
+\begin{tabular}{lccc}
+\hline
+Benchmark & True randomness & Learn $h$ & Learn $q$ \\
+\hline
+Resource allocation & $h$ & \textbf{8.07} & 24.31 \\
+Transshipment & $h,q$ & \textbf{2.06} & 26.95 \\
+Random yield & $W$ & 8.40 & \textbf{7.08} \\
+\hline
+\end{tabular}
+\end{table}
+
+The method trains stably on all instances in Table~\ref{tab:component-choice} and obtains single-digit relative regret when the learned component is chosen appropriately. The results also show that the learned component can have a large and non-obvious effect. In the transshipment problem with both random demand and random cost, learning demand gives $2.06\%$ regret, whereas learning the cost vector gives $26.95\%$ regret under the same evaluation protocol. Thus, although Theorem~\ref{thm:realizability} gives an existence result for decision-optimal single-scenario representations, finite-sample learning still strongly depends on which scenario component is parameterized.
+
+The random-yield experiment illustrates the complementary phenomenon. In this instance the real uncertainty is in the recourse matrix $W$, which would be expensive and structurally delicate to learn directly. Instead, following the logic of Theorem~\ref{thm:realizability} and Proposition~\ref{prop:constructive}, we keep $W$ fixed in the generated scenario and learn a positive second-stage cost vector $q$. This achieves $7.08\%$ relative regret, slightly better than learning $h$ and substantially below the naive alternatives observed in our internal runs. This supports the main modeling point: the synthetic scenario need not be a literal forecast of the physical randomness in order to induce good first-stage decisions.
+
+Overall, the experiments support the intended qualitative conclusions. Single-scenario log-barrier training works in principle on contextual two-stage stochastic LPs. More importantly, the learned scenario component should be treated as a design choice: in some problems learning demand is far better, while in others learning a cost vector can avoid the need to learn recourse matrices altogether.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have presented both theoretical results, and a novel method. It is important to keep in mind their distinctness. While our theoretical results ground and justify our method, their relevance extends far beyond it, with general relevance for contextual stochastic programming. One could argue that they are the main contribution.
+This paper develops a theory of decision-focused single-scenario learning for contextual two-stage stochastic programming. The main message is that a learned scenario need not be an accurate sample from the conditional distribution in order to be decision optimal. Under the stated well-posedness assumptions, optimal stochastic-programming decisions can be induced by carefully chosen synthetic single-scenario problems.
 
-To the best of our knowledge, we are the first to present a comprehensive theory of optimal policy realizability via scenario learning, in the contextual stochastic programming literature. Proposition~\ref{prop:constructive} extends the applicability of various existing methods, connection different methods in the literature, and rendering previously intractable problem instances tractable. Likewise, our theoretical results regarding log-barriers generalize beyond our method and even beyond contextual stochastic programming, providing a principled argument for their usage, and superiority over quadratic smoothing methods, for decision focused learning.
+This perspective separates decision parametrization from distribution forecasting. It explains why cost, demand, and direct decision learning can be equivalent from the standpoint of the first-stage decision they induce, while still differing substantially in trainability, dimensionality, and feasibility. The constructive formulas in Proposition~\ref{prop:constructive} make this equivalence explicit: decision-optimal synthetic costs and demands can be written in terms of optimal decisions and averaged dual information. The counterexamples in the appendix also show that the assumptions are not merely technical; fixing the wrong structural component can destroy representability.
 
-Our method, inspired by these results, has several benefits. It has general applicability, and require no assumptions on the structure of the randomness for the underlying program. It is simultanesously dynamic, and can be adjusted to fit the needs of specific problems in terms of which components it learns. It can be applied both for problems with integer variables and those without. When integer variables are missing or the integrality gap is zero, it has the benefit or training directly on the decision objective, without the need for convex or black-box neural surrogates. On a conceptual level, it functions as a neural net extension of classical interior point methods, which have a rich theory that can be leveraged for theoretical analysis.
+The second part of the paper studies trainability. Log-barrier smoothing turns the scenario-to-decision map into a differentiable object with closed-form implicit derivatives. More importantly, the induced decision-focused loss has a componentwise invex structure in the learned cost and demand variables.
 
-However, there are also key limitations to keep in mind. The theoretical results only apply for synthetic scenarios, which function less as realistic predictions and more like arbitrary decision parameters. This limits interpretability.
+The experiments are intended as a validation of this theory rather than as a broad empirical benchmark.
 
-Our experiments provide a convincing case for the viability of our method by considering standard benchmarks, but many realistic industrial problems are of much greater size. Future work will focus on validating the method on such instances.
-
-Future work will focus on extending the theory and the method to take integers into account more thoroughly. Additionally, we expect the theory to generalize both to risk-averse problems, and more general convex programs such as second-order conic programs and semi-definite programs.
+Several directions remain open. Natural extensions include risk-averse objectives, richer scenario restrictions that preserve interpretability, and broader convex recourse models such as conic or semidefinite programs. A systematic scaling study on larger industrial instances is also needed to understand when the single-scenario theory translates into computational advantage in practice.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -495,13 +521,12 @@ Future work will focus on extending the theory and the method to take integers i
 {\Large\bfseries Core appendix}
 \end{center}
 
-\section{Proof of main theorems and closed form expressions}
-
-\subsection{Preliminary definitions and results}
+\section{Preliminary Definitions and Results}
 \label{app:preliminary-definitions-results}
 
 Throughout, we will repeatedly make use of the dual of the second stage problem, as defined by a scenario
 \(\xi \in \Xi^{\mathrm{synthetic}}\) and a first stage decision \(z \in Z\).
+By classical duality theory, it is equivalent in value to the second-stage primal problem.
 
 \[
 Q_\mu(z,\xi)
@@ -581,1132 +606,535 @@ In particular, for \(\mu>0\),
 -T^\top\hat\lambda_\mu(z,\xi).
 \]
 
-\subsection{Closed form expressions for optimal scenario components}
+\section{Optimal Decision Representability}
 \label{app:realizability-proof}
 
-This subsection records the constructive formulas used in Proposition~\ref{prop:constructive} and Theorem~\ref{thm:realizability}. The formulas are written in terms of the stochastic optimal decision $z_\mu^\#(x)$ and the corresponding averaged second-stage multiplier. Throughout, $\mu=0$ is interpreted as the limit along the log-barrier central path.
 
-Fix a context $x\in\mathcal X$ and a smoothing parameter $\mu\in[0,\infty)$. For compactness, write
-\begin{equation}
-\label{eq:core-lambda-shorthand}
-\lambda_\mu^{\#,x}:=\lambda_\mu^x\!\left(z_\mu^\#(x)\right).
-\end{equation}
-For a reference scenario $\tilde\xi=(\widetilde W,\widetilde h,\widetilde q)$, also write
-\begin{equation}
-\label{eq:core-reference-lambda-shorthand}
-\widetilde\lambda_\mu^x
-:=
-\hat\lambda_\mu\!\left(z_\mu^\#(x),\tilde\xi\right).
-\end{equation}
+\subsection{Closed-Form Expressions for Optimal Decision Inducing Demand and Cost}
 
-\paragraph{Learning the cost vector $q$.}
-For any reference scenario $\tilde\xi=(\widetilde W,\widetilde h,\widetilde q)$, define
+This subsection records the closed-form scenario components used in Proposition~\ref{prop:constructive} and Theorem~\ref{thm:realizability}. The dual variables are those defined in Appendix~\ref{app:preliminary-definitions-results}.
+
+\paragraph{Decision-optimal cost vector.}
+For a reference scenario $\tilde\xi=(\widetilde W,\widetilde h,\widetilde q)$, let $\widetilde\lambda_\mu^x$ be any second-stage dual optimizer for $\tilde\xi$ at $z_\mu^\#(x)$. Define
 \begin{equation}
 \label{eq:core-q-construct}
 q_\mu^{\#,\tilde\xi}(x)
 :=
-\widetilde q
-+
+\widetilde q+
 \widetilde W^\top
 \left(
 \lambda_\mu^{\#,x}-\widetilde\lambda_\mu^x
 \right).
 \end{equation}
-Then
-\begin{equation}
-\label{eq:core-q-construct-decision}
-\hat z_\mu^\#\!\left(
-\widetilde W,
-\widetilde h,
-q_\mu^{\#,\tilde\xi}(x)
-\right)
-=
-z_\mu^\#(x).
-\end{equation}
-Indeed, let $\widetilde y_\mu^x$ be the second-stage primal solution for the reference scenario $\tilde\xi$ at $z_\mu^\#(x)$. For $\mu>0$, the second-stage KKT equations for the reference scenario give
-\begin{equation}
-\label{eq:core-reference-second-stage-kkt}
-\widetilde W\widetilde y_\mu^x
-=
-\widetilde h-Tz_\mu^\#(x),
-\qquad
-\widetilde q-
-\widetilde W^\top\widetilde\lambda_\mu^x
-=
-\mu (\widetilde y_\mu^x)^{-1}.
-\end{equation}
-By the definition of $q_\mu^{\#,\tilde\xi}(x)$,
-\begin{equation}
-\label{eq:core-q-shift-identity}
-q_\mu^{\#,\tilde\xi}(x)
--
-\widetilde W^\top\lambda_\mu^{\#,x}
-=
-\widetilde q-
-\widetilde W^\top\widetilde\lambda_\mu^x.
-\end{equation}
-Combining \eqref{eq:core-reference-second-stage-kkt} and \eqref{eq:core-q-shift-identity} shows that $(\widetilde y_\mu^x,\lambda_\mu^{\#,x})$ satisfies the second-stage KKT system for the synthetic scenario $(\widetilde W,\widetilde h,q_\mu^{\#,\tilde\xi}(x))$ at $z=z_\mu^\#(x)$.
+This is the cost-vector construction used in Theorem~\ref{thm:realizability}.
 
-The first-stage KKT equations for the stochastic problem at $z_\mu^\#(x)$ give some multiplier $\nu_\mu^x$ such that
-\begin{equation}
-\label{eq:core-stochastic-first-stage-kkt}
-Az_\mu^\#(x)=b,
-\qquad
-c-
-\mu (z_\mu^\#(x))^{-1}
-+A^\top\nu_\mu^x
--T^\top\lambda_\mu^{\#,x}
-=0.
-\end{equation}
-Since the same averaged multiplier $\lambda_\mu^{\#,x}$ appears in the single-scenario KKT system above, \eqref{eq:core-stochastic-first-stage-kkt} is also the first-stage stationarity condition for the synthetic scenario. Hence $z_\mu^\#(x)$ satisfies the full single-scenario KKT system. Uniqueness of the log-barrier solution for $\mu>0$ gives \eqref{eq:core-q-construct-decision}. The unsmoothed $\mu=0$ expression is obtained by taking the central-path limit; the equality in \eqref{eq:core-reference-second-stage-kkt} is then replaced by dual feasibility and complementary slackness.
-
-\paragraph{Learning the right-hand side $h$.}
-Assume now that the recourse matrix is deterministic, $W(\xi)=W$ for all scenarios. Fix $\delta>0$ and define $q_\delta^{\max}$ as in \eqref{eq:qmaxdelta}. Set
+\paragraph{Decision-optimal demand vector.}
+Assume that the recourse matrix is deterministic, $W(\xi)=W$ for all scenarios, and fix $\delta>0$. Define $q_\delta^{\max}$ as in \eqref{eq:qmaxdelta}. For $\mu>0$, set
 \begin{equation}
 \label{eq:core-h-residual}
 r_\mu^{\#,x,\delta}
 :=
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}.
+q_\delta^{\max}-W^\top\lambda_\mu^{\#,x},
 \end{equation}
-For $\mu>0$, define
 \begin{equation}
 \label{eq:core-y-construct}
 y_\mu^{\#,\delta}(x)
 :=
 \mu\left(r_\mu^{\#,x,\delta}\right)^{-1},
 \end{equation}
-where the inverse is componentwise, and then define
+and
 \begin{equation}
 \label{eq:core-h-construct}
 h_\mu^{\#,\delta}(x)
 :=
 Tz_\mu^\#(x)+Wy_\mu^{\#,\delta}(x).
 \end{equation}
-For $\mu=0$, define the same object by the central-path limit; equivalently, the displayed formula gives $y_0^{\#,\delta}(x)=0$ and $h_0^{\#,\delta}(x)=Tz^\#(x)$.
-
-The vector $r_\mu^{\#,x,\delta}$ is componentwise positive. To see this for $\mu>0$, write
+For $\mu=0$, set
 \begin{equation}
-\label{eq:core-r-positivity}
-\begin{aligned}
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-&=
-\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
-\left[
-q_\delta^{\max}-W^\top\hat\lambda_\mu\!\left(z_\mu^\#(x),\boldsymbol\xi\right)
-\right]
-\\
-&=
-\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
-\left[
-q_\delta^{\max}-q(\boldsymbol\xi)
-+
-q(\boldsymbol\xi)-W^\top\hat\lambda_\mu\!\left(z_\mu^\#(x),\boldsymbol\xi\right)
-\right].
-\end{aligned}
+\label{eq:core-h-construct-zero}
+h_0^{\#,\delta}(x):=Tz_0^\#(x).
 \end{equation}
-The first term inside the expectation is at least $\delta\1$ componentwise by construction of $q_\delta^{\max}$, while the second term is equal to $\mu y_\mu(\boldsymbol\xi)^{-1}$ componentwise along the second-stage KKT system. Thus $r_\mu^{\#,x,\delta}>0$.
+These are the right-hand-side constructions used in Theorem~\ref{thm:realizability}.
 
-By construction,
-\begin{equation}
-\label{eq:core-h-second-stage-kkt}
-Wy_\mu^{\#,\delta}(x)
-=
-h_\mu^{\#,\delta}(x)-Tz_\mu^\#(x),
-\qquad
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-=
-\mu\left(y_\mu^{\#,\delta}(x)\right)^{-1}.
-\end{equation}
-Therefore $(y_\mu^{\#,\delta}(x),\lambda_\mu^{\#,x})$ satisfies the second-stage KKT equations for the synthetic scenario $(W,h_\mu^{\#,\delta}(x),q_\delta^{\max})$ at $z=z_\mu^\#(x)$. Combining this with the first-stage stochastic KKT equations \eqref{eq:core-stochastic-first-stage-kkt} gives
-\begin{equation}
-\label{eq:core-h-construct-decision}
-\hat z_\mu^\#\!\left(
-W,
-h_\mu^{\#,\delta}(x),
-q_\delta^{\max}
-\right)
-=
-z_\mu^\#(x).
-\end{equation}
-Again, the case $\mu=0$ follows by central-path convergence; the strict positivity of $r_\mu^{\#,x,\delta}$ gives $y_\mu^{\#,\delta}(x)\to 0$, so the limiting right-hand side is $Tz^\#(x)$.
+\subsection{Proof of Theorem 1}
 
-\paragraph{Computational cost.}
-If $z_\mu^\#(x)$ and the averaged multiplier $\lambda_\mu^{\#,x}$ are available, evaluating \eqref{eq:core-h-construct} requires only matrix-vector operations. Evaluating \eqref{eq:core-q-construct} additionally requires the reference multiplier $\widetilde\lambda_\mu^x$, which is obtained by solving the single-scenario second-stage problem at the fixed first-stage decision $z_\mu^\#(x)$. Thus the construction costs no more than a single second-stage solve plus matrix-vector operations.
-
-\subsection{Closed form expression for derivative of log barrier smoothed scenario-parametrized decision loss}
-\label{app:closed-form-derivatives}
-
-Fix $\mu>0$ and a synthetic scenario $\xi=(W,h,q)$ for which the single-scenario smoothed problem is well defined. Write
-\begin{equation}
-\label{eq:core-zhat-lambdahat}
-\hat z:=\hat z_\mu^\#(\xi),
-\qquad
-\hat\lambda:=\hat\lambda_\mu(\hat z,\xi).
-\end{equation}
-The formulas below are written after redundant equality constraints have been removed, so that the displayed inverses exist. Equivalently, the same expressions may be read on the corresponding relative coordinate spaces.
-
-For $z$ in the relative interior of $Z$, the derivative of the stochastic objective with respect to $z$, modulo the normal space of $Z$, is
-\begin{equation}
-\label{eq:core-G-gradient}
-\partial_z G_\mu(z,x)
-=
-c-
-\mu z^{-1}
--
-T^\top
-\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
-\left[
-\hat\lambda_\mu(z,\boldsymbol\xi)
-\right]
-+N_Z(z),
-\end{equation}
-and the corresponding scenario-specific expression is
-\begin{equation}
-\label{eq:core-Ghat-gradient}
-\partial_z \hat G_\mu(z,\xi)
-=
-c-
-\mu z^{-1}
--
-T^\top\hat\lambda_\mu(z,\xi)
-+N_Z(z).
-\end{equation}
-The normal-space term does not affect the chain rule below, because all derivatives of $\hat z_\mu^\#(\xi)$ lie in the tangent space $\ker(A)$.
-
-Define
-\begin{equation}
-\label{eq:core-H-P-D-S}
-\begin{aligned}
-H_z&:=\diag(\hat z^2),
-\\
-P_z
-&:=
-\frac1\mu
-\left(
-H_z-H_zA^\top(AH_zA^\top)^{-1}AH_z
-\right),
-\\
-D_y
-&:=
-\diag\!\left((q-W^\top\hat\lambda)^{-2}\right),
-\\
-S
-&:=
-TP_zT^\top+\mu W D_y W^\top.
-\end{aligned}
-\end{equation}
-Here powers and inverses applied to vectors are taken componentwise. Then the Jacobians of the single-scenario decision map with respect to the generated right-hand side and cost vector are
-\begin{equation}
-\label{eq:core-decision-jacobians}
-\boxed{
-\frac{\partial \hat z_\mu^\#(\xi)}{\partial h}
-=
-P_zT^\top S^{-1},
-\qquad
-\frac{\partial \hat z_\mu^\#(\xi)}{\partial q}
-=
-P_zT^\top S^{-1}\mu W D_y.
-}
-\end{equation}
-
-We derive \eqref{eq:core-decision-jacobians}. The first-stage KKT equations for the synthetic smoothed problem are
-\begin{equation}
-\label{eq:core-first-stage-kkt-for-derivative}
-c-
-\mu \hat z^{-1}
--T^\top\hat\lambda
-+A^\top\hat\nu
-=0,
-\qquad
-A\hat z=b.
-\end{equation}
-Differentiating \eqref{eq:core-first-stage-kkt-for-derivative} with respect to a scenario parameter $\theta\in\{h,q\}$ gives
-\begin{equation}
-\label{eq:core-diff-first-stage}
-\mu H_z^{-1}\,d\hat z
--T^\top d\hat\lambda
-+A^\top d\hat\nu
-=0,
-\qquad
-A\,d\hat z=0.
-\end{equation}
-Solving this equality-constrained linear system yields
-\begin{equation}
-\label{eq:core-dz-dlambda}
-d\hat z=P_zT^\top d\hat\lambda.
-\end{equation}
-
-The second-stage KKT equations imply
-\begin{equation}
-\label{eq:core-dual-kkt-for-derivative}
-h-T\hat z-
-\mu W(q-W^\top\hat\lambda)^{-1}=0.
-\end{equation}
-Differentiating \eqref{eq:core-dual-kkt-for-derivative} gives
-\begin{equation}
-\label{eq:core-diff-second-stage}
-dh-T\,d\hat z
-+
-\mu W D_y\,dq
--
-\mu W D_yW^\top d\hat\lambda
-=0.
-\end{equation}
-Substituting \eqref{eq:core-dz-dlambda} into \eqref{eq:core-diff-second-stage} gives
-\begin{equation}
-\label{eq:core-dlambda-linear}
-S\,d\hat\lambda
-=
-dh+
-\mu W D_y\,dq.
-\end{equation}
-Thus
-\begin{equation}
-\label{eq:core-dlambda-h-q}
-\frac{\partial\hat\lambda}{\partial h}=S^{-1},
-\qquad
-\frac{\partial\hat\lambda}{\partial q}=S^{-1}\mu W D_y.
-\end{equation}
-Combining \eqref{eq:core-dlambda-h-q} with \eqref{eq:core-dz-dlambda} proves \eqref{eq:core-decision-jacobians}.
-
-Finally, fix a realized scenario $\tilde\xi$ and a loss-smoothing parameter $\tilde\mu\geq 0$, and define
-\begin{equation}
-\label{eq:core-smoothed-scenario-loss}
-\mathcal L_{\mu,\tilde\mu}^{\tilde\xi}(\xi)
-:=
-\hat G_{\tilde\mu}\!\left(\hat z_\mu^\#(\xi),\tilde\xi\right).
-\end{equation}
-Let
-\begin{equation}
-\label{eq:core-loss-z-gradient}
-g_{\tilde\mu}^{\tilde\xi}
-:=
-c-
-\tilde\mu\hat z^{-1}
--
-T^\top\hat\lambda_{\tilde\mu}(\hat z,\tilde\xi),
-\end{equation}
-with $\tilde\mu=0$ interpreted using any valid subgradient representative. Since $P_zA^\top=0$, adding a normal vector in $N_Z(\hat z)$ to $g_{\tilde\mu}^{\tilde\xi}$ does not change the following expressions. The chain rule and \eqref{eq:core-decision-jacobians} give
-\begin{equation}
-\label{eq:core-loss-gradients}
-\boxed{
-\nabla_h\mathcal L_{\mu,\tilde\mu}^{\tilde\xi}(\xi)
-=
-S^{-1}TP_zg_{\tilde\mu}^{\tilde\xi},
-\qquad
-\nabla_q\mathcal L_{\mu,\tilde\mu}^{\tilde\xi}(\xi)
-=
-\mu D_yW^\top S^{-1}TP_zg_{\tilde\mu}^{\tilde\xi}.
-}
-\end{equation}
-These formulas are the closed-form back-propagation expressions used in Proposition~\ref{prop:logbarrier-derivatives}.
-
-\subsection{Proof of theorem 1}
-
-\paragraph{Definitions and technical lemmas.}
-
-Fix a context $x$ and a smoothing parameter $\mu\geq 0$. For $\mu>0$ and a scenario $\xi=(W,h,q)$, let $\hat y_\mu(z,\xi)$ and $\hat\lambda_\mu(z,\xi)$ denote the primal and dual solutions of the second-stage log-barrier problem at first-stage decision $z$. Thus they satisfy
-\[
-W\hat y_\mu(z,\xi)=h-Tz,
-\]
-\[
-q-W^\top\hat\lambda_\mu(z,\xi)
-=
-\mu\hat y_\mu(z,\xi)^{-1},
-\]
-with $\hat y_\mu(z,\xi)>0$ and $q-W^\top\hat\lambda_\mu(z,\xi)>0$ componentwise.
-
-For the stochastic problem, define
-\[
-\lambda_\mu^x(z)
-:=
-\E_{\boldsymbol{\xi}\sim P(\cdot\mid x)}
-\left[\hat\lambda_\mu(z,\boldsymbol{\xi})\right].
-\]
-At the stochastic optimum $z_\mu^\#(x)$, write
-\[
-\lambda_\mu^{\#,x}:=\lambda_\mu^x(z_\mu^\#(x)).
-\]
-For a fixed reference scenario $\tilde\xi=(\tilde W,\tilde h,\tilde q)$, write
-\[
-\tilde\lambda_\mu^x:=\hat\lambda_\mu(z_\mu^\#(x),\tilde\xi),
-\qquad
-\tilde y_\mu^x:=\hat y_\mu(z_\mu^\#(x),\tilde\xi).
-\]
-For $\mu=0$, all these quantities are interpreted as central-path limits as $\mu\downarrow 0$. In particular,
-\[
-z^\#(x)=\lim_{\mu\downarrow 0}z_\mu^\#(x),
-\]
-\[
-\lambda_0^{\#,x}:=\lim_{\mu\downarrow 0}\lambda_\mu^{\#,x},
-\qquad
-\tilde\lambda_0^x:=\lim_{\mu\downarrow 0}\tilde\lambda_\mu^x.
-\]
-Because the conditional support is finite, no measurability or interchange-of-limit issue arises in the definition of $\lambda_0^{\#,x}$.
-
-\begin{lemma}[Second-stage translation]
-\label{lem:second-stage-translation}
-Fix $W$, $h$, $q$, $z$, and a vector $\Delta\in\R^{m_2}$. Define
-\[
-q^\Delta:=q+W^\top\Delta.
-\]
-For $\mu>0$, the second-stage dual feasible set for $q^\Delta$ is the translate by $\Delta$ of the second-stage dual feasible set for $q$. More precisely,
-\[
-q^\Delta-W^\top\lambda>0
-\]
-if and only if
-\[
-q-W^\top(\lambda-\Delta)>0.
-\]
-Moreover, the log-barrier dual objective for $q^\Delta$ at $\lambda$ is equal to the log-barrier dual objective for $q$ at $\lambda-\Delta$, plus the constant
-\[
-(h-Tz)^\top\Delta.
-\]
-Therefore
-\[
-\hat\lambda_\mu(z,(W,h,q^\Delta))
-=
-\hat\lambda_\mu(z,(W,h,q))+\Delta,
-\]
-and the associated primal second-stage solution is unchanged.
-
-The same statement holds for $\mu=0$ by taking the central-path limit. In particular, translating $q$ by $W^\top\Delta$ translates the central-path dual multiplier by $\Delta$ and preserves the associated second-stage primal central path.
-\end{lemma}
-
-\begin{proof}
-For $\mu>0$, the dual objective is
-\[
-\lambda^\top(h-Tz)
-+\mu\sum_j\log(q_j-(W^\top\lambda)_j).
-\]
-Substitute $\lambda=\tilde\lambda+\Delta$ and $q^\Delta=q+W^\top\Delta$. Then
-\[
-\begin{aligned}
-q^\Delta-W^\top\lambda
-&=q+W^\top\Delta-W^\top(\tilde\lambda+\Delta)\\
-&=q-W^\top\tilde\lambda.
-\end{aligned}
-\]
-The logarithmic term is therefore unchanged, while the linear term becomes
-\[
-(\tilde\lambda+\Delta)^\top(h-Tz)
-=
-\tilde\lambda^\top(h-Tz)+\Delta^\top(h-Tz).
-\]
-The final term is constant in $\tilde\lambda$. Hence the maximizer is translated by $\Delta$. Taking $\mu\downarrow 0$ gives the unsmoothed central-path statement.
-\end{proof}
-
-\begin{lemma}[KKT characterization of a decision induced by one scenario]
-\label{lem:single-scenario-kkt}
-Fix $\mu>0$ and a synthetic scenario $\xi=(W,h,q)$. A first-stage point $z$ is equal to $\hat z_\mu^\#(\xi)$ if and only if there exist a second-stage vector $y>0$ and a second-stage multiplier $\lambda$ such that
-\[
-Wy=h-Tz,
-\]
-\[
-q-W^\top\lambda=\mu y^{-1},
-\]
-and
-\[
-0\in c-\mu z^{-1}-T^\top\lambda+N_Z(z).
-\]
-For the stochastic problem, $z_\mu^\#(x)$ satisfies
-\[
-0\in c-\mu z_\mu^\#(x)^{-1}-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#(x)).
-\]
-For $\mu=0$, the same characterization is understood as the central-path limit of these conditions.
-\end{lemma}
-
-\begin{proof}
-The first two displayed equations are the primal feasibility and stationarity equations for the second-stage log-barrier problem. The last displayed equation is the first-stage optimality condition after substituting the derivative of the second-stage value function, which is $-T^\top\lambda$. Convexity gives sufficiency, and uniqueness of the log-barrier solution gives equality with $\hat z_\mu^\#(\xi)$. The stochastic statement is identical, replacing the single-scenario multiplier by its conditional expectation $\lambda_\mu^{\#,x}$.
-\end{proof}
-
-\begin{lemma}[Positivity of the $q_\delta^{\max}$ slack]
-\label{lem:qmax-slack}
-Assume $W$ is deterministic across scenarios. For every $\mu>0$,
-\[
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-\]
-is strictly positive componentwise. More precisely, every component is at least $\delta$.
-\end{lemma}
-
-\begin{proof}
-For every supported scenario $\xi$, the second-stage KKT condition gives
-\[
-q(\xi)-W^\top\hat\lambda_\mu(z_\mu^\#(x),\xi)>0.
-\]
-Using the definition of $\lambda_\mu^{\#,x}$, we have
-\[
-\begin{aligned}
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-&=
-\E\!\left[
-q_\delta^{\max}
--W^\top\hat\lambda_\mu(z_\mu^\#(x),\boldsymbol{\xi})
-\right]\\
-&=
-\E\!\left[q_\delta^{\max}-q(\boldsymbol{\xi})\right]
-+
-\E\!\left[
-q(\boldsymbol{\xi})
--W^\top\hat\lambda_\mu(z_\mu^\#(x),\boldsymbol{\xi})
-\right].
-\end{aligned}
-\]
-The first term is componentwise at least $\delta$ by definition of $q_\delta^{\max}$. The second term is componentwise strictly positive for $\mu>0$. Hence the sum is componentwise at least $\delta$, and in particular strictly positive.
-
-By taking the central-path limit, the same lower bound remains valid at $\mu=0$.
-\end{proof}
-
-\paragraph{Central-path convention for the case $\mu=0$.}
-
-The theorem includes $\mu=0$, but the unsmoothed optimizer is not necessarily unique. Throughout the paper, the $\mu=0$ optimizer is selected by the log-barrier central-path limit. Accordingly, when the decision-optimal scenario component is defined at $\mu=0$, it is defined as the limit of the corresponding decision-optimal components for $\mu>0$.
-
-Thus, if $\xi_\mu^\#$ is a family of synthetic scenarios satisfying
-\[
-\hat z_\mu^\#(\xi_\mu^\#)=z_\mu^\#(x)
-\]
-for every $\mu>0$, and if $\xi_\mu^\#$ converges to $\xi_0^\#$, then the $\mu=0$ synthetic scenario $\xi_0^\#$ is interpreted through the same central-path limit. Consequently,
-\[
-\hat z_0^\#(\xi_0^\#)=z^\#(x),
-\]
-or, equivalently, the induced unsmoothed decision is decision-optimal for the original stochastic problem.
-
-This is exactly the same convention used in the definition
-\[
-z^\#(x)=\lim_{\mu\downarrow 0}z_\mu^\#(x).
-\]
-
-\paragraph{Proof of Theorem~\ref{thm:realizability}.}
-
-Fix $x\in\mathcal X$ and $\mu\geq 0$. Let $z_\mu^\#=z_\mu^\#(x)$. For $\mu>0$, define
+\begin{proof}[Proof of Theorem~\ref{thm:realizability}]
+Fix a context $x$ and a smoothing parameter $\mu\geq 0$. For $\mu>0$, define the averaged second-stage dual multiplier by
 \[
 \lambda_\mu^{\#,x}
 :=
-\E\!\left[\hat\lambda_\mu(z_\mu^\#,\boldsymbol{\xi})\right].
+\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
+\left[
+\hat\lambda_\mu\!\left(z_\mu^\#(x),\boldsymbol\xi\right)
+\right].
 \]
-By Lemma~\ref{lem:single-scenario-kkt}, the stochastic first-stage optimality condition is
-\[
-0\in c-\mu(z_\mu^\#)^{-1}-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#).
-\]
-We first prove the result for $\mu>0$, and then pass to the central-path limit for $\mu=0$.
+For $\mu=0$, let $\lambda_0^{\#,x}$ be any averaged second-stage dual multiplier at $z_0^\#(x)$ satisfying the stochastic KKT condition.
 
-\subparagraph{Part 1: learning $q$.}
-Fix any reference scenario
+Define
 \[
-\tilde\xi=(\tilde W,\tilde h,\tilde q)
+\beta_\mu(z)
+:=
+\begin{cases}
+\mu z^{-1}, & \mu>0,\\
+0, & \mu=0.
+\end{cases}
 \]
-from $\Xi$. Let
+Here $N_Z(z)$ denotes the normal cone to $Z$ at $z$. A point $z$ is optimal for a single-scenario problem with scenario $\xi=(W,h,q)$ if there exists a second-stage dual optimizer $\lambda$ for that scenario at $z$ such that
 \[
-\tilde\lambda_\mu^x=\hat\lambda_\mu(z_\mu^\#,\tilde\xi),
-\qquad
-\tilde y_\mu^x=\hat y_\mu(z_\mu^\#,\tilde\xi).
+0\in c-\beta_\mu(z)-T^\top\lambda+N_Z(z).
 \]
-By the second-stage KKT equations for the reference scenario at $z_\mu^\#$, we have
+Similarly, since $z_\mu^\#(x)$ is optimal for the stochastic problem, there exists an averaged multiplier $\lambda_\mu^{\#,x}$ such that
+\begin{equation}
+\label{eq:realizability-proof-stochastic-kkt}
+0\in c-\beta_\mu(z_\mu^\#(x))-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#(x)).
+\end{equation}
+
+We first prove the $q$-construction. Fix a reference scenario
 \[
-\tilde W\tilde y_\mu^x=\tilde h-Tz_\mu^\#,
+\tilde\xi=(\widetilde W,\widetilde h,\widetilde q).
 \]
-and
-\[
-\tilde q-\tilde W^\top\tilde\lambda_\mu^x
-=
-\mu(\tilde y_\mu^x)^{-1}.
-\]
-Now define the synthetic cost vector
+Choose any second-stage dual optimizer $\widetilde\lambda_\mu$ of the reference scenario at $z_\mu^\#(x)$. Define
 \[
 q_\mu^{\#,\tilde\xi}(x)
 :=
-\tilde q+\tilde W^\top(\lambda_\mu^{\#,x}-\tilde\lambda_\mu^x).
+\widetilde q+\widetilde W^\top(\lambda_\mu^{\#,x}-\widetilde\lambda_\mu).
 \]
-Consider the synthetic scenario
+We claim that $\lambda_\mu^{\#,x}$ is a second-stage dual optimizer for the synthetic scenario
 \[
-\xi_\mu^{\#,x,\tilde\xi}
+(\widetilde W,\widetilde h,q_\mu^{\#,\tilde\xi}(x))
+\]
+at the same first-stage point $z_\mu^\#(x)$.
+
+Indeed, for any $\lambda$, define
+\[
+\bar\lambda
 :=
-(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x)).
-\]
-We claim that $z_\mu^\#$ is the optimizer of the single-scenario log-barrier problem induced by this synthetic scenario.
-
-Indeed, using the definition of $q_\mu^{\#,\tilde\xi}(x)$, we obtain
-\[
-\begin{aligned}
-q_\mu^{\#,\tilde\xi}(x)-\tilde W^\top\lambda_\mu^{\#,x}
-&=
-\tilde q+\tilde W^\top(\lambda_\mu^{\#,x}-\tilde\lambda_\mu^x)
--\tilde W^\top\lambda_\mu^{\#,x}\\
-&=
-\tilde q-\tilde W^\top\tilde\lambda_\mu^x\\
-&=
-\mu(\tilde y_\mu^x)^{-1}.
-\end{aligned}
-\]
-Together with
-\[
-\tilde W\tilde y_\mu^x=\tilde h-Tz_\mu^\#,
-\]
-this shows that the pair $(\tilde y_\mu^x,\lambda_\mu^{\#,x})$ satisfies the second-stage KKT system for the synthetic scenario at $z_\mu^\#$.
-
-The first-stage KKT condition is exactly the stochastic first-stage condition already displayed:
-\[
-0\in c-\mu(z_\mu^\#)^{-1}-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#).
-\]
-Therefore the full single-scenario KKT system is satisfied at $z_\mu^\#$. Since the log-barrier single-scenario problem is convex and well posed, and since its $\mu>0$ solution is unique, we conclude that
-\[
-\hat z_\mu^\#(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x))
-=
-z_\mu^\#(x).
-\]
-This proves the $q$-realizability statement for $\mu>0$.
-
-Now consider $\mu=0$. By the central-path convergence assumptions,
-\[
-z_\mu^\#(x)\to z^\#(x),
-\qquad
-\lambda_\mu^{\#,x}\to\lambda_0^{\#,x},
-\qquad
-\tilde\lambda_\mu^x\to\tilde\lambda_0^x.
-\]
-Hence $q_\mu^{\#,\tilde\xi}(x)$ converges to
-\[
-q_0^{\#,\tilde\xi}(x)
-:=
-\tilde q+\tilde W^\top(\lambda_0^{\#,x}-\tilde\lambda_0^x).
-\]
-For every $\mu>0$, we have already shown
-\[
-\hat z_\mu^\#(\tilde W,\tilde h,q_\mu^{\#,\tilde\xi}(x))
-=
-z_\mu^\#(x).
-\]
-Taking the central-path limit gives
-\[
-\hat z_0^\#(\tilde W,\tilde h,q_0^{\#,\tilde\xi}(x))
-=
-z^\#(x).
-\]
-In particular, $\hat z_0^\#(\tilde W,\tilde h,q_0^{\#,\tilde\xi}(x))$ is an optimal solution of the unsmoothed stochastic problem. This proves the $q$-realizability statement for $\mu=0$.
-
-\subparagraph{Part 2: learning $h$ when $W$ is deterministic.}
-Now assume $W(\xi)=W$ for all scenarios $\xi$. Fix $\delta>0$ and define $q_\delta^{\max}$ componentwise by
-\[
-q_\delta^{\max}[i]
-=
-\max_{\xi'\in\Xi}q(\xi')[i]+\delta.
-\]
-By Lemma~\ref{lem:qmax-slack},
-\[
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-\]
-is strictly positive componentwise for every $\mu>0$. Therefore the vector
-\[
-y_\mu^{\#,\delta}(x)
-:=
-\mu(q_\delta^{\max}-W^\top\lambda_\mu^{\#,x})^{-1}
-\]
-is well defined and strictly positive. Define
-\[
-h_\mu^{\#,\delta}(x)
-:=
-Tz_\mu^\#(x)+Wy_\mu^{\#,\delta}(x).
-\]
-Consider the synthetic scenario
-\[
-\xi_\mu^{\#,x,\delta}
-:=
-(W,h_\mu^{\#,\delta}(x),q_\delta^{\max}).
-\]
-By construction,
-\[
-Wy_\mu^{\#,\delta}(x)
-=
-h_\mu^{\#,\delta}(x)-Tz_\mu^\#(x),
-\]
-and
-\[
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-=
-\mu(y_\mu^{\#,\delta}(x))^{-1}.
-\]
-Thus $(y_\mu^{\#,\delta}(x),\lambda_\mu^{\#,x})$ satisfies the second-stage KKT system for the synthetic scenario at $z_\mu^\#$.
-
-As before, the stochastic first-stage KKT condition gives
-\[
-0\in c-\mu(z_\mu^\#)^{-1}-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#).
-\]
-Therefore the full KKT system of the single-scenario log-barrier problem with scenario
-\[
-(W,h_\mu^{\#,\delta}(x),q_\delta^{\max})
-\]
-is satisfied at $z_\mu^\#$. By convexity and uniqueness of the $\mu>0$ log-barrier solution,
-\[
-\hat z_\mu^\#(W,h_\mu^{\#,\delta}(x),q_\delta^{\max})
-=
-z_\mu^\#(x).
-\]
-This proves the $h$-realizability statement for $\mu>0$.
-
-It remains to pass to $\mu=0$. By Lemma~\ref{lem:qmax-slack},
-\[
-q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
-\]
-is componentwise at least $\delta$. Therefore
-\[
-0<y_\mu^{\#,\delta}(x)\leq \frac{\mu}{\delta}\mathbf 1
-\]
-componentwise. Hence
-\[
-y_\mu^{\#,\delta}(x)\to 0
-\]
-as $\mu\downarrow 0$. Since $z_\mu^\#(x)\to z^\#(x)$, we get
-\[
-h_\mu^{\#,\delta}(x)
-=
-Tz_\mu^\#(x)+Wy_\mu^{\#,\delta}(x)
-\]
-converges to
-\[
-h_0^{\#,\delta}(x)
-:=
-Tz^\#(x).
-\]
-For every $\mu>0$, we have shown
-\[
-\hat z_\mu^\#(W,h_\mu^{\#,\delta}(x),q_\delta^{\max})
-=
-z_\mu^\#(x).
-\]
-Taking the central-path limit gives
-\[
-\hat z_0^\#(W,h_0^{\#,\delta}(x),q_\delta^{\max})
-=
-z^\#(x).
-\]
-Therefore the synthetic scenario
-\[
-(W,h_0^{\#,\delta}(x),q_\delta^{\max})
-\]
-induces an optimal first-stage decision for the original unsmoothed stochastic problem.
-
-Combining the $q$-construction and, under deterministic recourse, the $h$-construction proves Theorem~\ref{thm:realizability}.
-
-\subsection{Proof of theorem 2}
-\label{app:no-vanishing-gradients-proof}
-
-\begin{proof}[Proof of Theorem~\ref{thm:no-vanishing-gradients}]
-Fix $x\in\mathcal X$ and $\mu>0$. Fix a recourse matrix $W_f$ and consider the decision-focused loss
-\[
-L_\mu((W_f,h,q),x)
-=
-G_\mu(\hat z_\mu^\#(W_f,h,q),x).
-\]
-We prove that this loss has no spurious stationary points in the learned scenario components $h$ and $q$. The componentwise invexity statement then follows from the standard characterization of continuously differentiable invex functions: a continuously differentiable function is invex precisely when every stationary point is globally optimal.
-
-All gradients below are taken on the relative interior of the synthetic scenario domain where the single-scenario barrier problem is well defined and the derivative formulas from Appendix~\ref{app:closed-form-derivatives} apply.
-
-\paragraph{The rank-condition case.}
-Consider the following generalized single-scenario smoothed problem:
-\[
-\hat z_\mu(h,q)
-=
-\argmin_z
-\left\{
-F(z)+Q_\mu(z;W_f,h,q)
-\right\},
-\]
-where $F$ is a differentiable convex first-stage objective on the relative interior of a polytope $Z$, and
-\[
-Q_\mu(z;W_f,h,q)
-=
-\min_{y>0}
-\left\{
-q^\top y-\mu\sum_k\log y_k:
-W_fy=h-Tz
-\right\}.
-\]
-Let the corresponding true downstream objective be $G_\mu(z,x)$, assumed convex and differentiable on the same relative interior, with unique optimizer $z_\mu^\#(x)$. Define
-\[
-L_\mu(h,q,x):=G_\mu(\hat z_\mu(h,q),x).
-\]
-Assume that $T$ has no nonzero feasible-direction kernel, meaning
-\[
-d\in\operatorname{lin}(Z-Z)
-\quad\text{and}\quad
-Td=0
-\quad\Longrightarrow\quad
-d=0.
-\]
-Equivalently, every nonzero feasible first-stage movement changes the second-stage right-hand side.
-
-We show the stronger componentwise equivalences
-\[
-\nabla_h L_\mu(h,q,x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(h,q)=z_\mu^\#(x),
-\]
-and
-\[
-\nabla_q L_\mu(h,q,x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(h,q)=z_\mu^\#(x).
-\]
-
-Let
-\[
-\hat z=\hat z_\mu(h,q),
-\qquad
-v=\nabla_zG_\mu(\hat z,x).
-\]
-By the chain rule,
-\[
-\nabla_h L_\mu(h,q,x)
-=
-\left(\frac{\partial\hat z}{\partial h}\right)^\top v.
-\]
-From the derivative formula established earlier, the $h$-Jacobian has the form
-\[
-\frac{\partial\hat z}{\partial h}
-=
-PT^\top S^{-1},
-\]
-where $P$ is the projected inverse-Hessian operator for the first-stage feasible directions, and $S$ is the positive definite sensitivity matrix arising from the coupled first- and second-stage KKT system. Therefore,
-\[
-\nabla_h L_\mu(h,q,x)=0
-\]
-implies
-\[
-S^{-1}TPv=0.
-\]
-Since $S$ is invertible,
-\[
-TPv=0.
-\]
-Now $Pv$ is a feasible first-stage direction: $P$ maps into $\operatorname{lin}(Z-Z)$. By the rank assumption on $T$, the equality $TPv=0$ implies
-\[
-Pv=0.
-\]
-The operator $P$ is positive definite on the feasible-direction space $\operatorname{lin}(Z-Z)$, and its null space is the orthogonal complement of that feasible-direction space. Hence $Pv=0$ means exactly that $v$ has no component along any feasible first-stage direction. Equivalently,
-\[
-d^\top\nabla_zG_\mu(\hat z,x)=0
-\qquad
-\text{for every feasible direction }d\in\operatorname{lin}(Z-Z).
-\]
-Thus $\hat z$ satisfies the first-order optimality condition for minimizing the convex function $G_\mu(\cdot,x)$ over $Z$. Since $\mu>0$ and the smoothed problem has a unique optimizer,
-\[
-\hat z=z_\mu^\#(x).
-\]
-This proves the forward $h$-gradient direction.
-
-The same argument applies to the $q$-gradient. By the derivative formula from Appendix~\ref{app:closed-form-derivatives},
-\[
-\frac{\partial\hat z}{\partial q}
-=
-PT^\top S^{-1}\mu W_f D_y,
-\]
-where $D_y$ is positive diagonal. Hence, by the chain rule,
-\[
-\nabla_q L_\mu(h,q,x)
-=
-\mu D_y W_f^\top S^{-1}TPv.
-\]
-Suppose
-\[
-\nabla_q L_\mu(h,q,x)=0.
+\lambda-\lambda_\mu^{\#,x}+\widetilde\lambda_\mu.
 \]
 Then
 \[
-\mu D_y W_f^\top S^{-1}TPv=0.
+q_\mu^{\#,\tilde\xi}(x)-\widetilde W^\top\lambda
+=
+\widetilde q-\widetilde W^\top\bar\lambda.
 \]
-Since $\mu>0$ and $D_y$ is invertible, this implies
+Thus $\lambda$ is feasible for the synthetic dual if and only if $\bar\lambda$ is feasible for the reference dual; this holds both for the strict feasible set when $\mu>0$ and the closed feasible set when $\mu=0$. Moreover, the synthetic dual objective at $\lambda$ equals the reference dual objective at $\bar\lambda$ plus the constant
 \[
-W_f^\top S^{-1}TPv=0.
+(\lambda_\mu^{\#,x}-\widetilde\lambda_\mu)^\top(\widetilde h-Tz_\mu^\#(x)).
 \]
-By the standing full-row-rank condition on $W_f$, the map $W_f^\top$ is injective. Therefore
-\[
-S^{-1}TPv=0.
-\]
-Since $S$ is invertible,
-\[
-TPv=0.
-\]
-As before, $Pv$ lies in the feasible-direction space $\operatorname{lin}(Z-Z)$. Under the rank condition on $T$, the equality $TPv=0$ implies
-\[
-Pv=0.
-\]
-Because $P$ is positive definite on $\operatorname{lin}(Z-Z)$, this means that $v$ has no component along any feasible first-stage direction. Equivalently,
-\[
-d^\top\nabla_zG_\mu(\hat z,x)=0
-\qquad
-\text{for every feasible direction }d\in\operatorname{lin}(Z-Z).
-\]
-Thus $\hat z$ satisfies the first-order optimality condition for minimizing the convex function $G_\mu(\cdot,x)$ over $Z$. Since the smoothed stochastic problem has unique optimizer $z_\mu^\#(x)$, we conclude that
-\[
-\hat z_\mu(h,q)=z_\mu^\#(x).
-\]
+Therefore the maximizers are translated by $\lambda_\mu^{\#,x}-\widetilde\lambda_\mu$. Since $\widetilde\lambda_\mu$ is optimal for the reference scenario, $\lambda_\mu^{\#,x}$ is optimal for the synthetic scenario.
 
-Conversely, suppose
+Combining this second-stage optimality with the stochastic first-stage KKT condition \eqref{eq:realizability-proof-stochastic-kkt}, we get
 \[
-\hat z=z_\mu^\#(x).
+0\in c-\beta_\mu(z_\mu^\#(x))-T^\top\lambda_\mu^{\#,x}+N_Z(z_\mu^\#(x)),
 \]
-Then $\hat z$ minimizes $G_\mu(\cdot,x)$ over $Z$. Hence
+where $\lambda_\mu^{\#,x}$ is now a valid dual optimizer for the synthetic single-scenario problem. Hence $z_\mu^\#(x)$ satisfies the single-scenario KKT condition for
 \[
-d^\top\nabla_zG_\mu(\hat z,x)=0
-\qquad
-\text{for every feasible direction }d\in\operatorname{lin}(Z-Z).
+(\widetilde W,\widetilde h,q_\mu^{\#,\tilde\xi}(x)).
 \]
-Both Jacobians $\partial\hat z/\partial h$ and $\partial\hat z/\partial q$ take values in the feasible-direction space $\operatorname{lin}(Z-Z)$, because differentiating the equality constraints defining $Z$ gives $A\,d\hat z=0$. Therefore,
+By convexity, $z_\mu^\#(x)$ is optimal for that single-scenario problem. This proves $q$-realizability for both $\mu>0$ and $\mu=0$.
+
+Now consider the $h$-construction. Assume $W$ is deterministic across scenarios. Fix $\delta>0$ and define $q_\delta^{\max}$ componentwise by
 \[
-\left(\frac{\partial\hat z}{\partial h}\right)^\top
-\nabla_zG_\mu(\hat z,x)=0,
-\qquad
-\left(\frac{\partial\hat z}{\partial q}\right)^\top
-\nabla_zG_\mu(\hat z,x)=0.
+q_\delta^{\max}[j]
+=
+\max_{\xi\in\Xi}q(\xi)[j]+\delta.
 \]
-By the chain rule,
+For $\mu>0$, define
 \[
-\nabla_h L_\mu(h,q,x)=0,
-\qquad
-\nabla_q L_\mu(h,q,x)=0.
+r_\mu^{\#,x,\delta}
+:=
+q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}.
 \]
-Thus, in the rank-condition case, we have proved the stronger componentwise statement
+This vector is strictly positive componentwise: writing $\lambda_{\mu,\xi}$ for a supported dual optimizer at $z_\mu^\#(x)$, $q_\delta^{\max}$ dominates every supported cost vector by at least $\delta$, and every supported dual multiplier satisfies $q(\xi)-W^\top\lambda_{\mu,\xi}>0$. Define
 \[
-\nabla_h L_\mu(h,q,x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(h,q)=z_\mu^\#(x),
+y_{\mu,\delta}^\#(x)
+:=
+\mu\left(r_\mu^{\#,x,\delta}\right)^{-1}
 \]
 and
 \[
-\nabla_q L_\mu(h,q,x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(h,q)=z_\mu^\#(x).
-\]
-In particular,
-\[
-\nabla_h L_\mu(h,q,x)=0
-\quad\Longleftrightarrow\quad
-\nabla_q L_\mu(h,q,x)=0
-\]
-and both are equivalent to recovery of the stochastic optimum. Since
-\[
-L_\mu(h,q,x)=G_\mu(\hat z_\mu(h,q),x),
-\]
-and $G_\mu(\cdot,x)$ is uniquely minimized at $z_\mu^\#(x)$, these conditions are also equivalent to global optimality of the synthetic scenario loss.
-
-This proves the rank-condition case componentwise.
-
-\paragraph{The general case.}
-We now remove the rank condition on $T$ by projecting away the part of $z$ that does not affect the second stage.
-
-Let
-\[
-Z=\{z\geq 0:\;Az=b\},
-\qquad
-Z^\circ=Z\cap\R^{n_1}_{++}
-\]
-denote the barrier domain. Let
-\[
-V=\operatorname{lin}(Z-Z)
-\]
-be the feasible-direction space of the first-stage polytope. The obstruction to the rank condition is the subspace
-\[
-K=V\cap\ker T.
-\]
-These are precisely the feasible first-stage directions along which $z$ can move without changing the second-stage right-hand side $h-Tz$.
-
-We quotient out these directions. Equivalently, identify two feasible first-stage points $z_1,z_2\in Z$ whenever
-\[
-Tz_1=Tz_2.
-\]
-Let
-\[
-u=Tz
-\]
-be the reduced first-stage variable, and define the reduced feasible set
-\[
-Z_{\mathrm{red}}:=T(Z).
-\]
-Since $Z$ is a polytope and $T$ is linear, $Z_{\mathrm{red}}$ is also a polytope. Its relative interior is the image of the relative interior of $Z$ under $T$.
-
-For $u\in Z_{\mathrm{red}}$, define the fiber
-\[
-Z(u):=\{z\in Z:\;Tz=u\}.
-\]
-Now define the reduced first-stage cost by partial minimization over the fiber:
-\[
-F_\mu(u)
+h_{\mu,\delta}^\#(x)
 :=
-\min_{z\in Z(u)\cap\R^{n_1}_{++}}
-\left\{
-c^\top z-\mu\sum_j\log z_j
-\right\}.
+Tz_\mu^\#(x)+Wy_{\mu,\delta}^\#(x).
 \]
-The function $F_\mu$ is convex. Indeed, it is the value function obtained by partially minimizing a jointly convex function over affine slices. More explicitly, if $u_1,u_2\in Z_{\mathrm{red}}$ and $\alpha\in[0,1]$, then feasible fiber points over $u_1$ and $u_2$ convexly combine to a feasible fiber point over $\alpha u_1+(1-\alpha)u_2$, and convexity of the objective gives
+Then, by construction,
 \[
-F_\mu(\alpha u_1+(1-\alpha)u_2)
-\leq
-\alpha F_\mu(u_1)+(1-\alpha)F_\mu(u_2).
-\]
-Because $\mu>0$, the fiber minimizer is unique whenever the fiber has nonempty barrier-relative interior. Denote this unique fiber minimizer by
-\[
-\phi_\mu(u)
-:=
-\argmin_{z\in Z(u)\cap\R^{n_1}_{++}}
-\left\{
-c^\top z-\mu\sum_j\log z_j
-\right\}.
-\]
-
-Now observe that the second-stage value depends on $z$ only through $Tz$. Therefore, for every fixed scenario $(W,h,q)$,
-\[
-Q_\mu(z;W,h,q)=Q_\mu^{\mathrm{red}}(u;W,h,q),
-\qquad
-u=Tz,
-\]
-where
-\[
-Q_\mu^{\mathrm{red}}(u;W,h,q)
+Wy_{\mu,\delta}^\#(x)
 =
-\min_{y>0}
-\left\{
-q^\top y-\mu\sum_k\log y_k:
-Wy=h-u
-\right\}.
-\]
-Hence the original single-scenario optimization problem
-\[
-\min_{z\in Z^\circ}
-\left\{
-c^\top z-\mu\sum_j\log z_j+Q_\mu(z;W_f,h,q)
-\right\}
-\]
-is equivalent to the reduced problem
-\[
-\min_{u\in Z_{\mathrm{red}}}
-\left\{
-F_\mu(u)+Q_\mu^{\mathrm{red}}(u;W_f,h,q)
-\right\}.
-\]
-If $\hat u_\mu(h,q)$ denotes the unique optimizer of the reduced problem, then the original optimizer is recovered by
-\[
-\hat z_\mu(W_f,h,q)=\phi_\mu(\hat u_\mu(h,q)).
-\]
-
-The same reduction applies to the true stochastic objective. Define
-\[
-G_\mu^{\mathrm{red}}(u,x)
-:=
-F_\mu(u)
-+
-\E_{\boldsymbol\xi\sim P(\cdot\mid x)}
-\left[
-Q_\mu^{\mathrm{red}}(u;W(\boldsymbol\xi),h(\boldsymbol\xi),q(\boldsymbol\xi))
-\right].
-\]
-Then, for every $z\in Z^\circ$ with $u=Tz$,
-\[
-G_\mu(z,x)\geq G_\mu^{\mathrm{red}}(u,x),
-\]
-with equality precisely when $z=\phi_\mu(u)$. Therefore the original stochastic optimizer satisfies
-\[
-z_\mu^\#(x)=\phi_\mu(u_\mu^\#(x)),
-\]
-where
-\[
-u_\mu^\#(x)
-=
-\argmin_{u\in Z_{\mathrm{red}}}G_\mu^{\mathrm{red}}(u,x).
-\]
-Likewise, the original decision-focused loss can be written entirely in reduced coordinates:
-\[
-\begin{aligned}
-L_\mu((W_f,h,q),x)
-&=G_\mu(\hat z_\mu(W_f,h,q),x)\\
-&=G_\mu^{\mathrm{red}}(\hat u_\mu(h,q),x).
-\end{aligned}
-\]
-Thus the original scenario-parametrized loss is exactly the reduced scenario-parametrized loss, composed with the fiber minimizer $\phi_\mu$.
-
-Now consider the reduced problem. Its decision variable is $u$, and the second-stage right-hand side is $h-u$. Therefore the reduced technology map is the identity map on the reduced feasible-direction space. In particular, it satisfies the rank condition from the rank-condition case automatically: there is no nonzero reduced direction $du$ with $du=0$.
-
-The reduced problem also has a convex first-stage cost $F_\mu$, exactly of the type allowed above. Therefore, applying the rank-condition result to the reduced problem gives the separate equivalences
-\[
-\nabla_h L_\mu((W_f,h,q),x)=0
-\quad\Longleftrightarrow\quad
-\hat u_\mu(h,q)=u_\mu^\#(x),
+h_{\mu,\delta}^\#(x)-Tz_\mu^\#(x),
 \]
 and
 \[
-\nabla_q L_\mu((W_f,h,q),x)=0
-\quad\Longleftrightarrow\quad
-\hat u_\mu(h,q)=u_\mu^\#(x).
-\]
-Using the recovery map $\phi_\mu$, these are equivalent to
-\[
-\hat z_\mu(W_f,h,q)
+q_\delta^{\max}-W^\top\lambda_\mu^{\#,x}
 =
-\phi_\mu(\hat u_\mu(h,q))
-=
-\phi_\mu(u_\mu^\#(x))
-=
-z_\mu^\#(x).
+\mu\left(y_{\mu,\delta}^\#(x)\right)^{-1}.
 \]
-Therefore, in the original coordinates,
+Thus $\lambda_\mu^{\#,x}$ is the second-stage dual optimizer for the synthetic scenario
 \[
-\nabla_h L_\mu((W_f,h,q),x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(W_f,h,q)=z_\mu^\#(x),
+(W,h_{\mu,\delta}^\#(x),q_\delta^{\max})
 \]
-and
-\[
-\nabla_q L_\mu((W_f,h,q),x)=0
-\quad\Longleftrightarrow\quad
-\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
-\]
-Hence
-\[
-\nabla_h L_\mu((W_f,h,q),x)=0
-\quad\Longleftrightarrow\quad
-\nabla_q L_\mu((W_f,h,q),x)=0
-\]
-and both are equivalent to
-\[
-\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
-\]
+at $z_\mu^\#(x)$. Combining this with the stochastic KKT condition \eqref{eq:realizability-proof-stochastic-kkt}, $z_\mu^\#(x)$ satisfies the single-scenario KKT condition. Hence, by convexity, $z_\mu^\#(x)$ is optimal for the synthetic single-scenario problem. This proves $h$-realizability for $\mu>0$.
 
-Since $z_\mu^\#(x)$ is the unique minimizer of $G_\mu(\cdot,x)$, every synthetic scenario inducing $z_\mu^\#(x)$ is globally optimal for the decision-focused scenario loss. Conversely, any global minimizer of the scenario loss must induce $z_\mu^\#(x)$, because otherwise its downstream value would be strictly larger than $G_\mu(z_\mu^\#(x),x)$. The realizability theorem guarantees that at least one such synthetic scenario exists in $\Xi_\mu^{\mathrm{synthetic}}$.
-
-Thus
+Finally, consider $\mu=0$ for the $h$-construction. Set
 \[
-\nabla_h L_\mu((W_f,h,q),x)=0
+h_{0,\delta}^\#(x)
+:=
+Tz_0^\#(x).
 \]
+The dual feasible set
 \[
-\Longleftrightarrow
+\{\lambda:\;W^\top\lambda\leq q_\delta^{\max}\}
 \]
+contains every supported second-stage dual feasible set, because $q_\delta^{\max}$ dominates every $q(\xi)$. Therefore it contains the averaged stochastic multiplier $\lambda_0^{\#,x}$. Since
 \[
-\nabla_q L_\mu((W_f,h,q),x)=0
+h_{0,\delta}^\#(x)-Tz_0^\#(x)=0,
 \]
+the unsmoothed second-stage dual objective is identically zero over the feasible dual polytope. Hence every feasible dual point is optimal, in particular $\lambda_0^{\#,x}$. Combining this with the stochastic KKT condition
 \[
-\Longleftrightarrow
+0\in c-T^\top\lambda_0^{\#,x}+N_Z(z_0^\#(x)),
 \]
+we conclude that $z_0^\#(x)$ satisfies the single-scenario KKT condition for
 \[
-(W_f,h,q)
-\in
-\argmin_{\xi\in\Xi_\mu^{\mathrm{synthetic}}}L_\mu(\xi,x)
+(W,h_{0,\delta}^\#(x),q_\delta^{\max}).
 \]
-\[
-\Longleftrightarrow
-\]
-\[
-\hat z_\mu(W_f,h,q)=z_\mu^\#(x).
-\]
-
-Finally, for fixed $q$, every $h$-stationary point is globally optimal over the corresponding $h$-section. Therefore $h\mapsto L_\mu((W_f,h,q),x)$ is invex on that section. Similarly, for fixed $h$, every $q$-stationary point is globally optimal over the corresponding $q$-section. Therefore $q\mapsto L_\mu((W_f,h,q),x)$ is invex on that section.
-
-This proves componentwise invexity in $h$ and $q$, and the theorem follows.
+Therefore $z_0^\#(x)$ is optimal for that synthetic single-scenario problem. This proves the $h$-realizability claim for $\mu=0$.
 \end{proof}
 
-\section{Tightness of theorem 1}
+
+\section{Log-Barrier Smoothing}
+\label{app:log-barrier-smoothing}
+
+
+\subsection{Closed-Form Derivatives and Proof of Theorem 2}
+\label{app:closed-form-derivatives}
+\label{app:no-vanishing-gradients-proof}
+
+Fix $\mu>0$ and $(W,h,q)\in\Xi_\mu^{\mathrm{synthetic}}$. For the rest of this subsection, write $\lambda(\xi,z):=\hat\lambda_\mu(z,\xi)$ for the second-stage dual optimizer defined in Appendix~\ref{app:preliminary-definitions-results}. Set
+\[
+        \hat z:=\hat z_\mu^\#(W,h,q),
+        \qquad
+        \hat\lambda:=\lambda((W,h,q),\hat z).
+\]
+All derivatives are taken on the relative interior of the domain. Vector powers are componentwise.
+
+For
+\[
+        L_\mu(q,h,W,x):=G_\mu(\hat z_\mu^\#(W,h,q),x),
+\]
+the chain rule gives
+\[
+        \nabla_h L_\mu(q,h,W,x)
+        =
+        \left(\frac{\partial \hat z}{\partial h}\right)^\top
+        \nabla_zG_\mu(\hat z,x),
+        \qquad
+        \nabla_q L_\mu(q,h,W,x)
+        =
+        \left(\frac{\partial \hat z}{\partial q}\right)^\top
+        \nabla_zG_\mu(\hat z,x).
+\]
+By the envelope theorem,
+\[
+        \nabla_z \widehat G_\mu(z,\xi)
+        =
+        c-\mu z^{-1}-T^\top\lambda(\xi,z)
+        \quad \bmod\operatorname{range}(A^\top),
+\]
+and hence
+\[
+        \nabla_z G_\mu(z,x)
+        =
+        c-\mu z^{-1}
+        -
+        T^\top \E_{\xi\sim P(\cdot\mid x)}[\lambda(\xi,z)]
+        \quad \bmod\operatorname{range}(A^\top).
+\]
+
+\begin{lemma}
+Let $B\in\mathbb R^{n\times m}$ have full column rank and let
+\[
+        \lambda(a,r)
+        :=
+        \argmax_{\lambda:\ a-B\lambda>0}
+        \left\{
+        r^\top\lambda
+        +
+        \mu\sum_{i=1}^n \log(a_i-(B\lambda)_i)
+        \right\}.
+\]
+At a solution, set
+\[
+        D:=\operatorname{Diag}\bigl((a-B\lambda(a,r))^{-2}\bigr).
+\]
+Then
+\[
+        d\lambda
+        =
+        (\mu B^\top D B)^{-1}
+        \bigl(dr+\mu B^\top D\,da\bigr).
+\]
+Equivalently,
+\[
+        \frac{\partial\lambda}{\partial r}
+        =
+        (\mu B^\top D B)^{-1},
+        \qquad
+        \frac{\partial\lambda}{\partial a}
+        =
+        (\mu B^\top D B)^{-1}\mu B^\top D .
+\]
+\end{lemma}
+
+\begin{proof}
+The first-order equation is
+\[
+        r-\mu B^\top(a-B\lambda)^{-1}=0.
+\]
+Differentiating gives
+\[
+        dr+\mu B^\top D\,da-\mu B^\top D B\,d\lambda=0.
+\]
+Since $B$ has full column rank and $D\succ0$, $\mu B^\top D B$ is nonsingular.
+\end{proof}
+
+Applying the lemma with $B=W^\top$, $a=q$, and $r=h-Tz$ gives
+\[
+        d\lambda
+        =
+        (\mu WDW^\top)^{-1}
+        \bigl(dh-T\,dz+\mu WD\,dq\bigr),
+        \qquad
+        D:=\operatorname{Diag}\bigl((q-W^\top\hat\lambda)^{-2}\bigr).
+\]
+In particular, at fixed $(W,h,q)$,
+\[
+        \frac{\partial\lambda}{\partial z}
+        =
+        -(\mu WDW^\top)^{-1}T.
+\]
+
+The KKT equations for $\hat z$ are
+\[
+        c-\mu \hat z^{-1}-T^\top\hat\lambda+A^\top\nu=0,
+        \qquad
+        A\hat z=b.
+\]
+Let
+\[
+        D_z:=\operatorname{Diag}(\hat z^2),
+        \qquad
+        P
+        :=
+        \frac1\mu
+        \left(
+        D_z
+        -
+        D_zA^\top(AD_zA^\top)^{-1}AD_z
+        \right).
+\]
+Differentiating the first-stage KKT equations gives
+\[
+        d\hat z=P T^\top d\hat\lambda.
+\]
+Combining this identity with the preceding expression for $d\lambda$ yields
+\[
+        S\,d\hat\lambda=dh+\mu WD\,dq,
+        \qquad
+        S:=TPT^\top+\mu WDW^\top.
+\]
+Therefore
+\[
+        \frac{\partial\hat\lambda}{\partial h}=S^{-1},
+        \qquad
+        \frac{\partial\hat\lambda}{\partial q}=S^{-1}\mu WD,
+\]
+and
+\[
+        \boxed{
+        \frac{\partial \hat z_\mu^\#}{\partial h}
+        =
+        PT^\top S^{-1}}
+        ,
+        \qquad
+        \boxed{
+        \frac{\partial \hat z_\mu^\#}{\partial q}
+        =
+        PT^\top S^{-1}\mu WD}.
+\]
+Thus, for any representative
+\[
+        g\in\nabla_zG_\mu(\hat z,x),
+\]
+the loss gradients are
+\[
+        \boxed{
+        \nabla_h L_\mu(q,h,W,x)
+        =
+        S^{-1}TPg},
+        \qquad
+        \boxed{
+        \nabla_q L_\mu(q,h,W,x)
+        =
+        \mu DW^\top S^{-1}TPg}.
+\]
+
+\paragraph{Proof of Theorem 2.}
+Fix $x\in \mathcal X$, $\mu>0$, and $W_f$ from the support. Write $W:=W_f$ and
+\[
+        \hat z:=\hat z_\mu^\#(W,h,q),
+        \qquad
+        g\in\nabla_zG_\mu(\hat z,x).
+\]
+
+First assume
+\[
+        d\in\ker A,
+        \quad
+        Td=0
+        \quad\Longrightarrow\quad
+        d=0.
+\]
+Since $P=P^\top$, $\operatorname{range}(P)=\ker A$, $P\succ0$ on $\ker A$, and $W$ has full row rank, the closed-form gradients give
+\[
+        \nabla_h L_\mu(q,h,W,x)=0
+        \iff
+        TPg=0,
+\]
+and
+\[
+        \nabla_q L_\mu(q,h,W,x)=0
+        \iff
+        \mu DW^\top S^{-1}TPg=0
+        \iff
+        TPg=0.
+\]
+The rank condition gives
+\[
+        TPg=0
+        \iff
+        Pg=0.
+\]
+Finally,
+\[
+        Pg=0
+        \iff
+        d^\top g=0
+        \quad\text{for every }d\in\ker A.
+\]
+Hence, under the rank condition,
+\[
+        \nabla_h L_\mu(q,h,W,x)=0
+        \iff
+        \nabla_q L_\mu(q,h,W,x)=0
+        \iff
+        d^\top\nabla_zG_\mu(\hat z,x)=0
+        \quad\forall d\in\ker A.
+\]
+
+It remains to remove the rank condition. Set
+\[
+        u:=Tz,
+        \qquad
+        Z_T:=T(Z),
+\]
+and define
+\[
+        \phi_\mu(u)
+        :=
+        \argmin_{\substack{z\in Z\cap\mathbb R^{n_1}_{++}\\ Tz=u}}
+        \left\{
+        c^\top z-\mu\sum_{j=1}^{n_1}\log z_j
+        \right\}.
+\]
+Also define
+\[
+        F_\mu(u)
+        :=
+        c^\top\phi_\mu(u)
+        -
+        \mu\sum_{j=1}^{n_1}\log(\phi_\mu(u)_j),
+\]
+and
+\[
+        Q_\mu^T(u,\xi)
+        :=
+        \min_{\substack{y>0\\ W(\xi)y=h(\xi)-u}}
+        \left\{
+        q(\xi)^\top y-\mu\sum_{k=1}^{n_2}\log y_k
+        \right\}.
+\]
+Then
+\[
+        \bar G_\mu(u,x)
+        :=
+        F_\mu(u)
+        +
+        \E_{\xi\sim P(\cdot\mid x)}
+        [Q_\mu^T(u,\xi)]
+\]
+satisfies
+\[
+        G_\mu(\phi_\mu(u),x)=\bar G_\mu(u,x).
+\]
+Likewise, for the synthetic scenario $(W,h,q)$,
+\[
+        \hat u_\mu(h,q)
+        :=
+        \argmin_{u\in Z_T}
+        \left\{
+        F_\mu(u)+Q_\mu^T(u,(W,h,q))
+        \right\},
+\]
+and
+\[
+        \hat z_\mu^\#(W,h,q)=\phi_\mu(\hat u_\mu(h,q)),
+        \qquad
+        L_\mu(q,h,W,x)=\bar G_\mu(\hat u_\mu(h,q),x).
+\]
+
+In the reduced problem the technology map is the identity on
+\[
+        \operatorname{lin}(Z_T-Z_T)=T(\ker A),
+\]
+so the rank-condition case applies. Hence
+\[
+\begin{aligned}
+        \nabla_h L_\mu(q,h,W,x)=0
+        &\iff
+        \nabla_q L_\mu(q,h,W,x)=0
+        \\
+        &\iff
+        v^\top\nabla_u\bar G_\mu(\hat u_\mu(h,q),x)=0
+        \quad\forall v\in\operatorname{lin}(Z_T-Z_T).
+\end{aligned}
+\]
+By the envelope theorem for the fiber minimization,
+\[
+        d^\top\nabla_zG_\mu(\phi_\mu(u),x)
+        =
+        (Td)^\top\nabla_u\bar G_\mu(u,x),
+        \qquad d\in\ker A.
+\]
+Therefore, in the original variables,
+\[
+        \nabla_h L_\mu(q,h,W,x)=0
+        \iff
+        \nabla_q L_\mu(q,h,W,x)=0
+        \iff
+        d^\top\nabla_zG_\mu(\hat z,x)=0
+        \quad\forall d\in\ker A.
+\]
+Since $G_\mu(\cdot,x)$ is convex on $Z$ and has the unique minimizer $z_\mu^\#(x)$, the last condition is equivalent to
+\[
+        \hat z_\mu^\#(W,h,q)=z_\mu^\#(x).
+\]
+The rest of the theorem statement follows immediately.
+
+\section{Tightness of Theorem 1}
 
 Theorem~\ref{thm:realizability} makes several assumptions. As we shall see in this section, the conclusions of the theorem cannot generally be made to hold while relaxing these assumptions.
 
-\ref{Wallace} presents elementary examples of problems where no scenario in the support of the noise yields an optimal first-stage decision. Other work goes further, showing that if even a single component in the demand vector is restricted to be equal to zero, the result may generally fail to hold. Hence, fully synthetic scenarios are generally required, though there may be problems where restrictions can be imposed without losing optimal decision representability.
+\citet{wallace2000decision} presents elementary examples of problems where no scenario in the support of the noise yields an optimal first-stage decision. \citet{homemdemello2024forecasting} go further, showing that restrictions on the admissible scenario components can prevent decision-optimal single-scenario representability. Hence, fully synthetic scenarios are generally required, though there may be problems where restrictions can be imposed without losing optimal decision representability.
 
 Below, we present additional counterexamples showing that our assumptions of deterministic technology matrix $T$, and deterministic recourse for learning $h$, cannot be relaxed in general.
 
@@ -2043,5 +1471,136 @@ The same KKT argument again forces $\lambda=(3,3)$, but
 Therefore no choice of $h$ can make $z^\#$ optimal when $W$ is fixed to $W_1$ or $W_2$.
 
 This shows that learning $h$ can shift the second-stage right-hand side, but it cannot enlarge the dual feasible set $\{\lambda:\; W^\top\lambda\leq q\}$. When $W$ varies across scenarios, the stochastic optimum may require a dual slope that is unavailable under any fixed support value of $W$.
+
+\section{Details on Experiments and Benchmarks Against Standard Methods}
+\label{app:details-experiments-benchmarks}
+
+This appendix records the experimental protocol, benchmark definitions, implementation details, hardware, and baseline comparisons used in the empirical study. All methods are evaluated as contextual two-stage stochastic linear-programming policies: a policy observes a context, returns a first-stage decision, and is scored by downstream stochastic-programming cost.
+
+\subsection{Experimental Protocol}
+
+Each benchmark uses the same data generating protocol. The training set contains $100$ contexts with one observed scenario per context. The test set contains $30$ independently generated contexts. For each test context, we generate $500$ conditional scenarios and evaluate policies over five batches of $100$ scenarios. Reported values are averages over the resulting $30\times 5=150$ test evaluations. The test contexts and scenarios are generated independently from the training data.
+
+For each test context and evaluation batch, we compute both the candidate policy cost and an oracle SAA cost on the same batch. For a policy $\pi$, regret is reported as
+\[
+\widehat{\mathrm{Regret}}(\pi)
+=
+\frac{1}{30\cdot 5}
+\sum_{i=1}^{30}
+\sum_{b=1}^{5}
+\left[
+\widehat V_{i,b}(\pi(x_i))-\widehat V_{i,b}^{\star}
+\right],
+\]
+where $\widehat V_{i,b}^{\star}$ is the oracle SAA value for test context $i$ and batch $b$. Relative regret divides each gap by the corresponding oracle value before averaging. Lower values are better.
+
+
+\subsection{Benchmarks}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Benchmark & Random component & $n_1$ & $n_2$ & $m_2$ \\
+\midrule
+Resource allocation & $h$ & $20$ & $680$ & $50$ \\
+Transshipment & $h,q$ & $7$ & $77$ & $35$ \\
+Random yield & $W$ & $5$ & $20$ & $5$ \\
+\bottomrule
+\end{tabular}
+\caption{Benchmark families and equality-form dimensions.}
+\label{tab:app-benchmark-dimensions}
+\end{table}
+
+\paragraph{Problem descriptions and data generation.}
+We give a more explicit description of the three benchmark families emphasized in the main text. All three are contextual two-stage stochastic linear programs. A context is observed before the first-stage decision is chosen, and uncertainty is then realized through one or more second-stage data components. Two of the benchmarks are inherited from prior contextual or stochastic-programming benchmark papers; the third is a controlled synthetic stress test targeting the random-recourse-matrix regime that prior single-scenario methods largely do not cover.
+
+\paragraph{Resource allocation.}
+The resource-allocation instance is included as a direct point of contact with the recent application-driven pointwise forecasting literature. It is a contextual two-stage stochastic LP with uncertainty entering only through the second-stage right-hand side, matching the fixed-recourse and fixed-cost setting studied by \citet{homemdemello2024forecasting}. The instance also connects to data-driven SAA with covariate information \citep{kannan2025datadriven}. This makes it a natural baseline regime for testing whether the proposed log-barrier single-scenario training procedure can recover useful decision policies in a setting where single-scenario representability is already known to be favorable.
+
+In the data generator, each context is three-dimensional. Contexts are generated as folded Gaussian vectors with a randomly generated correlation matrix. Conditional demand is then produced by combining a contextual signal with additive noise; in the reported experiments the noise level is $\sigma=5$ and the contextual exponent is $p=2$. The base instance has $20$ resources and $30$ demand classes, so the generated demand vector has length $30$. In equality form, this demand vector is embedded into the second-stage right-hand side by prepending $20$ zero entries for resource-balance rows, giving $m_2=50$ second-stage equality rows. The full equality-form instance has $n_1=20$ first-stage variables and $n_2=680$ second-stage variables. The random component is $h$, while the recourse matrix $W$, second-stage cost vector $q$, and technology matrix $T$ are fixed.
+
+\paragraph{Transshipment.}
+The transshipment benchmark is included to test the method in a random-cost stochastic-programming regime. The base problem is a multilocation transshipment model from the inventory and supply-chain literature, where post-demand lateral transshipments are represented through a network-flow recourse problem \citep{herer2006multilocation}. We use it in the spirit of the random-cost stochastic-programming experiments of \citet{gangammanavar2021stochastic}, who introduced random second-stage objective coefficients into classical two-stage stochastic LP test instances. This benchmark is therefore qualitatively different from the resource-allocation instance: uncertainty affects both the second-stage right-hand side and second-stage objective vector.
+
+The data generator uses three-dimensional contexts centered around four fixed context regimes. Conditional scenarios are generated by perturbing both the second-stage right-hand side and the second-stage cost vector. The underlying transshipment instance is read from SMPS data and has $n_1=7$ first-stage variables, $n_2=77$ second-stage variables, and $m_2=35$ second-stage equality rows. In the mixed version used here, the contextual generator varies $7$ stochastic right-hand-side values and $7$ stochastic recourse-cost values. The main comparison stresses the choice of learned scenario component: the real stochastic problem contains both demand and cost variation, but we may still choose to learn only one of the two.
+
+\paragraph{Random yield.}
+The random-yield instance is a controlled synthetic stress test for random recourse matrices. Unlike the previous two benchmarks, it is not meant to reproduce a canonical named test instance. Instead, it isolates a source of uncertainty that is central to the paper's theoretical motivation: the physical effectiveness of second-stage actions may vary across scenarios, causing uncertainty to enter the recourse matrix $W$. Such random-recourse structures are studied in stochastic programming \citep{fan2024decision,jiang2019quantitative}, and arise naturally in production-planning settings with uncertain yields \citep{kazemi2011production}. The benchmark tests whether a synthetic vector-valued scenario, especially a learned cost vector $q$, can induce good first-stage decisions without requiring the neural generator to output a full recourse matrix.
+
+This benchmark is included because directly learning a recourse matrix can be expensive and structurally delicate. The generator therefore creates scenarios in which the true conditional distribution changes $W$, while the learned synthetic scenario is restricted to vector-valued data such as $h$ or $q$. In the small instance used here, the equality-form dimensions are $n_1=5$, $n_2=20$, and $m_2=5$. The construction uses $r=5$ products, $a=10$ activities, and a support size $K_{\mathrm{support}}=5$, giving $n_2=a+2r=20$. The random recourse matrix has the block form $W=[Y\ I\ -I]$, where $Y$ is a scenario-dependent yield matrix. The base cost vector has length $20$: ten activity costs, five positive-slack costs, and five negative-slack costs. This benchmark directly tests the modeling message of Theorem~\ref{thm:realizability} and Proposition~\ref{prop:constructive}: a synthetic scenario need not reproduce the physical source of uncertainty in order to induce a good first-stage decision.
+
+\subsection{Methods and Hyperparameters}
+
+The baseline set is
+\[
+\text{SAA},\quad
+\text{OLS-CE},\quad
+\text{ER-SAA},\quad
+\text{NN}.
+\]
+SAA is context-free and solves one sample-average approximation using all training scenarios. OLS-CE fits an ordinary least-squares map from context to the relevant scenario component and solves the induced one-scenario problem. ER-SAA fits the same linear map but evaluates an SAA formed by adding empirical residuals to the predicted component. NN uses the same neural architecture as IP-SG, but is trained by mean-squared prediction error rather than decision loss.
+
+All MLP-based policies use three hidden ReLU layers of width $128$ followed by a benchmark-specific output layer. Neural scenario generators are trained with Adam, learning rate $10^{-3}$, minibatch size $1$, and one generated scenario per context. Training uses $130$ epochs: $20$ epochs for the first smoothing stage and $10$ epochs for each later stage. The log-barrier schedule is
+\[
+\mu\in
+\{1.0,\ 0.8,\ 0.6,\ 0.4,\ 0.2,\ 0.1,\ 0.08,\ 0.06,\ 0.04,\ 0.02,\ 0.01\}.
+\]
+During annealing, $(\mu_{\mathrm{in}},\mu_{\mathrm{ref}})=(\mu_s,\mu_s)$. The final fine-tuning stage uses $(\mu_{\mathrm{in}},\mu_{\mathrm{ref}})=(0.01,0)$.
+
+All experiments are implemented in Julia. Neural-network training uses Flux. Smoothed log-barrier problems are solved with Ipopt, while unsmoothed LPs and oracle SAA problems are solved with HiGHS. Neural-network computations use Float64 precision.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Item & Value \\
+\midrule
+Machine & MacBook Pro, model identifier Mac15,10 \\
+Chip & Apple M3 Max \\
+CPU & 14 cores total, 10 performance and 4 efficiency \\
+GPU & Integrated Apple M3 Max GPU, 30 cores, Metal 3 \\
+Memory & 36 GB unified memory \\
+Operating system & macOS 15.6, build 24G84 \\
+Kernel & Darwin 24.6.0 \\
+\bottomrule
+\end{tabular}
+\caption{Hardware and operating-system details.}
+\label{tab:app-hardware}
+\end{table}
+
+\clearpage
+\subsection{Benchmark Results}
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Benchmark & SAA & ER & OLS & NN & IP-SG-$q$ & IP-SG-$h$ \\
+\midrule
+\texttt{random\_yield} & 23.62\% & 46.81\% & 29.14\% & 26.07\% & 7.08\% & 8.40\% \\
+\texttt{resource\_allocation} & 23.54\% & 6.27\% & 8.52\% & 11.73\% & 24.31\% & 8.07\% \\
+\texttt{transshipment} & 13.22\% & 4.08\% & 6.02\% & 6.99\% & 26.95\% & 2.06\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Benchmark comparison.}
+\label{tab:app-dfl-overlap-comparison}
+\end{table}
+
+The comparison is intended to contextualize the IP-SG results rather than to establish a comprehensive leaderboard.
+Against the standard baselines, IP-SG is strongest on transshipment, where IP-SG-$h$ gives the lowest regret in the table.
+On resource allocation, IP-SG-$h$ is competitive with the predictive baselines, though not the best overall.
+On random yield, the cost-vector IP-SG variant is the strongest vector-valued generator and substantially improves over the non-scenario-generation baselines, despite the physical uncertainty being in the recourse matrix.
+Across the board, IP-SG outperforms naive baselines when the learned component is chosen appropriately, but can fail otherwise.
+This pattern matches the main empirical message of the paper: the learned synthetic component is a modeling choice, and its best choice need not coincide with the physical source of randomness.
+
+\clearpage
+\input{checklist}
 
 \end{document}

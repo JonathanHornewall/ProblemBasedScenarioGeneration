@@ -1,0 +1,3 @@
+activation,batch_size,candidate_name,data_seed,depth,display_loss,epoch,epoch_seconds,group,hidden_size,iterations,knn_k,loss_kind,model_seed,mu,mu_in,mu_ref,nr_scenarios,replicate,reset_optimizer_each_epoch,rho,rho_in,rho_ref,run_id,schedule_kind,training_loss,training_seed
+silu,1,rho_0p0001,202615051,4,1596.325918265024,1,26.681386947631836,03_quadratic_smoothing,128,2,0,dfl,202615052,1.0,1.0,1.0,1,1,true,0.0001,0.0001,0.0001,smoke_03_quadratic_smoothing_rho_0p0001_rep01,baseline,1596.325918265024,202615053
+silu,1,rho_0p0001,202615051,4,3266.1984099191613,2,0.7806839942932129,03_quadratic_smoothing,128,2,0,dfl,202615052,0.01,0.01,0.0,1,1,true,0.0001,0.0001,0.0,smoke_03_quadratic_smoothing_rho_0p0001_rep01,baseline,3266.1984099191613,202615053
