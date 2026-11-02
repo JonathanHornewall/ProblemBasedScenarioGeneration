@@ -1,0 +1,7 @@
+{
+  "status": "failed",
+  "stage": "cold-classifier fixture setup",
+  "slurm_job_id": 16740,
+  "observed_exception": "Classifier subprocess returned nonzero before the parent initialization assertion.",
+  "repair": "Create fixture ops directory required by the classifier registry lock; expose child stderr. No numerical fit or healthy worker was affected."
+}

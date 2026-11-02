@@ -1,0 +1,24 @@
+{
+  "observed_unix": 1793656203.8534138,
+  "valid_completed": {
+    "SP": 318,
+    "KP": 4,
+    "CFL": 27
+  },
+  "remaining_from_original_scope": {
+    "SP": 342,
+    "CFL": 633,
+    "KP": 2
+  },
+  "active_numerical_children": 42,
+  "active_by_kind": {
+    "preparation": 17,
+    "fit": 25
+  },
+  "approx_effective_cpu_cores": 41.781000000000006,
+  "running_allocated_cpus": 52,
+  "pending_cpus": 0,
+  "completed_replacements": 7,
+  "new_operational_provenance_holds": 2,
+  "new_scientific_failures": 0
+}

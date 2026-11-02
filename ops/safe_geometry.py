@@ -1,7 +1,16 @@
 """Admit proven random-free legacy prefixes or exact seeded-v2 caches."""
-import fcntl,os,pathlib,socket,time
+import fcntl,os,pathlib,socket,time,subprocess,sys
 from qualify import read,write,sha
 from bank_geometry import directory,get_geometry as load
+
+def classify_in_subprocess(root,key,n,metadata=None):
+ root=pathlib.Path(root)
+ command=[sys.executable,str(pathlib.Path(__file__).parent/'geometry_provenance.py'),
+  '--root',str(root),'--key',key,'--n',str(n)]
+ if metadata is not None:command+=['--metadata',str(metadata)]
+ result=subprocess.run(command,capture_output=True,text=True,timeout=600)
+ if result.returncode:raise RuntimeError('Prefix-classifier child failed: '+result.stderr[-3000:])
+ return read(root/'ops/GEOMETRY_PROVENANCE.json')[key]
 
 def decision(root,job):
  root=pathlib.Path(root);key=job['required_data_key'];n=int(job['config']['sizes']['train'])
@@ -19,8 +28,9 @@ def decision(root,job):
    raise RuntimeError('Seeded cache identity mismatch')
   return {'ready':True,'initialization_seed':seed}
  if (directory(key)/f'prefix{n}.json').exists():
-  from geometry_provenance import certify
-  entry=certify(root,key,n)
+  # Classification configures Torch interop in a fresh process. Maintained
+  # fitting must retain its own single permitted interop initialization.
+  entry=classify_in_subprocess(root,key,n)
   if entry.get('random_free_supplied_prefix',0)>=n:return {'ready':True,'initialization_seed':None}
  request=root/'seeded_requests'/(key+'__init'+str(seed)+'.json');request.parent.mkdir(exist_ok=True)
  with request.with_suffix('.lock').open('a') as lock:

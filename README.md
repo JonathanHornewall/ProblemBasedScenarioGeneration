@@ -26,3 +26,7 @@ Operational instructions, exact jobs, recovery rules and terminal cleanup are in
 The live serial KP bank is proved random-free through all 1000 supplied training observations, so its in-flight fit is retained; see [ops/KP_CONSUMED_PREFIX_PROVENANCE.json](ops/KP_CONSUMED_PREFIX_PROVENANCE.json). Current job/admission ownership and the passing final CLI/resume check are saved in [ops/CURRENT_OPERATIONAL_STATE.json](ops/CURRENT_OPERATIONAL_STATE.json).
 
 The final request is52 CPUs running plus pending (51 running,1 pending in the saved operational receipt), within the100-CPU envelope. The additional node09 queue lets the diagnosed CFL50 repair progress independently of the active CFL100 probe.
+
+At the21:50UTC outage check, cluster work had continued:349 valid completions (SP318, CFL27, KP4), all seven corrected CFL fits complete,42 active numerical children using~41.8 of52 allocated cores. Twenty-three older SP failures were traced to Torch startup initialization, all before the saved20:27state. Their receipts are preserved; only those failed cells receive explicit runtime replacements after the focused isolation regression. See [ops/FAILED_SP_STATUS_20261102.json](ops/FAILED_SP_STATUS_20261102.json) and [ops/INTEROP_REPAIR_RESUMPTION.json](ops/INTEROP_REPAIR_RESUMPTION.json).
+
+The scoped Torch startup repair is verified:23 original failures retained,23 explicit replacements registered, the first two already training at25/10epochs and21 queued at the repair readback. No additional CPU allocation or unrelated check was needed.

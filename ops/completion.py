@@ -34,8 +34,12 @@ def make_job(root,plan,route,seeds,phase,choices,stage):
     jid='lava_complete__'+hashlib.sha256(json.dumps(job,sort_keys=True).encode()).hexdigest()[:32]
     job['id']=jid;job['config']['name']=jid
     affected=root/'ops/AFFECTED_JOB_IDS.json'
-    if affected.exists() and jid in read(affected):
-        job['replaces_job_id']=jid;job['lava_geometry_repair']='seeded_numpy_resume_v2'
+    repairs=root/'ops/JOB_REPAIRS.json'
+    runtime_repairs=read(repairs) if repairs.exists() else {}
+    if (affected.exists() and jid in read(affected)) or jid in runtime_repairs:
+        job['replaces_job_id']=jid
+        if jid in runtime_repairs:job['lava_runtime_repair']=runtime_repairs[jid]['revision']
+        else:job['lava_geometry_repair']='seeded_numpy_resume_v2'
         job.pop('id');job['config'].pop('name')
         jid='lava_complete__'+hashlib.sha256(json.dumps(job,sort_keys=True).encode()).hexdigest()[:32]
         job['id']=jid;job['config']['name']=jid
