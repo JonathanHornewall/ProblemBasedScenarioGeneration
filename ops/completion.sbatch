@@ -11,6 +11,7 @@ export ATLANTA_SOURCE_MANIFEST="$LAVA_RUN_ROOT/source_receipt.json"
 export CENTRAL_PATH_FROZEN_DATA=/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data
 export SCALED_DATA_NEURAL_ROOT="$LAVA_RUN_ROOT" SIMPLIFIED_ROOT="$LAVA_RUN_ROOT"
 export SCALED_DATA_NEURAL_SITE=cermics
+export CENTRAL_PATH_GEOMETRY_CACHE=/tmp/lava_completion_20261102/banks
 export LAVA_NODE_MEMORY_GIB=230
 LAVA_PYTHON=/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python
 hostname
@@ -19,5 +20,5 @@ df -h /tmp
 if [ "$LAVA_WORKERS" = check ]; then
   srun --cpu-bind=cores "$LAVA_PYTHON" "$LAVA_RUN_ROOT/ops/check_bank_geometry.py"
 else
-  "$LAVA_PYTHON" "$LAVA_RUN_ROOT/ops/completion.py" --root "$LAVA_RUN_ROOT" --pool "$LAVA_WORKERS"
+  srun --cpu-bind=cores "$LAVA_PYTHON" "$LAVA_RUN_ROOT/ops/completion.py" --root "$LAVA_RUN_ROOT" --pool "$LAVA_WORKERS"
 fi

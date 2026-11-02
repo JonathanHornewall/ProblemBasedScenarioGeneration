@@ -1,0 +1,43 @@
+node09.cluster.local
+Mon Nov  2 04:52:09 AM UTC 2026
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p4  438G   20G  418G   5% /
+[{"key": "dys_shortest_path_10x10__data1103", "samples": 2, "exact_anchor_rows": true, "exact_neighbour_rows_and_order": true, "exact_binding_normals": true, "exact_public_loss_and_gradient": true, "mismatched_costs_rejected": true, "elapsed_wall_seconds": 2.190653458237648, "vertex_counts": [108, 129]}, {"key": "dys_cfl_50x5__data17", "samples": 2, "exact_anchor_rows": true, "exact_neighbour_rows_and_order": true, "exact_binding_normals": true, "exact_public_loss_and_gradient": true, "mismatched_costs_rejected": true, "elapsed_wall_seconds": 12.50999554619193, "vertex_counts": [11432, 1362]}]
+{
+  "bank_geometry_sha256": "310d6846188d9bfb64cad85db6255175949a1268ad9c667664cfae7459f67c8f",
+  "check_script_sha256": "a45b70881ce0c87e180ea50258bb5d86b86d59dde6beade3d6baa85c7f9489e3",
+  "results": [
+    {
+      "elapsed_wall_seconds": 2.190653458237648,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_shortest_path_10x10__data1103",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        108,
+        129
+      ]
+    },
+    {
+      "elapsed_wall_seconds": 12.50999554619193,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_cfl_50x5__data17",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        11432,
+        1362
+      ]
+    }
+  ],
+  "scientific_fits": false,
+  "slurm_job_id": "16222",
+  "source": "first two original supplied training costs only",
+  "status": "passed"
+}

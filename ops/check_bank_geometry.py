@@ -9,12 +9,12 @@ import torch
 from bank_geometry import prepare,get_geometry,directory
 from simplified_data import load_structure
 from proximal_spo.public_highs import HighsLAVADataset,HighsOptModel,public_geometry
-from qualify import write
+from qualify import write,sha
 
 torch.set_num_threads(1);torch.set_num_interop_threads(1)
 root=Path(os.environ['LAVA_RUN_ROOT']);results=[]
 for key in ('dys_shortest_path_10x10__data1103','dys_cfl_50x5__data17'):
-    t=time.perf_counter();prepare(root,key,2)
+    t=time.perf_counter();prepare(root,key,2,force=True)
     source=Path('/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data')/key
     with np.load(source/'observations_n100.npz',allow_pickle=False) as f:
         x=f['train__contexts'][:2];c=f['train__physical_costs'][:2]
@@ -43,5 +43,8 @@ for key in ('dys_shortest_path_10x10__data1103','dys_cfl_50x5__data17'):
         'mismatched_costs_rejected':True,'elapsed_wall_seconds':time.perf_counter()-t,
         'vertex_counts':[len(v) for v in reference.adjacent_verts]})
 write(root/'ops/BANK_GEOMETRY_CHECK.json',{'status':'passed','results':results,
-    'scientific_fits':False,'source':'first two original supplied training costs only'})
+    'scientific_fits':False,'source':'first two original supplied training costs only',
+    'slurm_job_id':os.environ['SLURM_JOB_ID'],
+    'bank_geometry_sha256':sha(root/'ops/bank_geometry.py'),
+    'check_script_sha256':sha(Path(__file__))})
 print(json.dumps(results),flush=True)

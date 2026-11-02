@@ -1,0 +1,24 @@
+{
+  "qualification_failed": [
+    16205,
+    16206,
+    16207
+  ],
+  "qualification_active": [
+    16208,
+    16209,
+    16210
+  ],
+  "kp_recovery_array": 16211,
+  "implementation_checks": [
+    16219,
+    16220,
+    16221,
+    16222
+  ],
+  "completion_pool": 16223,
+  "completion_workers": 16,
+  "maximum_campaign_cpus": 100,
+  "largest_total_requested_cpus_so_far": 25,
+  "absolute_deadline_utc": "2026-11-09T04:27:29.088834+00:00"
+}

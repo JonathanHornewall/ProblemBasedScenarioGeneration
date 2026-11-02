@@ -1,0 +1,42 @@
+node09.cluster.local
+Mon Nov  2 04:45:33 AM UTC 2026
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p4  438G   20G  418G   5% /
+/home/jonathan.hornewall/runs/lava_completion_20261102/code/src/proximal_spo/public_highs.py:305: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+  torch.as_tensor(values[index], dtype=torch.float32)
+[{"key": "dys_shortest_path_10x10__data1103", "samples": 2, "exact_anchor_rows": true, "exact_neighbour_rows_and_order": true, "exact_binding_normals": true, "exact_public_loss_and_gradient": true, "mismatched_costs_rejected": true, "elapsed_wall_seconds": 4.324527814984322, "vertex_counts": [108, 129]}, {"key": "dys_cfl_50x5__data17", "samples": 2, "exact_anchor_rows": true, "exact_neighbour_rows_and_order": true, "exact_binding_normals": true, "exact_public_loss_and_gradient": true, "mismatched_costs_rejected": true, "elapsed_wall_seconds": 24.489515267312527, "vertex_counts": [11432, 1362]}]
+{
+  "results": [
+    {
+      "elapsed_wall_seconds": 4.324527814984322,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_shortest_path_10x10__data1103",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        108,
+        129
+      ]
+    },
+    {
+      "elapsed_wall_seconds": 24.489515267312527,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_cfl_50x5__data17",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        11432,
+        1362
+      ]
+    }
+  ],
+  "scientific_fits": false,
+  "source": "first two original supplied training costs only",
+  "status": "passed"
+}

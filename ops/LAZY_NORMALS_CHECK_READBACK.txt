@@ -1,0 +1,51 @@
+p4  438G   20G  418G   5% /
+Traceback (most recent call last):
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/check_bank_geometry.py", line 17, in <module>
+    t=time.perf_counter();prepare(root,key,2,force=True)
+                          ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/bank_geometry.py", line 45, in prepare
+    if sha(training_file)!=source_receipt['files_sha256'][training_file.name]:
+       ~~~^^^^^^^^^^^^^^^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/qualify.py", line 32, in sha
+    with Path(path).open('rb') as f:
+         ~~~~~~~~~~~~~~~^^^^^^
+  File "/home/jonathan.hornewall/runs/central_path_final_20260922/runtime/cpython-3.13.5-linux-x86_64-gnu/lib/python3.13/pathlib/_local.py", line 537, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data/dys_shortest_path_10x10__data1103/observations_n1000.npz'
+srun: error: node09: task 0: Exited with exit code 1
+{
+  "results": [
+    {
+      "elapsed_wall_seconds": 4.324527814984322,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_shortest_path_10x10__data1103",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        108,
+        129
+      ]
+    },
+    {
+      "elapsed_wall_seconds": 24.489515267312527,
+      "exact_anchor_rows": true,
+      "exact_binding_normals": true,
+      "exact_neighbour_rows_and_order": true,
+      "exact_public_loss_and_gradient": true,
+      "key": "dys_cfl_50x5__data17",
+      "mismatched_costs_rejected": true,
+      "samples": 2,
+      "vertex_counts": [
+        11432,
+        1362
+      ]
+    }
+  ],
+  "scientific_fits": false,
+  "source": "first two original supplied training costs only",
+  "status": "passed"
+}

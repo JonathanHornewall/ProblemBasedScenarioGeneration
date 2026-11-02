@@ -93,7 +93,8 @@ def advance(root):
     for key in keys:
         status=root/'banks'/key/'STATUS.json'
         v=read(status) if status.exists() else {}
-        if v.get('status')!='complete' or v.get('maximum_training_samples')!=1000:prep.append({'kind':'prepare','id':'bank__'+key,'key':key,'n':1000,
+        maximum=admission.get('prepare_maximum_by_route',{}).get(key.split('__data')[0],1000)
+        if v.get('status')!='complete' or v.get('maximum_training_samples')!=maximum:prep.append({'kind':'prepare','id':'bank__'+key,'key':key,'n':maximum,
             'route':key.split('__data')[0],'stage':'upstream_preprocessing'})
     # Ready training comes first; missing geometry owners are a separate queue,
     # so other bank/phase work fills all usable memory and CPU slots.
@@ -107,8 +108,8 @@ def advance(root):
             'note':'KP recovery scope is accounted separately before terminal closeout'})
 
 def memory(item):
-    if item['kind']=='prepare':return 24. if 'cfl' in item['route'] else 12. if '50x50' in item['route'] else 6.
-    return 12. if 'cfl' in item['route'] or '50x50' in item['route'] else 6.
+    if item['kind']=='prepare':return 48. if 'cfl' in item['route'] else 24. if '50x50' in item['route'] else 6.
+    return 24. if '50x50' in item['route'] else 12. if 'cfl' in item['route'] else 6.
 
 def work(root,index):
     root=Path(root)
@@ -134,7 +135,7 @@ def work(root,index):
             try:fcntl.flock(candidate,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError:candidate.close();continue
             if item['kind']=='fit' and (root/'results/receipts'/(item['id']+'.json')).exists():candidate.close();continue
-            if item['kind']=='prepare' and (directory(item['key'])/'prefix1000.json').exists():candidate.close();continue
+            if item['kind']=='prepare' and (directory(item['key'])/f'prefix{item["n"]}.json').exists():candidate.close();continue
             with guard.open('a') as g:
                 fcntl.flock(g,fcntl.LOCK_EX);held=read(reservation) if reservation.exists() else {}
                 # Reap only dead local worker reservations, never other jobs.
@@ -152,7 +153,7 @@ def work(root,index):
         item=chosen
         path=root/'logs'/(item['id']+'.log');path.parent.mkdir(exist_ok=True)
         if item['kind']=='fit':cmd=[sys.executable,str(root/'ops/run_fit.py'),'--manifest',str(root/'jobs'/(item['id']+'.json')),'--output-root',str(root/'results')]
-        else:cmd=[sys.executable,str(root/'ops/bank_geometry.py'),'--root',str(root),'--key',item['key']]
+        else:cmd=[sys.executable,str(root/'ops/bank_geometry.py'),'--root',str(root),'--key',item['key'],'--maximum',str(item['n'])]
         opened=time.monotonic();cap=min(43200 if item['kind']=='fit' else 86400,deadline-time.time())
         reason=None;peak_sampled=0;cpu_sampled=0.
         import psutil

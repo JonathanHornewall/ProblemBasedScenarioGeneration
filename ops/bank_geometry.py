@@ -22,24 +22,26 @@ def directory(key):
 def vertex_name(anchor):
     return hashlib.sha256(anchor.tobytes()).hexdigest()+'.npy'
 
-def prepare(root,key,maximum=1000):
+def prepare(root,key,maximum=1000,force=False):
     import numpy as np
     import highspy
     import torch
     from physical128_data import array_hash
     from simplified_data import load_structure
     from proximal_spo.public_highs import HighsLAVADataset,HighsOptModel,binding_normals
+    import proximal_spo.public_highs as public_highs
     torch.set_num_threads(1)
     if torch.get_num_interop_threads()!=1:torch.set_num_interop_threads(1)
     root=Path(root);where=directory(key);where.mkdir(parents=True,exist_ok=True)
     record=root/'banks'/key/'STATUS.json'
     old=read(record) if record.exists() else {}
-    if old.get('status')=='complete' and (where/f'prefix{maximum}.json').exists():return
+    if not force and old.get('status')=='complete' and (where/f'prefix{maximum}.json').exists():return
     source=Path('/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data')/key
     meta=read(source/'receipt.json');route,seed=key.split('__data')
     development=seed not in [str(s['data']) for s in read(root/'PLAN.json')['cells'][route]['confirmation']]
-    train_source=source.parent/'retuning_development'/key if development else source
-    training_file=train_source/f'observations_n{maximum if maximum in (100,500,1000) else 1000}.npz'
+    train_source=source.parent/'retuning_development'/key if development and maximum>100 else source
+    stored_n=100 if maximum<=100 else 500 if maximum<=500 else 1000
+    training_file=train_source/f'observations_n{stored_n}.npz'
     source_receipt=read(train_source/'receipt.json')
     if sha(training_file)!=source_receipt['files_sha256'][training_file.name]:
         raise RuntimeError('Frozen training file changed')
@@ -56,6 +58,7 @@ def prepare(root,key,maximum=1000):
           'validation_opened':False,'test_opened':False,'generator_called':False,
           'adapter_sha256':sha(Path(os.environ['LAVA_CODE'])/'src/proximal_spo/public_highs.py'),
           'highs_version':highspy.Highs().version(),'basis_enumeration_cap':250,'vertex_tolerance':0.,
+          'binding_normals_storage':'lossless NPZ per exact anchor; lazy original arrays at training',
           'reused_completed_prefixes':sorted(int(p.stem[6:]) for p in where.glob('prefix*.json'))}
     write(record,info)
     started,cpu_started=time.perf_counter(),time.process_time()
@@ -82,8 +85,14 @@ def prepare(root,key,maximum=1000):
             temp=path.with_suffix(f'.{os.getpid()}.tmp')
             with temp.open('wb') as f:np.save(f,vertices,allow_pickle=False)
             temp.replace(path)
+        normals_name=Path(name).stem+'.normals.npz';normals_path=where/normals_name
+        if not normals_path.exists():
+            normals=binding_normals(problem,sol)
+            tmp=normals_path.with_suffix(f'.{os.getpid()}.tmp')
+            with tmp.open('wb') as f:np.savez_compressed(f,normals=normals)
+            tmp.replace(normals_path)
         unique_names.add(name);sols.append(sol);objs.append([float(costs[n-1]@sol)])
-        ctrs.append(binding_normals(problem,sol));names.append(name);counts.append(len(vertices))
+        ctrs.append(normals_name);names.append(name);counts.append(len(vertices))
         elapsed=time.perf_counter()-started;cpu=time.process_time()-cpu_started
         if n in (100,300,500,1000,maximum):
             fields={'sols':np.asarray(sols),'objs':np.asarray(objs),'ctrs':ctrs.copy(),
@@ -103,8 +112,17 @@ def prepare(root,key,maximum=1000):
         if n%10==0 or n==1:
             write(record,{**info,'samples_completed':n,'unique_anchors':len(unique_names),
                 'elapsed_wall_seconds':elapsed,'process_cpu_seconds':cpu,'updated_unix':time.time()})
-    d=Retained(model,contexts,costs,public_repo=os.environ['SOLVER_FREE_DFL_REPO'],
-               vertex_tolerance=0.,progress=progress)
+    # The constructor's binding-normal list is bookkeeping only. Retaining
+    # every dense matrix can exceed RAM for SP50. The callback stores the
+    # exact maintained arrays losslessly; training restores those same arrays.
+    # Solves, bases, public enumeration, projection and duplicates are untouched.
+    original_binding=public_highs.binding_normals
+    public_highs.binding_normals=lambda p,s:np.empty((0,p.variable_count),dtype=np.float64)
+    try:
+        d=Retained(model,contexts,costs,public_repo=os.environ['SOLVER_FREE_DFL_REPO'],
+                   vertex_tolerance=0.,progress=progress)
+    finally:
+        public_highs.binding_normals=original_binding
     write(record,{**info,'status':'complete','samples_completed':maximum,
         'elapsed_wall_seconds':time.perf_counter()-started,
         'process_cpu_seconds':time.process_time()-cpu_started,'finished_unix':time.time(),
@@ -115,7 +133,14 @@ class LazyVertices:
     def __len__(self):return len(self.names)
     def __getitem__(self,index):
         import numpy as np
-        return np.load(self.where/self.names[index],mmap_mode='r',allow_pickle=False)
+        return np.load(self.where/self.names[index],mmap_mode='c',allow_pickle=False)
+
+class LazyNormals:
+    def __init__(self,where,names):self.where,self.names=where,names
+    def __len__(self):return len(self.names)
+    def __getitem__(self,index):
+        import numpy as np
+        with np.load(self.where/self.names[index],allow_pickle=False) as f:return f['normals']
 
 def get_geometry(job,model,contexts,costs,update):
     import numpy as np
@@ -129,7 +154,8 @@ def get_geometry(job,model,contexts,costs,update):
     with (where/f'prefix{n}.pickle').open('rb') as f:fields=pickle.load(f)
     d=HighsBindingDataset.__new__(HighsBindingDataset)
     d.model,d.feats,d.costs=model,contexts,costs
-    d.sols,d.objs,d.ctrs=fields['sols'],fields['objs'],fields['ctrs']
+    d.sols,d.objs=fields['sols'],fields['objs']
+    d.ctrs=LazyNormals(where,fields['ctrs']) if isinstance(fields['ctrs'][0],str) else fields['ctrs']
     d.relaxed_sols,d.relaxed_objs=d.sols,d.objs
     d.adjacent_verts=LazyVertices(where,fields['vertices'])
     d.geometry_cache_receipt={'hit':True,'key':key,'supplied_training_samples':n,
