@@ -68,6 +68,8 @@ if __name__=='__main__':
     if not runtime_fit_allowed(scope_root,job):
         scope_skip(scope_root,'fit',job['id'],'Excluded by the direct human CFL N100 amendment')
         raise SystemExit(76)
+    from worker_admission import handoff_if_stale
+    handoff_if_stale(scope_root,job)
     if job.get('lava_completion_revision') or job.get('lava_completion_recovery',{}).get('lazy_exact_bank'):
         from safe_geometry import decision
         admission=decision(Path(os.environ['LAVA_RUN_ROOT']),job)
