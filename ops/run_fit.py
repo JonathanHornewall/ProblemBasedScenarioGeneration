@@ -63,6 +63,11 @@ if __name__=='__main__':
     if not os.environ.get('SLURM_JOB_ID') or len(os.sched_getaffinity(0))!=1:
         raise RuntimeError('Single-core Slurm fit required')
     job=json.loads(args.manifest.read_text())['jobs'][0]
+    from scope_control import runtime_fit_allowed,scope_skip
+    scope_root=Path(os.environ.get('LAVA_RUN_ROOT',Path(__file__).resolve().parents[1]))
+    if not runtime_fit_allowed(scope_root,job):
+        scope_skip(scope_root,'fit',job['id'],'Excluded by the direct human CFL N100 amendment')
+        raise SystemExit(76)
     if job.get('lava_completion_revision') or job.get('lava_completion_recovery',{}).get('lazy_exact_bank'):
         from safe_geometry import decision
         admission=decision(Path(os.environ['LAVA_RUN_ROOT']),job)
@@ -80,4 +85,7 @@ if __name__=='__main__':
         install_geometry()
     import run_central_path_final as maintained
     args.job_index=0;args.smoke=False
+    if not runtime_fit_allowed(scope_root,job):
+        scope_skip(scope_root,'fit',job['id'],'Scope refreshed immediately before maintained fitting')
+        raise SystemExit(76)
     maintained.run(args)

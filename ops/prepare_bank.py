@@ -5,9 +5,19 @@ from qualify import read,write
 from bank_geometry import prepare,directory
 p=argparse.ArgumentParser();p.add_argument('--root',required=True);p.add_argument('--key',required=True);p.add_argument('--maximum',type=int,required=True);p.add_argument('--initialization-seed',type=int)
 a=p.parse_args();root=pathlib.Path(a.root);plan=read(root/'PLAN.json');route,data=a.key.split('__data')
+from scope_control import preparation_maximum,scope_skip
+requested_maximum=a.maximum;a.maximum=preparation_maximum(root,a.key,a.maximum)
+if a.maximum==0:
+ scope_skip(root,'preparation',a.key,'Excluded CFL route; no new preprocessing')
+ raise SystemExit(76)
+if a.maximum!=requested_maximum:scope_skip(root,'preparation_cap',a.key,{'requested':requested_maximum,'effective':a.maximum})
 seeds=next((v for v in plan['cells'][route]['confirmation'] if str(v['data'])==data),plan['cells'][route]['screen'])
 if str(seeds['data'])!=data:raise RuntimeError('Original bank seed identity missing')
 if a.initialization_seed is not None and a.initialization_seed!=seeds['initialization']:raise RuntimeError('Requested initialization differs from original bank')
+from scope_control import amendment,retained_prefix_durable
+if amendment(root) and 'cfl' in route and a.maximum==100 and retained_prefix_durable(root,a.key,seeds['initialization']):
+ print('Retained N100 input already durable; no further preprocessing',flush=True)
+ raise SystemExit(0)
 failure=root/'failures'/('bank__'+a.key+'.json')
 if not failure.exists():write(failure,{'key':a.key,'reason':'seeded_construction_owner','host':socket.gethostname(),'created_unix':time.time(),'scientific_failure':False})
 status=root/'banks'/a.key/'STATUS.json';old=read(status) if status.exists() else {'key':a.key,'host':socket.gethostname(),'status':'seeded_constructing'}

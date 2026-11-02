@@ -1,0 +1,3385 @@
+{
+  "observed_unix": 1793658758.4846594,
+  "nodes": [
+    {
+      "host": "node09.cluster.local",
+      "observed_unix": 1793658758.7898078,
+      "fits": [
+        {
+          "pid": 3145047,
+          "birth_unix": 1793658239.1,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__17caf572933bb58fc26050ce2e83c025.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16223",
+          "current_CPU_seconds": 515.1999999999999,
+          "current_RSS_bytes": 739233792,
+          "elapsed_wall_seconds": 519.9300367832184,
+          "id": "lava_complete__17caf572933bb58fc26050ce2e83c025",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_n100",
+            "candidate": "0ebf9735a6b6dc0ed778",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_20x20",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__17caf572933bb58fc26050ce2e83c025",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151101,
+                "initialization": 161101,
+                "perturbation": 181101,
+                "shuffle": 171101,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__17caf572933bb58fc26050ce2e83c025",
+            "lava_completion_revision": "20261102_v1",
+            "lava_runtime_repair": "isolated_prefix_classifier_20261102",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "replaces_job_id": "lava_complete__b2aa5c99fade1412ff2ef6bcaf9ba12a",
+            "required_data_key": "dys_shortest_path_20x20__data151101",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_20x20",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node09.cluster.local_1_16223.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 200
+        },
+        {
+          "pid": 3145065,
+          "birth_unix": 1793658268.45,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__154adad170f04290ee1c504f8e5edd0b.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16223",
+          "current_CPU_seconds": 487.41,
+          "current_RSS_bytes": 493383680,
+          "elapsed_wall_seconds": 490.58599185943604,
+          "id": "lava_complete__154adad170f04290ee1c504f8e5edd0b",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_n100",
+            "candidate": "0ebf9735a6b6dc0ed778",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_20x20",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__154adad170f04290ee1c504f8e5edd0b",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151103,
+                "initialization": 161103,
+                "perturbation": 181103,
+                "shuffle": 171103,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__154adad170f04290ee1c504f8e5edd0b",
+            "lava_completion_revision": "20261102_v1",
+            "lava_runtime_repair": "isolated_prefix_classifier_20261102",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "replaces_job_id": "lava_complete__da127a52e45b76dd6cd5db56c3775f7c",
+            "required_data_key": "dys_shortest_path_20x20__data151103",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_20x20",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node09.cluster.local_8_16223.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 200
+        },
+        {
+          "pid": 3145075,
+          "birth_unix": 1793658380.46,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__15b685ccfbcaa4507c614ea01cff49be.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16223",
+          "current_CPU_seconds": 374.94,
+          "current_RSS_bytes": 781832192,
+          "elapsed_wall_seconds": 378.57775020599365,
+          "id": "lava_complete__15b685ccfbcaa4507c614ea01cff49be",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_n100",
+            "candidate": "0ebf9735a6b6dc0ed778",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_20x20",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__15b685ccfbcaa4507c614ea01cff49be",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151105,
+                "initialization": 161105,
+                "perturbation": 181105,
+                "shuffle": 171105,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__15b685ccfbcaa4507c614ea01cff49be",
+            "lava_completion_revision": "20261102_v1",
+            "lava_runtime_repair": "isolated_prefix_classifier_20261102",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "replaces_job_id": "lava_complete__4816f5ebdc2d139605ee82f5922249dd",
+            "required_data_key": "dys_shortest_path_20x20__data151105",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_20x20",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node09.cluster.local_10_16223.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 150
+        },
+        {
+          "pid": 3145081,
+          "birth_unix": 1793658384.69,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__fd16f74eaee37d4488a63cd1e8b8c58b.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16223",
+          "current_CPU_seconds": 371.39,
+          "current_RSS_bytes": 581496832,
+          "elapsed_wall_seconds": 374.3492658138275,
+          "id": "lava_complete__fd16f74eaee37d4488a63cd1e8b8c58b",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_n100",
+            "candidate": "0ebf9735a6b6dc0ed778",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_20x20",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__fd16f74eaee37d4488a63cd1e8b8c58b",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151107,
+                "initialization": 161107,
+                "perturbation": 181107,
+                "shuffle": 171107,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__fd16f74eaee37d4488a63cd1e8b8c58b",
+            "lava_completion_revision": "20261102_v1",
+            "lava_runtime_repair": "isolated_prefix_classifier_20261102",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "replaces_job_id": "lava_complete__dc8f8f391211380d8d14e8968b6f14bb",
+            "required_data_key": "dys_shortest_path_20x20__data151107",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_20x20",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node09.cluster.local_2_16223.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 150
+        },
+        {
+          "pid": 3145087,
+          "birth_unix": 1793658414.21,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__ac1a08a04eceb95d1e034cf72339d90f.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16223",
+          "current_CPU_seconds": 334.44000000000005,
+          "current_RSS_bytes": 534003712,
+          "elapsed_wall_seconds": 344.83075523376465,
+          "id": "lava_complete__ac1a08a04eceb95d1e034cf72339d90f",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_n100",
+            "candidate": "0ebf9735a6b6dc0ed778",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_20x20",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__ac1a08a04eceb95d1e034cf72339d90f",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151109,
+                "initialization": 161109,
+                "perturbation": 181109,
+                "shuffle": 171109,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__ac1a08a04eceb95d1e034cf72339d90f",
+            "lava_completion_revision": "20261102_v1",
+            "lava_runtime_repair": "isolated_prefix_classifier_20261102",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "replaces_job_id": "lava_complete__fe1aa0ddb9bec48813e12ead2066df2c",
+            "required_data_key": "dys_shortest_path_20x20__data151109",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_20x20",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node09.cluster.local_0_16223.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 125
+        }
+      ],
+      "builders": [
+        {
+          "pid": 3142295,
+          "birth_unix": 1793651240.09,
+          "host": "node09.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+            "--root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102",
+            "--key",
+            "dys_cfl_50x5__data151101",
+            "--maximum",
+            "1000",
+            "--initialization-seed",
+            "161101"
+          ],
+          "slurm_job_id": "16744",
+          "current_CPU_seconds": 7486.55,
+          "current_RSS_bytes": 2345529344,
+          "elapsed_wall_seconds": 7518.913764715195,
+          "key": "dys_cfl_50x5__data151101",
+          "route": "dys_cfl_50x5",
+          "maximum": 1000,
+          "initialization_seed": 161101,
+          "owned_process_group": true,
+          "durable_N100_inputs": [
+            {
+              "where": "/tmp/lava_completion_20261102/seeded_banks_v2/dys_cfl_50x5__data151101__init161101",
+              "prefix100": {
+                "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+                "basis_enumeration_cap": 250,
+                "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+                "build_cpu_seconds_cumulative": 313.41448612100004,
+                "build_wall_seconds_cumulative": 314.89959048479795,
+                "builder_identity": {
+                  "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+                  "basis_enumeration_cap": 250,
+                  "initialization_seed": 161101,
+                  "schema": 2,
+                  "vertex_tolerance": 0.0
+                },
+                "completeness_certified": false,
+                "data_seed": 151101,
+                "finished_unix": 1793651557.5109148,
+                "generator_called": false,
+                "geometry_identity_sha256": "aa820fbc344378fd4fea58c027635dd0d7b8413b72bda7290e3c74e9113d7f12",
+                "geometry_rng_protocol": "seeded_numpy_resume_v2",
+                "highs_version": "1.12.0",
+                "host": "node09.cluster.local",
+                "initialization_seed": 161101,
+                "key": "dys_cfl_50x5__data151101",
+                "maximum_training_samples": 1000,
+                "metadata_bytes": 220328,
+                "metadata_sha256": "36e8bb4b4a9f4369a839c847028756b3cd03a34445828a045399b449a41ea06e",
+                "prefix_context_sha256": "379509111ddb1713f5fa41a58b0c70ea1a19a69a7c48e3cfd5f32de9229319bf",
+                "prefix_cost_sha256": "27dc215164884a3a703182d45cb7b5e26a3337f2c585858b62658d32ef6e7378",
+                "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+                "python_recursion_limit": 20000,
+                "reused_completed_prefixes": [],
+                "reused_random_free_unique_anchors": 34,
+                "route": "dys_cfl_50x5",
+                "scratch": "/tmp/lava_completion_20261102/seeded_banks_v2/dys_cfl_50x5__data151101__init161101",
+                "seeded_rng_checkpoints": 100,
+                "slurm_job_id": "16744",
+                "source_observation_sha256": "585d9ffe1a4262f073914bd74cc97d7b3e3ca288e98dd5c1b91e88ee7e74859e",
+                "source_training_file": "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data/dys_cfl_50x5__data151101/observations_n1000.npz",
+                "started_unix": 1793651242.6078193,
+                "status": "complete",
+                "supplied_training_samples": 100,
+                "test_opened": false,
+                "unique_anchor_cache_files": 100,
+                "validation_opened": false,
+                "vertex_counts": [
+                  9777,
+                  7952,
+                  6026,
+                  13097,
+                  10853,
+                  4763,
+                  7703,
+                  3342,
+                  1205,
+                  1517,
+                  8041,
+                  8275,
+                  11991,
+                  7140,
+                  6821,
+                  3315,
+                  6762,
+                  15709,
+                  18799,
+                  18545,
+                  4418,
+                  4763,
+                  5019,
+                  4642,
+                  6683,
+                  852,
+                  2709,
+                  22839,
+                  8801,
+                  10599,
+                  11219,
+                  2450,
+                  4262,
+                  4156,
+                  5886,
+                  6672,
+                  2984,
+                  653,
+                  3985,
+                  4178,
+                  14790,
+                  6008,
+                  5919,
+                  15831,
+                  12452,
+                  14141,
+                  11533,
+                  2380,
+                  10676,
+                  22553,
+                  14661,
+                  18592,
+                  6250,
+                  6107,
+                  6105,
+                  3692,
+                  15055,
+                  16340,
+                  7986,
+                  5254,
+                  11731,
+                  8547,
+                  1281,
+                  12753,
+                  11202,
+                  5841,
+                  16926,
+                  12509,
+                  1368,
+                  2270,
+                  6926,
+                  9430,
+                  5607,
+                  2520,
+                  9829,
+                  5473,
+                  1244,
+                  697,
+                  2966,
+                  9072,
+                  4730,
+                  8282,
+                  6032,
+                  1207,
+                  12205,
+                  2332,
+                  205,
+                  3892,
+                  3404,
+                  1269,
+                  3724,
+                  6348,
+                  3146,
+                  4987,
+                  1363,
+                  680,
+                  9262,
+                  7448,
+                  1190,
+                  2128
+                ],
+                "vertex_storage_bytes": 1484630960,
+                "vertex_tolerance": 0.0
+              },
+              "admissible_seeded": true,
+              "admissible_random_free": false
+            }
+          ]
+        }
+      ],
+      "CPU_model": "Intel(R) Xeon(R) 6730P",
+      "RAM_total_bytes": 269560250368
+    },
+    {
+      "host": "node07.cluster.local",
+      "observed_unix": 1793658759.7683165,
+      "fits": [
+        {
+          "pid": 1635319,
+          "birth_unix": 1793657354.17,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__38b48aa7763b308698528b2ef95b566d.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 1399.89,
+          "current_RSS_bytes": 1425113088,
+          "elapsed_wall_seconds": 1405.6863193511963,
+          "id": "lava_complete__38b48aa7763b308698528b2ef95b566d",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "3bb014c6bf9e8cf2bb47",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -0.1
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__38b48aa7763b308698528b2ef95b566d",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__38b48aa7763b308698528b2ef95b566d",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.1,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_3_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 189
+        },
+        {
+          "pid": 1635457,
+          "birth_unix": 1793657601.51,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__10faf0d0a70c38fb624916594d7237d7.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16740",
+          "current_CPU_seconds": 1153.4099999999999,
+          "current_RSS_bytes": 648597504,
+          "elapsed_wall_seconds": 1158.3501393795013,
+          "id": "lava_complete__10faf0d0a70c38fb624916594d7237d7",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8a462fa8345227f9fd9a",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_25x25",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__10faf0d0a70c38fb624916594d7237d7",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151101,
+                "initialization": 161101,
+                "perturbation": 181101,
+                "shuffle": 171101,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__10faf0d0a70c38fb624916594d7237d7",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_shortest_path_25x25__data151101",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_25x25",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_6_16740.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 180
+        },
+        {
+          "pid": 1635465,
+          "birth_unix": 1793657616.69,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__3821cf0a2eec809af67efbf2bd836c60.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16740",
+          "current_CPU_seconds": 1138.58,
+          "current_RSS_bytes": 1121349632,
+          "elapsed_wall_seconds": 1143.1715281009674,
+          "id": "lava_complete__3821cf0a2eec809af67efbf2bd836c60",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8a462fa8345227f9fd9a",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_25x25",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__3821cf0a2eec809af67efbf2bd836c60",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151103,
+                "initialization": 161103,
+                "perturbation": 181103,
+                "shuffle": 171103,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__3821cf0a2eec809af67efbf2bd836c60",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_shortest_path_25x25__data151103",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_25x25",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_5_16740.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 180
+        },
+        {
+          "pid": 1635487,
+          "birth_unix": 1793657661.71,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__34a8470579d71a1a36f5149ac9b3fdd1.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16740",
+          "current_CPU_seconds": 1090.88,
+          "current_RSS_bytes": 543621120,
+          "elapsed_wall_seconds": 1098.1525511741638,
+          "id": "lava_complete__34a8470579d71a1a36f5149ac9b3fdd1",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8a462fa8345227f9fd9a",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_25x25",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__34a8470579d71a1a36f5149ac9b3fdd1",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151105,
+                "initialization": 161105,
+                "perturbation": 181105,
+                "shuffle": 171105,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__34a8470579d71a1a36f5149ac9b3fdd1",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_shortest_path_25x25__data151105",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_25x25",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_3_16740.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 175
+        },
+        {
+          "pid": 1635530,
+          "birth_unix": 1793657719.72,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__97e559c18a6447262c9e8b6b66073ca2.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 1035.8400000000001,
+          "current_RSS_bytes": 3692220416,
+          "elapsed_wall_seconds": 1040.143653869629,
+          "id": "lava_complete__97e559c18a6447262c9e8b6b66073ca2",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "b26e6fcbd39b308e3b9b",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__97e559c18a6447262c9e8b6b66073ca2",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__97e559c18a6447262c9e8b6b66073ca2",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_4_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 134
+        },
+        {
+          "pid": 1635540,
+          "birth_unix": 1793657748.79,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__4f102e926cfa7eee5d1f4cb798aa835c.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 1006.3199999999999,
+          "current_RSS_bytes": 2124312576,
+          "elapsed_wall_seconds": 1011.0746982097626,
+          "id": "lava_complete__4f102e926cfa7eee5d1f4cb798aa835c",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "2b2a517e419bc900a439",
+            "choices": {
+              "learning_rate": 0.01,
+              "threshold": 0.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__4f102e926cfa7eee5d1f4cb798aa835c",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.01,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__4f102e926cfa7eee5d1f4cb798aa835c",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": 0.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_9_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 134
+        },
+        {
+          "pid": 1635547,
+          "birth_unix": 1793657753.53,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__735361f218cdd9792a9e32aebe803a61.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 1002.16,
+          "current_RSS_bytes": 2709684224,
+          "elapsed_wall_seconds": 1006.3356766700745,
+          "id": "lava_complete__735361f218cdd9792a9e32aebe803a61",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "09a92e156e75762f9c5f",
+            "choices": {
+              "learning_rate": 0.01,
+              "threshold": -0.01
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__735361f218cdd9792a9e32aebe803a61",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.01,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__735361f218cdd9792a9e32aebe803a61",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.01,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_15_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 134
+        },
+        {
+          "pid": 1635560,
+          "birth_unix": 1793657783.81,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__3218ab237ddadfbd46bebfb1acebecb5.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 971.9100000000001,
+          "current_RSS_bytes": 2388885504,
+          "elapsed_wall_seconds": 976.0566394329071,
+          "id": "lava_complete__3218ab237ddadfbd46bebfb1acebecb5",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "9b0af16faa594268fb16",
+            "choices": {
+              "learning_rate": 0.01,
+              "threshold": -0.1
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__3218ab237ddadfbd46bebfb1acebecb5",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.01,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__3218ab237ddadfbd46bebfb1acebecb5",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.1,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_19_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 134
+        },
+        {
+          "pid": 1635561,
+          "birth_unix": 1793657783.92,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__0dc37c38304d0004fbe60cf68cd584d1.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 972.0999999999999,
+          "current_RSS_bytes": 2330787840,
+          "elapsed_wall_seconds": 975.9476044178009,
+          "id": "lava_complete__0dc37c38304d0004fbe60cf68cd584d1",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 2,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth2",
+            "candidate": "340304108650478f9886",
+            "choices": {
+              "learning_rate": 0.01,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 2,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__0dc37c38304d0004fbe60cf68cd584d1",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.01,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__0dc37c38304d0004fbe60cf68cd584d1",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_10_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 134
+        },
+        {
+          "pid": 1635573,
+          "birth_unix": 1793657793.92,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__c883813e94b69f0371d106e409b8409a.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 961.93,
+          "current_RSS_bytes": 2708742144,
+          "elapsed_wall_seconds": 965.9485642910004,
+          "id": "lava_complete__c883813e94b69f0371d106e409b8409a",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "50610567974bbfaf3ea2",
+            "choices": {
+              "learning_rate": 0.0003,
+              "threshold": 0.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__c883813e94b69f0371d106e409b8409a",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.0003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__c883813e94b69f0371d106e409b8409a",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": 0.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_7_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 125
+        },
+        {
+          "pid": 1635594,
+          "birth_unix": 1793657862.84,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__ced81930026372b63180066bafecacc6.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 893.0,
+          "current_RSS_bytes": 1454686208,
+          "elapsed_wall_seconds": 897.0296680927277,
+          "id": "lava_complete__ced81930026372b63180066bafecacc6",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "d4fad67d6af1e3e94284",
+            "choices": {
+              "learning_rate": 0.0003,
+              "threshold": -0.01
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__ced81930026372b63180066bafecacc6",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.0003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__ced81930026372b63180066bafecacc6",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.01,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_13_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 120
+        },
+        {
+          "pid": 1635617,
+          "birth_unix": 1793657888.59,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__36938fb69e68bca08e7f19c19d184d7e.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 867.24,
+          "current_RSS_bytes": 3508924416,
+          "elapsed_wall_seconds": 871.2805624008179,
+          "id": "lava_complete__36938fb69e68bca08e7f19c19d184d7e",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "c894bb72e1822f6def9f",
+            "choices": {
+              "learning_rate": 0.0003,
+              "threshold": -0.1
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__36938fb69e68bca08e7f19c19d184d7e",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.0003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__36938fb69e68bca08e7f19c19d184d7e",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.1,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_23_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 118
+        },
+        {
+          "pid": 1635698,
+          "birth_unix": 1793657987.85,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__2b9afb13cbba95c34f2ce879dc0d7421.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 768.4,
+          "current_RSS_bytes": 2971795456,
+          "elapsed_wall_seconds": 772.0217614173889,
+          "id": "lava_complete__2b9afb13cbba95c34f2ce879dc0d7421",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "7e52b11543480dc19e89",
+            "choices": {
+              "learning_rate": 0.0003,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__2b9afb13cbba95c34f2ce879dc0d7421",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.0003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__2b9afb13cbba95c34f2ce879dc0d7421",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_1_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 100
+        },
+        {
+          "pid": 1635711,
+          "birth_unix": 1793658007.86,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__67504b589fd82d593a86e75ba2160051.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 748.81,
+          "current_RSS_bytes": 2438889472,
+          "elapsed_wall_seconds": 752.0128147602081,
+          "id": "lava_complete__67504b589fd82d593a86e75ba2160051",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8433e62e74438749415c",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": 0.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__67504b589fd82d593a86e75ba2160051",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__67504b589fd82d593a86e75ba2160051",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": 0.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_2_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 100
+        },
+        {
+          "pid": 1635730,
+          "birth_unix": 1793658012.86,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__a7d1e76627ff89268d2d3c6a92cecb49.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 743.6700000000001,
+          "current_RSS_bytes": 1947402240,
+          "elapsed_wall_seconds": 747.0137121677399,
+          "id": "lava_complete__a7d1e76627ff89268d2d3c6a92cecb49",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8e787bb9a7a0a39a021c",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -0.01
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__a7d1e76627ff89268d2d3c6a92cecb49",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__a7d1e76627ff89268d2d3c6a92cecb49",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.01,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_8_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 100
+        },
+        {
+          "pid": 1635737,
+          "birth_unix": 1793658016.51,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__ae21d8af122e5e018a83ba3c502290de.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16740",
+          "current_CPU_seconds": 740.0699999999999,
+          "current_RSS_bytes": 1144631296,
+          "elapsed_wall_seconds": 743.3646147251129,
+          "id": "lava_complete__ae21d8af122e5e018a83ba3c502290de",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8a462fa8345227f9fd9a",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_shortest_path_25x25",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__ae21d8af122e5e018a83ba3c502290de",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151107,
+                "initialization": 161107,
+                "perturbation": 181107,
+                "shuffle": 171107,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__ae21d8af122e5e018a83ba3c502290de",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_shortest_path_25x25__data151107",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_shortest_path_25x25",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_0_16740.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 110
+        },
+        {
+          "pid": 1635743,
+          "birth_unix": 1793658022.87,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__b632c205a7a1422ff4fc42c1eced509e.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 733.68,
+          "current_RSS_bytes": 2331353088,
+          "elapsed_wall_seconds": 737.0054771900177,
+          "id": "lava_complete__b632c205a7a1422ff4fc42c1eced509e",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "4cc1d7796d2eb49e6be3",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -0.1
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__b632c205a7a1422ff4fc42c1eced509e",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__b632c205a7a1422ff4fc42c1eced509e",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -0.1,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_14_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 100
+        },
+        {
+          "pid": 1635870,
+          "birth_unix": 1793658308.12,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__afba92ce69a6bd05d08c6fefc6840a2d.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 448.95000000000005,
+          "current_RSS_bytes": 1483169792,
+          "elapsed_wall_seconds": 451.75670742988586,
+          "id": "lava_complete__afba92ce69a6bd05d08c6fefc6840a2d",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "8a462fa8345227f9fd9a",
+            "choices": {
+              "learning_rate": 0.001,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__afba92ce69a6bd05d08c6fefc6840a2d",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.001,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__afba92ce69a6bd05d08c6fefc6840a2d",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_16_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 59
+        },
+        {
+          "pid": 1635871,
+          "birth_unix": 1793658308.12,
+          "host": "node07.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__0a0090d4106bd35249bc86faff9fbe17.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16726",
+          "current_CPU_seconds": 448.96,
+          "current_RSS_bytes": 2376409088,
+          "elapsed_wall_seconds": 451.7576198577881,
+          "id": "lava_complete__0a0090d4106bd35249bc86faff9fbe17",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "neural",
+            "architecture_depth": 3,
+            "base_method": "lava",
+            "campaign_phase": "mlp_depth3",
+            "candidate": "ba8ecc5ec88b635f9c00",
+            "choices": {
+              "learning_rate": 0.003,
+              "threshold": 0.0
+            },
+            "config": {
+              "benchmark_id": "dys_cfl_50x5",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": false,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 3,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_complete__0a0090d4106bd35249bc86faff9fbe17",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 17,
+                "initialization": 8201,
+                "perturbation": 8401,
+                "shuffle": 8301,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 100,
+                "validation": 32
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.003,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_complete__0a0090d4106bd35249bc86faff9fbe17",
+            "lava_completion_revision": "20261102_v1",
+            "method": "lava",
+            "parameters": {
+              "threshold": 0.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_cfl_50x5__data17",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 1800
+            },
+            "route": "dys_cfl_50x5",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "screen",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": "node07.cluster.local_22_16726.json",
+          "status": "running",
+          "phase": "training",
+          "epochs": 59
+        }
+      ],
+      "builders": [],
+      "CPU_model": "Intel(R) Xeon(R) 6730P",
+      "RAM_total_bytes": 269560238080
+    },
+    {
+      "host": "node08.cluster.local",
+      "observed_unix": 1793658760.145235,
+      "fits": [
+        {
+          "pid": 1807343,
+          "birth_unix": 1793648057.82,
+          "host": "node08.cluster.local",
+          "cmdline": [
+            "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+            "--manifest",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/recovery/jobs/job5_serial.json",
+            "--output-root",
+            "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+          ],
+          "slurm_job_id": "16727",
+          "current_CPU_seconds": 10639.789999999999,
+          "current_RSS_bytes": 1156440064,
+          "elapsed_wall_seconds": 10702.463916778564,
+          "id": "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44",
+          "job": {
+            "analytic_validation": false,
+            "architecture_arm": "linear",
+            "architecture_depth": 0,
+            "base_method": "lava",
+            "campaign_phase": "linear_retune_n1000",
+            "candidate": "84358160e514aed9d9c6",
+            "choices": {
+              "learning_rate": 0.01,
+              "threshold": -1.0
+            },
+            "config": {
+              "benchmark_id": "dys_knapsack_1000x2",
+              "benchmark_source": "dfl_extensions_lab",
+              "conditional_reference_samples": 64,
+              "cost_coordinate_normalization": "none",
+              "evaluate_test": true,
+              "interface": "full",
+              "law": {
+                "context_dimension": 5,
+                "noise": "gaussian",
+                "noise_scale": 0.2,
+                "polynomial_degree": 4,
+                "random_fraction": 1.0,
+                "signal_scale": 1.0,
+                "style": "positive"
+              },
+              "method": "mse",
+              "method_parameters": {},
+              "model": {
+                "activation": "gelu",
+                "correction_depth": 0,
+                "correction_width": 64,
+                "depth": 0,
+                "dtype": "float32",
+                "layer_norm": false,
+                "width": 64
+              },
+              "name": "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44",
+              "physical_cost_output": true,
+              "seeds": {
+                "data": 151101,
+                "initialization": 161101,
+                "perturbation": 181101,
+                "shuffle": 171101,
+                "structural": 101
+              },
+              "sizes": {
+                "test": 100,
+                "train": 1000,
+                "validation": 320
+              },
+              "training": {
+                "batch_size": 32,
+                "epochs": 300,
+                "evaluation_batch_size": 32,
+                "gradient_clip": null,
+                "gradient_diagnostic_interval": 8,
+                "learning_rate": 0.01,
+                "learning_rate_schedule": "constant",
+                "maximum_optimization_seconds": null,
+                "minimum_delta": 1e-08,
+                "optimizer": "adam",
+                "patience": 301,
+                "schedule_reference_epochs": 300,
+                "selection_mode": "validation_regret",
+                "torch_threads": 1,
+                "validation_epochs": [
+                  5,
+                  10,
+                  20,
+                  40,
+                  80,
+                  120,
+                  180,
+                  240,
+                  300
+                ],
+                "validation_interval": 300,
+                "weight_decay": 0.0
+              },
+              "workers": 1
+            },
+            "id": "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44",
+            "lava_completion_recovery": {
+              "lazy_exact_bank": true,
+              "original_checkpoint": "No resumable optimizer/shuffle state; restart affected failed/censored fit from its original initialization.",
+              "original_compact_receipt_sha256": "6d10e4a4ad88b761c3470c1ba9219b5b710b0bacbe823ff96a175282fed19fc6",
+              "original_error": "worker_exit_without_receipt",
+              "original_job_id": "sdn__f18f6bfc29e993a2e2cc19c6a2e41a03",
+              "original_status": "failed",
+              "previous_recovery_job_id": "lava_recovery__82313c6b023c10b84f46a280a9d31e68",
+              "reason": "Five prior SIGKILL worker exits with no decisive phase accounting; isolate with24GiB per fit. One measured1h training censor; remove operational training cap to finish approved300epochs. No hyperparameter/data/protocol changes.",
+              "repair": "Serial execution on idle node08 with 210GiB RSS/12GiB host headroom guards; share exact bank once; original seeds/configuration unchanged."
+            },
+            "method": "lava",
+            "parameters": {
+              "threshold": -1.0,
+              "vertex_tolerance": 0.0
+            },
+            "required_data_key": "dys_knapsack_1000x2__data151101",
+            "resource_limits": {
+              "job_wall_cap_seconds": 43200,
+              "preprocessing_cap_seconds": 14400
+            },
+            "route": "dys_knapsack_1000x2",
+            "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+            "simplified_revision": "simplified_linear_test100_20261020_v1",
+            "stage": "confirmation",
+            "training_oracle": "continuous_relaxation",
+            "validation_costs": "single_sample",
+            "wise_transform": false
+          },
+          "required_after_amendment": true,
+          "worker_record": null,
+          "status": "running",
+          "phase": "training",
+          "epochs": 131
+        }
+      ],
+      "builders": [],
+      "CPU_model": "Intel(R) Xeon(R) 6730P",
+      "RAM_total_bytes": 269560250368
+    }
+  ]
+}

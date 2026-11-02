@@ -56,11 +56,13 @@ def advance(root):
     from pilot_common import SMALLEST,family
     import simplified_campaign as linear
     import frozen_nonlinear_retuning as nonlinear
+    from scope_control import amendment,phase_required,route_required,preparation_maximum,drain_status,kp_status
     root=Path(root);plan=read(root/'PLAN.json');admission=read(root/'ADMISSION.json')
     routes=admission['routes'];ready=[];expected=[];selections={};pending=[]
     for fam in ('sp','cfl'):
         smallest=SMALLEST[fam]
         for base_phase in PHASES:
+            if not phase_required(root,fam,base_phase):continue
             phase=copy.deepcopy(base_phase)
             if phase['depth'] is None:
                 phase['runtime_source_commit']=read(root/'FROZEN_NONLINEAR_RETUNING_AMENDMENT_20261022.json')['runtime_source_commit']
@@ -91,7 +93,7 @@ def advance(root):
                 write(selection_path,selection)
             else:continue
             selections[fam+'__'+phase['id']]=selection
-            for route in [r for r in plan['routes'] if family(r)==fam]:
+            for route in [r for r in plan['routes'] if family(r)==fam and route_required(root,r)]:
                 for seed in plan['cells'][route]['confirmation']:
                     j=make_job(root,plan,route,seed,phase,selection['selected_template']['choices'],'confirmation')
                     r=require(root,j);expected.append(j['id'])
@@ -106,6 +108,8 @@ def advance(root):
         status=root/'banks'/key/'STATUS.json'
         v=read(status) if status.exists() else {}
         maximum=admission.get('prepare_maximum_by_route',{}).get(key.split('__data')[0],1000)
+        maximum=preparation_maximum(root,key,maximum)
+        if not maximum:continue
         # The owner must check its actual node-local prefix even when the
         # shared status says complete. A missing local cache stays dispatchable.
         prep.append({'kind':'prepare','id':'bank__'+key,'key':key,'n':maximum,
@@ -113,14 +117,18 @@ def advance(root):
             'recorded_owner_host':v.get('host'),'shared_status':v.get('status')})
     # Ready training comes first; missing geometry owners are a separate queue,
     # so other bank/phase work fills all usable memory and CPU slots.
+    active_scope=amendment(root);counts={'screens':224,'confirmations':580,'kp_recoveries':6,'total':810} if active_scope else {'screens':320,'confirmations':1000,'kp_recoveries':6,'total':1326}
+    drain=drain_status(root);kp=kp_status(root)
     write(root/'READY.json',{'updated_unix':time.time(),'fits':ready,'preparation':prep,
         'selected_groups':len(selections),'expected_created_jobs':len(set(expected)),
-        'expected_complete_scope':{'screens':320,'confirmations':1000,'kp_recoveries':6},
+        'expected_complete_scope':counts,'grandfathered_drain':drain,'KP_complete':sum(v['complete'] for v in kp),
         'admitted_routes':routes,'pending_dependencies':pending,
-        'all_routes':sorted(r for r in plan['routes'] if family(r) in ('sp','cfl'))})
-    if len(set(expected))==1320 and all(jid in _RECORDS and linear.successful(_RECORDS[jid]) for jid in set(expected)):
-        write(root/'SCIENCE_COMPLETE.json',{'finished_unix':time.time(),'screens':320,'confirmations':1000,
-            'note':'KP recovery scope is accounted separately before terminal closeout'})
+        'all_routes':sorted(r for r in plan['routes'] if family(r) in ('sp','cfl') and route_required(root,r))})
+    target=804 if active_scope else 1320
+    if len(set(expected))==target and all(jid in _RECORDS and linear.successful(_RECORDS[jid]) for jid in set(expected)) and all(v['complete'] for v in kp) and not drain['active'] and not drain['unresolved']:
+        write(root/'SCIENCE_COMPLETE.json',{'finished_unix':time.time(),**counts,
+            'scope_amendment':active_scope['revision'] if active_scope else None,
+            'grandfathered_active_fits_drained':True,'excluded_cells_required':False})
 
 def memory(item):
     if item['kind']=='prepare':return 32. if item['route']=='dys_cfl_50x5' else 48. if 'cfl' in item['route'] else 96. if '50x50' in item['route'] else 24. if '25x25' in item['route'] else 6.
@@ -129,6 +137,7 @@ def memory(item):
 def work(root,index):
     root=Path(root)
     from bank_geometry import directory
+    from scope_control import preparation_maximum,required_fit
     token=socket.gethostname()+'_'+str(index)+'_'+os.environ['SLURM_JOB_ID']
     deadline=read(root/'CONTRACT.json')['scientific_cutoff_unix']
     plan=read(root/'PLAN.json')
@@ -163,6 +172,10 @@ def work(root,index):
                 queued_keys.add(item['key'])
         preparation=sorted(queue['preparation'],key=lambda item:(item['key'] not in development_keys,item['key']))
         for item in queue['fits']+preparation:
+            if item['kind']=='prepare':
+                item={**item,'n':preparation_maximum(root,item['key'],item['n'])}
+                if not item['n']:continue
+            elif not required_fit(root,read(root/'jobs'/(item['id']+'.json'))['jobs'][0]):continue
             bank_status=root/'banks'/item['key']/'STATUS.json'
             if bank_status.exists():
                 owner=read(bank_status).get('host')
@@ -198,6 +211,10 @@ def work(root,index):
                 'slurm_job_id':os.environ['SLURM_JOB_ID'],'pid':os.getpid()})
             time.sleep(10);continue
         item=chosen
+        if item['kind']=='fit' and not required_fit(root,read(root/'jobs'/(item['id']+'.json'))['jobs'][0]):
+            with guard.open('a') as g:
+                fcntl.flock(g,fcntl.LOCK_EX);held=read(reservation);held.pop(token,None);write(reservation,held)
+            claim.close();continue
         path=root/'logs'/(item['id']+'.log');path.parent.mkdir(exist_ok=True)
         if item['kind']=='fit':cmd=[sys.executable,str(root/'ops/run_fit.py'),'--manifest',str(root/'jobs'/(item['id']+'.json')),'--output-root',str(root/'results')]
         else:cmd=[sys.executable,str(root/'ops/prepare_bank.py'),'--root',str(root),'--key',item['key'],'--maximum',str(item['n'])]

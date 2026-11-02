@@ -1,0 +1,52 @@
+{
+  "authorization_source": "Direct human scope change relayed by Main 01a14a8b-3d7c-7d23-a8bb-2baa8f90c86c",
+  "cfl_depths": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "cfl_sizes": {
+    "test": 100,
+    "train": 100,
+    "validation": 32
+  },
+  "completion_rule": "Reduced required scope plus healthy active-fit drain; excluded cells and supplementary results cannot keep monitoring alive.",
+  "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+  "effective_unix": 1793658662.5825126,
+  "excluded_cells": [
+    "CFL200/250/500 at every N",
+    "CFL N300/500/1000 at every route"
+  ],
+  "grandfathered_active_fit_ids": [],
+  "grandfathered_active_fits_file": "ops/SCOPE_GRANDFATHERED_FITS.json",
+  "grandfathered_count": 0,
+  "human_instruction": "Finish CFL50/100 at N=100, skip the larger CFL cases and data sizes, and record the resource costs clearly. Preserve completed results and let healthy running fits finish.",
+  "maximum_cpus_running_plus_pending": 100,
+  "preserve_completed_additional_evidence": true,
+  "required_counts": {
+    "CFL": {
+      "confirmations": 80,
+      "screens": 64,
+      "total": 144
+    },
+    "KP": {
+      "recoveries": 6,
+      "total": 6
+    },
+    "SP": {
+      "confirmations": 500,
+      "screens": 160,
+      "total": 660
+    },
+    "total": 810
+  },
+  "retained_cfl_routes": [
+    "dys_cfl_50x5",
+    "dys_cfl_100x10"
+  ],
+  "retention": "Source, seeds, measured quantities; no raw archive project.",
+  "revision": "cfl_n100_only_20261102",
+  "selection": "Unchanged original full16-point grids, one original smallest-family development seed, validation-only frozen selection, ten original paired confirmation seeds; no CFL100-specific tuning.",
+  "snapshot_file": "ops/SCOPE_CHANGE_SNAPSHOT.json"
+}

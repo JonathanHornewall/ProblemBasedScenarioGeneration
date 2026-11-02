@@ -4,6 +4,7 @@ import psutil
 from qualify import read,write
 from bank_geometry import directory
 from safe_geometry import release_unstarted_holds
+from scope_control import preparation_maximum
 root=pathlib.Path(os.environ['LAVA_RUN_ROOT']);host=socket.gethostname();job=os.environ['SLURM_JOB_ID']
 deadline=read(root/'CONTRACT.json')['scientific_cutoff_unix'];stopped=False
 def stop(*_):
@@ -12,12 +13,14 @@ def stop(*_):
 signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
 local=pathlib.Path('/tmp/lava_completion_20261102');local.mkdir(exist_ok=True)
 token=host+'_seeded_'+job;reservation=local/'reservations.json';guard=local/'reservations.lock'
-while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists():
+while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists() and not (root/'SCIENCE_COMPLETE.json').exists():
  chosen=None;claim=None
  for request in sorted((root/'seeded_requests').glob('*.json')):
   value=read(request)
   if value['host']!=host:continue
-  key=value['key'];seed=value['initialization_seed'];n=value['maximum'];ident=key+'__init'+str(seed)
+  key=value['key'];seed=value['initialization_seed'];n=preparation_maximum(root,key,value['maximum']);ident=key+'__init'+str(seed)
+  if not n:continue
+  value={**value,'maximum':n}
   if (directory(key,seed)/f'prefix{n}.json').exists():
    release_unstarted_holds(root,key,seed,n);continue
   if (root/'failures'/('seeded__'+ident+'.json')).exists():continue

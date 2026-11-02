@@ -14,6 +14,8 @@ def classify_in_subprocess(root,key,n,metadata=None):
 
 def decision(root,job):
  root=pathlib.Path(root);key=job['required_data_key'];n=int(job['config']['sizes']['train'])
+ from scope_control import runtime_fit_allowed,preparation_maximum
+ if not runtime_fit_allowed(root,job):return {'ready':False,'reason':'excluded_by_CFL_N100_scope'}
  if 'cfl' in job.get('route','') and (root/'ops/HOLD_CFL_COORDINATOR_REFRESH.json').exists():
   return {'ready':False,'reason':'CFL affected-score coordinator refresh'}
  registry=root/'ops/GEOMETRY_PROVENANCE.json';values=read(registry) if registry.exists() else {}
@@ -33,9 +35,11 @@ def decision(root,job):
   entry=classify_in_subprocess(root,key,n)
   if entry.get('random_free_supplied_prefix',0)>=n:return {'ready':True,'initialization_seed':None}
  request=root/'seeded_requests'/(key+'__init'+str(seed)+'.json');request.parent.mkdir(exist_ok=True)
+ maximum=preparation_maximum(root,key,n)
+ if maximum==0:return {'ready':False,'reason':'excluded_by_CFL_N100_scope'}
  with request.with_suffix('.lock').open('a') as lock:
   fcntl.flock(lock,fcntl.LOCK_EX);old=read(request) if request.exists() else {}
-  write(request,{'key':key,'initialization_seed':seed,'maximum':max(n,old.get('maximum',0)),
+  write(request,{'key':key,'initialization_seed':seed,'maximum':preparation_maximum(root,key,max(maximum,old.get('maximum',0))),
    'host':socket.gethostname(),'source_job_ids':sorted(set(old.get('source_job_ids',[])+[job['id']])),
    'updated_unix':time.time(),'reason':'Actual random-transition branch reachable; seeded construction required.'})
  return {'ready':False,'reason':'seeded_v2_cache_requested','request':str(request)}
