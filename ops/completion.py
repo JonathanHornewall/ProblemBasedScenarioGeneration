@@ -133,7 +133,10 @@ def advance(root):
 
 def memory(item):
     if item['kind']=='prepare':return 32. if item['route']=='dys_cfl_50x5' else 48. if 'cfl' in item['route'] else 96. if '50x50' in item['route'] else 24. if '25x25' in item['route'] else 6.
-    return 24. if '50x50' in item['route'] else 12. if 'cfl' in item['route'] else 6.
+    # Completed CFL50 N100 fits peak below3.6GiB. Keep measured headroom,
+    # rather than reserving12GiB and blocking ready fits and shared banks.
+    # Existing workers retain their original guard until their child ends.
+    return 6. if item['route']=='dys_cfl_50x5' and item['n']==100 else 24. if '50x50' in item['route'] else 12. if 'cfl' in item['route'] else 6.
 
 def work(root,index):
     root=Path(root)
