@@ -1,0 +1,136 @@
+{
+  "job": {
+    "analytic_validation": false,
+    "architecture_arm": "linear",
+    "architecture_depth": 0,
+    "base_method": "lava",
+    "campaign_phase": "linear_retune_n1000",
+    "candidate": "84358160e514aed9d9c6",
+    "choices": {
+      "learning_rate": 0.01,
+      "threshold": -1.0
+    },
+    "config": {
+      "benchmark_id": "dys_knapsack_1000x2",
+      "benchmark_source": "dfl_extensions_lab",
+      "conditional_reference_samples": 64,
+      "cost_coordinate_normalization": "none",
+      "evaluate_test": true,
+      "interface": "full",
+      "law": {
+        "context_dimension": 5,
+        "noise": "gaussian",
+        "noise_scale": 0.2,
+        "polynomial_degree": 4,
+        "random_fraction": 1.0,
+        "signal_scale": 1.0,
+        "style": "positive"
+      },
+      "method": "mse",
+      "method_parameters": {},
+      "model": {
+        "activation": "gelu",
+        "correction_depth": 0,
+        "correction_width": 64,
+        "depth": 0,
+        "dtype": "float32",
+        "layer_norm": false,
+        "width": 64
+      },
+      "name": "sdn__77db1c9274a6a98eb8f5b746539f222a",
+      "physical_cost_output": true,
+      "seeds": {
+        "data": 151111,
+        "initialization": 161111,
+        "perturbation": 181111,
+        "shuffle": 171111,
+        "structural": 101
+      },
+      "sizes": {
+        "test": 100,
+        "train": 1000,
+        "validation": 320
+      },
+      "training": {
+        "batch_size": 32,
+        "epochs": 300,
+        "evaluation_batch_size": 32,
+        "gradient_clip": null,
+        "gradient_diagnostic_interval": 8,
+        "learning_rate": 0.01,
+        "learning_rate_schedule": "constant",
+        "maximum_optimization_seconds": 3600.0,
+        "minimum_delta": 1e-08,
+        "optimizer": "adam",
+        "patience": 301,
+        "schedule_reference_epochs": 300,
+        "selection_mode": "validation_regret",
+        "torch_threads": 1,
+        "validation_epochs": [
+          5,
+          10,
+          20,
+          40,
+          80,
+          120,
+          180,
+          240,
+          300
+        ],
+        "validation_interval": 300,
+        "weight_decay": 0.0
+      },
+      "workers": 1
+    },
+    "id": "sdn__77db1c9274a6a98eb8f5b746539f222a",
+    "method": "lava",
+    "parameters": {
+      "threshold": -1.0,
+      "vertex_tolerance": 0.0
+    },
+    "required_data_key": "dys_knapsack_1000x2__data151111",
+    "resource_limits": {
+      "job_wall_cap_seconds": 9000,
+      "preprocessing_cap_seconds": 3600
+    },
+    "route": "dys_knapsack_1000x2",
+    "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+    "simplified_revision": "simplified_linear_test100_20261020_v1",
+    "stage": "confirmation",
+    "training_oracle": "continuous_relaxation",
+    "validation_costs": "single_sample",
+    "wise_transform": false
+  },
+  "status": "failed",
+  "smoke_only": null,
+  "attempt_directory": null,
+  "started_utc": null,
+  "finished_utc": null,
+  "packaged_source": null,
+  "data_hashes": null,
+  "validation_protocol": null,
+  "test_bank_opened": null,
+  "test_access": null,
+  "error": "worker_exit_without_receipt",
+  "returncode": -9,
+  "total_wall_seconds": 1322.7698192596436,
+  "resource_usage": null,
+  "prior_resource_attempts": null,
+  "summary": {
+    "best_epoch": null,
+    "best_selection_score": null,
+    "best_validation": null,
+    "epochs_completed": null,
+    "optimization_cap_reached": null,
+    "optimization_cpu_seconds": null,
+    "optimization_wall_seconds": null,
+    "training_cpu_seconds": null,
+    "training_wall_seconds": null,
+    "validation_wall_seconds": null,
+    "test_evaluation_wall_seconds": null,
+    "test": null
+  },
+  "receipt": "results/receipts/sdn__77db1c9274a6a98eb8f5b746539f222a.json",
+  "receipt_sha256": "190ffa60910cafaba7bcc23ec12b4f846c5617bcca185985ed44ca324a761420",
+  "sealed_test_access": null
+}

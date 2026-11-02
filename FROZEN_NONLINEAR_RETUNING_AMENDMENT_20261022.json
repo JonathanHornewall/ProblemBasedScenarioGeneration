@@ -1,0 +1,62 @@
+{
+  "WiSE_CP_SPO_separate_ablation": true,
+  "activation": "gelu",
+  "aggregate_CERMICS_CPU_limit": 150,
+  "authority": "Direct human22October request and explicit parent scientific review/launch approval; research_records/cp_spo_20261022/NEXT_EXPERIMENTS.json",
+  "batch_size": 32,
+  "candidate_depths": [
+    1,
+    2,
+    3
+  ],
+  "deadline_unix": 1793176730,
+  "epochs": 300,
+  "extra_WiSE_baselines": false,
+  "final_seed_bundles": 10,
+  "full_added_science_fits": 45732,
+  "gradient_clip": null,
+  "hidden_width": 64,
+  "id": "frozen_nonlinear_retuning_20261022_v1",
+  "initial_depth_eligible_fits": 45498,
+  "initial_held_nce_cfl_fits": 234,
+  "integer_repeats": false,
+  "larger_data_depth0_comparison": "Reuse matching completed depth0 retuning; development-validation-only choice, no new fits or full higher-data depth sweep",
+  "missing_choice_policy": "Hold affected method/family only until all three N100 nonlinear development selections exist",
+  "optimizer": "adam",
+  "ordinary_CP_SPO_primary": true,
+  "output_root": "/home/jonathan.hornewall/runs/scaled_data_neural_20261021",
+  "phase_order": "N300 thenN500 thenN1000 dispatch priority; no global barrier",
+  "planning_duration_hours": [
+    18,
+    48
+  ],
+  "planning_duration_limitation": "Sample-based estimate; held NCE/CFL completion has no supported ETA; original finite stop remains.",
+  "retained_methods": [
+    "mse",
+    "central_path_hard_validation",
+    "central_path_wise_validation",
+    "wise",
+    "spo_plus",
+    "pfyl",
+    "nce",
+    "lava"
+  ],
+  "retune_existing_full_grid": true,
+  "runtime_source_commit": "88269e1c1f7f37369f0aa7f09702d2a54caeafb6",
+  "selection_training_samples": 100,
+  "selection_validation_samples": 32,
+  "test_samples": 100,
+  "test_scores_read": false,
+  "timing_deferred": true,
+  "training_samples": [
+    300,
+    500,
+    1000
+  ],
+  "validation_samples_by_training_size": {
+    "1000": 320,
+    "300": 96,
+    "500": 160
+  },
+  "weight_decay": 0
+}

@@ -1,0 +1,35 @@
+{
+  "allowed_depths": [
+    1,
+    2,
+    3
+  ],
+  "family": "kp",
+  "method": "lava",
+  "revision": "frozen_nonlinear_retuning_20261022_v1",
+  "score": 4.437499999995609,
+  "selected_depth": 1,
+  "selection_data": "smallest-family N100 development observed validation32",
+  "sources": [
+    {
+      "depth": 1,
+      "path": "selections/mlp_depth1/lava__kp.json",
+      "score": 4.437499999995609,
+      "sha256": "d007c0382ae92c78caf740e525dc33868a45f91a703cb15a598abb2e2ee1fd49"
+    },
+    {
+      "depth": 2,
+      "path": "selections/mlp_depth2/lava__kp.json",
+      "score": 5.21875,
+      "sha256": "4fb518c56a89fcc08c203c4af81a13647e3b1b8c4048364ed8a8de729783ecab"
+    },
+    {
+      "depth": 3,
+      "path": "selections/mlp_depth3/lava__kp.json",
+      "score": 6.03125,
+      "sha256": "0110d50d190eff10f44f16d3cec00726c607337257e84c667f88805fec1a3a32"
+    }
+  ],
+  "test_scores_read": false,
+  "tie_rule": "lower depth on exact validation-score tie"
+}

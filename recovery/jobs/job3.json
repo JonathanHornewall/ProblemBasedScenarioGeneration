@@ -1,0 +1,123 @@
+{
+  "jobs": [
+    {
+      "analytic_validation": false,
+      "architecture_arm": "neural",
+      "architecture_depth": 1,
+      "base_method": "lava",
+      "campaign_phase": "nonlinear_retune_n1000",
+      "candidate": "d01bd23f93914346cdc9",
+      "choices": {
+        "learning_rate": 0.001,
+        "threshold": -1.0
+      },
+      "config": {
+        "benchmark_id": "dys_knapsack_1000x2",
+        "benchmark_source": "dfl_extensions_lab",
+        "conditional_reference_samples": 64,
+        "cost_coordinate_normalization": "none",
+        "evaluate_test": true,
+        "interface": "full",
+        "law": {
+          "context_dimension": 5,
+          "noise": "gaussian",
+          "noise_scale": 0.2,
+          "polynomial_degree": 4,
+          "random_fraction": 1.0,
+          "signal_scale": 1.0,
+          "style": "positive"
+        },
+        "method": "mse",
+        "method_parameters": {},
+        "model": {
+          "activation": "gelu",
+          "correction_depth": 0,
+          "correction_width": 64,
+          "depth": 1,
+          "dtype": "float32",
+          "layer_norm": false,
+          "width": 64
+        },
+        "name": "lava_recovery__f4653eda0f78c83cf62b43b12b65d59a",
+        "physical_cost_output": true,
+        "seeds": {
+          "data": 151113,
+          "initialization": 161113,
+          "perturbation": 181113,
+          "shuffle": 171113,
+          "structural": 101
+        },
+        "sizes": {
+          "test": 100,
+          "train": 1000,
+          "validation": 320
+        },
+        "training": {
+          "batch_size": 32,
+          "epochs": 300,
+          "evaluation_batch_size": 32,
+          "gradient_clip": null,
+          "gradient_diagnostic_interval": 8,
+          "learning_rate": 0.001,
+          "learning_rate_schedule": "constant",
+          "maximum_optimization_seconds": null,
+          "minimum_delta": 1e-08,
+          "optimizer": "adam",
+          "patience": 301,
+          "schedule_reference_epochs": 300,
+          "selection_mode": "validation_regret",
+          "torch_threads": 1,
+          "validation_epochs": [
+            5,
+            10,
+            20,
+            40,
+            80,
+            120,
+            180,
+            240,
+            300
+          ],
+          "validation_interval": 300,
+          "weight_decay": 0.0
+        },
+        "workers": 1
+      },
+      "frozen_depth_choice": {
+        "path": "architecture_choices/nonlinear_transfer/lava__kp.json",
+        "sha256": "dcfef8f075adeac5b730e8de1c1ecbd69d50ada36b00c96810eeec6752174c91"
+      },
+      "frozen_nonlinear_retuning_revision": "frozen_nonlinear_retuning_20261022_v1",
+      "frozen_nonlinear_runtime_commit": "88269e1c1f7f37369f0aa7f09702d2a54caeafb6",
+      "id": "lava_recovery__f4653eda0f78c83cf62b43b12b65d59a",
+      "lava_completion_recovery": {
+        "original_checkpoint": "No resumable optimizer/shuffle state; restart affected failed/censored fit from its original initialization.",
+        "original_compact_receipt_sha256": "0bc5c4de7f48f94ea6c336d8fc17e3eb4bc73906334e0e3844d03c8ec65e01ec",
+        "original_error": "measured_training_budget_exhausted",
+        "original_job_id": "sdn__8673d03f669130209460c9a48ee02162",
+        "original_status": "censored",
+        "reason": "Five prior SIGKILL worker exits with no decisive phase accounting; isolate with24GiB per fit. One measured1h training censor; remove operational training cap to finish approved300epochs. No hyperparameter/data/protocol changes."
+      },
+      "method": "lava",
+      "parameters": {
+        "threshold": -1.0,
+        "vertex_tolerance": 0.0
+      },
+      "required_data_key": "dys_knapsack_1000x2__data151113",
+      "resource_limits": {
+        "job_wall_cap_seconds": 43200,
+        "preprocessing_cap_seconds": 14400
+      },
+      "route": "dys_knapsack_1000x2",
+      "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+      "simplified_revision": "simplified_linear_test100_20261020_v1",
+      "stage": "confirmation",
+      "training_oracle": "continuous_relaxation",
+      "validation_costs": "single_sample",
+      "wise_transform": false
+    }
+  ],
+  "protocol": {
+    "lava_completion_revision": "20261102_v1"
+  }
+}

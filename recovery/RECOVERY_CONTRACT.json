@@ -1,0 +1,60 @@
+{
+  "fits": [
+    {
+      "array_index": 0,
+      "original_id": "sdn__079f0048256962678d473b0c69e5ab9b",
+      "new_id": "lava_recovery__3f364ccd10588d29f072fb14b99ae6c5",
+      "data_seed": 151113,
+      "phase": "linear_retune_n1000",
+      "depth": 0
+    },
+    {
+      "array_index": 1,
+      "original_id": "sdn__1a475b156ab7ef98e655d8cd99c13aa1",
+      "new_id": "lava_recovery__0025686af4a5fd9e4772f460d6a3c8bb",
+      "data_seed": 151115,
+      "phase": "linear_retune_n1000",
+      "depth": 0
+    },
+    {
+      "array_index": 2,
+      "original_id": "sdn__77db1c9274a6a98eb8f5b746539f222a",
+      "new_id": "lava_recovery__16cfe309f2fe288041341eb07224fd23",
+      "data_seed": 151111,
+      "phase": "linear_retune_n1000",
+      "depth": 0
+    },
+    {
+      "array_index": 3,
+      "original_id": "sdn__8673d03f669130209460c9a48ee02162",
+      "new_id": "lava_recovery__f4653eda0f78c83cf62b43b12b65d59a",
+      "data_seed": 151113,
+      "phase": "nonlinear_retune_n1000",
+      "depth": 1
+    },
+    {
+      "array_index": 4,
+      "original_id": "sdn__8f26c030014016c15a544d592c87336b",
+      "new_id": "lava_recovery__c958d202dbd22aa041b68b02ee682f0d",
+      "data_seed": 151101,
+      "phase": "nonlinear_retune_n1000",
+      "depth": 1
+    },
+    {
+      "array_index": 5,
+      "original_id": "sdn__f18f6bfc29e993a2e2cc19c6a2e41a03",
+      "new_id": "lava_recovery__82313c6b023c10b84f46a280a9d31e68",
+      "data_seed": 151101,
+      "phase": "linear_retune_n1000",
+      "depth": 0
+    }
+  ],
+  "memory_gib_per_fit": 24,
+  "concurrency": 6,
+  "node": "node08",
+  "wall_seconds_per_fit": 43200,
+  "source_data": "existing frozen banks read-only",
+  "prior_SIGKILL_cause": "not conclusively established; old logs include integer-evaluation HiGHS transform messages; no preprocessing-only attribution",
+  "scientific_change": false,
+  "slurm_array_id": "16211"
+}

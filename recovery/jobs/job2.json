@@ -1,0 +1,117 @@
+{
+  "jobs": [
+    {
+      "analytic_validation": false,
+      "architecture_arm": "linear",
+      "architecture_depth": 0,
+      "base_method": "lava",
+      "campaign_phase": "linear_retune_n1000",
+      "candidate": "84358160e514aed9d9c6",
+      "choices": {
+        "learning_rate": 0.01,
+        "threshold": -1.0
+      },
+      "config": {
+        "benchmark_id": "dys_knapsack_1000x2",
+        "benchmark_source": "dfl_extensions_lab",
+        "conditional_reference_samples": 64,
+        "cost_coordinate_normalization": "none",
+        "evaluate_test": true,
+        "interface": "full",
+        "law": {
+          "context_dimension": 5,
+          "noise": "gaussian",
+          "noise_scale": 0.2,
+          "polynomial_degree": 4,
+          "random_fraction": 1.0,
+          "signal_scale": 1.0,
+          "style": "positive"
+        },
+        "method": "mse",
+        "method_parameters": {},
+        "model": {
+          "activation": "gelu",
+          "correction_depth": 0,
+          "correction_width": 64,
+          "depth": 0,
+          "dtype": "float32",
+          "layer_norm": false,
+          "width": 64
+        },
+        "name": "lava_recovery__16cfe309f2fe288041341eb07224fd23",
+        "physical_cost_output": true,
+        "seeds": {
+          "data": 151111,
+          "initialization": 161111,
+          "perturbation": 181111,
+          "shuffle": 171111,
+          "structural": 101
+        },
+        "sizes": {
+          "test": 100,
+          "train": 1000,
+          "validation": 320
+        },
+        "training": {
+          "batch_size": 32,
+          "epochs": 300,
+          "evaluation_batch_size": 32,
+          "gradient_clip": null,
+          "gradient_diagnostic_interval": 8,
+          "learning_rate": 0.01,
+          "learning_rate_schedule": "constant",
+          "maximum_optimization_seconds": null,
+          "minimum_delta": 1e-08,
+          "optimizer": "adam",
+          "patience": 301,
+          "schedule_reference_epochs": 300,
+          "selection_mode": "validation_regret",
+          "torch_threads": 1,
+          "validation_epochs": [
+            5,
+            10,
+            20,
+            40,
+            80,
+            120,
+            180,
+            240,
+            300
+          ],
+          "validation_interval": 300,
+          "weight_decay": 0.0
+        },
+        "workers": 1
+      },
+      "id": "lava_recovery__16cfe309f2fe288041341eb07224fd23",
+      "lava_completion_recovery": {
+        "original_checkpoint": "No resumable optimizer/shuffle state; restart affected failed/censored fit from its original initialization.",
+        "original_compact_receipt_sha256": "91884514581bd10eb84cadcdf180090e36659209297ecf9b96ca441a3bf45f5a",
+        "original_error": "worker_exit_without_receipt",
+        "original_job_id": "sdn__77db1c9274a6a98eb8f5b746539f222a",
+        "original_status": "failed",
+        "reason": "Five prior SIGKILL worker exits with no decisive phase accounting; isolate with24GiB per fit. One measured1h training censor; remove operational training cap to finish approved300epochs. No hyperparameter/data/protocol changes."
+      },
+      "method": "lava",
+      "parameters": {
+        "threshold": -1.0,
+        "vertex_tolerance": 0.0
+      },
+      "required_data_key": "dys_knapsack_1000x2__data151111",
+      "resource_limits": {
+        "job_wall_cap_seconds": 43200,
+        "preprocessing_cap_seconds": 14400
+      },
+      "route": "dys_knapsack_1000x2",
+      "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+      "simplified_revision": "simplified_linear_test100_20261020_v1",
+      "stage": "confirmation",
+      "training_oracle": "continuous_relaxation",
+      "validation_costs": "single_sample",
+      "wise_transform": false
+    }
+  ],
+  "protocol": {
+    "lava_completion_revision": "20261102_v1"
+  }
+}

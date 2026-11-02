@@ -1,0 +1,8 @@
+{
+  "routes": [
+    "dys_shortest_path_10x10",
+    "dys_cfl_50x5"
+  ],
+  "basis": "Smallest original tuning banks and their existing paired confirmation data; independent of large-CFL qualification. Other routes wait for measured throughput/memory admission.",
+  "maximum_node_local_storage_gib": 350
+}
