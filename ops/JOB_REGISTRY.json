@@ -1,5 +1,7 @@
 {
   "absolute_deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+  "cfl100_node07_pool": 16745,
+  "cfl100_node09_pool": 16746,
   "completion_pool": 16223,
   "completion_workers": 16,
   "implementation_checks": [
@@ -10,7 +12,7 @@
   ],
   "kp_recovery_array": 16211,
   "kp_serial_job": 16727,
-  "largest_total_requested_cpus_so_far": 52,
+  "largest_total_requested_cpus_so_far": 54,
   "maximum_campaign_cpus": 100,
   "node07_completion_cancelled_attempt": 16224,
   "node07_completion_pool": 16726,

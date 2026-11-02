@@ -7,6 +7,9 @@
     "dys_shortest_path_10x10__data151113": "9fa165358f390126b4c24b40bfc1b5b751e0099e9672b162f321141d69870638"
   },
   "basis": "Measured SP10 development complete; admit original paired SP N100 prefixes under finite per-bank wall/RSS/storage guards. Large CFL remains pending. Resume exact allocation-stop bank failures once on their original node; original failed records retained.",
+  "dedicated_preparation_routes": [
+    "dys_cfl_100x10"
+  ],
   "maximum_node_local_storage_gib": 350,
   "prepare_maximum_by_route": {
     "dys_cfl_100x10": 100,
