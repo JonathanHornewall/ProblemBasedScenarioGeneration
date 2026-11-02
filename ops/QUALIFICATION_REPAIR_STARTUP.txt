@@ -1,0 +1,10 @@
+             JOBID          PARTITION                     NAME ST       TIME   CPUS NODELIST(REASON)
+             16208               defq        lavaq200_20261102  R       0:33      1 node04
+             16209               defq        lavaq250_20261102  R       0:33      1 node05
+             16210           defq-gpu        lavaq500_20261102  R       0:30      1 node07
+dys_cfl_500x10__seed17__sample0.json running 16210 1608859 None
+dys_cfl_200x10__seed17__sample0.json running 16208 1489782 None
+dys_cfl_250x10__seed17__sample0.json running 16209 158051 None
+dys_cfl_500x10__seed17__sample1.json failed 16207 None 3.0064215399324894
+dys_cfl_200x10__seed17__sample1.json failed 16205 None 4.0047671645879745
+dys_cfl_250x10__seed17__sample1.json failed 16206 None 4.004881553351879

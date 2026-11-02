@@ -1,0 +1,18 @@
+# LAVA completion Monitor
+
+Main: `01a14a8b-3d7c-7d23-a8bb-2baa8f90c86c` (Regularize experiments CP-SPO).
+Monitor: `01a19a7d-6b4c-7e41-981f-ea544f90aed0` (Monitor: LAVA completion), GPT-6.1 Sol Max.
+Reuse synthetic Analyzer: `01a167fc-0385-7502-b7aa-744fc489c456`.
+Monitor is registered as an ordinary top-level Chat Board chat with Main's tags and Relevant relations.
+
+Read `CONTRACT.json` for the absolute deadline and scientific boundary. Local campaign root is this directory's parent. Remote root is `/home/jonathan.hornewall/runs/lava_completion_20261102`. Working historical source is `ProximalSPO-parsimonious-pilot-20261019`, commit recorded in `source_receipt.json`; do not switch or stage that worktree. All new operational code and results stay here.
+
+One heartbeat: `monitor-lava-completion`, ACTIVE and attached to this Monitor. Created 2026-11-02 about 04:29 UTC. First two hourly checks, then update this same heartbeat to every four hours with finite count/end before the unchanged contract deadline. Existing early checks must not be repeated on handoff. Every wake is one bounded check; quiet while healthy, material messages to Main only. No reply loops. Read `ops/MONITOR_CLOSED.json` first if present; terminal queued wakes do nothing.
+
+Initial jobs `16205,16206,16207` really started on node04/node07 at 04:28 UTC, but all six children failed before enumeration: `ModuleNotFoundError: utils`. This was an import-path fault in the new runner. No qualification timings resulted. `ops/INITIAL_FAILURE_DIAGNOSIS.txt` and remote qualification attempt receipts preserve it. Repair adds pinned `vendor/public` to PYTHONPATH; no scientific code changes. Recovery is authorized. Retain both failed and replacement job IDs.
+
+Qualification uses actual CFL200x10/250x10/500x10 routes, original training data seed17, samples0/1, read-only original pilot frozen banks. The NPZ reader materializes only training context/cost arrays. Each sample is a separate child, with wait4 wall/process CPU/peak RSS accounting retained even on SIGKILL after7200s. Replay preceding solver objective updates to retain the bank-order simplex basis. Cap250 and exact duplicate rows remain unchanged. Successful geometry remains on exact node-local scratch paths recorded under `ops/scratch_*.json`, until reuse/terminal cleanup. Shared home had144GiB free; node04 /tmp14GiB and node07 /tmp410GiB at startup.
+
+After measured qualification, admit only work credibly fitting the initial seven-day window and maximum100 campaign CPUs counting running plus pending. If large CFL projection is unsupported, retain pending cells with concrete measurements/censor, and continue independently feasible SP/CFL and six KP1000 repairs. Never call censored observations impossible. Do not extend the window silently. No IntOpt/WiSE-LAVA/electricity/cloud. Preserve original data/one-dev-seed/grid/batch32/Adam/no clipping/no decay/300epochs/validation-only selection/ten paired confirmations. Charge each shared exact-bank cache construction once; cache load time is separate.
+
+Terminal procedure: pause heartbeat first, release only exact owned idle jobs once, retrieve agreed compact source/seeds/configs/validation tables/scalar per-seed results and separate timing/outcomes/logs, verify that transfer once, then remove exact new owned remote root and scratch (never follow links to old banks/shared runtime). No weights/dense caches in final preservation. Write terminal marker and send final report once to Main, data-ready notice to the existing Analyzer.

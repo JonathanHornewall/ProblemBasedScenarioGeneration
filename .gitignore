@@ -1,0 +1,10 @@
+source.tar.gz
+deployment.tar.gz
+ops/__pycache__/
+code/
+qualification/
+logs/
+remote_snapshot/
+results/
+*.pickle
+*.npz

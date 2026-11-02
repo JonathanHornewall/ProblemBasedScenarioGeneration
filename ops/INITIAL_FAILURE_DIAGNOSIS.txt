@@ -1,0 +1,51 @@
+Traceback (most recent call last):
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/qualify.py", line 176, in <module>
+    child(a) if a.child else parent(a)
+    ~~~~~^^^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/qualify.py", line 97, in child
+    d = Isolated(model,x,costs,public_repo=os.environ['SOLVER_FREE_DFL_REPO'],
+                 vertex_tolerance=0.,progress=progress)
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/code/src/proximal_spo/public_highs.py", line 335, in __init__
+    self.public = public_geometry(
+                  ~~~~~~~~~~~~~~~^
+        str(public_repo or os.environ["SOLVER_FREE_DFL_REPO"])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/code/src/proximal_spo/public_highs.py", line 246, in public_geometry
+    from utils.misc import (
+    ...<3 lines>...
+    )
+ModuleNotFoundError: No module named 'utils'
+Traceback (most recent call last):
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/qualify.py", line 176, in <module>
+    child(a) if a.child else parent(a)
+    ~~~~~^^^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/qualify.py", line 97, in child
+    d = Isolated(model,x,costs,public_repo=os.environ['SOLVER_FREE_DFL_REPO'],
+                 vertex_tolerance=0.,progress=progress)
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/code/src/proximal_spo/public_highs.py", line 335, in __init__
+    self.public = public_geometry(
+                  ~~~~~~~~~~~~~~~^
+        str(public_repo or os.environ["SOLVER_FREE_DFL_REPO"])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/jonathan.hornewall/runs/lava_completion_20261102/code/src/proximal_spo/public_highs.py", line 246, in public_geometry
+    from utils.misc import (
+    ...<3 lines>...
+    )
+ModuleNotFoundError: No module named 'utils'
+JobID|State|Elapsed|TotalCPU|MaxRSS|ExitCode
+16205|COMPLETED|00:00:11|00:00:00||0:0
+16205.batch|COMPLETED|00:00:11|00:00:00||0:0
+16205.extern|COMPLETED|00:00:11|00:00:00||0:0
+16205.0|COMPLETED|00:00:09|00:00:00||0:0
+16206|COMPLETED|00:00:11|00:00:00||0:0
+16206.batch|COMPLETED|00:00:11|00:00:00||0:0
+16206.extern|COMPLETED|00:00:11|00:00:00||0:0
+16206.0|COMPLETED|00:00:09|00:00:00||0:0
+16207|COMPLETED|00:00:10|00:00:00||0:0
+16207.batch|COMPLETED|00:00:10|00:00:00||0:0
+16207.extern|COMPLETED|00:00:10|00:00:00||0:0
+16207.0|COMPLETED|00:00:09|00:00:00||0:0
