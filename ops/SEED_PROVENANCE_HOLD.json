@@ -1,0 +1,6 @@
+{
+  "created_unix": 1793648290.828164,
+  "reason": "Public random transition search lacks recorded initialization seed/RNG position in v1 bank construction. New fits require random-free prefix classification. Existing rows/results immutable; Main owns disposition.",
+  "qualifier_numpy_seed_initialized": false,
+  "qualification_resources_remain_factual": true
+}

@@ -39,12 +39,31 @@ groups={}
 for v in list(out['qualification'].values())+out['fits']:
  if v.get('status')=='running' and v.get('host') and v.get('pid'):
   groups.setdefault(v['host'],set()).add(int(v['pid']))
+for name,v in out['workers'].items():
+ if v.get('state')=='active' and v.get('pid'):
+  groups.setdefault(name.split('_')[0],set()).add(int(v['pid']))
 out['actual_cpu_rss']={}
+owned={16208,16209,16210,16211,16223}
+if (r/'ops/JOB_REGISTRY.json').exists():
+ registry=read(r/'ops/JOB_REGISTRY.json')
+ for key,value in registry.items():
+  if key.endswith('_pool') or key in ('kp_recovery_array','kp_serial_job'):owned.add(int(value))
+allocations={}
+for row in out['squeue'].splitlines():
+ parts=row.split('|')
+ if len(parts)>=4 and int(parts[0].split('_')[0]) in owned and parts[2]=='RUNNING':
+  allocations.setdefault(parts[3],parts[0])
 for host,pids in groups.items():
  try:
-  command=['ssh','-o','BatchMode=yes','-o','ControlMaster=no','-o','ControlPath=none',
-   '-o','ConnectTimeout=5','-o','StrictHostKeyChecking=yes',host,
-   'ps -p '+','.join(str(p) for p in sorted(pids))+' -o pid=,pcpu=,cputimes=,rss=,stat=']
+  node=host.split('.')[0]
+  if node not in allocations:continue
+  jobid=allocations[node]
+  if '_' in jobid:
+   describe=subprocess.run(['scontrol','show','job',jobid,'-o'],capture_output=True,text=True,timeout=5)
+   jobid=next(token.split('=',1)[1] for token in describe.stdout.split() if token.startswith('JobId='))
+  command=['srun','--overlap','--jobid='+jobid,'--nodelist='+node,'--nodes=1',
+   '--ntasks=1','--cpus-per-task=1','--time=00:00:10','--cpu-bind=cores',
+   'ps','-p',','.join(str(p) for p in sorted(pids)),'-o','pid=,pcpu=,cputimes=,rss=,stat=']
   p=subprocess.run(command,capture_output=True,text=True,timeout=8)
   out['actual_cpu_rss'][host]={'returncode':p.returncode,'processes':p.stdout,'error':p.stderr[-500:]}
  except subprocess.TimeoutExpired:

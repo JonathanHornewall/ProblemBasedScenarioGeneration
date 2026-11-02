@@ -63,9 +63,15 @@ if __name__=='__main__':
     if not os.environ.get('SLURM_JOB_ID') or len(os.sched_getaffinity(0))!=1:
         raise RuntimeError('Single-core Slurm fit required')
     job=json.loads(args.manifest.read_text())['jobs'][0]
-    if job.get('lava_completion_revision'):
+    if job.get('lava_completion_revision') or job.get('lava_completion_recovery',{}).get('lazy_exact_bank'):
+        from safe_geometry import decision
+        admission=decision(Path(os.environ['LAVA_RUN_ROOT']),job)
+        if not admission['ready']:
+            print('Operational hold: '+admission['reason'],flush=True)
+            raise SystemExit(75)
+    if job.get('lava_completion_revision') or job.get('lava_completion_recovery',{}).get('lazy_exact_bank'):
         import final_geometry_cache
-        from bank_geometry import get_geometry
+        from safe_geometry import get_geometry
         final_geometry_cache.get_geometry=get_geometry
         import scaled_data_neural_campaign as campaign
         if not any(p['id']=='linear_n100' for p in campaign.PHASES):

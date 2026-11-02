@@ -1,0 +1,3 @@
+scontrol: error: Invalid MinMemoryNode value: 230G
+scontrol: error: Invalid MinMemoryNode value: 30G
+135881

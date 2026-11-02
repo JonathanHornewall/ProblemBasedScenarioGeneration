@@ -74,6 +74,7 @@ def child(args):
         'earlier_geometry_unavailable':[i for i in range(args.sample) if i not in prefix_available],
         'host':socket.gethostname(), 'slurm_job_id':os.environ['SLURM_JOB_ID'],
         'adapter_sha256':sha(Path(os.environ['LAVA_CODE'])/'src/proximal_spo/public_highs.py')}
+    state['qualifier_script_sha256']=sha(Path(__file__))
     write(args.progress,state)
     class Isolated(HighsLAVADataset):
         calls = 0
@@ -81,18 +82,22 @@ def child(args):
             index = self.calls
             self.calls += 1
             if index < args.sample:
-                previous = prefix_available.get(index)
-                # Public code projects first, then removes exact duplicates.
-                # Supply retained geometry with zero slack padding solely for
-                # prefix-cache reconstruction; target enumeration is untouched.
-                if previous is not None:
-                    vertices = previous['adjacent_verts']
-                    return np.pad(vertices, ((0,0),(0,len(solution)-model.num_cost)))
+                # Replay preceding objectives, but never rebuild the earlier
+                # billion-byte exact-tuple dictionary merely to import a cache.
+                # The callback installs the already completed projected rows.
                 return [solution]
             return super()._get_adjacent_vertices(solution)
     def progress(n, dataset):
-        if n <= args.sample and n-1 not in prefix_available:
-            dataset.adjacent_vertices_cache.clear()
+        if n <= args.sample:
+            previous=prefix_available.get(n-1)
+            if previous is None:
+                dataset.adjacent_vertices_cache.clear()
+            else:
+                anchor=np.asarray(dataset.slack_model._model.getSolution().col_value)[:model.num_cost].copy()
+                anchor[np.abs(anchor)<1e-10]=0.
+                if not np.array_equal(anchor,previous['sols']):
+                    raise RuntimeError('Replayed prefix anchor differs from its exact completed cache')
+                dataset.adjacent_vertices_cache[tuple(anchor)]=previous['adjacent_verts']
     t, cpu = time.perf_counter(), time.process_time()
     d = Isolated(model,x,costs,public_repo=os.environ['SOLVER_FREE_DFL_REPO'],
                  vertex_tolerance=0.,progress=progress)

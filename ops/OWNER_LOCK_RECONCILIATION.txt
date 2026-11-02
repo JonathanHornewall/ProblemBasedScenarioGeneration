@@ -1,0 +1,10 @@
+{"node07.cluster.local_seeded_16741.json": {"actual_process_cpu_seconds": 1435.9, "item": {"key": "dys_cfl_50x5__data17", "kind": "seeded_prepare", "n": 300}, "pid": 1631028, "rss_bytes": 5600149504, "slurm_job_id": "16741", "state": "active", "updated_unix": 1793650918.9896154, "worker_pid": 1630874}}
+{
+  "active_preparation_preserved": true,
+  "host": "node09.cluster.local",
+  "refreshed": [],
+  "refreshed_unix": 1793650317.2167745,
+  "slurm_job_id": "16223"
+}
+
+

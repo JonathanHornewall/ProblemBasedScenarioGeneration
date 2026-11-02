@@ -1,0 +1,7 @@
+{
+  "old_job_id": "lava_recovery__c958d202dbd22aa041b68b02ee682f0d",
+  "slurm_task": "16211_4",
+  "status": "failed",
+  "exit_signal": 9,
+  "cause": "Unproven; six-way aggregate memory pressure is a concrete risk. Isolate serially with own RSS/headroom guard."
+}

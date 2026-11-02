@@ -1,0 +1,224 @@
+{
+  "attempt_directory": "/home/jonathan.hornewall/runs/lava_completion_20261102/results/attempts/lava_recovery__82313c6b023c10b84f46a280a9d31e68/1793594089307064519-1787031",
+  "benchmark_provenance": {
+    "generator_called_by_fit": false,
+    "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+    "simplified_data": {
+      "context_dimension": 10,
+      "key": "dys_knapsack_1000x2__data151101",
+      "known_structure_unchanged": true,
+      "native_integer_count": 1000,
+      "observations_policy": "exact old train100 prefix; nested500/1000; original observed validation32",
+      "revision": "scaled_data_neural_20261021_v1",
+      "sizes": {
+        "test": 100,
+        "train": 1000,
+        "validation": 320
+      },
+      "source_observed_receipt_sha256": "343b9c7a4113964e6b98da9b8bf4efeb2a1fd5b1aaf1c0c5eafaebdbb9001192",
+      "supplemental_validation": {
+        "observation_sha256": "ec5c5ab28b3fdd13c1cbfd264da7ac63caf0e168f7c3d3039b9849c2a6610922",
+        "original_validation_prefix": 32,
+        "receipt_sha256": "a43053f296f9658f4771d23be014482e87488763ff59323b9ee4fadc8840b70c",
+        "selection_only": true,
+        "stored_validation_count": 320,
+        "supplied_validation_count": 320
+      },
+      "supplied_training_count": 1000
+    },
+    "test_bank_opened": false
+  },
+  "data_hashes": {
+    "test": {
+      "conditional_mean_costs": "7aec22ccf821bddbf68dd4853dec0a7101ea53a7423ef8ec6a66ff78060d0fc1",
+      "contexts": "f04e84ff88c2d5a7b9ebdd3d2b35700a6f4061b6720ee8512c9766395aa1da4f",
+      "physical_costs": "7aec22ccf821bddbf68dd4853dec0a7101ea53a7423ef8ec6a66ff78060d0fc1"
+    },
+    "train": {
+      "conditional_mean_costs": "e845b4eae0134594ebb37a06efc98d7c5f2042635c22f5742076d0e701bf740f",
+      "contexts": "142bf5d8a38f796d60e4e523c8d7a824fa94c303e04d9f16c9d41e42dc0de9e7",
+      "physical_costs": "e845b4eae0134594ebb37a06efc98d7c5f2042635c22f5742076d0e701bf740f"
+    },
+    "validation": {
+      "conditional_mean_costs": "d717c61ab0a47ecf43a9d279c3479620b4baeb35702d04632ebac3e7dc9388b1",
+      "contexts": "e2a7bca96348cb9802a92c2b9188acd53ddb0b4528ef973583c31a5fca8ff942",
+      "physical_costs": "d717c61ab0a47ecf43a9d279c3479620b4baeb35702d04632ebac3e7dc9388b1"
+    }
+  },
+  "elapsed_seconds": 600.5801599062979,
+  "environment": {
+    "captured_at_utc": "2026-11-02T04:34:51.466157+00:00",
+    "git_commit": "uncommitted",
+    "git_dirty": true,
+    "logical_cpu_count": 64,
+    "packages": {
+      "clarabel": "0.11.1",
+      "cvxpy": "1.7.4",
+      "cvxpylayers": "1.0.0",
+      "diffcp": "1.1.9",
+      "highspy": "1.12.0",
+      "numpy": "2.3.5",
+      "osqp": "1.0.4",
+      "scipy": "1.16.3",
+      "torch": "2.8.0+cpu"
+    },
+    "platform": "Linux-5.14.0-503.35.1.el9_5.x86_64-x86_64-with-glibc2.34",
+    "processor": "x86_64",
+    "python": "3.13.5",
+    "source_sha256": "153700dc4c7d6a600b1a9f1814b802ae6522feef2b306247cef0da6b13875b36",
+    "torch_threads": 1
+  },
+  "execution_resources": {
+    "affinity": [
+      10
+    ],
+    "host": "node08.cluster.local",
+    "scientific_training_oracle": "continuous_relaxation",
+    "site": "cermics"
+  },
+  "external_commit": null,
+  "geometry_cache_key": "a8d5803a95f925bb445b3976b164404fb1991f6c2ac5e229e18344d3428a61ad",
+  "geometry_samples_processed": 1000,
+  "host": "node08.cluster.local",
+  "job": {
+    "analytic_validation": false,
+    "architecture_arm": "linear",
+    "architecture_depth": 0,
+    "base_method": "lava",
+    "campaign_phase": "linear_retune_n1000",
+    "candidate": "84358160e514aed9d9c6",
+    "choices": {
+      "learning_rate": 0.01,
+      "threshold": -1.0
+    },
+    "config": {
+      "benchmark_id": "dys_knapsack_1000x2",
+      "benchmark_source": "dfl_extensions_lab",
+      "conditional_reference_samples": 64,
+      "cost_coordinate_normalization": "none",
+      "evaluate_test": true,
+      "interface": "full",
+      "law": {
+        "context_dimension": 5,
+        "noise": "gaussian",
+        "noise_scale": 0.2,
+        "polynomial_degree": 4,
+        "random_fraction": 1.0,
+        "signal_scale": 1.0,
+        "style": "positive"
+      },
+      "method": "mse",
+      "method_parameters": {},
+      "model": {
+        "activation": "gelu",
+        "correction_depth": 0,
+        "correction_width": 64,
+        "depth": 0,
+        "dtype": "float32",
+        "layer_norm": false,
+        "width": 64
+      },
+      "name": "lava_recovery__82313c6b023c10b84f46a280a9d31e68",
+      "physical_cost_output": true,
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "sizes": {
+        "test": 100,
+        "train": 1000,
+        "validation": 320
+      },
+      "training": {
+        "batch_size": 32,
+        "epochs": 300,
+        "evaluation_batch_size": 32,
+        "gradient_clip": null,
+        "gradient_diagnostic_interval": 8,
+        "learning_rate": 0.01,
+        "learning_rate_schedule": "constant",
+        "maximum_optimization_seconds": null,
+        "minimum_delta": 1e-08,
+        "optimizer": "adam",
+        "patience": 301,
+        "schedule_reference_epochs": 300,
+        "selection_mode": "validation_regret",
+        "torch_threads": 1,
+        "validation_epochs": [
+          5,
+          10,
+          20,
+          40,
+          80,
+          120,
+          180,
+          240,
+          300
+        ],
+        "validation_interval": 300,
+        "weight_decay": 0.0
+      },
+      "workers": 1
+    },
+    "id": "lava_recovery__82313c6b023c10b84f46a280a9d31e68",
+    "lava_completion_recovery": {
+      "original_checkpoint": "No resumable optimizer/shuffle state; restart affected failed/censored fit from its original initialization.",
+      "original_compact_receipt_sha256": "6d10e4a4ad88b761c3470c1ba9219b5b710b0bacbe823ff96a175282fed19fc6",
+      "original_error": "worker_exit_without_receipt",
+      "original_job_id": "sdn__f18f6bfc29e993a2e2cc19c6a2e41a03",
+      "original_status": "failed",
+      "reason": "Five prior SIGKILL worker exits with no decisive phase accounting; isolate with24GiB per fit. One measured1h training censor; remove operational training cap to finish approved300epochs. No hyperparameter/data/protocol changes."
+    },
+    "method": "lava",
+    "parameters": {
+      "threshold": -1.0,
+      "vertex_tolerance": 0.0
+    },
+    "required_data_key": "dys_knapsack_1000x2__data151101",
+    "resource_limits": {
+      "job_wall_cap_seconds": 43200,
+      "preprocessing_cap_seconds": 14400
+    },
+    "route": "dys_knapsack_1000x2",
+    "scaled_data_neural_revision": "scaled_data_neural_20261021_v1",
+    "simplified_revision": "simplified_linear_test100_20261020_v1",
+    "stage": "confirmation",
+    "training_oracle": "continuous_relaxation",
+    "validation_costs": "single_sample",
+    "wise_transform": false
+  },
+  "manifest_sha256": "7765ab933e09eef7be10befa646786a8ad66b54ee7c60d435462bc928c07998a",
+  "operational_io_policy": "scaled_data_neural_buffered_io_v1",
+  "packaged_source": {
+    "code_diff_from_HEAD": "none under src/scripts/vendor",
+    "qualification_routes": [
+      "dys_cfl_200x10",
+      "dys_cfl_250x10",
+      "dys_cfl_500x10"
+    ],
+    "runtime": "read-only original CERMICS venv; no upgrades",
+    "scientific_source_commit": "ed80f8b45fc291d27f9bf67b95b58fc9ee4642a9",
+    "source_bundle_sha256": "1375e613d7c97c15402f31d5a65d16af91cb5be8748fbabd1ece31ced119f8f0",
+    "source_plan_sha256": "cbf2d8740bee0095070af646f546ac5cf893e9a8a2a64519bb3a1c37bae58930"
+  },
+  "phase": "training",
+  "pid": 1787031,
+  "preprocessing_wall_seconds": 600.5801436156034,
+  "prior_resource_attempts": [],
+  "public_commit": null,
+  "smoke_only": false,
+  "started_utc": "2026-11-02T04:34:49Z",
+  "status": "running",
+  "test_access": false,
+  "validation_protocol": {
+    "analytic_validation_requested": false,
+    "contexts_sha256": "e2a7bca96348cb9802a92c2b9188acd53ddb0b4528ef973583c31a5fca8ff942",
+    "costs": "single_sample",
+    "one_fixed_observed_cost_per_context": true,
+    "selection_costs_sha256": "d717c61ab0a47ecf43a9d279c3479620b4baeb35702d04632ebac3e7dc9388b1",
+    "test_costs": "conditional_mean"
+  }
+}

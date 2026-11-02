@@ -1,0 +1,22 @@
+             JOBID          PARTITION                     NAME ST       TIME   CPUS NODELIST(REASON)
+             16208               defq        lavaq200_20261102  R      13:26      1 node04
+             16209               defq        lavaq250_20261102  R      13:26      1 node05
+           16211_0           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+           16211_1           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+           16211_2           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+           16211_3           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+           16211_4           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+           16211_5           defq-gpu         lavakpr_20261102  R       9:01      1 node08
+             16210           defq-gpu        lavaq500_20261102  R      13:23      1 node07
+lava_recovery__3f364ccd10588d29f072fb14b99ae6c5 running training 1000 None 330.7545787021518
+lava_recovery__16cfe309f2fe288041341eb07224fd23 running training 1000 None 231.52622721344233
+lava_recovery__82313c6b023c10b84f46a280a9d31e68 running preprocessing 897 None 478.3977163955569
+lava_recovery__0025686af4a5fd9e4772f460d6a3c8bb running training 1000 None 232.55649135634303
+lava_recovery__f4653eda0f78c83cf62b43b12b65d59a running preprocessing 779 None 438.5524957254529
+lava_recovery__c958d202dbd22aa041b68b02ee682f0d running training 1000 None 344.06261978670955
+dys_cfl_500x10__seed17__sample0.json running 16210 None None
+dys_cfl_200x10__seed17__sample0.json running 16208 None None
+dys_cfl_250x10__seed17__sample0.json running 16209 None None
+dys_cfl_500x10__seed17__sample1.json failed 16207 3.0064215399324894 None
+dys_cfl_200x10__seed17__sample1.json failed 16205 4.0047671645879745 None
+dys_cfl_250x10__seed17__sample1.json failed 16206 4.004881553351879 None

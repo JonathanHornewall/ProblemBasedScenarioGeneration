@@ -1,0 +1,7 @@
+{
+  "authorized_by_main": "01a14a8b-3d7c-7d23-a8bb-2baa8f90c86c",
+  "recorded_unix": 1793648569.073729,
+  "scope": "Current LAVA completion only. Seed/resume/cache identity correctness repair, not tuning.",
+  "policy": "Prevent unknown/affected bank prefixes feeding new fits/selections. Retain completed fits only after exact no-random-branch proof on consumed prefixes. Repair actual affected dependency closure; preserve all attempts/caches/results. Original initialization seeds and exact RNG positions; no arbitrary seed or changed cap/tolerance. No qualifier rerun; measured resources remain factual with RNG limitation.",
+  "known_affected_child": 3120354
+}

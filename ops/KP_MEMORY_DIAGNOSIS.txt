@@ -1,0 +1,54 @@
+JobID|State|ExitCode|Elapsed
+16211_0|RUNNING|0:0|00:51:10
+16211_0.batch|RUNNING|0:0|00:51:10
+16211_0.extern|RUNNING|0:0|00:51:10
+16211_0.0|RUNNING|0:0|00:51:09
+16211_0.1|COMPLETED|0:0|00:00:00
+16211_1|RUNNING|0:0|00:51:10
+16211_1.batch|RUNNING|0:0|00:51:10
+16211_1.extern|RUNNING|0:0|00:51:10
+16211_1.0|RUNNING|0:0|00:51:09
+16211_2|RUNNING|0:0|00:51:10
+16211_2.batch|RUNNING|0:0|00:51:10
+16211_2.extern|RUNNING|0:0|00:51:10
+16211_2.0|RUNNING|0:0|00:51:09
+16211_3|RUNNING|0:0|00:51:10
+16211_3.batch|RUNNING|0:0|00:51:10
+16211_3.extern|RUNNING|0:0|00:51:10
+16211_3.0|RUNNING|0:0|00:51:09
+16211_4|RUNNING|0:0|00:51:10
+16211_4.batch|RUNNING|0:0|00:51:10
+16211_4.extern|RUNNING|0:0|00:51:10
+16211_4.0|RUNNING|0:0|00:51:09
+16211_5|FAILED|9:0|00:14:48
+16211_5.batch|FAILED|9:0|00:14:48
+16211_5.extern|COMPLETED|0:0|00:14:48
+16211_5.0|CANCELLED|0:9|00:14:47
+1787024 76509208 99.1 python
+1787027 69631416 91.4 python
+1787028 41652620 98.9 python
+1787029 16449480 98.7 python
+1787021 16445084 98.6 python
+1786955  4608  0.0 srun
+1786957  4608  0.0 srun
+1786958  4608  0.0 srun
+1786959  4608  0.0 srun
+1788126  3072  0.0 ps
+1786956  2560  0.0 srun
+1786960  1032  0.0 srun
+1786961  1032  0.0 srun
+1786962  1032  0.0 srun
+1786964  1032  0.0 srun
+1786967  1032  0.0 srun
+1786924   512  0.0 slurm_script
+1786925   512  0.0 slurm_script
+1786926   512  0.0 slurm_script
+1786927   512  0.0 slurm_script
+1786928   512  0.0 slurm_script
+lava_recovery__3f364ccd10588d29f072fb14b99ae6c5 {'status': 'running', 'phase': 'training', 'pid': 1787028, 'epoch': None, 'epochs_completed': 17, 'optimization_seconds': 1402.0429421886802, 'optimization_wall_seconds': None, 'elapsed_seconds': 3053.2828697413206, 'error': None}
+lava_recovery__16cfe309f2fe288041341eb07224fd23 {'status': 'running', 'phase': 'training', 'pid': 1787021, 'epoch': None, 'epochs_completed': 48, 'optimization_seconds': 822.95596229285, 'optimization_wall_seconds': None, 'elapsed_seconds': 3062.9415570758283, 'error': None}
+lava_recovery__82313c6b023c10b84f46a280a9d31e68 {'status': 'running', 'phase': 'training', 'pid': 1787031, 'epoch': None, 'epochs_completed': None, 'optimization_seconds': None, 'optimization_wall_seconds': None, 'elapsed_seconds': 600.5801599062979, 'error': None}
+lava_recovery__0025686af4a5fd9e4772f460d6a3c8bb {'status': 'running', 'phase': 'training', 'pid': 1787029, 'epoch': None, 'epochs_completed': 54, 'optimization_seconds': 847.2906343787909, 'optimization_wall_seconds': None, 'elapsed_seconds': 3030.3074803203344, 'error': None}
+lava_recovery__f4653eda0f78c83cf62b43b12b65d59a {'status': 'running', 'phase': 'training', 'pid': 1787027, 'epoch': None, 'epochs_completed': 19, 'optimization_seconds': 1383.4040154851973, 'optimization_wall_seconds': None, 'elapsed_seconds': 3034.139781989157, 'error': None}
+lava_recovery__c958d202dbd22aa041b68b02ee682f0d {'status': 'running', 'phase': 'training', 'pid': 1787024, 'epoch': None, 'epochs_completed': 18, 'optimization_seconds': 1840.2979229390621, 'optimization_wall_seconds': None, 'elapsed_seconds': 3033.9178731665015, 'error': None}
+Job is no longer pending execution for job 16210

@@ -1,0 +1,19 @@
+JobId=16212 ArrayJobId=16211 ArrayTaskId=0 ArrayTaskThrottle=6 JobName=lavakpr_20261102 UserId=jonathan.hornewall(758227476) GroupId=utilisateurs du domaine(758200513) MCS_label=N/A Priority=1 Nice=10000 Account=(null) QOS=normal JobState=RUNNING Reason=None Dependency=(null) Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0 RunTime=00:34:37 TimeLimit=12:10:00 TimeMin=N/A SubmitTime=2026-11-02T05:34:48 EligibleTime=2026-11-02T05:34:48 AccrueTime=Unknown StartTime=2026-11-02T05:34:48 EndTime=2026-11-02T17:44:48 Deadline=N/A PreemptEligibleTime=2026-11-02T05:34:48 PreemptTime=None SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-11-02T05:34:48 Scheduler=Backfill Partition=defq-gpu AllocNode:Sid=master01-hpc:94460 ReqNodeList=node08 ExcNodeList=(null) NodeList=node08 BatchHost=node08 NumNodes=1 NumCPUs=1 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:* ReqTRES=cpu=1,mem=24G,node=1,billing=1 AllocTRES=cpu=1,node=1,billing=1 Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=* MinCPUsNode=1 MinMemoryNode=24G MinTmpDiskNode=0 Features=(null) DelayBoot=00:00:00 OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null) Command=/home/jonathan.hornewall/runs/lava_completion_20261102/ops/recovery.sbatch WorkDir=/home/jonathan.hornewall/runs/lava_completion_20261102 StdErr=/home/jonathan.hornewall/runs/lava_completion_20261102/logs/recovery-16211_0.out StdIn=/dev/null StdOut=/home/jonathan.hornewall/runs/lava_completion_20261102/logs/recovery-16211_0.out Power= TresPerTask=cpu:1 
+               total        used        free      shared  buff/cache   available
+Mem:     269560238080 242791981056  2072940544    34566144 26817789952 26768257024
+Swap:     8589930496  8589836288       94208
+               total        used        free      shared  buff/cache   available
+Mem:     269560250368 20101677056 217136644096   104931328 34522054656 249458573312
+Swap:     8589930496  2375585792  6214344704
+dys_shortest_path_10x10__data1103 10765024 288.16922944039106 [108, 129, 79]
+dys_shortest_path_10x10__data151103 10382240 298.95603520795703 [62, 68, 65]
+dys_shortest_path_10x10__data151105 10264704 272.13769655302167 [84, 58, 56]
+dys_cfl_50x5__data151105 1719902120 535.0625751316547 [4403, 8298, 8677]
+dys_cfl_50x5__data151101 1486462880 515.4243794083595 [9777, 7952, 6026]
+dys_shortest_path_10x10__data151107 10180256 287.2595006003976 [104, 122, 35]
+dys_shortest_path_10x10__data151109 10868448 263.3491123728454 [155, 74, 69]
+dys_cfl_50x5__data151107 1675781000 515.7358841150999 [14565, 9658, 13745]
+dys_cfl_50x5__data151103 1547791400 522.3624643757939 [13780, 5522, 4350]
+dys_shortest_path_10x10__data151101 10289952 301.0258345864713 [120, 84, 47]
+dys_shortest_path_10x10__data151113 10897504 286.4551674053073 [167, 114, 67]
+dys_shortest_path_10x10__data151111 10613824 271.559935092926 [103, 99, 42]
