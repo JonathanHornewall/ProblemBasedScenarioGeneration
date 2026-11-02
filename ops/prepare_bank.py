@@ -6,6 +6,10 @@ from bank_geometry import prepare,directory
 p=argparse.ArgumentParser();p.add_argument('--root',required=True);p.add_argument('--key',required=True);p.add_argument('--maximum',type=int,required=True);p.add_argument('--initialization-seed',type=int)
 a=p.parse_args();root=pathlib.Path(a.root);plan=read(root/'PLAN.json');route,data=a.key.split('__data')
 from scope_control import preparation_maximum,scope_skip
+policy=root/'ops/CFL100_N100_RESOURCE_POLICY.json'
+if route=='dys_cfl_100x10' and policy.exists() and os.environ.get('SLURM_JOB_ID') not in read(policy).get('authorized_jobs',[]):
+ scope_skip(root,'preparation_capacity_routing',a.key,'CFL100 N100 requires the measured-resource recovery queue')
+ raise SystemExit(77)
 requested_maximum=a.maximum;a.maximum=preparation_maximum(root,a.key,a.maximum)
 if a.maximum==0:
  scope_skip(root,'preparation',a.key,'Excluded CFL route; no new preprocessing')

@@ -13,21 +13,27 @@ def stop(*_):
 signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
 local=pathlib.Path('/tmp/lava_completion_20261102');local.mkdir(exist_ok=True)
 token=host+'_seeded_'+job;reservation=local/'reservations.json';guard=local/'reservations.lock'
+request_folder=root/os.environ.get('LAVA_REQUEST_FOLDER','seeded_requests')
 while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists() and not (root/'SCIENCE_COMPLETE.json').exists():
  chosen=None;claim=None
- for request in sorted((root/'seeded_requests').glob('*.json')):
+ for request in sorted(request_folder.glob('*.json')):
   value=read(request)
   if value['host']!=host:continue
   key=value['key'];seed=value['initialization_seed'];n=preparation_maximum(root,key,value['maximum']);ident=key+'__init'+str(seed)
   if not n:continue
   value={**value,'maximum':n}
+  policy=root/'ops/CFL100_N100_RESOURCE_POLICY.json';resource_policy=read(policy) if policy.exists() else {}
+  if 'cfl_100x10' in key and resource_policy and job not in resource_policy.get('authorized_jobs',[]):continue
   if (directory(key,seed)/f'prefix{n}.json').exists():
    release_unstarted_holds(root,key,seed,n);continue
-  if (root/'failures'/('seeded__'+ident+'.json')).exists():continue
+  failure=root/'failures'/('seeded__'+ident+'.json')
+  if failure.exists():
+   retry='cfl_100x10' in key and job in resource_policy.get('authorized_jobs',[]) and read(failure).get('finished_unix',0)<resource_policy.get('activated_unix',0)
+   if not retry:continue
   candidate=(root/'claims'/('seeded__'+ident+'.lock')).open('a')
   try:fcntl.flock(candidate,fcntl.LOCK_EX|fcntl.LOCK_NB)
   except BlockingIOError:candidate.close();continue
-  gib=96. if '50x50' in key else 48. if '100x10' in key else 32. if 'cfl' in key else 24. if '25x25' in key else 6.
+  gib=96. if '50x50' in key or 'cfl_100x10' in key else 32. if 'cfl' in key else 24. if '25x25' in key else 6.
   with guard.open('a') as g:
    fcntl.flock(g,fcntl.LOCK_EX);held=read(reservation) if reservation.exists() else {}
    for k,v in list(held.items()):

@@ -105,6 +105,7 @@ def advance(root):
     development_keys={r+'__data'+str(plan['cells'][r]['screen']['data']) for r in ('dys_shortest_path_10x10','dys_cfl_50x5')}
     keys.sort(key=lambda key:(key not in development_keys,key))
     for key in keys:
+        if key.split('__data')[0] in admission.get('dedicated_preparation_routes',[]):continue
         status=root/'banks'/key/'STATUS.json'
         v=read(status) if status.exists() else {}
         maximum=admission.get('prepare_maximum_by_route',{}).get(key.split('__data')[0],1000)
@@ -165,6 +166,7 @@ def work(root,index):
             state=root/'banks'/item['key']/'STATUS.json'
             owner=read(state).get('host') if state.exists() else None
             if (owner in (None,socket.gethostname()) and item['key'] not in queued_keys
+                and item['route'] not in read(root/'ADMISSION.json').get('dedicated_preparation_routes',[])
                 and not available(item['key'],item['n'])):
                 maximum=read(root/'ADMISSION.json').get('prepare_maximum_by_route',{}).get(item['route'],1000)
                 queue['preparation'].append({'kind':'prepare','id':'bank__'+item['key'],
