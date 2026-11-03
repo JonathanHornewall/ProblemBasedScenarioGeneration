@@ -33,9 +33,6 @@ out={'started_unix':time.time(),'original_banks':10,'original_maximum':100,'cont
  'guard':'Unchanged24GiB preparation,6GiB fit,230GiB node and original96GiB resource-pool aggregate; original disk30GiB reserve and finite wall/cutoff.',
  'scientific_parameters_changed':False,'launchers':[]}
 write(receipt,out)
-admission['prepare_maximum_by_route']['dys_shortest_path_25x25']=1000
-admission['sp25_expansion']={k:v for k,v in out.items()if k!='launchers'}
-write(r/'ADMISSION.json',admission)
 # Only idle workers are adopted so their cached6GiB pre-repair bank guard
 # cannot misclassify the permitted24GiB continuation as a new resource censor.
 for node,job,cpus in [('node07',16726,24),('node07',16740,8)]:
@@ -47,4 +44,19 @@ for node,job,cpus in [('node07',16726,24),('node07',16740,8)]:
   'bash',str(r/'ops/coordinator_env.sh'),str(r),'refresh_idle_once.py'],
   stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
  out['launchers'].append({'allocation':job,'pid':child.pid,'workers_maximum':cpus});write(receipt,out)
+limit=time.monotonic()+20;refreshed={}
+while time.monotonic()<limit:
+ for entry in out['launchers']:
+  job=entry['allocation'];path=r/'ops'/('IDLE_REFRESH_ONCE_'+str(job)+'_SP25_N1000_20261103.json')
+  if path.exists() and read(path).get('finished_unix'):refreshed[str(job)]=read(path)
+ if len(refreshed)==2:break
+ time.sleep(.1)
+if len(refreshed)!=2:raise RuntimeError('Idle refresh did not reconcile; N1000 remains unadmitted')
+for entry in out['launchers']:
+ value=refreshed[str(entry['allocation'])]
+ assert len(value['refreshed'])==entry['workers_maximum'] and not value['preserved']
+out['idle_refresh_receipts']=refreshed
+admission['prepare_maximum_by_route']['dys_shortest_path_25x25']=1000
+admission['sp25_expansion']={k:v for k,v in out.items()if k not in ('launchers','idle_refresh_receipts')}
+write(r/'ADMISSION.json',admission)
 out['finished_unix']=time.time();write(receipt,out);print(json.dumps(out))
