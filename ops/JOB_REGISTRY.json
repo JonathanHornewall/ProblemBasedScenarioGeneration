@@ -2,8 +2,10 @@
   "absolute_deadline_utc": "2026-11-09T04:27:29.088834+00:00",
   "cfl100_node07_pool": 16745,
   "cfl100_node09_pool": 16746,
+  "completed_KP_serial_job": 16727,
   "completion_pool": 16223,
   "completion_workers": 16,
+  "current_requested_CPUs_after_release": 48,
   "implementation_checks": [
     16219,
     16220,
@@ -28,6 +30,13 @@
     16208,
     16209,
     16210
+  ],
+  "released_completed_preparation_jobs": [
+    16741,
+    16742,
+    16744,
+    16745,
+    16746
   ],
   "resource_repair_pool": 16740,
   "seed_check_jobs": [

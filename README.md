@@ -1,5 +1,8 @@
 # LAVA completion campaign
 
+Current: **610 valid successes +40 documented CFL100 resource censors;60 SP25 fits remain**. No further CFL100 attempt/cap/batch/loss change. Required outcome coverage stays710; once SP25 succeeds,670 successes+40 censors close execution. Missing CFL100 regret is not a method win. [Censor evidence](ops/RESOURCE_CENSORED_CELLS_20261103.json), [SP25 continuation](ops/SP25_CONTINUATION_DEPLOYMENT.json), [released preparation queues](ops/COMPLETED_PREPARATION_RELEASE.json). Original deadline/allowances remain.
+
+
 The direct human scope retains **SP10/15/20/25, CFL50/100 N100 and six KP recoveries**. All SP50 preprocessing/fits/recovery and larger CFL cases/data sizes are excluded from new dispatch. Required total: **710 = SP560 + CFL144 + KP6**. Original grids, one family development seed, frozen validation-only selection, paired seeds and all scientific settings remain unchanged. Completed results and failed/scope-stopped attempts are preserved.
 
 At21:34La Paz2Nov (01:34UTC3Nov), **470/710 complete;240 remain**: SP10 done, SP15 50,SP20 50,SP25 68,CFL50 30,CFL100 40,KP2 fits remain. See [current remaining counts](ops/NO_SP50_REMAINING.json). No SP50 fit required drain; one newly active excluded builder was stopped after exact identity/dependency checks. No healthy fit was signalled and no resources added. Current allowances and the finite deadline stay fixed; a genuine resource/budget censor is reportable closeout, not authorization for escalation.

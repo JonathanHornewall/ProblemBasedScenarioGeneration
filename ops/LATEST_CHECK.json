@@ -1,51 +1,207 @@
 {
-  "SP50_builder_stop_attempts": 1,
-  "SP50_exact_stop_verified": true,
-  "SP50_stop_reconciliation": "ops/NO_SP50_FINAL_SYNC.json",
-  "active_SP50_fits": 0,
-  "by_route": {
-    "KP1000": {
-      "complete": 4,
-      "remaining": 2,
-      "required": 6
-    },
-    "dys_cfl_100x10": {
-      "complete": 0,
-      "remaining": 40,
-      "required": 40
-    },
-    "dys_cfl_50x5": {
-      "complete": 74,
-      "remaining": 30,
-      "required": 104
-    },
-    "dys_shortest_path_10x10": {
-      "complete": 260,
-      "remaining": 0,
-      "required": 260
-    },
-    "dys_shortest_path_15x15": {
-      "complete": 50,
-      "remaining": 50,
-      "required": 100
-    },
-    "dys_shortest_path_20x20": {
-      "complete": 50,
-      "remaining": 50,
-      "required": 100
-    },
-    "dys_shortest_path_25x25": {
-      "complete": 32,
-      "remaining": 68,
-      "required": 100
-    }
+  "SP25_guards": {
+    "fit_GiB": 6,
+    "node_GiB": 230,
+    "preparation_GiB": 24,
+    "resource_pool_aggregate_GiB": 96
   },
-  "completed_total": 470,
+  "accepted_resource_censors": 40,
+  "actual_effective_lifetime_cores": 8.930460626270248,
+  "actual_numeric_processes": 9,
+  "actual_processes": [
+    {
+      "CPU_seconds": 337.93,
+      "RSS_bytes": 3568562176,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151101",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_effective_cores": 0.9925150157005513,
+      "node": "node07",
+      "pid": 2261961
+    },
+    {
+      "CPU_seconds": 337.57,
+      "RSS_bytes": 2233966592,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151103",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_effective_cores": 0.9914576801409615,
+      "node": "node07",
+      "pid": 2261962
+    },
+    {
+      "CPU_seconds": 337.93,
+      "RSS_bytes": 2710147072,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151105",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_effective_cores": 0.9925150157005513,
+      "node": "node07",
+      "pid": 2261963
+    },
+    {
+      "CPU_seconds": 337.66999999999996,
+      "RSS_bytes": 3075706880,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151107",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_effective_cores": 0.9917513844630697,
+      "node": "node07",
+      "pid": 2261964
+    },
+    {
+      "CPU_seconds": 337.98,
+      "RSS_bytes": 2263379968,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151109",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_effective_cores": 0.9926618678616055,
+      "node": "node07",
+      "pid": 2261965
+    },
+    {
+      "CPU_seconds": 337.99,
+      "RSS_bytes": 2697281536,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151111",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_effective_cores": 0.9926912382938163,
+      "node": "node07",
+      "pid": 2261966
+    },
+    {
+      "CPU_seconds": 337.93,
+      "RSS_bytes": 2849894400,
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151113",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_effective_cores": 0.9925150157005513,
+      "node": "node07",
+      "pid": 2261967
+    },
+    {
+      "CPU_seconds": 337.63,
+      "RSS_bytes": 2265051136,
+      "birth_unix": 1793712646.11,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151115",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_effective_cores": 0.9916630282781982,
+      "node": "node07",
+      "pid": 2261968
+    },
+    {
+      "CPU_seconds": 337.95,
+      "RSS_bytes": 3116322816,
+      "birth_unix": 1793712646.14,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151117",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_effective_cores": 0.9926903801309437,
+      "node": "node07",
+      "pid": 2261969
+    }
+  ],
+  "applied_CPU_resource_readback": "ops/COMPLETED_PREPARATION_RELEASE.json",
+  "continuation": "ops/SP25_CONTINUATION_DEPLOYMENT.json",
+  "covered_outcomes_so_far": 650,
+  "current_allocated_CPUs": 48,
+  "current_pending_CPUs": 0,
   "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
-  "final_human_instruction": "Okay great. We complete that and nothing else.",
-  "focused_guard_check": {
+  "excluded_dispatch": [],
+  "focused_terminal_check": {
     "CFL100_uses_original_smallest_family_tuning": true,
     "KP": 6,
+    "accepted_resource_censors": 40,
+    "censors_are_scientific_successes": false,
     "counts": {
       "cfl": {
         "confirmations": 80,
@@ -63,17 +219,26 @@
     "slurm_job_id": "16223",
     "stale_runtime_guard_checked": true,
     "status": "passed",
+    "terminal_coverage_regression": "passed",
     "total_required": 710
   },
-  "healthy_fits_signalled": 0,
-  "new_CPU_allocations": 0,
-  "observed_unix": 1793669657.0868766,
-  "readback": "ops/NO_SP50_SCOPE_READBACK.json",
-  "remaining_total": 240,
-  "required_total": 710,
-  "source_commit": "1c22371",
-  "terminal_backups": [
-    "GitHub",
-    "Drive"
-  ]
+  "observed_unix": 1793713428.007132,
+  "phase_resources_released_once": [
+    16741,
+    16742,
+    16744,
+    16745,
+    16746
+  ],
+  "release_verified_absent": true,
+  "remaining_non_censored_fits": 60,
+  "remaining_ready_fits": 60,
+  "remaining_route": "dys_shortest_path_25x25",
+  "required_outcomes": 710,
+  "resource_limits_unchanged": true,
+  "snapshot": "monitor_snapshots/1793712331.json",
+  "terminal_gate_readback": "ops/TERMINAL_CENSOR_GATE_DEPLOYMENT.json",
+  "terminal_marker": "EXECUTION_OUTCOMES_COMPLETE.json",
+  "terminal_successes_if_SP25_succeeds": 670,
+  "valid_successes": 610
 }

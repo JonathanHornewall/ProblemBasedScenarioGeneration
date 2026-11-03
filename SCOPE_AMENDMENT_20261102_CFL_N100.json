@@ -11,7 +11,7 @@
     "train": 100,
     "validation": 32
   },
-  "completion_rule": "Reduced required scope plus healthy active-fit drain; excluded cells and supplementary results cannot keep monitoring alive.",
+  "completion_rule": "Required outcomes covered by valid successes plus accepted explicit resource censors, followed by active-fit drain. Censors are not scientific successes; excluded/supplementary cells cannot keep monitoring alive.",
   "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
   "effective_unix": 1793669563.943964,
   "excluded_cells": [
@@ -64,5 +64,15 @@
   ],
   "selection": "Unchanged original full16-point grids, one original smallest-family development seed, validation-only frozen selection, ten original paired confirmation seeds; no CFL100-specific tuning.",
   "snapshot_file": "ops/NO_SP50_SCOPE_SNAPSHOT.json",
+  "terminal_accounting": {
+    "accepted_resource_censors": 40,
+    "censor_evidence": "ops/RESOURCE_CENSORED_CELLS_20261103.json",
+    "missing_CFL100_regret_is_not_a_win": true,
+    "no_further_CFL100_attempts": true,
+    "required_outcomes": 710,
+    "scope_exclusions_are_not_censors": true,
+    "terminal_marker": "EXECUTION_OUTCOMES_COMPLETE.json",
+    "valid_successes_if_SP25_succeeds": 670
+  },
   "terminal_compact_backup": "Source, seeds, selected configurations, per-seed measured results and existing validation tables to GitHub and Drive, verified before remote cleanup; no weights/dense caches/raw archive project."
 }
