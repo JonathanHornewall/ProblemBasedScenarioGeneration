@@ -118,14 +118,20 @@ def advance(root):
             'recorded_owner_host':v.get('host'),'shared_status':v.get('status')})
     # Ready training comes first; missing geometry owners are a separate queue,
     # so other bank/phase work fills all usable memory and CPU slots.
-    active_scope=amendment(root);counts={'screens':224,'confirmations':580,'kp_recoveries':6,'total':810} if active_scope else {'screens':320,'confirmations':1000,'kp_recoveries':6,'total':1326}
+    active_scope=amendment(root)
+    if active_scope:
+        required=active_scope['required_counts']
+        counts={'screens':required['SP']['screens']+required['CFL']['screens'],
+            'confirmations':required['SP']['confirmations']+required['CFL']['confirmations'],
+            'kp_recoveries':required['KP']['total'],'total':required['total']}
+    else:counts={'screens':320,'confirmations':1000,'kp_recoveries':6,'total':1326}
     drain=drain_status(root);kp=kp_status(root)
     write(root/'READY.json',{'updated_unix':time.time(),'fits':ready,'preparation':prep,
         'selected_groups':len(selections),'expected_created_jobs':len(set(expected)),
         'expected_complete_scope':counts,'grandfathered_drain':drain,'KP_complete':sum(v['complete'] for v in kp),
         'admitted_routes':routes,'pending_dependencies':pending,
         'all_routes':sorted(r for r in plan['routes'] if family(r) in ('sp','cfl') and route_required(root,r))})
-    target=804 if active_scope else 1320
+    target=counts['total']-counts['kp_recoveries']
     if len(set(expected))==target and all(jid in _RECORDS and linear.successful(_RECORDS[jid]) for jid in set(expected)) and all(v['complete'] for v in kp) and not drain['active'] and not drain['unresolved']:
         write(root/'SCIENCE_COMPLETE.json',{'finished_unix':time.time(),**counts,
             'scope_amendment':active_scope['revision'] if active_scope else None,

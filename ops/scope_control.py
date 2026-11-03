@@ -7,6 +7,7 @@ def amendment(root):
  return read(path) if path.exists() else None
 def required_fit(root,job):
  a=amendment(root)
+ if a and job.get('route') in a.get('excluded_routes',[]):return False
  if not a or 'cfl' not in job.get('route',''):return True
  c=job.get('config',{});s=c.get('sizes',{})
  return (job['route'] in a['retained_cfl_routes'] and s.get('train')==100
@@ -18,6 +19,7 @@ def runtime_fit_allowed(root,job):
   and v['host']==socket.gethostname() for v in read(file))
 def preparation_maximum(root,key,maximum):
  a=amendment(root);route=key.split('__data')[0]
+ if a and route in a.get('excluded_routes',[]):return 0
  if not a or 'cfl' not in route:return maximum
  return min(maximum,100) if route in a['retained_cfl_routes'] else 0
 def retained_prefix_durable(root,key,seed):
@@ -35,6 +37,7 @@ def phase_required(root,family,phase):
  return not amendment(root) or family!='cfl' or phase['train']==100
 def route_required(root,route):
  a=amendment(root)
+ if a and route in a.get('excluded_routes',[]):return False
  return not a or 'cfl' not in route or route in a['retained_cfl_routes']
 def drain_status(root):
  root=pathlib.Path(root);path=root/'ops/SCOPE_GRANDFATHERED_FITS.json';entries=read(path) if path.exists() else []

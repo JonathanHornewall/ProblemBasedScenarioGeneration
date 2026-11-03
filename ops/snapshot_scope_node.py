@@ -2,7 +2,7 @@
 import os,pathlib,socket,time,json
 import psutil
 from qualify import read
-from scope_control import required_fit
+from scope_control import required_fit,amendment
 r=pathlib.Path('/home/jonathan.hornewall/runs/lava_completion_20261102');host=socket.gethostname()
 proof=read(r/'ops/GEOMETRY_PROVENANCE.json');workers={p.name:read(p) for p in (r/'workers').glob('*.json')}
 out={'host':host,'observed_unix':time.time(),'fits':[],'builders':[],
@@ -28,7 +28,7 @@ for proc in psutil.process_iter(['pid','cmdline','create_time','username']):
    'worker_record':owner,'status':v.get('status'),'phase':v.get('phase'),'epochs':v.get('epochs_completed',(v.get('summary')or{}).get('epochs_completed'))})
  elif '--key' in cmd:
   key=cmd[cmd.index('--key')+1];maximum=int(cmd[cmd.index('--maximum')+1]);route,data=key.split('__data')
-  if 'cfl' not in route:continue
+  if 'cfl' not in route and route not in (amendment(r)or{}).get('excluded_routes',[]):continue
   seed=int(cmd[cmd.index('--initialization-seed')+1]) if '--initialization-seed' in cmd else None
   if seed is None:
    plan=read(r/'PLAN.json');s=next((s for s in plan['cells'][route]['confirmation'] if str(s['data'])==data),plan['cells'][route]['screen']);seed=s['initialization']
