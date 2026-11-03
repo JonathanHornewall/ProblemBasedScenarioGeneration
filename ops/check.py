@@ -11,7 +11,7 @@ import json,pathlib,subprocess,time
 r=pathlib.Path('/home/jonathan.hornewall/runs/lava_completion_20261102')
 read=lambda p:json.loads(p.read_text())
 out={'observed_unix':time.time()}
-for name in ('READY.json','SCIENCE_COMPLETE.json'):
+for name in ('READY.json','SCIENCE_COMPLETE.json','EXECUTION_OUTCOMES_COMPLETE.json'):
  if (r/name).exists():
   v=read(r/name)
   if name=='READY.json':v={k:v[k] for k in v if k not in ('fits','preparation')}|{'ready_fit_count':len(v['fits']),'preparation_count':len(v['preparation'])}

@@ -63,8 +63,11 @@ if __name__=='__main__':
     if not os.environ.get('SLURM_JOB_ID') or len(os.sched_getaffinity(0))!=1:
         raise RuntimeError('Single-core Slurm fit required')
     job=json.loads(args.manifest.read_text())['jobs'][0]
-    from scope_control import runtime_fit_allowed,scope_skip
+    from scope_control import runtime_fit_allowed,scope_skip,resource_censors,censored_ids
     scope_root=Path(os.environ.get('LAVA_RUN_ROOT',Path(__file__).resolve().parents[1]))
+    if job.get('route') in resource_censors(scope_root).get('no_further_attempt_routes',[]) or job.get('id') in censored_ids(scope_root):
+        scope_skip(scope_root,'resource_budget_closed',job['id'],'Documented resource censor; no further fit attempt authorized')
+        raise SystemExit(79)
     if not runtime_fit_allowed(scope_root,job):
         scope_skip(scope_root,'fit',job['id'],'Excluded by the direct human CFL N100 amendment')
         raise SystemExit(76)

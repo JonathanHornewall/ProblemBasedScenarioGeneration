@@ -17,6 +17,11 @@ import time
 from qualify import read,write,sha
 _RECORDS={}
 
+def outcome_coverage(expected,successful,censored):
+    expected=set(expected);successful=set(successful)&expected
+    censored=(set(censored)&expected)-successful
+    return successful,censored,expected-successful-censored
+
 PHASES=[{'id':'linear_n100','train':100,'depth':0,'epochs':300,'tune':True}]+[
     {'id':f'mlp_depth{d}','train':100,'depth':d,'epochs':300,'tune':True} for d in (1,2,3)]+[
     {'id':f'linear_retune_n{n}','train':n,'validation':v,'depth':0,'epochs':300,'tune':True}
@@ -56,9 +61,9 @@ def advance(root):
     from pilot_common import SMALLEST,family
     import simplified_campaign as linear
     import frozen_nonlinear_retuning as nonlinear
-    from scope_control import amendment,phase_required,route_required,preparation_maximum,drain_status,kp_status
+    from scope_control import amendment,phase_required,route_required,preparation_maximum,drain_status,kp_status,censored_ids
     root=Path(root);plan=read(root/'PLAN.json');admission=read(root/'ADMISSION.json')
-    routes=admission['routes'];ready=[];expected=[];selections={};pending=[]
+    routes=admission['routes'];ready=[];expected=[];selections={};pending=[];censored=censored_ids(root)
     for fam in ('sp','cfl'):
         smallest=SMALLEST[fam]
         for base_phase in PHASES:
@@ -72,7 +77,7 @@ def advance(root):
             jobs=[make_job(root,plan,smallest,plan['cells'][smallest]['screen'],phase,q,'screen') for q in linear.grid('lava')]
             records=[require(root,j) for j in jobs];expected.extend(j['id'] for j in jobs)
             for j,r in zip(jobs,records):
-                if r is None:ready.append({'kind':'fit','id':j['id'],'key':j['required_data_key'],
+                if r is None and j['id']not in censored:ready.append({'kind':'fit','id':j['id'],'key':j['required_data_key'],
                     'n':j['config']['sizes']['train'],'route':j['route'],'stage':'screen'})
             selection_path=root/'selections'/phase['id']/('lava__'+fam+'.json')
             if selection_path.exists():selection=read(selection_path)
@@ -97,7 +102,7 @@ def advance(root):
                 for seed in plan['cells'][route]['confirmation']:
                     j=make_job(root,plan,route,seed,phase,selection['selected_template']['choices'],'confirmation')
                     r=require(root,j);expected.append(j['id'])
-                    if r is None and route in routes:ready.append({'kind':'fit','id':j['id'],
+                    if r is None and j['id']not in censored and route in routes:ready.append({'kind':'fit','id':j['id'],
                         'key':j['required_data_key'],'n':j['config']['sizes']['train'],'route':route,'stage':'confirmation'})
     keys=sorted({r+'__data'+str(s['data']) for r in routes for s in plan['cells'][r]['confirmation'][:admission.get('prepare_seed_limit_by_route',{}).get(r,10)]}|
         {r+'__data'+str(plan['cells'][r]['screen']['data']) for r in ('dys_shortest_path_10x10','dys_cfl_50x5')})
@@ -126,14 +131,23 @@ def advance(root):
             'kp_recoveries':required['KP']['total'],'total':required['total']}
     else:counts={'screens':320,'confirmations':1000,'kp_recoveries':6,'total':1326}
     drain=drain_status(root);kp=kp_status(root)
+    successful,accepted_censors,missing=outcome_coverage(expected,
+        {jid for jid in set(expected)if jid in _RECORDS and linear.successful(_RECORDS[jid])},censored)
     write(root/'READY.json',{'updated_unix':time.time(),'fits':ready,'preparation':prep,
         'selected_groups':len(selections),'expected_created_jobs':len(set(expected)),
         'expected_complete_scope':counts,'grandfathered_drain':drain,'KP_complete':sum(v['complete'] for v in kp),
+        'successful_SP_CFL_fits':len(successful),'resource_censored_SP_CFL_fits':len(accepted_censors),
+        'unresolved_SP_CFL_outcomes':len(missing),
         'admitted_routes':routes,'pending_dependencies':pending,
         'all_routes':sorted(r for r in plan['routes'] if family(r) in ('sp','cfl') and route_required(root,r))})
     target=counts['total']-counts['kp_recoveries']
-    if len(set(expected))==target and all(jid in _RECORDS and linear.successful(_RECORDS[jid]) for jid in set(expected)) and all(v['complete'] for v in kp) and not drain['active'] and not drain['unresolved']:
-        write(root/'SCIENCE_COMPLETE.json',{'finished_unix':time.time(),**counts,
+    if len(set(expected))==target and not missing and all(v['complete'] for v in kp) and not drain['active'] and not drain['unresolved']:
+        marker='EXECUTION_OUTCOMES_COMPLETE.json' if accepted_censors else 'SCIENCE_COMPLETE.json'
+        write(root/marker,{'finished_unix':time.time(),**counts,
+            'status':'resource_censored'if accepted_censors else'complete',
+            'successful_fits':len(successful)+len(kp),'resource_censored_fits':len(accepted_censors),
+            'required_outcomes_covered':len(successful)+len(accepted_censors)+len(kp),
+            'censored_job_ids':sorted(accepted_censors),'censors_are_scientific_successes':False,
             'scope_amendment':active_scope['revision'] if active_scope else None,
             'grandfathered_active_fits_drained':True,'excluded_cells_required':False})
 
@@ -164,7 +178,7 @@ def work(root,index):
         nonlocal stopped
         stopped=True
     signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-    while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists() and not (root/'SCIENCE_COMPLETE.json').exists():
+    while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists() and not (root/'SCIENCE_COMPLETE.json').exists() and not (root/'EXECUTION_OUTCOMES_COMPLETE.json').exists():
         queue=read(root/'READY.json') if (root/'READY.json').exists() else {'fits':[],'preparation':[]}
         chosen=None;claim=None
         # A shared completion marker does not promise that the owner's local

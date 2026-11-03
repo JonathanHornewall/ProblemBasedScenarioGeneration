@@ -1,8 +1,8 @@
 """Focused metadata-only dispatch/counting checks; no optimization or enumeration."""
 import pathlib,os,json
 from qualify import read,write
-from completion import PHASES,make_job
-from scope_control import phase_required,route_required,required_fit,preparation_maximum
+from completion import PHASES,make_job,outcome_coverage
+from scope_control import phase_required,route_required,required_fit,preparation_maximum,censored_ids,runtime_fit_allowed
 r=pathlib.Path(os.environ['LAVA_RUN_ROOT']);plan=read(r/'PLAN.json')
 from simplified_campaign import grid
 from pilot_common import family,SMALLEST
@@ -30,7 +30,17 @@ for n in (100,300,500,1000):
 assert not route_required(r,'dys_shortest_path_50x50')
 assert preparation_maximum(r,'dys_shortest_path_25x25__data151101',1000)==1000
 assert preparation_maximum(r,'dys_knapsack_1000x2__data151101',1000)==1000
+assert outcome_coverage({'ok','censor','missing'},{'ok'},{'censor'})[2]=={'missing'}
+assert not outcome_coverage({'ok','censor'},{'ok'},{'censor'})[2]
+assert outcome_coverage({'required'},set(),{'excluded'})[2]=={'required'}
+assert len(outcome_coverage({'ok'},{'ok'},{'ok'})[0])==1 and not outcome_coverage({'ok'},{'ok'},{'ok'})[1]
+declared=censored_ids(r);assert len(declared)==40
+for jid in declared:
+ job=read(r/'jobs'/(jid+'.json'))['jobs'][0]
+ assert job['route']=='dys_cfl_100x10' and job['config']['sizes']=={'train':100,'validation':32,'test':100}
+ assert required_fit(r,job) and not runtime_fit_allowed(r,job)
 out={'status':'passed','counts':counts,'KP':6,'total_required':710,'neighbor_enumerations':0,
  'scientific_fits':0,'CFL100_uses_original_smallest_family_tuning':True,'original_seed_configurations_preserved':True,
  'stale_runtime_guard_checked':True,'preparation_caps_checked':True,'slurm_job_id':os.environ['SLURM_JOB_ID']}
+out.update({'accepted_resource_censors':40,'terminal_coverage_regression':'passed','censors_are_scientific_successes':False})
 write(r/'ops/SCOPE_DISPATCH_CHECK.json',out);print(json.dumps(out))

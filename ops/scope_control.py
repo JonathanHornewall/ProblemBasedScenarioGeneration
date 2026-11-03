@@ -5,6 +5,12 @@ NAME='SCOPE_AMENDMENT_20261102_CFL_N100.json'
 def amendment(root):
  path=pathlib.Path(root)/NAME
  return read(path) if path.exists() else None
+def resource_censors(root):
+ path=pathlib.Path(root)/'ops/RESOURCE_CENSORED_CELLS_20261103.json'
+ return read(path) if path.exists() else {}
+def censored_ids(root):
+ value=resource_censors(root)
+ return {v['id']for v in value.get('attempts',[])}if value.get('status')=='resource_censored' else set()
 def required_fit(root,job):
  a=amendment(root)
  if a and job.get('route') in a.get('excluded_routes',[]):return False
@@ -13,6 +19,8 @@ def required_fit(root,job):
  return (job['route'] in a['retained_cfl_routes'] and s.get('train')==100
   and s.get('validation')==32 and s.get('test')==100 and c.get('model',{}).get('depth') in (0,1,2,3))
 def runtime_fit_allowed(root,job):
+ if job.get('route') in resource_censors(root).get('no_further_attempt_routes',[]):return False
+ if job.get('id') in censored_ids(root):return False
  if required_fit(root,job):return True
  file=pathlib.Path(root)/'ops/SCOPE_GRANDFATHERED_FITS.json'
  return file.exists() and any(v['id']==job['id'] and v['pid']==os.getpid()

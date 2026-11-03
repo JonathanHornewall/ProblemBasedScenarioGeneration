@@ -11,5 +11,5 @@ with (root/'ops/coordinator.lock').open('a') as lock:
  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
  write(root/'ops/COORDINATOR_ACTIVE.json',{'pid':os.getpid(),'host':os.uname().nodename,'started_unix':time.time(),
   'slurm_job_id':os.environ['SLURM_JOB_ID'],'fresh_receipt_cache':True})
- while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists():
+ while not stopped and time.time()<deadline and not (root/'ops/MONITOR_CLOSED.json').exists() and not (root/'SCIENCE_COMPLETE.json').exists() and not (root/'EXECUTION_OUTCOMES_COMPLETE.json').exists():
   advance(root);time.sleep(10)
