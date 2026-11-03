@@ -1,7 +1,7 @@
 """Reload scoped metadata accounting, reconcile, then reopen retained CFL cells."""
 import pathlib,time,subprocess,json
 from qualify import read,write
-from scope_control import required_fit,drain_status,kp_status,amendment
+from scope_control import required_fit,drain_status,kp_status,amendment,censored_ids
 r=pathlib.Path('/home/jonathan.hornewall/runs/lava_completion_20261102')
 assert read(r/'ops/SCOPE_DISPATCH_CHECK.json')['status']=='passed'
 required=amendment(r)['required_counts'];total=required['total']
@@ -11,18 +11,21 @@ p=subprocess.run(['srun','--overlap','--jobid=16223','--nodelist=node09','--ntas
  '/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python',str(r/'ops/stop_current_coordinator.py')],capture_output=True,text=True,timeout=22)
 if p.returncode:raise RuntimeError(p.stderr+p.stdout)
 log=(r/'logs/coordinator-current.out').open('ab')
+not_before=time.time()
 child=subprocess.Popen(['srun','--overlap','--jobid=16223','--nodelist=node09','--ntasks=1','--cpus-per-task=1',
  '--cpu-bind=cores','bash',str(r/'ops/coordinator_env.sh'),str(r)],stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
 deadline=time.monotonic()+20;ready=None
 while time.monotonic()<deadline:
  v=read(r/'READY.json')
- if v.get('expected_complete_scope',{}).get('total')==total:
+ if (v.get('expected_complete_scope',{}).get('total')==total and v.get('updated_unix',0)>=not_before
+     and v.get('resource_censored_SP_CFL_fits',0)==len(censored_ids(r))):
   ready=v;break
  time.sleep(.25)
 if ready is None:raise RuntimeError('Scoped READY not observed; CFL hold remains for reconciliation')
 excluded=[]
 for item in ready['fits']:
  if not required_fit(r,read(r/'jobs'/(item['id']+'.json'))['jobs'][0]):excluded.append(item['id'])
+ if item['id'] in censored_ids(r):raise RuntimeError('Censored fit remained dispatchable')
 if excluded:raise RuntimeError('Excluded fit entered scoped READY; hold remains')
 hold=r/'ops/HOLD_CFL_COORDINATOR_REFRESH.json'
 if hold.exists():hold.rename(r/'ops/resolved_holds'/('scope_N100__'+str(time.time_ns())+'.json'))
@@ -52,6 +55,9 @@ for file in (r/'results/receipts').glob('*.json'):
   by_route[job['route']]=by_route.get(job['route'],0)+1
  else:supplementary+=1
 out={'observed_unix':time.time(),'required_counts':{'SP':required['SP']['total'],'CFL':required['CFL']['total'],'KP':required['KP']['total'],'total':total},'valid_required_completed':counts,'valid_required_completed_by_route':by_route,
+ 'accepted_resource_censors':ready.get('resource_censored_SP_CFL_fits',0),
+ 'unresolved_SP_CFL_outcomes':ready.get('unresolved_SP_CFL_outcomes'),
+ 'ready_fit_count':len(ready['fits']),
  'completed_total':sum(counts.values()),'valid_completed_supplementary':supplementary,'unresolved_completed_records':unresolved,
  'superseded_RNG_originals':len(bad),'excluded_new_dispatch':excluded,'CFL_allowed_in_READY':sorted(set((v['route'],v['n'])for v in ready['fits']if 'cfl' in v['route'])),
  'grandfathered_drain':drain_status(r),'retained_holds_released':released,'new_CPU_allocations_for_reload':0,
