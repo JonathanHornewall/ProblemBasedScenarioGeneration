@@ -16,8 +16,7 @@
     "dys_cfl_50x5": 100,
     "dys_shortest_path_15x15": 1000,
     "dys_shortest_path_20x20": 1000,
-    "dys_shortest_path_25x25": 100,
-    "dys_shortest_path_50x50": 100
+    "dys_shortest_path_25x25": 100
   },
   "prepare_seed_limit_by_route": {},
   "resource_recovery_failure_sha256": {
@@ -58,11 +57,10 @@
     "dys_shortest_path_15x15",
     "dys_shortest_path_20x20",
     "dys_shortest_path_25x25",
-    "dys_shortest_path_50x50",
     "dys_cfl_50x5",
     "dys_cfl_100x10"
   ],
-  "scope_amendment": "cfl_n100_only_20261102",
+  "scope_amendment": "cfl_n100_no_SP50_20261103",
   "sp15_expansion": {
     "admitted_unix": 1793649940.3986588,
     "inference": "10x extrapolation ~2.75h/1000-bank and0.45GB/bank, before contingency; ten banks fit remaining151h and actual >300GB scratch headroom. Not a bound; retain existing per-bank wall/RSS/storage guards.",

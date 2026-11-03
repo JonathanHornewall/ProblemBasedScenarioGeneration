@@ -1,6 +1,6 @@
 # Observed CFL resource costs
 
-The active scope is CFL50/100 at N100 only. Larger cases and data sizes are excluded by the human amendment; their completed/failed resource attempts remain evidence and are never ranked as missing-method losses. No new qualification or enumeration was run to compile this table.
+The active CFL scope is CFL50/100 at N100 only; SP50 has also been excluded from new work by the subsequent human amendment. Larger cases and data sizes are excluded by the human amendment; their completed/failed resource attempts remain evidence and are never ranked as missing-method losses. No new qualification or enumeration was run to compile this table.
 
 Wall/CPU columns are minutes. RSS is RAM; geometry/pickle columns are disk GiB. Prefix clocks are constructor clocks at a completed prefix; whole-attempt clocks include imports/replay and must not be added to those cumulative prefix clocks. Shared construction is charged once per exact bank, never once per fit. All interrupted/replay attempts remain separately recorded.
 
@@ -17,6 +17,7 @@ Wall/CPU columns are minutes. RSS is RAM; geometry/pickle columns are disk GiB. 
 | Unseeded CFL50 paired attempt; data151101; node09 | 887.50 | 882.79 | 2.25 | 1.38 committed raw | Stopped for seed-provenance repair |
 | Seeded CFL50 larger suffix; init161101; node09 | 133.35 | 132.78 | 2.26 | 1.38 committed raw | Scope-stopped; N100 input durable |
 | Seeded CFL100 N100; init161101; node09 | 121.12 | 120.67 | 48.45 | Not sampled at censor | Memory-censored at48GiB;96GiB recovery provisioned |
+| Scope-stopped SP50 N100 preparation; data151107/init161107; node07 | 10.34 | 10.22 | 78.88 | Completed/partial files preserved | Human scope stop; no N100 prefix or dependent healthy fit |
 | CFL50 N100 screen fitting (64 valid fits); original seeds; nodes07/09 | 23.02–36.13 | 22.95–36.02 | 3.52–3.58 | Shared geometry above | 300epochs complete; RSS is whole-fit peak |
 | CFL50 N100 confirmation fitting (8 valid fits); original seeds; nodes07/09 | 21.75–25.23 | 21.68–25.15 | 2.99–3.96 | Shared geometry above | 300epochs complete; RSS is whole-fit peak |
 | Superseded CFL50 screen fitting (7 attempts); node07 | 24.04–24.59 | 23.96–24.51 | 3.85–3.89 | Shared geometry | Measured costs retained; scientific results superseded |

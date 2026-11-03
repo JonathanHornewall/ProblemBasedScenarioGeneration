@@ -1,0 +1,72 @@
+{
+  "SP50_builder_stop_attempts": 1,
+  "active_SP50_fits": 0,
+  "by_route": {
+    "KP1000": {
+      "complete": 4,
+      "remaining": 2,
+      "required": 6
+    },
+    "dys_cfl_100x10": {
+      "complete": 0,
+      "remaining": 40,
+      "required": 40
+    },
+    "dys_cfl_50x5": {
+      "complete": 74,
+      "remaining": 30,
+      "required": 104
+    },
+    "dys_shortest_path_10x10": {
+      "complete": 260,
+      "remaining": 0,
+      "required": 260
+    },
+    "dys_shortest_path_15x15": {
+      "complete": 50,
+      "remaining": 50,
+      "required": 100
+    },
+    "dys_shortest_path_20x20": {
+      "complete": 50,
+      "remaining": 50,
+      "required": 100
+    },
+    "dys_shortest_path_25x25": {
+      "complete": 32,
+      "remaining": 68,
+      "required": 100
+    }
+  },
+  "completed_total": 470,
+  "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+  "focused_guard_check": {
+    "CFL100_uses_original_smallest_family_tuning": true,
+    "KP": 6,
+    "counts": {
+      "cfl": {
+        "confirmations": 80,
+        "screens": 64
+      },
+      "sp": {
+        "confirmations": 400,
+        "screens": 160
+      }
+    },
+    "neighbor_enumerations": 0,
+    "original_seed_configurations_preserved": true,
+    "preparation_caps_checked": true,
+    "scientific_fits": 0,
+    "slurm_job_id": "16223",
+    "stale_runtime_guard_checked": true,
+    "status": "passed",
+    "total_required": 710
+  },
+  "healthy_fits_signalled": 0,
+  "new_CPU_allocations": 0,
+  "observed_unix": 1793669657.0868766,
+  "readback": "ops/NO_SP50_SCOPE_READBACK.json",
+  "remaining_total": 240,
+  "required_total": 710,
+  "source_commit": "1c22371"
+}

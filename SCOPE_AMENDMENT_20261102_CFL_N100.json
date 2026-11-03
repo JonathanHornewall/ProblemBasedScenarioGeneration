@@ -22,6 +22,8 @@
   "excluded_routes": [
     "dys_shortest_path_50x50"
   ],
+  "final_authorization_scope": "Only SP10/15/20/25 retained original N/depths, CFL50/100 N100, six exact KP recoveries; no added scope or resource/deadline increases.",
+  "final_human_instruction": "Okay great. We complete that and nothing else.",
   "grandfathered_active_fit_ids": [],
   "grandfathered_active_fits_file": "ops/SCOPE_GRANDFATHERED_FITS.json",
   "grandfathered_count": 0,
@@ -61,5 +63,6 @@
     }
   ],
   "selection": "Unchanged original full16-point grids, one original smallest-family development seed, validation-only frozen selection, ten original paired confirmation seeds; no CFL100-specific tuning.",
-  "snapshot_file": "ops/NO_SP50_SCOPE_SNAPSHOT.json"
+  "snapshot_file": "ops/NO_SP50_SCOPE_SNAPSHOT.json",
+  "terminal_compact_backup": "Source, seeds, selected configurations, per-seed measured results and existing validation tables to GitHub and Drive, verified before remote cleanup; no weights/dense caches/raw archive project."
 }
