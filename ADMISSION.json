@@ -16,7 +16,7 @@
     "dys_cfl_50x5": 100,
     "dys_shortest_path_15x15": 1000,
     "dys_shortest_path_20x20": 1000,
-    "dys_shortest_path_25x25": 100
+    "dys_shortest_path_25x25": 1000
   },
   "prepare_seed_limit_by_route": {},
   "resource_recovery_failure_sha256": {
@@ -78,5 +78,23 @@
     "max_N100_wall_seconds": 2489.5005866363645,
     "projected_total_vertex_bytes_at_10x": 8795088000,
     "projection_is_not_a_bound": true
+  },
+  "sp25_expansion": {
+    "continued_maximum": 1000,
+    "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+    "existing_fit_GiB": 6,
+    "existing_node_GiB": 230,
+    "existing_preparation_GiB": 24,
+    "finite_preparation_seconds": 86400,
+    "guard": "Unchanged24GiB preparation,6GiB fit,230GiB node and original96GiB resource-pool aggregate; original disk30GiB reserve and finite wall/cutoff.",
+    "max_observed_N100_wall_seconds": 5624.223287638277,
+    "new_CPU_allocations": 0,
+    "original_banks": 10,
+    "original_maximum": 100,
+    "projected_N1000_wall_seconds_per_bank": 56242.23287638277,
+    "projected_additional_vertex_bytes": 11752502400,
+    "projection_is_not_a_bound": true,
+    "scientific_parameters_changed": false,
+    "started_unix": 1793712626.256473
   }
 }
