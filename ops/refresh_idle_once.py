@@ -9,12 +9,13 @@ import psutil
 from qualify import read,write
 
 root=pathlib.Path(os.environ['LAVA_RUN_ROOT']);host=socket.gethostname();job=os.environ['SLURM_JOB_ID']
-receipt=root/'ops'/('IDLE_REFRESH_ONCE_'+job+'_CFL50_6GiB.json')
+label=os.environ.get('LAVA_IDLE_REFRESH_LABEL','CFL50_6GiB')
+receipt=root/'ops'/('IDLE_REFRESH_ONCE_'+job+'_'+label+'.json')
 if receipt.exists():raise RuntimeError('Refresh already attempted; reconcile its receipt')
 deadline=read(root/'CONTRACT.json')['scientific_cutoff_unix']
 if time.time()>=deadline:raise RuntimeError('Scientific cutoff passed')
 record={'started_unix':time.time(),'host':host,'slurm_job_id':job,'refreshed':[],'preserved':[],
-        'new_CPU_allocations':0,'reason':'Measured CFL50 N100 fit reservation12 to6GiB'}
+        'new_CPU_allocations':0,'reason':os.environ.get('LAVA_IDLE_REFRESH_REASON','Measured CFL50 N100 fit reservation12 to6GiB')}
 write(receipt,record)
 children=[]
 for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
@@ -24,7 +25,8 @@ for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
     try:
         proc=psutil.Process(v['pid']);cmd=proc.cmdline()
         if len(cmd)<2 or cmd[1]!=str(root/'ops/completion.py') or '--worker' not in cmd:continue
-        if proc.environ().get('SLURM_JOB_ID')!=job:raise RuntimeError('Worker allocation differs')
+        prior_env=proc.environ()
+        if prior_env.get('SLURM_JOB_ID')!=job:raise RuntimeError('Worker allocation differs')
         cores=proc.cpu_affinity();birth=proc.create_time()
         if len(cores)!=1:raise RuntimeError('Single bound core required')
         proc.send_signal(signal.SIGSTOP);paused=True
@@ -44,11 +46,17 @@ for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
         # No scientific process exists or can be created by this stopped idle
         # worker. Killing only that process releases its claims atomically.
         proc.kill();paused=False
+        child_env=os.environ.copy()
+        for key in ('LAVA_NODE_MEMORY_GIB','LAVA_POOL_MEMORY_GIB'):
+            if key in prior_env:child_env[key]=prior_env[key]
+            else:child_env.pop(key,None)
         child=subprocess.Popen(['taskset','-c',str(cores[0]),sys.executable,str(root/'ops/completion.py'),
-                                '--root',str(root),'--worker',index],start_new_session=True)
+                                '--root',str(root),'--worker',index],start_new_session=True,env=child_env)
         children.append(child)
         record['refreshed'].append({'index':index,'old_pid':proc.pid,'old_birth_unix':birth,
-                                    'new_pid':child.pid,'core':cores[0]})
+                                    'new_pid':child.pid,'core':cores[0],
+                                    'preserved_pool_memory_GiB':prior_env.get('LAVA_POOL_MEMORY_GIB'),
+                                    'preserved_node_memory_GiB':prior_env.get('LAVA_NODE_MEMORY_GIB')})
         write(receipt,record)
     except psutil.NoSuchProcess:pass
     finally:
