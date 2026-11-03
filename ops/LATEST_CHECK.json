@@ -1,0 +1,76 @@
+{
+  "CFL50_live_claims": [
+    {
+      "gib": 6.0,
+      "id": "lava_complete__13e5633a7a9a17703f89170604d00d3d",
+      "token": "node07.cluster.local_12_16726",
+      "train": 100,
+      "worker_pid": 1639090
+    },
+    {
+      "gib": 6.0,
+      "id": "lava_complete__b076fe84da3c797c10f911680b5f7a8e",
+      "token": "node07.cluster.local_20_16726",
+      "train": 100,
+      "worker_pid": 1639092
+    }
+  ],
+  "active_types": {
+    "fit": 6,
+    "prepare": 20
+  },
+  "aggregate_current_RSS_bytes_across_nodes": 274271391744,
+  "allocated_running_CPUs": 54,
+  "completed_total": 441,
+  "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+  "diagnosis": "Live6GiB CFL50 handoff verified. Node07 reserves204/230GiB; remaining26GiB cannot admit a32GiB CFL50 bank or96GiB CFL100/SP50 bank. Six SP25 N100 builders remain healthy; four are80\u201390/100. Node09 reserves222/230GiB and all16 pool workers are occupied. No additional CPUs or lower unmeasured bank limits.",
+  "effective_lifetime_cores": 25.842,
+  "natural_boundary_handoffs": 3,
+  "new_failures_since_prior_check": {},
+  "node_CPU_RSS": {
+    "node07.cluster.local": {
+      "current_RSS_bytes": 74563682304,
+      "effective_lifetime_cores": 8.961,
+      "observed_numerical_processes": 9
+    },
+    "node08.cluster.local": {
+      "current_RSS_bytes": 61072457728,
+      "effective_lifetime_cores": 0.9940000000000001,
+      "observed_numerical_processes": 1
+    },
+    "node09.cluster.local": {
+      "current_RSS_bytes": 138635251712,
+      "effective_lifetime_cores": 15.887,
+      "observed_numerical_processes": 16
+    }
+  },
+  "node_reservations": {
+    "node07": {
+      "available_GiB": 173.60039901733398,
+      "reserved_GiB": 204.0,
+      "scratch_available_GiB": 339.15367126464844
+    },
+    "node09": {
+      "available_GiB": 122.32992172241211,
+      "reserved_GiB": 222.0,
+      "scratch_available_GiB": 208.25537490844727
+    }
+  },
+  "observed_numerical_processes": 26,
+  "observed_unix": 1793664735.4765892,
+  "observed_utc": "2026-11-03T00:12:15.476589+00:00",
+  "pending_CPUs": 0,
+  "ready_fits": 367,
+  "remaining_total": 369,
+  "required_total": 810,
+  "reservations_receipt": "ops/HEARTBEAT_20261103_0011_RESERVATIONS.json",
+  "scientific_mutations_this_check": 0,
+  "snapshot": "monitor_snapshots/1793664735.json",
+  "successful_fits_rerun": 0,
+  "valid_required_complete": {
+    "CFL": 72,
+    "KP": 4,
+    "SP": 365
+  },
+  "validation_selection_groups": 14
+}
