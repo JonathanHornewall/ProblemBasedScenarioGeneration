@@ -1,5 +1,5 @@
 {
-  "CPU_interval_seconds": 5.060412645339966,
+  "CPU_interval_seconds": 5.05180811882019,
   "SP25_admission_GiB": {
     "fit": 3,
     "preparation": 16
@@ -10,19 +10,82 @@
     "preparation_GiB": 24,
     "resource_pool_aggregate_GiB": 96
   },
-  "SP25_successes": 52,
+  "SP25_seeded_banks_complete": 9,
+  "SP25_successes": 76,
   "accepted_resource_censors": 40,
-  "actual_RSS_total_bytes": 94171144192,
-  "actual_builders": 10,
-  "actual_effective_interval_cores": 30.598295208712422,
-  "actual_fits": 21,
-  "actual_numeric_processes": 31,
-  "before_allocated_CPUs": 48,
-  "before_builders": 9,
-  "before_fits": 2,
-  "before_numeric_processes": 11,
+  "actual_RSS_total_bytes": 29104734208,
+  "actual_builders": 1,
+  "actual_effective_interval_cores": 20.808391278438453,
+  "actual_fits": 20,
+  "actual_numeric_processes": 21,
+  "applied_repair": "ops/WORKER_SERVICE_REPAIR_APPLIED_20261104.json",
+  "blocked_prefix_dependencies": [
+    {
+      "id": "lava_complete__60a58add52449a8aa9724503d8a70c4f",
+      "key": "dys_shortest_path_25x25__data151119",
+      "kind": "fit",
+      "n": 500,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    },
+    {
+      "id": "lava_complete__8e7532e0ff198c9c64879bbf7e2247c3",
+      "key": "dys_shortest_path_25x25__data151119",
+      "kind": "fit",
+      "n": 1000,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    },
+    {
+      "id": "lava_complete__1b758ae1cb9ca00eb74a5ec3dad81c1a",
+      "key": "dys_shortest_path_25x25__data151119",
+      "kind": "fit",
+      "n": 500,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    },
+    {
+      "id": "lava_complete__d64233e03f05e34d6d92d140e7ba4e65",
+      "key": "dys_shortest_path_25x25__data151119",
+      "kind": "fit",
+      "n": 1000,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    }
+  ],
   "censors_are_scientific_successes": false,
-  "compact_node09_verified": "ops/NODE09_COMPACT_LOCAL_VERIFIED_20261104.json",
+  "completed_fit_costs": {
+    "300": {
+      "elapsed_wall_seconds": [
+        4707.032497741282,
+        5297.176392290741
+      ],
+      "fits": 18,
+      "peak_rss_bytes": [
+        1738846208,
+        1813245952
+      ],
+      "process_cpu_seconds": [
+        4688.4373319999995,
+        5274.080298
+      ]
+    },
+    "500": {
+      "elapsed_wall_seconds": [
+        7918.3303015343845,
+        8798.79233711958
+      ],
+      "fits": 18,
+      "peak_rss_bytes": [
+        1771442176,
+        1840672768
+      ],
+      "process_cpu_seconds": [
+        7885.162066,
+        8768.877837
+      ]
+    }
+  },
   "coordinator": {
     "fresh_receipt_cache": true,
     "host": "node07.cluster.local",
@@ -30,24 +93,30 @@
     "slurm_job_id": "16726",
     "started_unix": 1793756489.3643343
   },
-  "coordinator_reserved_core": 46,
-  "covered_outcomes_so_far": 662,
+  "covered_outcomes_so_far": 686,
   "current_allocated_CPUs": 32,
-  "current_node_admission_GiB": 223.0,
   "current_pending_CPUs": 0,
-  "current_resource_pool_admission_GiB": 89.0,
   "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
-  "evidence": "ops/SP25_NODE07_AFTER_RELEASE_20261104.json",
-  "guard_limits_unchanged": true,
-  "healthy_numerical_children_signalled": 0,
-  "host_available_bytes": 169656922112,
+  "distinct_interrupted_fit_IDs": 9,
+  "healthy_processes_checked": 20,
+  "healthy_processes_signalled": 0,
+  "heartbeat_trigger_utc": "2026-11-04T05:22:06.225Z",
+  "host_available_bytes": 202015830016,
+  "initial_check_new_failed_attempts": [],
+  "interrupted_CPU_seconds_lower_bound": 11268.47,
+  "interrupted_attempt_evidence": "recovery/worker_step_loss",
+  "interrupted_terminal_rusage_unavailable": true,
+  "last_bank_samples_at_initial_0523_check": 330,
+  "last_original_seed": 151119,
+  "live_worker_slots": 31,
+  "memory_admission_GiB": 76.0,
   "new_allocations": 0,
-  "new_failed_attempts_at_applied_verification": [],
-  "node09_release": "ops/NODE09_RELEASE_20261104.json",
-  "observed_La_Paz": "2026-11-03T21:46:08.388680-04:00",
-  "observed_unix": 1793756768.3886795,
-  "observed_utc": "2026-11-04T01:46:08.388680+00:00",
-  "old_healthy_children_continued": 11,
+  "no_new_science_settings": true,
+  "no_successful_fit_rerun": true,
+  "notification": "Material worker-service fault repaired; one report to Main, no reply loop.",
+  "observed_La_Paz": "2026-11-04T01:36:03.306986-04:00",
+  "observed_unix": 1793770563.306986,
+  "observed_utc": "2026-11-04T05:36:03.306986+00:00",
   "phase_resources_released_once": [
     16741,
     16742,
@@ -55,19 +124,36 @@
     16745,
     16746
   ],
+  "reconciled_interrupted_attempts": 11,
   "release_verified_absent": true,
   "released_idle_control_jobs": [
     16223
   ],
-  "remaining_non_censored_fits": 48,
-  "remaining_ready_fits": 48,
+  "remaining_non_censored_fits": 24,
   "remaining_route": "dys_shortest_path_25x25",
   "required_outcomes": 710,
   "required_terminal_marker": "EXECUTION_OUTCOMES_COMPLETE.json",
+  "resource_pool_admission_GiB": 28.0,
+  "restoration_services": [
+    {
+      "job": "16740",
+      "pid": 2286462,
+      "status": "sleeping",
+      "step": "8"
+    },
+    {
+      "job": "16726",
+      "pid": 2286465,
+      "status": "sleeping",
+      "step": "33"
+    }
+  ],
+  "restored_dead_slots": 11,
   "same_finite_heartbeat_preserved": true,
   "scientific_cutoff_utc": "2026-11-09T03:57:29.088834+00:00",
-  "scientific_protocol_changed": false,
-  "state": "healthy_in_progress_after_authorized_admission_correction",
+  "snapshot": "monitor_snapshots/1793769780.json",
+  "state": "healthy_after_diagnosed_worker_service_repair",
   "terminal_successes_if_SP25_succeeds": 670,
-  "valid_successes": 622
+  "unstarted_dispatchable": [],
+  "valid_successes": 646
 }

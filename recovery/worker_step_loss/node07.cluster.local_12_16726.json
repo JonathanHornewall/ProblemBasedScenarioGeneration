@@ -1,0 +1,53 @@
+{
+  "CPU_seconds_lower_bound": 2207.6899999999996,
+  "RSS_peak_bytes_lower_bound": 1787138048,
+  "core": 24,
+  "dead_child_pid": 2282886,
+  "dead_worker_pid": 2282883,
+  "handoff": {
+    "core": 24,
+    "healthy_active_fits_signalled": 0,
+    "host": "node07.cluster.local",
+    "new_CPU_allocations": 0,
+    "new_reservation_GiB": 3,
+    "new_worker_pid": 2282883,
+    "observed_unix": 1793761625.490315,
+    "old_reservation_GiB": 6,
+    "old_worker_birth_unix": 1793712625.89,
+    "old_worker_pid": 2261919,
+    "scientific_fit_started": false,
+    "slurm_job_id": "16726",
+    "state": "exec_current_worker",
+    "unstarted_job_id": "lava_complete__a423fdb0fd8669a1de9c02b9679a2f4b",
+    "worker_index": "12"
+  },
+  "index": "12",
+  "interrupted_fit_id": "lava_complete__84cda8200ae1474c4219cbdf440a9451",
+  "job": "16726",
+  "last_heartbeat_unix": 1793763841.66099,
+  "no_canonical_failure_written_over_healthy_replacement": true,
+  "original_step": "19",
+  "process_CPU_seconds_lower_bound": 2207.6899999999996,
+  "sampled_RSS_peak_bytes_lower_bound": 1787138048,
+  "status": "interrupted_by_step_lifetime",
+  "successful_fit_rerun": false,
+  "terminal_returncode_observed": false,
+  "token": "node07.cluster.local_12_16726",
+  "worker_snapshot": {
+    "actual_process_cpu_seconds": 2207.6899999999996,
+    "item": {
+      "id": "lava_complete__84cda8200ae1474c4219cbdf440a9451",
+      "key": "dys_shortest_path_25x25__data151113",
+      "kind": "fit",
+      "n": 1000,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    },
+    "pid": 2282886,
+    "rss_bytes": 1787138048,
+    "slurm_job_id": "16726",
+    "state": "active",
+    "updated_unix": 1793763841.66099,
+    "worker_pid": 2282883
+  }
+}

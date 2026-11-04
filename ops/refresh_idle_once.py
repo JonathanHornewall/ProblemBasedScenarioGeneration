@@ -76,6 +76,7 @@ for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
 record['finished_unix']=time.time();write(receipt,record);print(json.dumps(record),flush=True)
 # Keep these workers in their original finite Slurm step; they retain their
 # own cutoff and per-fit guards. This is a dispatcher process, not chat polling.
-while time.time()<deadline and any(c.poll() is None for c in children):time.sleep(5)
+from worker_service import keep_step_alive
+keep_step_alive(root,deadline,children)
 for child in children:
     if child.poll() is None:child.terminate()

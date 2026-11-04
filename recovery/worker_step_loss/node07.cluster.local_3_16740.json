@@ -1,0 +1,53 @@
+{
+  "CPU_seconds_lower_bound": 0.0,
+  "RSS_peak_bytes_lower_bound": 0,
+  "core": 54,
+  "dead_child_pid": 2283105,
+  "dead_worker_pid": 2283104,
+  "handoff": {
+    "core": 54,
+    "healthy_active_fits_signalled": 0,
+    "host": "node07.cluster.local",
+    "new_CPU_allocations": 0,
+    "new_reservation_GiB": 3,
+    "new_worker_pid": 2283104,
+    "observed_unix": 1793761890.6149204,
+    "old_reservation_GiB": 6,
+    "old_worker_birth_unix": 1793712625.89,
+    "old_worker_pid": 2261918,
+    "scientific_fit_started": false,
+    "slurm_job_id": "16740",
+    "state": "exec_current_worker",
+    "unstarted_job_id": "lava_complete__455a5a06f33fa2b0f4cbaa3c554af73b",
+    "worker_index": "3"
+  },
+  "index": "3",
+  "interrupted_fit_id": "lava_complete__455a5a06f33fa2b0f4cbaa3c554af73b",
+  "job": "16740",
+  "last_heartbeat_unix": 1793761890.6794379,
+  "no_canonical_failure_written_over_healthy_replacement": true,
+  "original_step": "5",
+  "process_CPU_seconds_lower_bound": 0.0,
+  "sampled_RSS_peak_bytes_lower_bound": 0,
+  "status": "interrupted_by_step_lifetime",
+  "successful_fit_rerun": false,
+  "terminal_returncode_observed": false,
+  "token": "node07.cluster.local_3_16740",
+  "worker_snapshot": {
+    "actual_process_cpu_seconds": 0.0,
+    "item": {
+      "id": "lava_complete__455a5a06f33fa2b0f4cbaa3c554af73b",
+      "key": "dys_shortest_path_25x25__data151115",
+      "kind": "fit",
+      "n": 1000,
+      "route": "dys_shortest_path_25x25",
+      "stage": "confirmation"
+    },
+    "pid": 2283105,
+    "rss_bytes": 0,
+    "slurm_job_id": "16740",
+    "state": "active",
+    "updated_unix": 1793761890.6794379,
+    "worker_pid": 2283104
+  }
+}
