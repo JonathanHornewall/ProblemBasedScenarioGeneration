@@ -1,0 +1,45 @@
+{
+  "attempted_unix": 1793762960.3228593,
+  "same_job_id": 17476,
+  "previous_process_wall_seconds": 4.181127946823835,
+  "previous_process_CPU_seconds": 3.176916543,
+  "previous_allocation_wall_seconds": 6,
+  "new_hard_wall_seconds": 285,
+  "aggregate_allocation_wall_cap_seconds": 291,
+  "correction": "Expose float32 in diagnostic-only Torch proxy; syntax already checked",
+  "source_sha256": "687d0cb51eadd1df054876bf0cebf3876bfe16e1f853bf2978b64462f2e09283",
+  "steps": [
+    {
+      "command": [
+        "scontrol",
+        "requeuehold",
+        "17476"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "scontrol",
+        "update",
+        "JobId=17476",
+        "TimeLimit=00:04:45"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "scontrol",
+        "release",
+        "17476"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "state": "same_job_resumed_with_reduced_remaining_budget"
+}

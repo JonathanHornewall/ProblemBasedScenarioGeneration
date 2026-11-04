@@ -1,0 +1,21 @@
+{
+  "observed_unix": 1793763201.712217,
+  "state": "diagnostic_complete_resource_released",
+  "job_id": 17476,
+  "same_job_restarts": 1,
+  "source_sha256": "687d0cb51eadd1df054876bf0cebf3876bfe16e1f853bf2978b64462f2e09283",
+  "raw_timing_sha256": "7fee1169e2f2d0ddbeb9a4d7fbba257b8020bb53f5eff10f8ace200db595addc",
+  "queue": "",
+  "scheduler_state": "JobId=17476 JobName=lava_loader_profile_20261104 UserId=jonathan.hornewall(758227476) GroupId=utilisateurs du domaine(758200513) MCS_label=N/A Priority=1 Nice=10000 Account=(null) QOS=normal JobState=COMPLETED Reason=None Dependency=(null) Requeue=1 Restarts=1 BatchFlag=1 Reboot=0 ExitCode=0:0 RunTime=00:00:34 TimeLimit=00:05:00 TimeMin=N/A SubmitTime=2026-11-04T04:29:20 EligibleTime=2026-11-04T04:31:21 AccrueTime=2026-11-04T04:31:21 StartTime=2026-11-04T04:31:33 EndTime=2026-11-04T04:32:07 Deadline=N/A PreemptEligibleTime=2026-11-04T04:31:33 PreemptTime=None SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-11-04T04:31:33 Scheduler=Backfill Partition=defq-gpu AllocNode:Sid=master01-hpc:1490102 ReqNodeList=node07 ExcNodeList=(null) NodeList=node07 BatchHost=node07 NumNodes=1 NumCPUs=1 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:1 ReqTRES=cpu=1,mem=6G,node=1,billing=1 AllocTRES=cpu=1,node=1,billing=1 Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=* MinCPUsNode=1 MinMemoryNode=6G MinTmpDiskNode=0 Features=(null) DelayBoot=00:00:00 OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null) Command=(null) WorkDir=/home/jonathan.hornewall StdErr=/home/jonathan.hornewall/runs/lava_completion_20261102/ops/loader_profile_20261104/slurm.err StdIn=/dev/null StdOut=/home/jonathan.hornewall/runs/lava_completion_20261102/ops/loader_profile_20261104/slurm.out Power= TresPerTask=cpu:1 \n",
+  "accounting": "JobID|State|Elapsed|TotalCPU|AllocCPUS|NodeList|ExitCode\n17476|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.batch|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.extern|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.0|COMPLETED|00:00:33|00:00:00|1|node07|0:0\n",
+  "allocation_released_verified": true,
+  "cancel_needed": false,
+  "all_attempt_process_wall_seconds": 35.89104424417019,
+  "all_attempt_process_CPU_seconds": 33.790091378,
+  "all_attempt_allocation_wall_seconds": 40,
+  "diagnostic_peak_RSS_bytes": 2078261248,
+  "no_campaign_source_cache_dispatch_allocation_or_process_changes": true,
+  "numerical_scope_complete": true,
+  "further_diagnostic_runs": false,
+  "guard_note": "Requeue release reset Slurm to its original5min limit; the standalone process retained260s internal/270s alarm/275s CPU guards. Actual all-attempt execution was below the original aggregate300s cap."
+}

@@ -1,0 +1,2835 @@
+{
+  "budget": {
+    "CPU_seconds": 275,
+    "CPUs": 1,
+    "RSS_GiB": 6,
+    "address_space_GiB": 10,
+    "internal_wall_seconds": 260,
+    "numerical_threads": 1,
+    "wall_seconds": 300
+  },
+  "case": "SP25,N500,data151101,initialization161101",
+  "enumerations": 0,
+  "equality": {
+    "gradient_exact": true,
+    "gradient_max_absolute_difference": 0.0,
+    "gradient_sha256": "12647b41ca9b8e81b7a5d57e2b0ea75cc88df8328eaab9b9479f7bbdbe918d75",
+    "scalar_exact": true
+  },
+  "finished_unix": 1793763125.7607837,
+  "identities": {
+    "bank": "/tmp/lava_completion_20261102/seeded_banks_v2/dys_shortest_path_25x25__data151101__init161101",
+    "geometry_identity": "d1f09640f29f9fae5f9cbc43b82e6aea68f510eb828f1ffdbd7a2692f78c25d6",
+    "input_file": "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/frozen_data/dys_shortest_path_25x25__data151101/observations_n500.npz",
+    "input_sha256": "71221d5169ed086126d7871fa75eb53b67258163ba75a52d08912e5e8dce31e3",
+    "prefix500_sha256": "2da392d766601d8313e339131a29bf5a194930559aa935bd18ee02cc0807e1ce",
+    "prefix_pickle_sha256": "4dc44afe6421a810d1594553c8ecdf1a1b4d77df468ec979c481f77fea97bb25",
+    "source_sha256": {
+      "code/scripts/run_central_path_final.py": "2bd606c71c910bd7674a2456603b3bd4279b150cd8211d2d7249d51f63341d9f",
+      "code/src/proximal_spo/public_highs.py": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "code/src/proximal_spo/seeds.py": "bf953fff33ac3324d9258677f01fbfbe3a270988db409f5ee439ffc7db59ee36",
+      "code/vendor/public/data/dataset_augmented.py": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "code/vendor/public/methods/lava.py": "c86af48cc221a6bb028a67f6f7def12c95c0b593cebbb62c0ff69fbb9b0fb9a1",
+      "ops/bank_geometry.py": "8448d676c7b985d63996ce00c6c65f3880a94805d170af8a273f1c8f60cb204b",
+      "ops/loader_profile_20261104/profile.py": "687d0cb51eadd1df054876bf0cebf3876bfe16e1f853bf2978b64462f2e09283"
+    }
+  },
+  "initialization": {
+    "CPU_seconds": 1.608369044,
+    "wall_seconds": 2.5103099048137665
+  },
+  "live_profiler_attachments": 0,
+  "optimizer_updates": 0,
+  "peak_RSS_bytes": 2078261248,
+  "placement": {
+    "CPU": 1,
+    "campaign_affinities": [
+      {
+        "affinity": [
+          38
+        ],
+        "physical_cores": [
+          [
+            0,
+            76
+          ]
+        ],
+        "pid": 2280388
+      },
+      {
+        "affinity": [
+          4
+        ],
+        "physical_cores": [
+          [
+            0,
+            7
+          ]
+        ],
+        "pid": 2280449
+      },
+      {
+        "affinity": [
+          46
+        ],
+        "physical_cores": [
+          [
+            0,
+            79
+          ]
+        ],
+        "pid": 2281033
+      },
+      {
+        "affinity": [
+          56
+        ],
+        "physical_cores": [
+          [
+            0,
+            66
+          ]
+        ],
+        "pid": 2281051
+      },
+      {
+        "affinity": [
+          28
+        ],
+        "physical_cores": [
+          [
+            0,
+            1
+          ]
+        ],
+        "pid": 2281052
+      },
+      {
+        "affinity": [
+          58
+        ],
+        "physical_cores": [
+          [
+            0,
+            75
+          ]
+        ],
+        "pid": 2281055
+      },
+      {
+        "affinity": [
+          30
+        ],
+        "physical_cores": [
+          [
+            0,
+            5
+          ]
+        ],
+        "pid": 2281057
+      },
+      {
+        "affinity": [
+          62
+        ],
+        "physical_cores": [
+          [
+            0,
+            78
+          ]
+        ],
+        "pid": 2281058
+      },
+      {
+        "affinity": [
+          60
+        ],
+        "physical_cores": [
+          [
+            0,
+            64
+          ]
+        ],
+        "pid": 2281059
+      },
+      {
+        "affinity": [
+          8
+        ],
+        "physical_cores": [
+          [
+            0,
+            3
+          ]
+        ],
+        "pid": 2281072
+      },
+      {
+        "affinity": [
+          10
+        ],
+        "physical_cores": [
+          [
+            0,
+            14
+          ]
+        ],
+        "pid": 2281073
+      },
+      {
+        "affinity": [
+          12
+        ],
+        "physical_cores": [
+          [
+            0,
+            4
+          ]
+        ],
+        "pid": 2281074
+      },
+      {
+        "affinity": [
+          14
+        ],
+        "physical_cores": [
+          [
+            0,
+            13
+          ]
+        ],
+        "pid": 2281075
+      },
+      {
+        "affinity": [
+          16
+        ],
+        "physical_cores": [
+          [
+            0,
+            2
+          ]
+        ],
+        "pid": 2281076
+      },
+      {
+        "affinity": [
+          18
+        ],
+        "physical_cores": [
+          [
+            0,
+            10
+          ]
+        ],
+        "pid": 2281077
+      },
+      {
+        "affinity": [
+          32
+        ],
+        "physical_cores": [
+          [
+            0,
+            70
+          ]
+        ],
+        "pid": 2282870
+      },
+      {
+        "affinity": [
+          20
+        ],
+        "physical_cores": [
+          [
+            0,
+            6
+          ]
+        ],
+        "pid": 2282885
+      },
+      {
+        "affinity": [
+          24
+        ],
+        "physical_cores": [
+          [
+            0,
+            8
+          ]
+        ],
+        "pid": 2282886
+      },
+      {
+        "affinity": [
+          36
+        ],
+        "physical_cores": [
+          [
+            0,
+            67
+          ]
+        ],
+        "pid": 2282915
+      },
+      {
+        "affinity": [
+          42
+        ],
+        "physical_cores": [
+          [
+            0,
+            77
+          ]
+        ],
+        "pid": 2282934
+      },
+      {
+        "affinity": [
+          44
+        ],
+        "physical_cores": [
+          [
+            0,
+            71
+          ]
+        ],
+        "pid": 2282935
+      },
+      {
+        "affinity": [
+          40
+        ],
+        "physical_cores": [
+          [
+            0,
+            65
+          ]
+        ],
+        "pid": 2282946
+      },
+      {
+        "affinity": [
+          2
+        ],
+        "physical_cores": [
+          [
+            0,
+            11
+          ]
+        ],
+        "pid": 2282947
+      },
+      {
+        "affinity": [
+          6
+        ],
+        "physical_cores": [
+          [
+            0,
+            15
+          ]
+        ],
+        "pid": 2282958
+      },
+      {
+        "affinity": [
+          26
+        ],
+        "physical_cores": [
+          [
+            0,
+            12
+          ]
+        ],
+        "pid": 2282977
+      },
+      {
+        "affinity": [
+          34
+        ],
+        "physical_cores": [
+          [
+            0,
+            74
+          ]
+        ],
+        "pid": 2283017
+      },
+      {
+        "affinity": [
+          0
+        ],
+        "physical_cores": [
+          [
+            0,
+            0
+          ]
+        ],
+        "pid": 2283116
+      },
+      {
+        "affinity": [
+          22
+        ],
+        "physical_cores": [
+          [
+            0,
+            9
+          ]
+        ],
+        "pid": 2283123
+      }
+    ],
+    "host": "node07.cluster.local",
+    "isolated_from_campaign": true,
+    "job": "17476",
+    "physical_socket_core": [
+      1,
+      2
+    ]
+  },
+  "preloads": [
+    {
+      "batch_position": 0,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.547121258000001,
+          "wall_seconds": 1.554514579474926
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.026843978999998352,
+          "wall_seconds": 0.029319819062948227
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.576950718,
+        "wall_seconds": 1.5856310240924358
+      },
+      "vertex_RAM_bytes": 37776000
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.465705175,
+          "wall_seconds": 1.4719952680170536
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.02094461500000122,
+          "wall_seconds": 0.021877549588680267
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.4886452830000003,
+        "wall_seconds": 1.4957426451146603
+      },
+      "vertex_RAM_bytes": 39609600
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.4158999890000068,
+          "wall_seconds": 1.4230754263699055
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.020959858999994196,
+          "wall_seconds": 0.021606795489788055
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.4398517420000019,
+        "wall_seconds": 1.4465159513056278
+      },
+      "vertex_RAM_bytes": 37516800
+    }
+  ],
+  "protocol": {
+    "I/O_caveat": "No page-cache flushing; lazy vertex timer covers file open/mmap creation. Page faults/materialization can be charged to conversion. Normal read timer combines ZIP reading/decompression.",
+    "batch_size": 32,
+    "derived_order_seed": 450263392,
+    "epoch": 1,
+    "full_batch_positions": [
+      0,
+      7,
+      14
+    ],
+    "mm": -1.0,
+    "original_shuffle_seed": 171101,
+    "path_order": "AB,BA,AB,BA",
+    "prediction": "fixed float32 sin(column*0.017+observation*0.11)+0.5*cos(column*0.031-observation*0.07); no model/optimizer",
+    "repeats_per_batch": 4,
+    "resident": "sampled raw float64 normal matrices and vertices in RAM; identical public float32 conversion/collation/loss",
+    "scope": "Data assembly plus public LAVA forward and prediction-gradient backward only; excludes model forward/backward, optimizer, evaluation, diagnostics, persistence and one-time shared geometry construction.",
+    "threshold": -1.0
+  },
+  "runs": [
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.000997095999999864,
+          "wall_seconds": 0.00038469210267066956
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0029879169999991184,
+          "wall_seconds": 0.0026273876428604126
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.011941356000000347,
+          "wall_seconds": 0.012774743139743805
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06862866700000048,
+          "wall_seconds": 0.06900641694664955
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10153964700000007,
+          "wall_seconds": 0.10246190428733826
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3952046060000014,
+          "wall_seconds": 1.4057075008749962
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.12838022100000002,
+          "wall_seconds": 0.12805024534463882
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0029896259999997454,
+          "wall_seconds": 0.0010848678648471832
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2226402759552002e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.006968593000001189,
+          "wall_seconds": 0.006801009178161621
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.01294504899999982,
+          "wall_seconds": 0.012282285839319229
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.010902090999998393,
+          "wall_seconds": 0.011323411017656326
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "A",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 1.7434848690000004,
+        "wall_seconds": 1.7525166906416416
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0005005747079849243
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0029879179999996452,
+          "wall_seconds": 0.0005774945020675659
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.011946949000000373,
+          "wall_seconds": 0.012709826231002808
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06672681699999927,
+          "wall_seconds": 0.06649479642510414
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09948832499999938,
+          "wall_seconds": 0.10010175406932831
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.08201147200000136,
+          "wall_seconds": 0.08362781256437302
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009963739999996335,
+          "wall_seconds": 0.0007799863815307617
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1261552572250366e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.011947627000000516,
+          "wall_seconds": 0.011945996433496475
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.0019933839999994873,
+          "wall_seconds": 0.0034369714558124542
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "B",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 0.27809886599999967,
+        "wall_seconds": 0.2801864743232727
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00025537237524986267
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0005537830293178558
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.012931764999999373,
+          "wall_seconds": 0.012441299855709076
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.060665795000000244,
+          "wall_seconds": 0.0617251992225647
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10159060099999984,
+          "wall_seconds": 0.10201167315244675
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.06272750500000068,
+          "wall_seconds": 0.06294132396578789
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0007926374673843384
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1768192052841187e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.01195107800000006,
+          "wall_seconds": 0.011471312493085861
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.004982318999999791,
+          "wall_seconds": 0.003619883209466934
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "B",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 0.254849063,
+        "wall_seconds": 0.2558242529630661
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002654716372489929
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009924750000003257,
+          "wall_seconds": 0.002416655421257019
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.011925281000000787,
+          "wall_seconds": 0.012835834175348282
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06669320899999942,
+          "wall_seconds": 0.06605511903762817
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10243045799999972,
+          "wall_seconds": 0.10267289727926254
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3762167680000017,
+          "wall_seconds": 1.385428138077259
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10946292199999874,
+          "wall_seconds": 0.1083851158618927
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.000997544999999711,
+          "wall_seconds": 0.0010419860482215881
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2189149856567383e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.004973848999999753,
+          "wall_seconds": 0.007150344550609589
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.011941944000000149,
+          "wall_seconds": 0.012239623814821243
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.01493619100000032,
+          "wall_seconds": 0.011356357485055923
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "A",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 1.7005706420000006,
+        "wall_seconds": 1.7098597325384617
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.000260673463344574
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009959190000010665,
+          "wall_seconds": 0.00237901508808136
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.012929034000000783,
+          "wall_seconds": 0.01291041448712349
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06761120800000064,
+          "wall_seconds": 0.06825892254710197
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.1025521850000004,
+          "wall_seconds": 0.10253917053341866
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3788917139999972,
+          "wall_seconds": 1.3851368464529514
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10541945799999741,
+          "wall_seconds": 0.107752975076437
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0029855750000002956,
+          "wall_seconds": 0.0010847337543964386
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.177564263343811e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.008954260000004766,
+          "wall_seconds": 0.006997991353273392
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.011951867999998811,
+          "wall_seconds": 0.01196550577878952
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.009957120999999347,
+          "wall_seconds": 0.011432360857725143
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "A",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 1.7022483420000007,
+        "wall_seconds": 1.7107303850352764
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002633705735206604
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009964329999991861,
+          "wall_seconds": 0.0005986690521240234
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.012938013999999498,
+          "wall_seconds": 0.01275409385561943
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06672232800000089,
+          "wall_seconds": 0.06709737703204155
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10048234899999997,
+          "wall_seconds": 0.10044847056269646
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.0886165279999993,
+          "wall_seconds": 0.08647776767611504
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009955460000004024,
+          "wall_seconds": 0.0007908456027507782
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.290440559387207e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.011955000000000382,
+          "wall_seconds": 0.012174054980278015
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00358765572309494
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "B",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 0.28270619799999963,
+        "wall_seconds": 0.28420520946383476
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002713799476623535
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009965399999991575,
+          "wall_seconds": 0.000599738210439682
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.011942565000000016,
+          "wall_seconds": 0.012693289667367935
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.06564938799999886,
+          "wall_seconds": 0.06600357592105865
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10159141200000121,
+          "wall_seconds": 0.10153676569461823
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.0891878540000004,
+          "wall_seconds": 0.08807242289185524
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0008079744875431061
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1429190635681152e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.011950223999999565,
+          "wall_seconds": 0.011871114373207092
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.001993553000000148,
+          "wall_seconds": 0.003628019243478775
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "B",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 0.28331153599999936,
+        "wall_seconds": 0.28549570962786674
+      }
+    },
+    {
+      "batch_position": 0,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00025212764739990234
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0067320360000007184,
+          "wall_seconds": 0.0024931803345680237
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.011933234000000681,
+          "wall_seconds": 0.012565717101097107
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.0627282479999991,
+          "wall_seconds": 0.06243862584233284
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10254728600000007,
+          "wall_seconds": 0.10258837416768074
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3830504459999968,
+          "wall_seconds": 1.394314631819725
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.07777016800000425,
+          "wall_seconds": 0.07884862273931503
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009921070000000753,
+          "wall_seconds": 0.0010717064142227173
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2096017599105835e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.005972670999996765,
+          "wall_seconds": 0.0072646476328372955
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.010869412999999994,
+          "wall_seconds": 0.011276394128799438
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.012946978000002218,
+          "wall_seconds": 0.011630766093730927
+        }
+      },
+      "gradient_L2": 0.20647597312927246,
+      "loss": 0.6588478088378906,
+      "path": "A",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          402,
+          1200
+        ],
+        "vertices_tensor_bytes": 61747200
+      },
+      "total": {
+        "CPU_seconds": 1.6755425870000007,
+        "wall_seconds": 1.6847568899393082
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00026727095246315
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.006969887000002117,
+          "wall_seconds": 0.002617672085762024
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.00995387099999867,
+          "wall_seconds": 0.01012442633509636
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.04682030700000084,
+          "wall_seconds": 0.04701129347085953
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10247172700000107,
+          "wall_seconds": 0.10251891613006592
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.391287339999991,
+          "wall_seconds": 1.3977059721946716
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.12436600100000383,
+          "wall_seconds": 0.12669989094138145
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0010885745286941528
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.0613352060317993e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.004972004999999058,
+          "wall_seconds": 0.006843838840723038
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.009960312999998777,
+          "wall_seconds": 0.009789597243070602
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.011873287000003785,
+          "wall_seconds": 0.011707395315170288
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "A",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 1.7086747379999991,
+        "wall_seconds": 1.7163854613900185
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00026261433959007263
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0006042830646038055
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008957576000000245,
+          "wall_seconds": 0.009532313793897629
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.04777637499999976,
+          "wall_seconds": 0.04722249507904053
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09854835100000159,
+          "wall_seconds": 0.09945832192897797
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10147963400000215,
+          "wall_seconds": 0.10298490151762962
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0007797256112098694
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.3463199138641357e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.009960446999999206,
+          "wall_seconds": 0.009993799030780792
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.005969653999997604,
+          "wall_seconds": 0.0036630183458328247
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "B",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 0.27269203700000055,
+        "wall_seconds": 0.27451493591070175
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00028255581855773926
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009958529999991583,
+          "wall_seconds": 0.0006217993795871735
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.009957500000000508,
+          "wall_seconds": 0.009689442813396454
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.046806662999999915,
+          "wall_seconds": 0.047108981758356094
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.1004824890000009,
+          "wall_seconds": 0.1006246916949749
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10354969499999989,
+          "wall_seconds": 0.10379080846905708
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.002988556000000031,
+          "wall_seconds": 0.0008319728076457977
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2647360563278198e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.009959841999998886,
+          "wall_seconds": 0.009727682918310165
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.0009911589999997972,
+          "wall_seconds": 0.0037802457809448242
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "B",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 0.2757317569999991,
+        "wall_seconds": 0.2764708288013935
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00027486681938171387
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.00199791100000013,
+          "wall_seconds": 0.0024941861629486084
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.009952647999998732,
+          "wall_seconds": 0.00990421324968338
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.04581054800000217,
+          "wall_seconds": 0.04574863240122795
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10153413100000108,
+          "wall_seconds": 0.10186175629496574
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3822927920000012,
+          "wall_seconds": 1.389785062521696
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.12413089400001098,
+          "wall_seconds": 0.12315784767270088
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009965619999992015,
+          "wall_seconds": 0.0010577403008937836
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.037493348121643e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.0069673869999995475,
+          "wall_seconds": 0.007031086832284927
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.00895699599999844,
+          "wall_seconds": 0.009103883057832718
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.010948902999988519,
+          "wall_seconds": 0.011749267578125
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "A",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 1.693588772,
+        "wall_seconds": 1.702178917825222
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00028978288173675537
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009972640000022182,
+          "wall_seconds": 0.002462562173604965
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.009953552000002475,
+          "wall_seconds": 0.010066647082567215
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.04779777399999929,
+          "wall_seconds": 0.047578826546669006
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10048272399999902,
+          "wall_seconds": 0.10115327686071396
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3898626230000133,
+          "wall_seconds": 1.3915094323456287
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.11741182699999442,
+          "wall_seconds": 0.12533945217728615
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.001989952999998934,
+          "wall_seconds": 0.0010922178626060486
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2420117855072021e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.013920459999990697,
+          "wall_seconds": 0.006907936185598373
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.009953821999999946,
+          "wall_seconds": 0.009778503328561783
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.006970514000002481,
+          "wall_seconds": 0.011643115431070328
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "A",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 1.6993405130000028,
+        "wall_seconds": 1.7078341729938984
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002611204981803894
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009948350000001938,
+          "wall_seconds": 0.0006263554096221924
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.009953867000000116,
+          "wall_seconds": 0.00990556925535202
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.046799298999999905,
+          "wall_seconds": 0.04708116501569748
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09948840499999889,
+          "wall_seconds": 0.09999451786279678
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10223649899999998,
+          "wall_seconds": 0.10409431904554367
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.000994715000000923,
+          "wall_seconds": 0.0007834881544113159
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.257285475730896e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.009955147999999525,
+          "wall_seconds": 0.009906530380249023
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.00398565899999781,
+          "wall_seconds": 0.0037368685007095337
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "B",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 0.27440842699999735,
+        "wall_seconds": 0.2764025069773197
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0009972500000010598,
+          "wall_seconds": 0.00029321759939193726
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009970529999989708,
+          "wall_seconds": 0.000605165958404541
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.00995184399999971,
+          "wall_seconds": 0.010036841034889221
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.047809563000001276,
+          "wall_seconds": 0.04780649021267891
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.1014883609999977,
+          "wall_seconds": 0.10226235166192055
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.10852766000000003,
+          "wall_seconds": 0.10559053346514702
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009914230000021007,
+          "wall_seconds": 0.000825926661491394
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2796372175216675e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.008958688999999964,
+          "wall_seconds": 0.009252991527318954
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0037528015673160553
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "B",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 0.2797218430000008,
+        "wall_seconds": 0.2804391160607338
+      }
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0009968689999979574,
+          "wall_seconds": 0.00027643144130706787
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.000995241000001812,
+          "wall_seconds": 0.00243198499083519
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.009958270999998575,
+          "wall_seconds": 0.009968411177396774
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.0448300830000008,
+          "wall_seconds": 0.045006413012742996
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10148425999999944,
+          "wall_seconds": 0.1020180806517601
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3815150279999955,
+          "wall_seconds": 1.3899100795388222
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.12321359299999202,
+          "wall_seconds": 0.12264377996325493
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0009946270000007473,
+          "wall_seconds": 0.0010623820126056671
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1481344699859619e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.007950575000002402,
+          "wall_seconds": 0.00702209398150444
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.00896505600000097,
+          "wall_seconds": 0.009211301803588867
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.011950441000010414,
+          "wall_seconds": 0.01165386289358139
+        }
+      },
+      "gradient_L2": 0.1518802046775818,
+      "loss": 0.6667423248291016,
+      "path": "A",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          284,
+          1200
+        ],
+        "vertices_tensor_bytes": 43622400
+      },
+      "total": {
+        "CPU_seconds": 1.6928540440000006,
+        "wall_seconds": 1.7012163028120995
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00024339184165000916
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.001993443000003481,
+          "wall_seconds": 0.0024389661848545074
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008954880000000998,
+          "wall_seconds": 0.008994467556476593
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.037832633000000726,
+          "wall_seconds": 0.03778675198554993
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.1014791420000023,
+          "wall_seconds": 0.1018465980887413
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3808424509999853,
+          "wall_seconds": 1.388313539326191
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.09753567900000348,
+          "wall_seconds": 0.09632137045264244
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0019920460000015794,
+          "wall_seconds": 0.0010914579033851624
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.0084360837936401e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.005976532999998341,
+          "wall_seconds": 0.0069727823138237
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.007970559999996851,
+          "wall_seconds": 0.007879797369241714
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.01094564100000639,
+          "wall_seconds": 0.011524014174938202
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "A",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 1.6555230079999994,
+        "wall_seconds": 1.6634232215583324
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0009961539999991942,
+          "wall_seconds": 0.0002444908022880554
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0005672499537467957
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.00895926600000152,
+          "wall_seconds": 0.008652150630950928
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.038828833999996704,
+          "wall_seconds": 0.03908924758434296
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09849432600000085,
+          "wall_seconds": 0.09949047118425369
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.07410026899999522,
+          "wall_seconds": 0.07570567727088928
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.001989315000002989,
+          "wall_seconds": 0.0007798634469509125
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1537224054336548e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.006970161000001696,
+          "wall_seconds": 0.007746309041976929
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.003982518000000823,
+          "wall_seconds": 0.0035138167440891266
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "B",
+      "repeat": 0,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 0.234320842999999,
+        "wall_seconds": 0.23580081388354301
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002655200660228729
+        },
+        "getitem_other": {
+          "CPU_seconds": 5.563999998514646e-06,
+          "wall_seconds": 0.0005986317992210388
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.007959318999997578,
+          "wall_seconds": 0.00849694013595581
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.03584371500000216,
+          "wall_seconds": 0.03564716875553131
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10055357899999962,
+          "wall_seconds": 0.1010269746184349
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.06562284900000037,
+          "wall_seconds": 0.06397749111056328
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0010068880000027036,
+          "wall_seconds": 0.0008473657071590424
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.2733042240142822e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.006973531999999949,
+          "wall_seconds": 0.006914541125297546
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.001992985999997643,
+          "wall_seconds": 0.003549788147211075
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "B",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 0.21995843199999854,
+        "wall_seconds": 0.22133715450763702
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002633705735206604
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.002987889999999993,
+          "wall_seconds": 0.0024444125592708588
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008947900000002562,
+          "wall_seconds": 0.008758757263422012
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.035855378999997356,
+          "wall_seconds": 0.036366790533065796
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09960502999999932,
+          "wall_seconds": 0.09972010925412178
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.38105397899999,
+          "wall_seconds": 1.3888455852866173
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.09454308200000483,
+          "wall_seconds": 0.09479620307683945
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.000996533999998661,
+          "wall_seconds": 0.0010648295283317566
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.0401010513305664e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.00994682099999622,
+          "wall_seconds": 0.007077615708112717
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.007962122000002125,
+          "wall_seconds": 0.007669556885957718
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.007958767000008748,
+          "wall_seconds": 0.01137172058224678
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "A",
+      "repeat": 1,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 1.6498575039999999,
+        "wall_seconds": 1.6583893522620201
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00025399401783943176
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.002986912000004338,
+          "wall_seconds": 0.0024188607931137085
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008956615999998974,
+          "wall_seconds": 0.008463840931653976
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.036844272000003286,
+          "wall_seconds": 0.03714004158973694
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10050219899999746,
+          "wall_seconds": 0.10130798816680908
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.381967797999991,
+          "wall_seconds": 1.3914763666689396
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.09544547500000178,
+          "wall_seconds": 0.09697342664003372
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.00108274444937706
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1235475540161133e-05
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.009950577000005012,
+          "wall_seconds": 0.007031992077827454
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.007969094999999982,
+          "wall_seconds": 0.0076916031539440155
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.012943585999998675,
+          "wall_seconds": 0.011507466435432434
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "A",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 1.6575665300000004,
+        "wall_seconds": 1.6653595604002476
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002501457929611206
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009951000000008037,
+          "wall_seconds": 0.000580906867980957
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008957253999998471,
+          "wall_seconds": 0.00889384001493454
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.038828359000000034,
+          "wall_seconds": 0.03919130563735962
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.09851221799999976,
+          "wall_seconds": 0.09872952848672867
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.07282045299999496,
+          "wall_seconds": 0.07507232204079628
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0007554776966571808
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.0870397090911865e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.007965320000000276,
+          "wall_seconds": 0.0076550208032131195
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.0049812120000041205,
+          "wall_seconds": 0.003590010106563568
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "B",
+      "repeat": 2,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 0.23305991599999842,
+        "wall_seconds": 0.23472942784428596
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.000998676000001808,
+          "wall_seconds": 0.00026477500796318054
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.0009951489999977525,
+          "wall_seconds": 0.0005839578807353973
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.007958566999999306,
+          "wall_seconds": 0.008444420993328094
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.0368137190000013,
+          "wall_seconds": 0.03638075664639473
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.10058015799999964,
+          "wall_seconds": 0.10115669667720795
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.07559082499999903,
+          "wall_seconds": 0.07608700916171074
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0008078180253505707
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 1.1280179023742676e-05
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.00696973399999834,
+          "wall_seconds": 0.007489021867513657
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.003984666000000914,
+          "wall_seconds": 0.0036239176988601685
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "B",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 0.2338914939999981,
+        "wall_seconds": 0.23484965413808823
+      }
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "collate_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0002586841583251953
+        },
+        "getitem_other": {
+          "CPU_seconds": 0.00218070000000381,
+          "wall_seconds": 0.002457141876220703
+        },
+        "loss_backward": {
+          "CPU_seconds": 0.008956555999997562,
+          "wall_seconds": 0.008673571050167084
+        },
+        "loss_forward": {
+          "CPU_seconds": 0.0358558010000003,
+          "wall_seconds": 0.035633984953165054
+        },
+        "normal_padding": {
+          "CPU_seconds": 0.0985893769999997,
+          "wall_seconds": 0.09912171214818954
+        },
+        "normal_read_decompress": {
+          "CPU_seconds": 1.3790609320000051,
+          "wall_seconds": 1.3866830095648766
+        },
+        "normals_conversion": {
+          "CPU_seconds": 0.09622276599998969,
+          "wall_seconds": 0.092584989964962
+        },
+        "other_conversion": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 0.0010717026889324188
+        },
+        "pipeline_other": {
+          "CPU_seconds": 0.0,
+          "wall_seconds": 9.823590517044067e-06
+        },
+        "vertex_open_mmap": {
+          "CPU_seconds": 0.004979277999996867,
+          "wall_seconds": 0.00708012655377388
+        },
+        "vertex_padding": {
+          "CPU_seconds": 0.0069736360000014486,
+          "wall_seconds": 0.007258452475070953
+        },
+        "vertices_conversion": {
+          "CPU_seconds": 0.01094038200000469,
+          "wall_seconds": 0.011388983577489853
+        }
+      },
+      "gradient_L2": 0.20243902504444122,
+      "loss": 0.844021201133728,
+      "path": "A",
+      "repeat": 3,
+      "shapes": {
+        "dtype": "torch.float32",
+        "normal_padded": [
+          32,
+          2402,
+          1200
+        ],
+        "normal_tensor_bytes": 368947200,
+        "vertices_padded": [
+          32,
+          231,
+          1200
+        ],
+        "vertices_tensor_bytes": 35481600
+      },
+      "total": {
+        "CPU_seconds": 1.6437594279999992,
+        "wall_seconds": 1.6522221826016903
+      }
+    }
+  ],
+  "samples": [
+    {
+      "batch_position": 0,
+      "normal_dtypes": [
+        "float64"
+      ],
+      "normal_shapes": [
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ]
+      ],
+      "original_epoch_indices": [
+        29,
+        327,
+        256,
+        398,
+        212,
+        334,
+        149,
+        409,
+        102,
+        264,
+        479,
+        125,
+        475,
+        417,
+        451,
+        221,
+        24,
+        97,
+        130,
+        222,
+        438,
+        467,
+        30,
+        266,
+        485,
+        383,
+        40,
+        261,
+        477,
+        47,
+        105,
+        198
+      ],
+      "vertex_counts": [
+        78,
+        110,
+        105,
+        251,
+        402,
+        105,
+        112,
+        84,
+        145,
+        110,
+        38,
+        69,
+        85,
+        202,
+        100,
+        78,
+        31,
+        86,
+        130,
+        75,
+        118,
+        61,
+        141,
+        149,
+        327,
+        113,
+        92,
+        107,
+        88,
+        111,
+        138,
+        94
+      ],
+      "vertex_dtypes": [
+        "float64"
+      ]
+    },
+    {
+      "batch_position": 7,
+      "normal_dtypes": [
+        "float64"
+      ],
+      "normal_shapes": [
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ]
+      ],
+      "original_epoch_indices": [
+        468,
+        82,
+        5,
+        320,
+        331,
+        493,
+        305,
+        313,
+        155,
+        187,
+        290,
+        131,
+        87,
+        402,
+        443,
+        219,
+        434,
+        339,
+        182,
+        357,
+        177,
+        154,
+        464,
+        93,
+        282,
+        106,
+        269,
+        49,
+        272,
+        323,
+        484,
+        369
+      ],
+      "vertex_counts": [
+        140,
+        100,
+        90,
+        83,
+        87,
+        284,
+        95,
+        86,
+        108,
+        139,
+        278,
+        191,
+        166,
+        109,
+        119,
+        126,
+        85,
+        110,
+        171,
+        99,
+        156,
+        76,
+        161,
+        114,
+        122,
+        174,
+        134,
+        84,
+        76,
+        75,
+        117,
+        171
+      ],
+      "vertex_dtypes": [
+        "float64"
+      ]
+    },
+    {
+      "batch_position": 14,
+      "normal_dtypes": [
+        "float64"
+      ],
+      "normal_shapes": [
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ],
+        [
+          2402,
+          1200
+        ]
+      ],
+      "original_epoch_indices": [
+        80,
+        23,
+        348,
+        152,
+        179,
+        270,
+        395,
+        373,
+        253,
+        433,
+        184,
+        194,
+        322,
+        431,
+        88,
+        353,
+        68,
+        447,
+        45,
+        101,
+        38,
+        294,
+        156,
+        456,
+        35,
+        406,
+        274,
+        151,
+        403,
+        428,
+        133,
+        139
+      ],
+      "vertex_counts": [
+        116,
+        71,
+        133,
+        127,
+        231,
+        128,
+        146,
+        135,
+        153,
+        67,
+        194,
+        73,
+        140,
+        94,
+        93,
+        189,
+        171,
+        145,
+        99,
+        155,
+        58,
+        85,
+        66,
+        47,
+        159,
+        91,
+        147,
+        108,
+        143,
+        150,
+        118,
+        76
+      ],
+      "vertex_dtypes": [
+        "float64"
+      ]
+    }
+  ],
+  "scientific_fits": 0,
+  "started_unix": 1793763094.0509825,
+  "status": "complete",
+  "total_CPU_seconds": 30.613174835,
+  "total_wall_seconds": 31.709916297346354,
+  "versions": {
+    "numpy": "2.3.5",
+    "python": "3.13.5 (main, Jul 23 2025, 00:37:22) [Clang 20.1.4 ]",
+    "torch": "2.8.0+cpu",
+    "torch_interop_threads": 1,
+    "torch_threads": 1
+  }
+}

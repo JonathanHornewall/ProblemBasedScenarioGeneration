@@ -1,0 +1,288 @@
+{
+  "CPU_ratio_A_over_B": 6.476025397126764,
+  "RAM_caveat": {
+    "raw_normals500_extrapolation_bytes": 11529600000.0,
+    "sample_batch_raw_normal_bytes": 737894400,
+    "whole_bank_resident_implementation_tested": false
+  },
+  "all_unused_normal_handling_share_A_CPU": 0.9449812765633434,
+  "components": {
+    "collate_other": {
+      "A": {
+        "CPU_fraction": 9.859881905150493e-05,
+        "mean_CPU_seconds": 0.00016616374999981845,
+        "mean_wall_seconds": 0.0002742297947406769
+      },
+      "B": {
+        "CPU_fraction": 0.0009581553455262409,
+        "mean_CPU_seconds": 0.0002493400000001718,
+        "mean_wall_seconds": 0.00028459479411443073
+      }
+    },
+    "getitem_other": {
+      "A": {
+        "CPU_fraction": 0.0016227848087183047,
+        "mean_CPU_seconds": 0.0027347995833349272,
+        "mean_wall_seconds": 0.002473502109448115
+      },
+      "B": {
+        "CPU_fraction": 0.0031909194413048125,
+        "mean_CPU_seconds": 0.0008303704166661152,
+        "mean_wall_seconds": 0.000593169592320919
+      }
+    },
+    "loss_backward": {
+      "A": {
+        "CPU_fraction": 0.006149588661225653,
+        "mean_CPU_seconds": 0.010363599916666763,
+        "mean_wall_seconds": 0.010503420295814673
+      },
+      "B": {
+        "CPU_fraction": 0.03920085496733483,
+        "mean_CPU_seconds": 0.010201207166666393,
+        "mean_wall_seconds": 0.010354169023533663
+      }
+    },
+    "loss_forward": {
+      "A": {
+        "CPU_fraction": 0.02953606313517476,
+        "mean_CPU_seconds": 0.04977567741666703,
+        "mean_wall_seconds": 0.049835984905560814
+      },
+      "B": {
+        "CPU_fraction": 0.1919048197695033,
+        "mean_CPU_seconds": 0.04993923791666669,
+        "mean_wall_seconds": 0.05007071327418089
+      }
+    },
+    "normal_padding": {
+      "A": {
+        "CPU_fraction": 0.0600908622055385,
+        "mean_CPU_seconds": 0.10126818049999997,
+        "mean_wall_seconds": 0.10165089865525563
+      },
+      "B": {
+        "CPU_fraction": 0.384693112002703,
+        "mean_CPU_seconds": 0.10010838116666661,
+        "mean_wall_seconds": 0.1005701847995321
+      }
+    },
+    "normal_read_decompress": {
+      "A": {
+        "CPU_fraction": 0.8209087408339374,
+        "mean_CPU_seconds": 1.383437206416664,
+        "mean_wall_seconds": 1.3912346803893645
+      },
+      "B": {
+        "CPU_fraction": 0.0,
+        "mean_CPU_seconds": 0,
+        "mean_wall_seconds": 0
+      }
+    },
+    "normals_conversion": {
+      "A": {
+        "CPU_fraction": 0.06398167352386742,
+        "mean_CPU_seconds": 0.10782517383333345,
+        "mean_wall_seconds": 0.10846282665928204
+      },
+      "B": {
+        "CPU_fraction": 0.32870742376832535,
+        "mean_CPU_seconds": 0.08553927024999945,
+        "mean_wall_seconds": 0.08570186576495568
+      }
+    },
+    "other_conversion": {
+      "A": {
+        "CPU_fraction": 0.0007384941350713953,
+        "mean_CPU_seconds": 0.0012445479166665792,
+        "mean_wall_seconds": 0.0010745786130428314
+      },
+      "B": {
+        "CPU_fraction": 0.0031903981060170668,
+        "mean_CPU_seconds": 0.000830234750000732,
+        "mean_wall_seconds": 0.0007985901708404223
+      }
+    },
+    "pipeline_other": {
+      "A": {
+        "CPU_fraction": 0.0,
+        "mean_CPU_seconds": 0.0,
+        "mean_wall_seconds": 1.1226783196131388e-05
+      },
+      "B": {
+        "CPU_fraction": 0.0,
+        "mean_CPU_seconds": 0.0,
+        "mean_wall_seconds": 1.210533082485199e-05
+      }
+    },
+    "vertex_open_mmap": {
+      "A": {
+        "CPU_fraction": 0.004526181047129567,
+        "mean_CPU_seconds": 0.007627750749999218,
+        "mean_wall_seconds": 0.007015122100710869
+      },
+      "B": {
+        "CPU_fraction": 0.0,
+        "mean_CPU_seconds": 0,
+        "mean_wall_seconds": 0
+      }
+    },
+    "vertex_padding": {
+      "A": {
+        "CPU_fraction": 0.005756802195894753,
+        "mean_CPU_seconds": 0.009701656166666442,
+        "mean_wall_seconds": 0.00967887540658315
+      },
+      "B": {
+        "CPU_fraction": 0.036992006007298774,
+        "mean_CPU_seconds": 0.00962640016666653,
+        "mean_wall_seconds": 0.009679031247893969
+      }
+    },
+    "vertices_conversion": {
+      "A": {
+        "CPU_fraction": 0.0065902106343906355,
+        "mean_CPU_seconds": 0.011106158500001998,
+        "mean_wall_seconds": 0.011524060120185217
+      },
+      "B": {
+        "CPU_fraction": 0.011162310591986642,
+        "mean_CPU_seconds": 0.0029047591666665116,
+        "mean_wall_seconds": 0.003623583043615023
+      }
+    }
+  },
+  "conditional_projection": {
+    "CPU_seconds_difference_for4500": 6412.597711875005,
+    "CPU_seconds_difference_per_full_batch": 1.4250217137500012,
+    "assumption": "Measured difference represents the4500 full batch32 visits in one300-epoch N500 fit;20-example tail batches and model/optimizer/evaluation excluded. This is not an end-to-end speedup estimate.",
+    "full_batch_visits": 4500,
+    "recorded_original_optimization_CPU_seconds": 8041.069128489983
+  },
+  "equality": {
+    "gradient_exact": true,
+    "gradient_max_absolute_difference": 0.0,
+    "gradient_sha256": "12647b41ca9b8e81b7a5d57e2b0ea75cc88df8328eaab9b9479f7bbdbe918d75",
+    "scalar_exact": true
+  },
+  "means": {
+    "A": {
+      "CPU_seconds": 1.6852509147500003,
+      "wall_seconds": 1.6937394058331847
+    },
+    "B": {
+      "CPU_seconds": 0.2602292009999992,
+      "wall_seconds": 0.26168800704181194
+    }
+  },
+  "median_max_CPU_seconds": {
+    "A": {
+      "max": 1.7434848690000004,
+      "median": 1.6932214080000003,
+      "min": 1.6437594279999992
+    },
+    "B": {
+      "max": 0.28331153599999936,
+      "median": 0.27355023199999895,
+      "min": 0.21995843199999854
+    }
+  },
+  "n_batches": 3,
+  "normal_read_decompress_share_A_CPU": 0.8209087408339374,
+  "one_time_preload": [
+    {
+      "batch_position": 0,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.547121258000001,
+          "wall_seconds": 1.554514579474926
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.026843978999998352,
+          "wall_seconds": 0.029319819062948227
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.576950718,
+        "wall_seconds": 1.5856310240924358
+      },
+      "vertex_RAM_bytes": 37776000
+    },
+    {
+      "batch_position": 7,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.465705175,
+          "wall_seconds": 1.4719952680170536
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.02094461500000122,
+          "wall_seconds": 0.021877549588680267
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.4886452830000003,
+        "wall_seconds": 1.4957426451146603
+      },
+      "vertex_RAM_bytes": 39609600
+    },
+    {
+      "batch_position": 14,
+      "components": {
+        "normal_read_decompress": {
+          "CPU_seconds": 1.4158999890000068,
+          "wall_seconds": 1.4230754263699055
+        },
+        "vertex_open_read_copy": {
+          "CPU_seconds": 0.020959858999994196,
+          "wall_seconds": 0.021606795489788055
+        }
+      },
+      "normal_RAM_bytes": 737894400,
+      "total": {
+        "CPU_seconds": 1.4398517420000019,
+        "wall_seconds": 1.4465159513056278
+      },
+      "vertex_RAM_bytes": 37516800
+    }
+  ],
+  "placement": {
+    "CPU": 1,
+    "host": "node07.cluster.local",
+    "isolated_from_campaign": true,
+    "job": "17476",
+    "physical_socket_core": [
+      1,
+      2
+    ]
+  },
+  "public_loss_forward_backward_share_A_CPU": 0.03568565179640042,
+  "repeats_per_path": 4,
+  "resident_CPU_reduction_fraction": 0.8455842992148127,
+  "scope": "SP25 N500,data151101/init161101, three original epoch1 full batches, four repeats each path",
+  "terminal": {
+    "accounting": "JobID|State|Elapsed|TotalCPU|AllocCPUS|NodeList|ExitCode\n17476|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.batch|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.extern|COMPLETED|00:00:34|00:00:00|1|node07|0:0\n17476.0|COMPLETED|00:00:33|00:00:00|1|node07|0:0\n",
+    "all_attempt_allocation_wall_seconds": 40,
+    "all_attempt_process_CPU_seconds": 33.790091378,
+    "all_attempt_process_wall_seconds": 35.89104424417019,
+    "allocation_released_verified": true,
+    "cancel_needed": false,
+    "diagnostic_peak_RSS_bytes": 2078261248,
+    "further_diagnostic_runs": false,
+    "guard_note": "Requeue release reset Slurm to its original5min limit; the standalone process retained260s internal/270s alarm/275s CPU guards. Actual all-attempt execution was below the original aggregate300s cap.",
+    "job_id": 17476,
+    "no_campaign_source_cache_dispatch_allocation_or_process_changes": true,
+    "numerical_scope_complete": true,
+    "observed_unix": 1793763201.712217,
+    "queue": "",
+    "raw_timing_sha256": "7fee1169e2f2d0ddbeb9a4d7fbba257b8020bb53f5eff10f8ace200db595addc",
+    "same_job_restarts": 1,
+    "scheduler_state": "JobId=17476 JobName=lava_loader_profile_20261104 UserId=jonathan.hornewall(758227476) GroupId=utilisateurs du domaine(758200513) MCS_label=N/A Priority=1 Nice=10000 Account=(null) QOS=normal JobState=COMPLETED Reason=None Dependency=(null) Requeue=1 Restarts=1 BatchFlag=1 Reboot=0 ExitCode=0:0 RunTime=00:00:34 TimeLimit=00:05:00 TimeMin=N/A SubmitTime=2026-11-04T04:29:20 EligibleTime=2026-11-04T04:31:21 AccrueTime=2026-11-04T04:31:21 StartTime=2026-11-04T04:31:33 EndTime=2026-11-04T04:32:07 Deadline=N/A PreemptEligibleTime=2026-11-04T04:31:33 PreemptTime=None SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-11-04T04:31:33 Scheduler=Backfill Partition=defq-gpu AllocNode:Sid=master01-hpc:1490102 ReqNodeList=node07 ExcNodeList=(null) NodeList=node07 BatchHost=node07 NumNodes=1 NumCPUs=1 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:1 ReqTRES=cpu=1,mem=6G,node=1,billing=1 AllocTRES=cpu=1,node=1,billing=1 Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=* MinCPUsNode=1 MinMemoryNode=6G MinTmpDiskNode=0 Features=(null) DelayBoot=00:00:00 OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null) Command=(null) WorkDir=/home/jonathan.hornewall StdErr=/home/jonathan.hornewall/runs/lava_completion_20261102/ops/loader_profile_20261104/slurm.err StdIn=/dev/null StdOut=/home/jonathan.hornewall/runs/lava_completion_20261102/ops/loader_profile_20261104/slurm.out Power= TresPerTask=cpu:1 \n",
+    "source_sha256": "687d0cb51eadd1df054876bf0cebf3876bfe16e1f853bf2978b64462f2e09283",
+    "state": "diagnostic_complete_resource_released"
+  },
+  "total_measured_pipelines": 24,
+  "wall_ratio_A_over_B": 6.472361591880528
+}
