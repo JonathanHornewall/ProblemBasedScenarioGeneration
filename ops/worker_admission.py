@@ -4,7 +4,9 @@ import psutil
 from qualify import read,write
 
 def handoff_if_stale(root,job,*,reservation_path=None):
-    if job['route']!='dys_cfl_50x5' or job['config']['sizes']['train']!=100:return False
+    if job['route']=='dys_shortest_path_25x25':expected,previous=3,6
+    elif job['route']=='dys_cfl_50x5' and job['config']['sizes']['train']==100:expected,previous=6,12
+    else:return False
     root=pathlib.Path(root)
     reservation=pathlib.Path(reservation_path or '/tmp/lava_completion_20261102/reservations.json')
     if not reservation.exists():return False
@@ -14,8 +16,8 @@ def handoff_if_stale(root,job,*,reservation_path=None):
     index=cmd[cmd.index('--worker')+1];token=socket.gethostname()+'_'+index+'_'+allocation
     entry=read(reservation).get(token)
     if not entry or entry.get('worker_pid')!=parent.pid or entry.get('id')!=job['id']:return False
-    if entry['gib']==6:return False
-    if entry['gib']!=12:raise RuntimeError('Unexpected CFL50 admission reservation')
+    if entry['gib']==expected:return False
+    if entry['gib']!=previous:raise RuntimeError('Unexpected fit admission reservation')
     if parent.environ().get('SLURM_JOB_ID')!=allocation:raise RuntimeError('Parent allocation differs')
     if parent.cpu_affinity()!=sorted(os.sched_getaffinity(0)) or len(os.sched_getaffinity(0))!=1:
         raise RuntimeError('Boundary handoff must retain the same single core')
@@ -36,7 +38,7 @@ def handoff_if_stale(root,job,*,reservation_path=None):
             record={'observed_unix':time.time(),'slurm_job_id':allocation,'host':socket.gethostname(),
                     'old_worker_pid':parent.pid,'old_worker_birth_unix':birth,'new_worker_pid':os.getpid(),
                     'worker_index':index,'core':next(iter(os.sched_getaffinity(0))),
-                    'unstarted_job_id':job['id'],'old_reservation_GiB':12,'new_reservation_GiB':6,
+                    'unstarted_job_id':job['id'],'old_reservation_GiB':previous,'new_reservation_GiB':expected,
                     'scientific_fit_started':False,'healthy_active_fits_signalled':0,
                     'new_CPU_allocations':0,'state':'admission_handoff_prepared'}
             write(path,record)

@@ -1,0 +1,223 @@
+{
+  "coordinator_before_release": {
+    "fresh_receipt_cache": true,
+    "host": "node07.cluster.local",
+    "pid": 2281033,
+    "slurm_job_id": "16726",
+    "started_unix": 1793756489.3643343
+  },
+  "finished_unix": 1793756705.9675965,
+  "local_compact_verification": {
+    "archive": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_completion_20261102/retained_compact/node09_seed_records.tar.gz",
+    "archive_bytes": 4303294,
+    "archive_sha256": "ef976b1afbd8b45a9a4c64b9544386e067fe9212951e32c08c4e8ad4e43fd832",
+    "dense_cache_files": 0,
+    "file_count": 21589,
+    "source_record": "ops/NODE09_COMPACT_RETENTION_20261104.json",
+    "state": "verified_local_compact_copy",
+    "uncompressed_bytes": 116877109,
+    "weights": 0
+  },
+  "owned_queue_row": "16223|jonathan.hornewall|lavacomp_20261102|node09|16|RUNNING\n",
+  "pre_release_node09": {
+    "CPU_interval_seconds": 5.03226113319397,
+    "available_bytes": 264383475712,
+    "coordinator_lock_held": true,
+    "coordinator_record": {
+      "fresh_receipt_cache": true,
+      "host": "node07.cluster.local",
+      "pid": 2281033,
+      "slurm_job_id": "16726",
+      "started_unix": 1793756489.3643343
+    },
+    "coordinators": [],
+    "host": "node09.cluster.local",
+    "numeric": [],
+    "observed_unix": 1793756670.8980448,
+    "reservations": {},
+    "workers": {
+      "node09.cluster.local_0_16223.json": {
+        "pid": 157851,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.5749805
+      },
+      "node09.cluster.local_10_16223.json": {
+        "pid": 155111,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.8095424
+      },
+      "node09.cluster.local_11_16223.json": {
+        "pid": 158692,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.8091176
+      },
+      "node09.cluster.local_12_16223.json": {
+        "pid": 155466,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.5688446
+      },
+      "node09.cluster.local_13_16223.json": {
+        "pid": 155394,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.5705354
+      },
+      "node09.cluster.local_14_16223.json": {
+        "pid": 157873,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756668.6541007
+      },
+      "node09.cluster.local_15_16223.json": {
+        "pid": 155192,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.5711405
+      },
+      "node09.cluster.local_1_16223.json": {
+        "pid": 155183,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.808185
+      },
+      "node09.cluster.local_2_16223.json": {
+        "pid": 154928,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.81015
+      },
+      "node09.cluster.local_3_16223.json": {
+        "pid": 154733,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.571799
+      },
+      "node09.cluster.local_4_16223.json": {
+        "pid": 158703,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.8085349
+      },
+      "node09.cluster.local_5_16223.json": {
+        "pid": 155184,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.8090274
+      },
+      "node09.cluster.local_6_16223.json": {
+        "pid": 155353,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.575796
+      },
+      "node09.cluster.local_7_16223.json": {
+        "pid": 155110,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.5705369
+      },
+      "node09.cluster.local_8_16223.json": {
+        "pid": 155458,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756664.809441
+      },
+      "node09.cluster.local_9_16223.json": {
+        "pid": 158645,
+        "slurm_job_id": "16223",
+        "state": "waiting_for_dependencies_or_memory",
+        "updated_unix": 1793756661.569745
+      },
+      "node09.cluster.local_seeded_16742.json": {
+        "slurm_job_id": "16742",
+        "state": "ended",
+        "updated_unix": 1793712974.5232623
+      },
+      "node09.cluster.local_seeded_16744.json": {
+        "slurm_job_id": "16744",
+        "state": "ended",
+        "updated_unix": 1793712974.5233746
+      },
+      "node09.cluster.local_seeded_16746.json": {
+        "slurm_job_id": "16746",
+        "state": "ended",
+        "updated_unix": 1793712978.3787012
+      }
+    }
+  },
+  "queue_after": "17282|1|RUNNING|node02|shipment-freight-check\n16900|1|RUNNING|node02|codex-agent-20261103T003359Z\n16740|8|RUNNING|node07|lava_resource_repair_pool_20261102\n16726|24|RUNNING|node07|lavacomp_20261102_c\n",
+  "registry": {
+    "absolute_deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+    "active_allocation_CPUs": {
+      "16726": 24,
+      "16740": 8
+    },
+    "cfl100_node07_pool": 16745,
+    "cfl100_node09_pool": 16746,
+    "completed_KP_serial_job": 16727,
+    "completion_pool": 16726,
+    "completion_workers": 23,
+    "coordinator_node": "node07",
+    "coordinator_pool": 16726,
+    "coordinator_reserved_core": 46,
+    "coordinator_worker_index": 23,
+    "current_requested_CPUs_after_release": 32,
+    "implementation_checks": [
+      16219,
+      16220,
+      16221,
+      16222
+    ],
+    "kp_recovery_array": 16211,
+    "kp_serial_job": 16727,
+    "largest_total_requested_cpus_so_far": 54,
+    "maximum_campaign_cpus": 100,
+    "node07_completion_cancelled_attempt": 16224,
+    "node07_completion_pool": 16726,
+    "node07_completion_workers": 24,
+    "node07_numeric_worker_slots": 31,
+    "provenance_check_array": 16728,
+    "qualification_active": [],
+    "qualification_failed": [
+      16205,
+      16206,
+      16207
+    ],
+    "qualification_terminal": [
+      16208,
+      16209,
+      16210
+    ],
+    "released_completed_preparation_jobs": [
+      16741,
+      16742,
+      16744,
+      16745,
+      16746
+    ],
+    "released_completion_pool": 16223,
+    "released_idle_control_jobs": [
+      16223
+    ],
+    "resource_repair_pool": 16740,
+    "seed_check_jobs": [
+      16739,
+      16743
+    ],
+    "seeded_node07_pool": 16741,
+    "seeded_node09_pool": 16742,
+    "seeded_node09_repair_pool": 16744
+  },
+  "released_CPUs": 16,
+  "released_job": 16223,
+  "scancel_attempted_unix": 1793756670.945486,
+  "scancel_returncode": 0,
+  "scancel_stderr": "",
+  "started_unix": 1793756670.945483,
+  "state": "released_verified_once",
+  "verified_absent": true
+}

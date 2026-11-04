@@ -1,0 +1,392 @@
+{
+  "active_numeric_processes_before": [
+    {
+      "CPU_seconds": 43244.39,
+      "RSS_bytes": 8724271104,
+      "affinity": [
+        22
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151101",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_cores": 0.9965264374855795,
+      "node_budget": "230",
+      "pid": 2261961,
+      "pool_budget": null,
+      "ppid": 2261917,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9198848 kB",
+        "VmPeak": "9825212 kB",
+        "VmRSS": "8519796 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43210.05,
+      "RSS_bytes": 4243619840,
+      "affinity": [
+        0
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151103",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_cores": 0.9957350994684089,
+      "node_budget": "230",
+      "pid": 2261962,
+      "pool_budget": null,
+      "ppid": 2261913,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9266060 kB",
+        "VmPeak": "9894468 kB",
+        "VmRSS": "4144160 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43248.8,
+      "RSS_bytes": 7917760512,
+      "affinity": [
+        20
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151105",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_cores": 0.9966280521215097,
+      "node_budget": "230",
+      "pid": 2261963,
+      "pool_budget": null,
+      "ppid": 2261915,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9134216 kB",
+        "VmPeak": "9761744 kB",
+        "VmRSS": "7732188 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43243.6,
+      "RSS_bytes": 7867924480,
+      "affinity": [
+        50
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151107",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_cores": 0.996508218183805,
+      "node_budget": "230",
+      "pid": 2261964,
+      "pool_budget": "96",
+      "ppid": 2261914,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9115004 kB",
+        "VmPeak": "9744380 kB",
+        "VmRSS": "7683520 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43248.48,
+      "RSS_bytes": 8325132288,
+      "affinity": [
+        52
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151109",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_cores": 0.9966206681107211,
+      "node_budget": "230",
+      "pid": 2261965,
+      "pool_budget": "96",
+      "ppid": 2261916,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9148784 kB",
+        "VmPeak": "9774712 kB",
+        "VmRSS": "8130012 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43250.43,
+      "RSS_bytes": 4094832640,
+      "affinity": [
+        48
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151111",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_cores": 0.9966655992354214,
+      "node_budget": "230",
+      "pid": 2261966,
+      "pool_budget": "96",
+      "ppid": 2261912,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9179108 kB",
+        "VmPeak": "9809220 kB",
+        "VmRSS": "3998860 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43251.479999999996,
+      "RSS_bytes": 6734979072,
+      "affinity": [
+        24
+      ],
+      "birth_unix": 1793712646.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151113",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_cores": 0.9966897906599986,
+      "node_budget": "230",
+      "pid": 2261967,
+      "pool_budget": null,
+      "ppid": 2261919,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9243012 kB",
+        "VmPeak": "9873760 kB",
+        "VmRSS": "6577128 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43163.36,
+      "RSS_bytes": 6017892352,
+      "affinity": [
+        54
+      ],
+      "birth_unix": 1793712646.11,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151115",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16740",
+      "lifetime_cores": 0.9946593723365278,
+      "node_budget": "230",
+      "pid": 2261968,
+      "pool_budget": "96",
+      "ppid": 2261918,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9211864 kB",
+        "VmPeak": "9840344 kB",
+        "VmRSS": "5876848 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 43249.4,
+      "RSS_bytes": 6862200832,
+      "affinity": [
+        26
+      ],
+      "birth_unix": 1793712646.14,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/prepare_bank.py",
+        "--root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "--key",
+        "dys_shortest_path_25x25__data151117",
+        "--maximum",
+        "1000"
+      ],
+      "entry": "prepare_bank.py",
+      "job": "16726",
+      "lifetime_cores": 0.9966427680571031,
+      "node_budget": "230",
+      "pid": 2261969,
+      "pool_budget": "230",
+      "ppid": 2261921,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "9313224 kB",
+        "VmPeak": "9940172 kB",
+        "VmRSS": "6701368 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 775.16,
+      "RSS_bytes": 1282117632,
+      "affinity": [
+        38
+      ],
+      "birth_unix": 1793755262.07,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+        "--manifest",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__f31a13ce8a115b21cad1634d3740da29.json",
+        "--output-root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+      ],
+      "entry": "run_fit.py",
+      "job": "16726",
+      "lifetime_cores": 0.9948602632353868,
+      "node_budget": "230",
+      "pid": 2280388,
+      "pool_budget": null,
+      "ppid": 2261930,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "1787420 kB",
+        "VmPeak": "2320312 kB",
+        "VmRSS": "1252068 kB"
+      },
+      "status": "running"
+    },
+    {
+      "CPU_seconds": 675.25,
+      "RSS_bytes": 1665875968,
+      "affinity": [
+        4
+      ],
+      "birth_unix": 1793755362.1,
+      "command": [
+        "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv/bin/python",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/run_fit.py",
+        "--manifest",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/jobs/lava_complete__4002b58cef56208704eae9aae0c8f7cb.json",
+        "--output-root",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/results"
+      ],
+      "entry": "run_fit.py",
+      "job": "16726",
+      "lifetime_cores": 0.9942795489763563,
+      "node_budget": "230",
+      "pid": 2280449,
+      "pool_budget": "230",
+      "ppid": 2261936,
+      "proc_status": {
+        "Threads": "1",
+        "VmHWM": "1706224 kB",
+        "VmPeak": "2241228 kB",
+        "VmRSS": "1626832 kB"
+      },
+      "status": "running"
+    }
+  ],
+  "admission_GiB": {
+    "fit": 3,
+    "prepare": 16
+  },
+  "authorization": "Direct human: Okay, fix this. Check what memory we actually need, get more SP25 fits running, and release the idle node09 cores. Do not interrupt healthy fits or change the science. Human then: Continue. Relayed by Main.",
+  "bank_headroom_factor": 1.8014401887037186,
+  "completed_fit_attempts": 52,
+  "fit_headroom_factor": 1.7799707122535495,
+  "measured_max_bank_VmHWM_bytes": 9536741376,
+  "measured_max_fit_ru_maxrss_bytes": 1809707008,
+  "new_allocations": 0,
+  "observed_unix": 1793756040.6114848,
+  "reserved_coordinator_worker": {
+    "core": 46,
+    "index": "23",
+    "job": "16726"
+  },
+  "revision": "SP25_MEASURED_ADMISSION_20261104",
+  "route": "dys_shortest_path_25x25",
+  "science_unchanged": [
+    "source solver/loss",
+    "data",
+    "original seeds",
+    "cap250",
+    "batch",
+    "300epochs",
+    "validation-only frozen selection",
+    "40 accepted CFL100 censors",
+    "absolute deadline"
+  ],
+  "sizing_basis": "Nine original N1000 builders near90percent complete, including all construction temporaries so far; Linux VmHWM and worker high-water RSS, not current RSS. Completed whole-process fit peaks across N100/N300/N500. Lazy per-row vertices and unchanged batch; admission remains below unchanged per-child termination guard. Remaining observations are not proved bounded.",
+  "source": "ops/SP25_MEMORY_PREFLIGHT_20261104.json",
+  "unchanged_aggregate_GiB": {
+    "node": 230,
+    "resource_pool_16740": 96
+  },
+  "unchanged_child_termination_GiB": {
+    "fit": 6,
+    "prepare": 24
+  }
+}

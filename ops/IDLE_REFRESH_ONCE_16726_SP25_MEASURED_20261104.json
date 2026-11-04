@@ -1,0 +1,155 @@
+{
+  "finished_unix": 1793756489.6603332,
+  "host": "node07.cluster.local",
+  "new_CPU_allocations": 0,
+  "preserved": [],
+  "reason": "Measured SP25 admission16GiB preparation/3GiB fit; child guards24/6GiB unchanged.",
+  "refreshed": [
+    {
+      "core": 28,
+      "index": "14",
+      "new_pid": 2281038,
+      "old_birth_unix": 1793712625.93,
+      "old_pid": 2261923,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 30,
+      "index": "15",
+      "new_pid": 2281039,
+      "old_birth_unix": 1793712625.96,
+      "old_pid": 2261925,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 32,
+      "index": "16",
+      "new_pid": 2281041,
+      "old_birth_unix": 1793712625.98,
+      "old_pid": 2261927,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 34,
+      "index": "17",
+      "new_pid": 2281043,
+      "old_birth_unix": 1793712626.0,
+      "old_pid": 2261928,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 36,
+      "index": "18",
+      "new_pid": 2281045,
+      "old_birth_unix": 1793712626.02,
+      "old_pid": 2261929,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 2,
+      "index": "1",
+      "new_pid": 2281046,
+      "old_birth_unix": 1793712626.07,
+      "old_pid": 2261931,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 40,
+      "index": "20",
+      "new_pid": 2281047,
+      "old_birth_unix": 1793712626.09,
+      "old_pid": 2261932,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": null
+    },
+    {
+      "core": 42,
+      "index": "21",
+      "new_pid": 2281048,
+      "old_birth_unix": 1793712626.12,
+      "old_pid": 2261933,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 44,
+      "index": "22",
+      "new_pid": 2281049,
+      "old_birth_unix": 1793712626.14,
+      "old_pid": 2261934,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 6,
+      "index": "3",
+      "new_pid": 2281050,
+      "old_birth_unix": 1793712626.21,
+      "old_pid": 2261937,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 8,
+      "index": "4",
+      "new_pid": 2281053,
+      "old_birth_unix": 1793712626.23,
+      "old_pid": 2261938,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 10,
+      "index": "5",
+      "new_pid": 2281054,
+      "old_birth_unix": 1793712626.26,
+      "old_pid": 2261939,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 12,
+      "index": "6",
+      "new_pid": 2281056,
+      "old_birth_unix": 1793712626.28,
+      "old_pid": 2261940,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": null
+    },
+    {
+      "core": 14,
+      "index": "7",
+      "new_pid": 2281060,
+      "old_birth_unix": 1793712626.29,
+      "old_pid": 2261941,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": null
+    },
+    {
+      "core": 16,
+      "index": "8",
+      "new_pid": 2281061,
+      "old_birth_unix": 1793712626.31,
+      "old_pid": 2261942,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    },
+    {
+      "core": 18,
+      "index": "9",
+      "new_pid": 2281065,
+      "old_birth_unix": 1793712626.34,
+      "old_pid": 2261943,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "230"
+    }
+  ],
+  "slurm_job_id": "16726",
+  "started_unix": 1793756489.365385
+}

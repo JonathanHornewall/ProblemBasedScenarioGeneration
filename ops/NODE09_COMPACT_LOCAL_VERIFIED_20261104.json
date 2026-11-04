@@ -1,0 +1,11 @@
+{
+  "state": "verified_local_compact_copy",
+  "archive": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_completion_20261102/retained_compact/node09_seed_records.tar.gz",
+  "archive_sha256": "ef976b1afbd8b45a9a4c64b9544386e067fe9212951e32c08c4e8ad4e43fd832",
+  "archive_bytes": 4303294,
+  "uncompressed_bytes": 116877109,
+  "file_count": 21589,
+  "weights": 0,
+  "dense_cache_files": 0,
+  "source_record": "ops/NODE09_COMPACT_RETENTION_20261104.json"
+}

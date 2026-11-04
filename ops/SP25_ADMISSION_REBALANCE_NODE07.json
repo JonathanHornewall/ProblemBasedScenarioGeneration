@@ -1,0 +1,478 @@
+{
+  "claims": [
+    {
+      "CPU_seconds": 43639.79,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261962,
+      "id": "bank__dys_shortest_path_25x25__data151103",
+      "measured_peak_bytes": 9488445440,
+      "parent_pid": 2261913,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_0_16726"
+    },
+    {
+      "CPU_seconds": 43680.76,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261966,
+      "id": "bank__dys_shortest_path_25x25__data151111",
+      "measured_peak_bytes": 9399406592,
+      "parent_pid": 2261912,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_0_16740"
+    },
+    {
+      "CPU_seconds": 43678.94,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261963,
+      "id": "bank__dys_shortest_path_25x25__data151105",
+      "measured_peak_bytes": 9353437184,
+      "parent_pid": 2261915,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_10_16726"
+    },
+    {
+      "CPU_seconds": 43674.54,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261961,
+      "id": "bank__dys_shortest_path_25x25__data151101",
+      "measured_peak_bytes": 9440768000,
+      "parent_pid": 2261917,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_11_16726"
+    },
+    {
+      "CPU_seconds": 43681.82,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261967,
+      "id": "bank__dys_shortest_path_25x25__data151113",
+      "measured_peak_bytes": 9464844288,
+      "parent_pid": 2261919,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_12_16726"
+    },
+    {
+      "CPU_seconds": 43679.69,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.14,
+      "child_pid": 2261969,
+      "id": "bank__dys_shortest_path_25x25__data151117",
+      "measured_peak_bytes": 9536741376,
+      "parent_pid": 2261921,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_13_16726"
+    },
+    {
+      "CPU_seconds": 1205.43,
+      "after_GiB": 3.0,
+      "before_GiB": 6.0,
+      "child_birth_unix": 1793755262.07,
+      "child_pid": 2280388,
+      "id": "lava_complete__f31a13ce8a115b21cad1634d3740da29",
+      "measured_peak_bytes": 1830318080,
+      "parent_pid": 2261930,
+      "retained_child_guard_GiB": 6,
+      "token": "node07.cluster.local_19_16726"
+    },
+    {
+      "CPU_seconds": 43673.88,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261964,
+      "id": "bank__dys_shortest_path_25x25__data151107",
+      "measured_peak_bytes": 9333764096,
+      "parent_pid": 2261914,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_1_16740"
+    },
+    {
+      "CPU_seconds": 1105.3999999999999,
+      "after_GiB": 3.0,
+      "before_GiB": 6.0,
+      "child_birth_unix": 1793755362.1,
+      "child_pid": 2280449,
+      "id": "lava_complete__4002b58cef56208704eae9aae0c8f7cb",
+      "measured_peak_bytes": 1766039552,
+      "parent_pid": 2261936,
+      "retained_child_guard_GiB": 6,
+      "token": "node07.cluster.local_2_16726"
+    },
+    {
+      "CPU_seconds": 43678.74,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.1,
+      "child_pid": 2261965,
+      "id": "bank__dys_shortest_path_25x25__data151109",
+      "measured_peak_bytes": 9368354816,
+      "parent_pid": 2261916,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_2_16740"
+    },
+    {
+      "CPU_seconds": 43592.77,
+      "after_GiB": 16.0,
+      "before_GiB": 24.0,
+      "child_birth_unix": 1793712646.11,
+      "child_pid": 2261968,
+      "id": "bank__dys_shortest_path_25x25__data151115",
+      "measured_peak_bytes": 9432948736,
+      "parent_pid": 2261918,
+      "retained_child_guard_GiB": 24,
+      "token": "node07.cluster.local_3_16740"
+    }
+  ],
+  "coordinator_slot": {
+    "core": 46,
+    "index": "23",
+    "job": "16726",
+    "old_birth_unix": 1793712626.16,
+    "old_idle_worker_pid": 2261935
+  },
+  "finished_unix": 1793756472.947289,
+  "frozen_idle_workers": [
+    {
+      "birth_unix": 1793712625.93,
+      "core": [
+        28
+      ],
+      "index": "14",
+      "job": "16726",
+      "pid": 2261923
+    },
+    {
+      "birth_unix": 1793712625.96,
+      "core": [
+        30
+      ],
+      "index": "15",
+      "job": "16726",
+      "pid": 2261925
+    },
+    {
+      "birth_unix": 1793712625.98,
+      "core": [
+        32
+      ],
+      "index": "16",
+      "job": "16726",
+      "pid": 2261927
+    },
+    {
+      "birth_unix": 1793712626.0,
+      "core": [
+        34
+      ],
+      "index": "17",
+      "job": "16726",
+      "pid": 2261928
+    },
+    {
+      "birth_unix": 1793712626.02,
+      "core": [
+        36
+      ],
+      "index": "18",
+      "job": "16726",
+      "pid": 2261929
+    },
+    {
+      "birth_unix": 1793712626.07,
+      "core": [
+        2
+      ],
+      "index": "1",
+      "job": "16726",
+      "pid": 2261931
+    },
+    {
+      "birth_unix": 1793712626.09,
+      "core": [
+        40
+      ],
+      "index": "20",
+      "job": "16726",
+      "pid": 2261932
+    },
+    {
+      "birth_unix": 1793712626.12,
+      "core": [
+        42
+      ],
+      "index": "21",
+      "job": "16726",
+      "pid": 2261933
+    },
+    {
+      "birth_unix": 1793712626.14,
+      "core": [
+        44
+      ],
+      "index": "22",
+      "job": "16726",
+      "pid": 2261934
+    },
+    {
+      "birth_unix": 1793712626.21,
+      "core": [
+        6
+      ],
+      "index": "3",
+      "job": "16726",
+      "pid": 2261937
+    },
+    {
+      "birth_unix": 1793712626.23,
+      "core": [
+        8
+      ],
+      "index": "4",
+      "job": "16726",
+      "pid": 2261938
+    },
+    {
+      "birth_unix": 1793712625.91,
+      "core": [
+        56
+      ],
+      "index": "4",
+      "job": "16740",
+      "pid": 2261920
+    },
+    {
+      "birth_unix": 1793712626.26,
+      "core": [
+        10
+      ],
+      "index": "5",
+      "job": "16726",
+      "pid": 2261939
+    },
+    {
+      "birth_unix": 1793712625.92,
+      "core": [
+        58
+      ],
+      "index": "5",
+      "job": "16740",
+      "pid": 2261922
+    },
+    {
+      "birth_unix": 1793712626.28,
+      "core": [
+        12
+      ],
+      "index": "6",
+      "job": "16726",
+      "pid": 2261940
+    },
+    {
+      "birth_unix": 1793712625.95,
+      "core": [
+        60
+      ],
+      "index": "6",
+      "job": "16740",
+      "pid": 2261924
+    },
+    {
+      "birth_unix": 1793712626.29,
+      "core": [
+        14
+      ],
+      "index": "7",
+      "job": "16726",
+      "pid": 2261941
+    },
+    {
+      "birth_unix": 1793712625.96,
+      "core": [
+        62
+      ],
+      "index": "7",
+      "job": "16740",
+      "pid": 2261926
+    },
+    {
+      "birth_unix": 1793712626.31,
+      "core": [
+        16
+      ],
+      "index": "8",
+      "job": "16726",
+      "pid": 2261942
+    },
+    {
+      "birth_unix": 1793712626.34,
+      "core": [
+        18
+      ],
+      "index": "9",
+      "job": "16726",
+      "pid": 2261943
+    }
+  ],
+  "healthy_children_signalled": 0,
+  "new_allocations": 0,
+  "preserved_active_workers": [],
+  "reservations_after": {
+    "node07.cluster.local_0_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151103",
+      "repriced_unix": 1793756472.8761926,
+      "worker_pid": 2261913
+    },
+    "node07.cluster.local_0_16740": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151111",
+      "repriced_unix": 1793756472.8839998,
+      "worker_pid": 2261912
+    },
+    "node07.cluster.local_10_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151105",
+      "repriced_unix": 1793756472.8908393,
+      "worker_pid": 2261915
+    },
+    "node07.cluster.local_11_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151101",
+      "repriced_unix": 1793756472.8972347,
+      "worker_pid": 2261917
+    },
+    "node07.cluster.local_12_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151113",
+      "repriced_unix": 1793756472.9040213,
+      "worker_pid": 2261919
+    },
+    "node07.cluster.local_13_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151117",
+      "repriced_unix": 1793756472.9101443,
+      "worker_pid": 2261921
+    },
+    "node07.cluster.local_19_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 6,
+      "gib": 3.0,
+      "id": "lava_complete__f31a13ce8a115b21cad1634d3740da29",
+      "repriced_unix": 1793756472.9172947,
+      "worker_pid": 2261930
+    },
+    "node07.cluster.local_1_16740": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151107",
+      "repriced_unix": 1793756472.9250767,
+      "worker_pid": 2261914
+    },
+    "node07.cluster.local_2_16726": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 6,
+      "gib": 3.0,
+      "id": "lava_complete__4002b58cef56208704eae9aae0c8f7cb",
+      "repriced_unix": 1793756472.9324389,
+      "worker_pid": 2261936
+    },
+    "node07.cluster.local_2_16740": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151109",
+      "repriced_unix": 1793756472.938962,
+      "worker_pid": 2261916
+    },
+    "node07.cluster.local_3_16740": {
+      "admission_revision": "SP25_MEASURED_ADMISSION_20261104",
+      "child_memory_limit_gib": 24,
+      "gib": 16.0,
+      "id": "bank__dys_shortest_path_25x25__data151115",
+      "repriced_unix": 1793756472.9455616,
+      "worker_pid": 2261918
+    }
+  },
+  "reservations_before": {
+    "node07.cluster.local_0_16726": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151103",
+      "worker_pid": 2261913
+    },
+    "node07.cluster.local_0_16740": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151111",
+      "worker_pid": 2261912
+    },
+    "node07.cluster.local_10_16726": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151105",
+      "worker_pid": 2261915
+    },
+    "node07.cluster.local_11_16726": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151101",
+      "worker_pid": 2261917
+    },
+    "node07.cluster.local_12_16726": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151113",
+      "worker_pid": 2261919
+    },
+    "node07.cluster.local_13_16726": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151117",
+      "worker_pid": 2261921
+    },
+    "node07.cluster.local_19_16726": {
+      "gib": 6.0,
+      "id": "lava_complete__f31a13ce8a115b21cad1634d3740da29",
+      "worker_pid": 2261930
+    },
+    "node07.cluster.local_1_16740": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151107",
+      "worker_pid": 2261914
+    },
+    "node07.cluster.local_2_16726": {
+      "gib": 6.0,
+      "id": "lava_complete__4002b58cef56208704eae9aae0c8f7cb",
+      "worker_pid": 2261936
+    },
+    "node07.cluster.local_2_16740": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151109",
+      "worker_pid": 2261916
+    },
+    "node07.cluster.local_3_16740": {
+      "gib": 24.0,
+      "id": "bank__dys_shortest_path_25x25__data151115",
+      "worker_pid": 2261918
+    }
+  },
+  "started_unix": 1793756472.464051,
+  "state": "applied"
+}

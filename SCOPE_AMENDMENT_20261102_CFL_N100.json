@@ -29,6 +29,8 @@
   "grandfathered_count": 0,
   "human_instruction": "Human accepted Main recommendation to drop full SP50 expansion, retain SP10/15/20/25, CFL50/100 N100 and six KP recoveries; preserve completed outputs and healthy running fit drain. No higher resource allowances or deadline extension.",
   "maximum_cpus_running_plus_pending": 100,
+  "operational_authorization_20261103_La_Paz": "Human authorized measured SP25 admission correction and node09 core release; claims16/3GiB with unchanged child guards24/6GiB, aggregate230/96GiB, scientific protocol and deadline.",
+  "operational_memory_policy": "ops/SP25_ADMISSION_POLICY_20261104.json",
   "preserve_completed_additional_evidence": true,
   "required_counts": {
     "CFL": {

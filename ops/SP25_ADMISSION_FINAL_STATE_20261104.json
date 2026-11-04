@@ -1,0 +1,73 @@
+{
+  "CPU_interval_seconds": 5.060412645339966,
+  "SP25_admission_GiB": {
+    "fit": 3,
+    "preparation": 16
+  },
+  "SP25_guards": {
+    "fit_GiB": 6,
+    "node_GiB": 230,
+    "preparation_GiB": 24,
+    "resource_pool_aggregate_GiB": 96
+  },
+  "SP25_successes": 52,
+  "accepted_resource_censors": 40,
+  "actual_RSS_total_bytes": 94171144192,
+  "actual_builders": 10,
+  "actual_effective_interval_cores": 30.598295208712422,
+  "actual_fits": 21,
+  "actual_numeric_processes": 31,
+  "before_allocated_CPUs": 48,
+  "before_builders": 9,
+  "before_fits": 2,
+  "before_numeric_processes": 11,
+  "censors_are_scientific_successes": false,
+  "compact_node09_verified": "ops/NODE09_COMPACT_LOCAL_VERIFIED_20261104.json",
+  "coordinator": {
+    "fresh_receipt_cache": true,
+    "host": "node07.cluster.local",
+    "pid": 2281033,
+    "slurm_job_id": "16726",
+    "started_unix": 1793756489.3643343
+  },
+  "coordinator_reserved_core": 46,
+  "covered_outcomes_so_far": 662,
+  "current_allocated_CPUs": 32,
+  "current_node_admission_GiB": 223.0,
+  "current_pending_CPUs": 0,
+  "current_resource_pool_admission_GiB": 89.0,
+  "deadline_utc": "2026-11-09T04:27:29.088834+00:00",
+  "evidence": "ops/SP25_NODE07_AFTER_RELEASE_20261104.json",
+  "guard_limits_unchanged": true,
+  "healthy_numerical_children_signalled": 0,
+  "host_available_bytes": 169656922112,
+  "new_allocations": 0,
+  "new_failed_attempts_at_applied_verification": [],
+  "node09_release": "ops/NODE09_RELEASE_20261104.json",
+  "observed_La_Paz": "2026-11-03T21:46:08.388680-04:00",
+  "observed_unix": 1793756768.3886795,
+  "observed_utc": "2026-11-04T01:46:08.388680+00:00",
+  "old_healthy_children_continued": 11,
+  "phase_resources_released_once": [
+    16741,
+    16742,
+    16744,
+    16745,
+    16746
+  ],
+  "release_verified_absent": true,
+  "released_idle_control_jobs": [
+    16223
+  ],
+  "remaining_non_censored_fits": 48,
+  "remaining_ready_fits": 48,
+  "remaining_route": "dys_shortest_path_25x25",
+  "required_outcomes": 710,
+  "required_terminal_marker": "EXECUTION_OUTCOMES_COMPLETE.json",
+  "same_finite_heartbeat_preserved": true,
+  "scientific_cutoff_utc": "2026-11-09T03:57:29.088834+00:00",
+  "scientific_protocol_changed": false,
+  "state": "healthy_in_progress_after_authorized_admission_correction",
+  "terminal_successes_if_SP25_succeeds": 670,
+  "valid_successes": 622
+}

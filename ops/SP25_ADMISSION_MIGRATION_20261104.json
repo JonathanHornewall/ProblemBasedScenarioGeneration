@@ -1,0 +1,106 @@
+{
+  "finished_unix": 1793756489.2168403,
+  "healthy_numerical_children_signalled": 0,
+  "new_allocations": 0,
+  "started_unix": 1793756472.295883,
+  "state": "launched_pending_applied_verification",
+  "steps": [
+    {
+      "entry": "rebalance_sp25_claims.py",
+      "finished_unix": 1793756472.9846048,
+      "job": 16726,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\"started_unix\": 1793756472.464051, \"claims\": [{\"token\": \"node07.cluster.local_0_16726\", \"child_pid\": 2261962, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261913, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9488445440, \"CPU_seconds\": 43639.79, \"id\": \"bank__dys_shortest_path_25x25__data151103\"}, {\"token\": \"node07.cluster.local_0_16740\", \"child_pid\": 2261966, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261912, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9399406592, \"CPU_seconds\": 43680.76, \"id\": \"bank__dys_shortest_path_25x25__data151111\"}, {\"token\": \"node07.cluster.local_10_16726\", \"child_pid\": 2261963, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261915, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9353437184, \"CPU_seconds\": 43678.94, \"id\": \"bank__dys_shortest_path_25x25__data151105\"}, {\"token\": \"node07.cluster.local_11_16726\", \"child_pid\": 2261961, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261917, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9440768000, \"CPU_seconds\": 43674.54, \"id\": \"bank__dys_shortest_path_25x25__data151101\"}, {\"token\": \"node07.cluster.local_12_16726\", \"child_pid\": 2261967, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261919, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9464844288, \"CPU_seconds\": 43681.82, \"id\": \"bank__dys_shortest_path_25x25__data151113\"}, {\"token\": \"node07.cluster.local_13_16726\", \"child_pid\": 2261969, \"child_birth_unix\": 1793712646.14, \"parent_pid\": 2261921, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9536741376, \"CPU_seconds\": 43679.69, \"id\": \"bank__dys_shortest_path_25x25__data151117\"}, {\"token\": \"node07.cluster.local_19_16726\", \"child_pid\": 2280388, \"child_birth_unix\": 1793755262.07, \"parent_pid\": 2261930, \"before_GiB\": 6.0, \"after_GiB\": 3.0, \"retained_child_guard_GiB\": 6, \"measured_peak_bytes\": 1830318080, \"CPU_seconds\": 1205.43, \"id\": \"lava_complete__f31a13ce8a115b21cad1634d3740da29\"}, {\"token\": \"node07.cluster.local_1_16740\", \"child_pid\": 2261964, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261914, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9333764096, \"CPU_seconds\": 43673.88, \"id\": \"bank__dys_shortest_path_25x25__data151107\"}, {\"token\": \"node07.cluster.local_2_16726\", \"child_pid\": 2280449, \"child_birth_unix\": 1793755362.1, \"parent_pid\": 2261936, \"before_GiB\": 6.0, \"after_GiB\": 3.0, \"retained_child_guard_GiB\": 6, \"measured_peak_bytes\": 1766039552, \"CPU_seconds\": 1105.3999999999999, \"id\": \"lava_complete__4002b58cef56208704eae9aae0c8f7cb\"}, {\"token\": \"node07.cluster.local_2_16740\", \"child_pid\": 2261965, \"child_birth_unix\": 1793712646.1, \"parent_pid\": 2261916, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9368354816, \"CPU_seconds\": 43678.74, \"id\": \"bank__dys_shortest_path_25x25__data151109\"}, {\"token\": \"node07.cluster.local_3_16740\", \"child_pid\": 2261968, \"child_birth_unix\": 1793712646.11, \"parent_pid\": 2261918, \"before_GiB\": 24.0, \"after_GiB\": 16.0, \"retained_child_guard_GiB\": 24, \"measured_peak_bytes\": 9432948736, \"CPU_seconds\": 43592.77, \"id\": \"bank__dys_shortest_path_25x25__data151115\"}], \"frozen_idle_workers\": [{\"pid\": 2261923, \"birth_unix\": 1793712625.93, \"index\": \"14\", \"job\": \"16726\", \"core\": [28]}, {\"pid\": 2261925, \"birth_unix\": 1793712625.96, \"index\": \"15\", \"job\": \"16726\", \"core\": [30]}, {\"pid\": 2261927, \"birth_unix\": 1793712625.98, \"index\": \"16\", \"job\": \"16726\", \"core\": [32]}, {\"pid\": 2261928, \"birth_unix\": 1793712626.0, \"index\": \"17\", \"job\": \"16726\", \"core\": [34]}, {\"pid\": 2261929, \"birth_unix\": 1793712626.02, \"index\": \"18\", \"job\": \"16726\", \"core\": [36]}, {\"pid\": 2261931, \"birth_unix\": 1793712626.07, \"index\": \"1\", \"job\": \"16726\", \"core\": [2]}, {\"pid\": 2261932, \"birth_unix\": 1793712626.09, \"index\": \"20\", \"job\": \"16726\", \"core\": [40]}, {\"pid\": 2261933, \"birth_unix\": 1793712626.12, \"index\": \"21\", \"job\": \"16726\", \"core\": [42]}, {\"pid\": 2261934, \"birth_unix\": 1793712626.14, \"index\": \"22\", \"job\": \"16726\", \"core\": [44]}, {\"pid\": 2261937, \"birth_unix\": 1793712626.21, \"index\": \"3\", \"job\": \"16726\", \"core\": [6]}, {\"pid\": 2261938, \"birth_unix\": 1793712626.23, \"index\": \"4\", \"job\": \"16726\", \"core\": [8]}, {\"pid\": 2261920, \"birth_unix\": 1793712625.91, \"index\": \"4\", \"job\": \"16740\", \"core\": [56]}, {\"pid\": 2261939, \"birth_unix\": 1793712626.26, \"index\": \"5\", \"job\": \"16726\", \"core\": [10]}, {\"pid\": 2261922, \"birth_unix\": 1793712625.92, \"index\": \"5\", \"job\": \"16740\", \"core\": [58]}, {\"pid\": 2261940, \"birth_unix\": 1793712626.28, \"index\": \"6\", \"job\": \"16726\", \"core\": [12]}, {\"pid\": 2261924, \"birth_unix\": 1793712625.95, \"index\": \"6\", \"job\": \"16740\", \"core\": [60]}, {\"pid\": 2261941, \"birth_unix\": 1793712626.29, \"index\": \"7\", \"job\": \"16726\", \"core\": [14]}, {\"pid\": 2261926, \"birth_unix\": 1793712625.96, \"index\": \"7\", \"job\": \"16740\", \"core\": [62]}, {\"pid\": 2261942, \"birth_unix\": 1793712626.31, \"index\": \"8\", \"job\": \"16726\", \"core\": [16]}, {\"pid\": 2261943, \"birth_unix\": 1793712626.34, \"index\": \"9\", \"job\": \"16726\", \"core\": [18]}], \"preserved_active_workers\": [], \"healthy_children_signalled\": 0, \"new_allocations\": 0, \"coordinator_slot\": {\"old_idle_worker_pid\": 2261935, \"old_birth_unix\": 1793712626.16, \"core\": 46, \"index\": \"23\", \"job\": \"16726\"}, \"reservations_before\": {\"node07.cluster.local_0_16726\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151103\", \"worker_pid\": 2261913}, \"node07.cluster.local_0_16740\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151111\", \"worker_pid\": 2261912}, \"node07.cluster.local_10_16726\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151105\", \"worker_pid\": 2261915}, \"node07.cluster.local_11_16726\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151101\", \"worker_pid\": 2261917}, \"node07.cluster.local_12_16726\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151113\", \"worker_pid\": 2261919}, \"node07.cluster.local_13_16726\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151117\", \"worker_pid\": 2261921}, \"node07.cluster.local_19_16726\": {\"gib\": 6.0, \"id\": \"lava_complete__f31a13ce8a115b21cad1634d3740da29\", \"worker_pid\": 2261930}, \"node07.cluster.local_1_16740\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151107\", \"worker_pid\": 2261914}, \"node07.cluster.local_2_16726\": {\"gib\": 6.0, \"id\": \"lava_complete__4002b58cef56208704eae9aae0c8f7cb\", \"worker_pid\": 2261936}, \"node07.cluster.local_2_16740\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151109\", \"worker_pid\": 2261916}, \"node07.cluster.local_3_16740\": {\"gib\": 24.0, \"id\": \"bank__dys_shortest_path_25x25__data151115\", \"worker_pid\": 2261918}}, \"reservations_after\": {\"node07.cluster.local_0_16726\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151103\", \"worker_pid\": 2261913, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.8761926}, \"node07.cluster.local_0_16740\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151111\", \"worker_pid\": 2261912, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.8839998}, \"node07.cluster.local_10_16726\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151105\", \"worker_pid\": 2261915, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.8908393}, \"node07.cluster.local_11_16726\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151101\", \"worker_pid\": 2261917, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.8972347}, \"node07.cluster.local_12_16726\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151113\", \"worker_pid\": 2261919, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9040213}, \"node07.cluster.local_13_16726\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151117\", \"worker_pid\": 2261921, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9101443}, \"node07.cluster.local_19_16726\": {\"gib\": 3.0, \"id\": \"lava_complete__f31a13ce8a115b21cad1634d3740da29\", \"worker_pid\": 2261930, \"child_memory_limit_gib\": 6, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9172947}, \"node07.cluster.local_1_16740\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151107\", \"worker_pid\": 2261914, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9250767}, \"node07.cluster.local_2_16726\": {\"gib\": 3.0, \"id\": \"lava_complete__4002b58cef56208704eae9aae0c8f7cb\", \"worker_pid\": 2261936, \"child_memory_limit_gib\": 6, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9324389}, \"node07.cluster.local_2_16740\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151109\", \"worker_pid\": 2261916, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.938962}, \"node07.cluster.local_3_16740\": {\"gib\": 16.0, \"id\": \"bank__dys_shortest_path_25x25__data151115\", \"worker_pid\": 2261918, \"child_memory_limit_gib\": 24, \"admission_revision\": \"SP25_MEASURED_ADMISSION_20261104\", \"repriced_unix\": 1793756472.9455616}}, \"finished_unix\": 1793756472.947289, \"state\": \"applied\"}\n"
+    },
+    {
+      "entry": "retain_node09_compact.py",
+      "finished_unix": 1793756483.094532,
+      "job": 16223,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\"started_unix\": 1793756473.204927, \"host\": \"node09.cluster.local\", \"archive\": \"/home/jonathan.hornewall/runs/lava_completion_20261102/retained_compact/node09_seed_records.tar.gz\", \"dense_cache_files\": 0, \"neural_weights\": 0, \"finished_unix\": 1793756483.0133553, \"archive_bytes\": 4303294, \"archive_sha256\": \"ef976b1afbd8b45a9a4c64b9544386e067fe9212951e32c08c4e8ad4e43fd832\", \"file_count\": 21589, \"uncompressed_bytes\": 116877109, \"state\": \"retained_on_shared_home\", \"scratch_removed\": false}\n"
+    },
+    {
+      "entry": "stop_current_coordinator.py",
+      "finished_unix": 1793756489.211461,
+      "job": 16223,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "Exact metadata coordinator exited; numerical workers preserved\n"
+    },
+    {
+      "command": [
+        "srun",
+        "--overlap",
+        "--jobid=16726",
+        "--nodelist=node07",
+        "--ntasks=1",
+        "--cpus-per-task=24",
+        "--time=7335",
+        "--cpu-bind=cores",
+        "taskset",
+        "-c",
+        "46",
+        "env",
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/coordinator_env.sh",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "coordinator.py"
+      ],
+      "entry": "coordinator.py",
+      "job": 16726,
+      "launched_unix": 1793756489.213306,
+      "launcher_pid": 1383654
+    },
+    {
+      "command": [
+        "srun",
+        "--overlap",
+        "--jobid=16740",
+        "--nodelist=node07",
+        "--ntasks=1",
+        "--cpus-per-task=8",
+        "--time=7335",
+        "--cpu-bind=cores",
+        "env",
+        "LAVA_IDLE_REFRESH_LABEL=SP25_MEASURED_20261104",
+        "LAVA_POOL_MEMORY_GIB=96",
+        "LAVA_FIRST_PREPARATION_KEY_BY_INDEX={\"4\":\"dys_shortest_path_25x25__data151119\"}",
+        "LAVA_IDLE_REFRESH_REASON=Measured SP25 admission16GiB preparation/3GiB fit; existing96GiB pool limit.",
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/coordinator_env.sh",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "refresh_idle_once.py"
+      ],
+      "entry": "refresh_idle_once.py",
+      "job": 16740,
+      "launched_unix": 1793756489.214863,
+      "launcher_pid": 1383655
+    },
+    {
+      "command": [
+        "srun",
+        "--overlap",
+        "--jobid=16726",
+        "--nodelist=node07",
+        "--ntasks=1",
+        "--cpus-per-task=24",
+        "--time=7335",
+        "--cpu-bind=cores",
+        "env",
+        "LAVA_IDLE_REFRESH_LABEL=SP25_MEASURED_20261104",
+        "LAVA_IDLE_REFRESH_SKIP_INDICES=23",
+        "LAVA_IDLE_REFRESH_REASON=Measured SP25 admission16GiB preparation/3GiB fit; child guards24/6GiB unchanged.",
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102/ops/coordinator_env.sh",
+        "/home/jonathan.hornewall/runs/lava_completion_20261102",
+        "refresh_idle_once.py"
+      ],
+      "entry": "refresh_idle_once.py",
+      "job": 16726,
+      "launched_unix": 1793756489.2163393,
+      "launcher_pid": 1383658
+    }
+  ]
+}

@@ -10,6 +10,10 @@ from qualify import read,write
 
 root=pathlib.Path(os.environ['LAVA_RUN_ROOT']);host=socket.gethostname();job=os.environ['SLURM_JOB_ID']
 label=os.environ.get('LAVA_IDLE_REFRESH_LABEL','CFL50_6GiB')
+skip_indices=set(filter(None,os.environ.get('LAVA_IDLE_REFRESH_SKIP_INDICES','').split(',')))
+priority_by_index=json.loads(os.environ.get('LAVA_FIRST_PREPARATION_KEY_BY_INDEX','{}'))
+frozen_receipt=root/'ops/SP25_ADMISSION_REBALANCE_NODE07.json'
+frozen_pids={v['pid'] for v in read(frozen_receipt).get('frozen_idle_workers',[])} if frozen_receipt.exists() else set()
 receipt=root/'ops'/('IDLE_REFRESH_ONCE_'+job+'_'+label+'.json')
 if receipt.exists():raise RuntimeError('Refresh already attempted; reconcile its receipt')
 deadline=read(root/'CONTRACT.json')['scientific_cutoff_unix']
@@ -20,7 +24,8 @@ write(receipt,record)
 children=[]
 for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
     v=read(file)
-    if v.get('state')!='waiting_for_dependencies_or_memory' or time.time()-v.get('updated_unix',0)>30:continue
+    if v.get('state')!='waiting_for_dependencies_or_memory':continue
+    if time.time()-v.get('updated_unix',0)>30 and v.get('pid') not in frozen_pids:continue
     proc=None;paused=False
     try:
         proc=psutil.Process(v['pid']);cmd=proc.cmdline()
@@ -43,10 +48,15 @@ for file in sorted((root/'workers').glob(host+'_*_'+job+'.json')):
             proc.send_signal(signal.SIGCONT);paused=False;continue
         if proc.create_time()!=birth:raise RuntimeError('Process identity changed')
         index=cmd[cmd.index('--worker')+1]
+        if index in skip_indices:
+            record['preserved'].append({'pid':proc.pid,'index':index,'reason':'reserved metadata coordinator slot'})
+            proc.send_signal(signal.SIGCONT);paused=False;continue
         # No scientific process exists or can be created by this stopped idle
         # worker. Killing only that process releases its claims atomically.
         proc.kill();paused=False
         child_env=os.environ.copy()
+        child_env.pop('LAVA_PRIORITY_PREPARATION_KEY',None)
+        if index in priority_by_index:child_env['LAVA_PRIORITY_PREPARATION_KEY']=priority_by_index[index]
         for key in ('LAVA_NODE_MEMORY_GIB','LAVA_POOL_MEMORY_GIB'):
             if key in prior_env:child_env[key]=prior_env[key]
             else:child_env.pop(key,None)

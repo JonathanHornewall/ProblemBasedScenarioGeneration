@@ -1,0 +1,47 @@
+{
+  "finished_unix": 1793756489.5240145,
+  "host": "node07.cluster.local",
+  "new_CPU_allocations": 0,
+  "preserved": [],
+  "reason": "Measured SP25 admission16GiB preparation/3GiB fit; existing96GiB pool limit.",
+  "refreshed": [
+    {
+      "core": 56,
+      "index": "4",
+      "new_pid": 2281037,
+      "old_birth_unix": 1793712625.91,
+      "old_pid": 2261920,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "96"
+    },
+    {
+      "core": 58,
+      "index": "5",
+      "new_pid": 2281040,
+      "old_birth_unix": 1793712625.92,
+      "old_pid": 2261922,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "96"
+    },
+    {
+      "core": 60,
+      "index": "6",
+      "new_pid": 2281042,
+      "old_birth_unix": 1793712625.95,
+      "old_pid": 2261924,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "96"
+    },
+    {
+      "core": 62,
+      "index": "7",
+      "new_pid": 2281044,
+      "old_birth_unix": 1793712625.96,
+      "old_pid": 2261926,
+      "preserved_node_memory_GiB": "230",
+      "preserved_pool_memory_GiB": "96"
+    }
+  ],
+  "slurm_job_id": "16740",
+  "started_unix": 1793756489.3655689
+}

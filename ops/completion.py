@@ -151,12 +151,19 @@ def advance(root):
             'scope_amendment':active_scope['revision'] if active_scope else None,
             'grandfathered_active_fits_drained':True,'excluded_cells_required':False})
 
-def memory(item):
+def memory_limit(item):
+    """Unchanged child termination limits, separate from admission claims."""
     if item['kind']=='prepare':return 32. if item['route']=='dys_cfl_50x5' else 48. if 'cfl' in item['route'] else 96. if '50x50' in item['route'] else 24. if '25x25' in item['route'] else 6.
     # Completed CFL50 N100 fits peak below3.6GiB. Keep measured headroom,
     # rather than reserving12GiB and blocking ready fits and shared banks.
     # Existing workers retain their original guard until their child ends.
     return 6. if item['route']=='dys_cfl_50x5' and item['n']==100 else 24. if '50x50' in item['route'] else 12. if 'cfl' in item['route'] else 6.
+
+def memory(item):
+    """Admission only: SP25 measured bank HWM<9GiB and fit peak<1.7GiB."""
+    if item['route']=='dys_shortest_path_25x25':
+        return 16. if item['kind']=='prepare' else 3.
+    return memory_limit(item)
 
 def work(root,index):
     root=Path(root)
@@ -196,7 +203,11 @@ def work(root,index):
                     'key':item['key'],'n':maximum,'route':item['route'],'stage':'upstream_preprocessing'})
                 queued_keys.add(item['key'])
         preparation=sorted(queue['preparation'],key=lambda item:(item['key'] not in development_keys,item['key']))
-        for item in queue['fits']+preparation:
+        items=queue['fits']+preparation
+        priority_key=os.environ.get('LAVA_PRIORITY_PREPARATION_KEY')
+        if priority_key:
+            items=sorted(items,key=lambda item:not(item['kind']=='prepare' and item['key']==priority_key))
+        for item in items:
             if item['kind']=='prepare':
                 item={**item,'n':preparation_maximum(root,item['key'],item['n'])}
                 if not item['n']:continue
@@ -229,7 +240,8 @@ def work(root,index):
                 own=sum(v['gib'] for key,v in held.items() if key.endswith('_'+os.environ['SLURM_JOB_ID']))
                 if own+memory(item)>float(os.environ.get('LAVA_POOL_MEMORY_GIB',os.environ['LAVA_NODE_MEMORY_GIB'])):
                     candidate.close();continue
-                held[token]={'gib':memory(item),'worker_pid':os.getpid(),'id':item['id']};write(reservation,held)
+                held[token]={'gib':memory(item),'worker_pid':os.getpid(),'id':item['id'],
+                    'child_memory_limit_gib':memory_limit(item)};write(reservation,held)
             chosen=item;claim=candidate;break
         if chosen is None:
             write(heartbeat,{'state':'waiting_for_dependencies_or_memory','updated_unix':time.time(),
@@ -245,6 +257,8 @@ def work(root,index):
         else:cmd=[sys.executable,str(root/'ops/prepare_bank.py'),'--root',str(root),'--key',item['key'],'--maximum',str(item['n'])]
         opened=time.monotonic();cap=min(43200 if item['kind']=='fit' else 86400,deadline-time.time())
         reason=None;peak_sampled=0;cpu_sampled=0.
+        # Capture once. Admission changes never lower a live child's guard.
+        child_memory_limit=memory_limit(item)
         import psutil
         with path.open('ab') as log:
             child=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
@@ -256,7 +270,7 @@ def work(root,index):
                     proc=psutil.Process(child.pid);rss=proc.memory_info().rss
                     peak_sampled=max(peak_sampled,rss);t=proc.cpu_times();cpu_sampled=t.user+t.system
                 except psutil.Error:pass
-                if stopped or time.monotonic()-opened>=cap or peak_sampled>memory(item)*2**30:
+                if stopped or time.monotonic()-opened>=cap or peak_sampled>child_memory_limit*2**30:
                     reason='allocation_stop' if stopped else 'finite_wall_budget' if time.monotonic()-opened>=cap else 'memory_reservation_exceeded'
                     os.killpg(child.pid,signal.SIGKILL);_,status,usage=os.wait4(child.pid,0)
                     child.returncode=os.waitstatus_to_exitcode(status);break
@@ -266,7 +280,8 @@ def work(root,index):
                 time.sleep(5)
         outcome={**item,'returncode':child.returncode,'reason':reason,'elapsed_wall_seconds':time.monotonic()-opened,
             'process_cpu_seconds':usage.ru_utime+usage.ru_stime,'peak_rss_bytes':usage.ru_maxrss*1024,
-            'finished_unix':time.time(),'host':socket.gethostname(),'slurm_job_id':os.environ['SLURM_JOB_ID']}
+            'finished_unix':time.time(),'host':socket.gethostname(),'slurm_job_id':os.environ['SLURM_JOB_ID'],
+            'admission_memory_gib':memory(item),'child_memory_limit_gib':child_memory_limit}
         write(attempts/(item['id']+'__'+str(time.time_ns())+'.json'),outcome)
         if child.returncode:
             write(root/'failures'/(item['id']+'.json'),outcome)
