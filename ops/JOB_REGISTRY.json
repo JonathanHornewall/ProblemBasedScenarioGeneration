@@ -1,9 +1,6 @@
 {
   "absolute_deadline_utc": "2026-11-09T04:27:29.088834+00:00",
-  "active_allocation_CPUs": {
-    "16726": 24,
-    "16740": 8
-  },
+  "active_allocation_CPUs": {},
   "cfl100_node07_pool": 16745,
   "cfl100_node09_pool": 16746,
   "completed_KP_serial_job": 16727,
@@ -13,7 +10,7 @@
   "coordinator_pool": 16726,
   "coordinator_reserved_core": 46,
   "coordinator_worker_index": 23,
-  "current_requested_CPUs_after_release": 32,
+  "current_requested_CPUs_after_release": 0,
   "implementation_checks": [
     16219,
     16220,
@@ -58,5 +55,12 @@
   ],
   "seeded_node07_pool": 16741,
   "seeded_node09_pool": 16742,
-  "seeded_node09_repair_pool": 16744
+  "seeded_node09_repair_pool": 16744,
+  "terminal_released_pools": [
+    16726,
+    16740
+  ],
+  "release_receipt": "ops/FINAL_RESOURCE_RELEASE.json",
+  "terminal_scientific_outcomes_covered": 710,
+  "numerical_work_complete": true
 }

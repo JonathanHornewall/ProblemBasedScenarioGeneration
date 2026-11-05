@@ -1,0 +1,13 @@
+{
+  "state": "verified_local_compact_copy",
+  "archive": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_completion_20261102/retained_compact/remote_compact_final.tar.gz",
+  "archive_bytes": 21997480,
+  "archive_sha256": "a3d97afd3cb676eaf7e1225148b552f778700e68090dedeb28b34a1fe4d395e9",
+  "file_count": 9035,
+  "extracted_to": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_completion_20261102/retained_compact/remote_snapshot",
+  "each_file_size_and_sha256_verified_once": true,
+  "weights": 0,
+  "dense_caches": 0,
+  "node07_compact_seed_records": 10973,
+  "node09_compact_seed_records_already_verified": 21589
+}

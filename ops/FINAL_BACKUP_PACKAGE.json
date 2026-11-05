@@ -1,0 +1,13 @@
+{
+  "archive": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_completion_20261102/retained_compact/lava_completion_20261102_compact_final.tar.gz",
+  "archive_bytes": 25912128,
+  "archive_sha256": "6a0aee4a7d5ad9bf3c1c936df30818871240e2d8d849c57e4227bd1736fafd35",
+  "archive_md5": "c3efb850f11cb06ddd9c300fd6e8aad1",
+  "top_level_file_count": 290,
+  "includes_verified_remote_compact_bundle": true,
+  "weights": 0,
+  "dense_caches": 0,
+  "github_repository": "JonathanHornewall/ProblemBasedScenarioGeneration",
+  "github_branch": "codex/lava-completion-20261102",
+  "git_branch_path_contains_complete_source_seeds_measurements": true
+}

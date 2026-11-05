@@ -1,0 +1,27 @@
+{
+  "state": "execution_complete_closeout_in_progress",
+  "heartbeat_trigger_utc": "2026-11-04T13:35:26.202Z",
+  "actual_observed_utc": "2026-11-05T01:00:40.221008+00:00",
+  "snapshot": "monitor_snapshots/1793840440.json",
+  "execution_finished_utc": "2026-11-04T19:51:27.847678+00:00",
+  "valid_successes": 670,
+  "accepted_resource_censors": 40,
+  "required_outcomes_covered": 710,
+  "actual_numerical_processes": 0,
+  "actual_effective_cores": 0,
+  "actual_numeric_RSS_bytes": 0,
+  "current_allocated_scientific_CPUs": 0,
+  "current_pending_scientific_CPUs": 0,
+  "current_reservations": {},
+  "SP25_successes": 100,
+  "SP25_seeded_banks_complete": 10,
+  "censors_are_scientific_successes": false,
+  "heartbeat_paused_before_compilation": true,
+  "released_once": [
+    16726,
+    16740
+  ],
+  "resource_release_verified": true,
+  "cutoff_and_deadline_unchanged": true,
+  "next": "Verified compact GitHub/Drive backup then exact remote cleanup; no scientific polling"
+}

@@ -1,0 +1,18 @@
+{"state": "completed", "returncode": 0, "stdout": "17690\n", "stderr": "", "finished_unix": 1793840721.3341775, "purpose": "file retention only; zero scientific numerical work", "CPUs": 1, "time_limit_seconds": 300}
+{
+  "state": "retained_on_shared_home",
+  "started_unix": 1793840680.181946,
+  "finished_unix": 1793840694.680146,
+  "archive": "/home/jonathan.hornewall/runs/lava_completion_20261102/retained_compact/remote_compact_final.tar.gz",
+  "archive_bytes": 21997480,
+  "archive_sha256": "a3d97afd3cb676eaf7e1225148b552f778700e68090dedeb28b34a1fe4d395e9",
+  "file_count": 9035,
+  "uncompressed_bytes": 78379822,
+  "node07_seed_files": 10973,
+  "node07_seed_archive_sha256": "8edd15ed46ddb44a7ab5be6421d31741201e4b7c6eba60be422e418979389013",
+  "scratch_removed": false,
+  "weights": 0,
+  "dense_caches": 0,
+  "slurm_job_id": "17690"
+}
+
