@@ -1,0 +1,8 @@
+{
+  "failed_branch": "codex/lava-completion-20261102",
+  "remote_result": "directory file conflict",
+  "diagnosed_conflict": "refs/heads/codex already exists at9d00593f98a463baa4a9df41cc4875227963245d",
+  "new_branch": "lava-completion-20261102-terminal-20261105",
+  "existing_refs_overwritten": false,
+  "new_branch_absence_verified": true
+}

@@ -8,6 +8,6 @@
   "weights": 0,
   "dense_caches": 0,
   "github_repository": "JonathanHornewall/ProblemBasedScenarioGeneration",
-  "github_branch": "codex/lava-completion-20261102",
+  "github_branch": "lava-completion-20261102-terminal-20261105",
   "git_branch_path_contains_complete_source_seeds_measurements": true
 }
