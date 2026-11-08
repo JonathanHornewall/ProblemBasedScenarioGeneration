@@ -1,0 +1,21 @@
+{
+  "remote_root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+  "scratch": "/tmp/lava_timing_replay_20261107",
+  "cutoff_utc": "2026-11-09T22:30:00Z",
+  "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+  "package_sha256": "8012615ba29b6893bc5e4b8d00ebbb6f1b200618e3a0d42745261a12ffc510fb",
+  "first_phase_RSS_guard_GiB": 32,
+  "host_headroom_GiB": 8,
+  "scratch_running_reserve_GiB": 30,
+  "allocated_CPUs_per_route": 1,
+  "maximum_campaign_CPUs": 6,
+  "follow_on_order": ["sp20", "kp1000", "sp15", "cfl50", "sp10"],
+  "routes": {
+    "sp25": {"key": "dys_shortest_path_25x25__data151101", "partition": "defq", "node": "node03", "memory_GiB": 40, "scratch_admission_GiB": 44, "wall_minutes": 2520},
+    "sp10": {"key": "dys_shortest_path_10x10__data151101", "partition": "defq", "node": "node05", "memory_GiB": 8, "scratch_admission_GiB": 34, "wall_minutes": 360},
+    "sp15": {"key": "dys_shortest_path_15x15__data151101", "partition": "defq", "node": "node01", "memory_GiB": 12, "scratch_admission_GiB": 38, "wall_minutes": 720},
+    "sp20": {"key": "dys_shortest_path_20x20__data151101", "partition": "defq", "node": "node02", "memory_GiB": 24, "scratch_admission_GiB": 44, "wall_minutes": 1200},
+    "cfl50": {"key": "dys_cfl_50x5__data151101", "partition": "defq", "node": "node01", "memory_GiB": 20, "scratch_admission_GiB": 38, "wall_minutes": 360},
+    "kp1000": {"key": "dys_knapsack_1000x2__data151101", "partition": "defq-gpu", "node": "node09", "memory_GiB": 112, "scratch_admission_GiB": 56, "wall_minutes": 1200}
+  }
+}

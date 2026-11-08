@@ -1,0 +1,63 @@
+{
+  "observed_utc": "2026-11-07T13:15:57.532409+00:00",
+  "prior_job": "19671",
+  "previous_admission_failure": "overlays/01-node03-19671/ADMISSION_FAILURE.json",
+  "new_submission_slot": "sp25-a2",
+  "cutoff_utc": "2026-11-09T22:30:00Z",
+  "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+  "scratch_probe_receipt": "SCRATCH_PROBE_READBACK.json",
+  "scratch_probe_utc": "2026-11-07T13:10:15.196954+00:00",
+  "placements": {
+    "node07": {
+      "routes": [
+        "sp25",
+        "sp15",
+        "sp20"
+      ],
+      "aggregate_memory_admission_GiB_with_host_headroom": 84,
+      "aggregate_scratch_admission_GiB_with_reserve": 66,
+      "measured_probe": {
+        "node": "node07",
+        "job_id": "19676",
+        "MemAvailable_bytes": 264454000640,
+        "scratch_free_bytes": 432093941760,
+        "scratch_total_bytes": 470007447552,
+        "scratch_free_inodes": 229211409,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) 6730P"
+      }
+    },
+    "node09": {
+      "routes": [
+        "sp10",
+        "cfl50",
+        "kp1000"
+      ],
+      "aggregate_memory_admission_GiB_with_host_headroom": 148,
+      "aggregate_scratch_admission_GiB_with_reserve": 68,
+      "measured_probe": {
+        "node": "node09",
+        "job_id": "19677",
+        "MemAvailable_bytes": 264704290816,
+        "scratch_free_bytes": 448744550400,
+        "scratch_total_bytes": 470007447552,
+        "scratch_free_inodes": 229348359,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) 6730P"
+      }
+    }
+  },
+  "job_cpus": 1,
+  "maximum_campaign_cpus": 6,
+  "gpus_requested": 0,
+  "local_ops_checks": [
+    "placement-only plan diff",
+    "live prior blocks replacement",
+    "old receipt immutable",
+    "exact replacement is idempotent",
+    "unknown receipt reconciles without submission"
+  ],
+  "scientific_work_executed_by_checks": 0
+}

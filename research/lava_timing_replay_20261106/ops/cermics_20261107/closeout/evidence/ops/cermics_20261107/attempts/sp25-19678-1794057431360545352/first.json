@@ -1,0 +1,37 @@
+{
+  "MemAvailable_before_bytes": 264434704384,
+  "MemAvailable_bytes": 199601274880,
+  "actual_CPU_cores_interval": 0.995181773278563,
+  "actual_CPU_seconds": 29348.435514,
+  "affinity": [
+    0
+  ],
+  "allocated_CPUs": 1,
+  "argv": [
+    "bash",
+    "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+    "dys_shortest_path_25x25__data151101",
+    "first"
+  ],
+  "child_peak_RSS_bytes": 14165565440,
+  "current_RSS_bytes": 13747695616,
+  "finished_unix": 1794086997.0916412,
+  "host": "node07.cluster.local",
+  "job_id": "19678",
+  "memory_limit_bytes": 34359738368,
+  "observed_unix": 1794086987.087295,
+  "partition": "defq-gpu",
+  "phase": "first",
+  "pid": 3158418,
+  "returncode": 0,
+  "route": "sp25",
+  "sampled_peak_RSS_bytes": 14093574144,
+  "scratch_filesystem": "xfs",
+  "scratch_free_before_bytes": 432094076928,
+  "scratch_free_bytes": 431405568000,
+  "started_unix": 1794057431.3634233,
+  "state": "complete",
+  "step_id": "0",
+  "stop_reason": null,
+  "wall_seconds": 29565.728218078613
+}

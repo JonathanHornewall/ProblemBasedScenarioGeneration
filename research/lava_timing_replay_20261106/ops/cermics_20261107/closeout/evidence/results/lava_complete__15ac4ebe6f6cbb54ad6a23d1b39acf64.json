@@ -1,0 +1,41 @@
+{
+  "N": 100,
+  "cpu_affinity": [
+    0
+  ],
+  "depth": 0,
+  "epochs": 300,
+  "geometry_preparation_record": "preprocessing/dys_shortest_path_25x25__data151101/1794114147900839533.json",
+  "host": "node07.cluster.local",
+  "numpy": "2.3.5",
+  "original_fit_id": "lava_complete__15ac4ebe6f6cbb54ad6a23d1b39acf64",
+  "original_receipt_sha256": "6fb9dca231cdbe942ddbc693b7fae9fd8392a5dd92c836194889ed8c3f6cd592",
+  "parameter_sha256_at_epoch300": "2e2c3a542cc90c1a6edd3a68d690724e06f99ca470e51d0e5c55f3bc185728bc",
+  "regret_source": "unchanged original confirmation",
+  "route": "dys_shortest_path_25x25",
+  "seeds": {
+    "data": 151101,
+    "initialization": 161101,
+    "perturbation": 181101,
+    "shuffle": 171101,
+    "structural": 101
+  },
+  "setup": {
+    "before_optimizer_including_parity": {
+      "cpu_seconds": 5.5463737190002576,
+      "wall_seconds": 6.134958293288946
+    },
+    "one_time_loader": {
+      "cpu_seconds": 4.794375632998708,
+      "wall_seconds": 4.8131264969706535
+    }
+  },
+  "slurm_job_id": "19678",
+  "status": "complete",
+  "test_access": false,
+  "torch": "2.8.0+cpu",
+  "torch_threads": 1,
+  "training_cpu_seconds": 213.93424660700475,
+  "training_wall_seconds": 215.00755567848682,
+  "validation_wall_seconds": 0.0
+}

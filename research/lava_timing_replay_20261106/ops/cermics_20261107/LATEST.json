@@ -1,0 +1,2145 @@
+{
+  "observed_utc": "2026-11-08T11:27:55.194887+00:00",
+  "remote_root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+  "root_exists": true,
+  "queue": "",
+  "submissions": {
+    "sp25": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp25",
+          "--partition=defq",
+          "--nodelist=node03",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=40G",
+          "--nice=10000",
+          "--requeue",
+          "--time=2520",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp25"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp25",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp25",
+        "started_utc": "2026-11-07T13:07:12.362782+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19671",
+        "name": "lava-replay-1107-sp25",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T13:07:12.369499+00:00"
+      }
+    },
+    "sp25-a2": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp25-a2",
+          "--partition=defq-gpu",
+          "--nodelist=node07",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=40G",
+          "--nice=10000",
+          "--requeue",
+          "--time=2520",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp25"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp25",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp25-a2",
+        "started_utc": "2026-11-07T13:17:10.247711+00:00",
+        "supersedes_job_id": "19671"
+      },
+      "RECEIPT.json": {
+        "job_id": "19678",
+        "name": "lava-replay-1107-sp25-a2",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T13:17:10.254078+00:00"
+      }
+    },
+    "sp10": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp10",
+          "--partition=defq-gpu",
+          "--nodelist=node09",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=8G",
+          "--nice=10000",
+          "--requeue",
+          "--time=360",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp10"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp10",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp10",
+        "started_utc": "2026-11-07T21:29:57.142199+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19979",
+        "name": "lava-replay-1107-sp10",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T21:29:57.149297+00:00"
+      }
+    },
+    "sp15": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp15",
+          "--partition=defq-gpu",
+          "--nodelist=node07",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=12G",
+          "--nice=10000",
+          "--requeue",
+          "--time=720",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp15"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp15",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp15",
+        "started_utc": "2026-11-07T21:29:57.122414+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19977",
+        "name": "lava-replay-1107-sp15",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T21:29:57.130167+00:00"
+      }
+    },
+    "sp20": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp20",
+          "--partition=defq-gpu",
+          "--nodelist=node07",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=24G",
+          "--nice=10000",
+          "--requeue",
+          "--time=1200",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp20"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp20",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp20",
+        "started_utc": "2026-11-07T21:29:57.098662+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19975",
+        "name": "lava-replay-1107-sp20",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T21:29:57.109945+00:00"
+      }
+    },
+    "cfl50": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-cfl50",
+          "--partition=defq-gpu",
+          "--nodelist=node09",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=20G",
+          "--nice=10000",
+          "--requeue",
+          "--time=360",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "cfl50"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "cfl50",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-cfl50",
+        "started_utc": "2026-11-07T21:29:57.132748+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19978",
+        "name": "lava-replay-1107-cfl50",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T21:29:57.139914+00:00"
+      }
+    },
+    "kp1000": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-kp1000",
+          "--partition=defq-gpu",
+          "--nodelist=node09",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=112G",
+          "--nice=10000",
+          "--requeue",
+          "--time=1200",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "kp1000"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "kp1000",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-kp1000",
+        "started_utc": "2026-11-07T21:29:57.112368+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19976",
+        "name": "lava-replay-1107-kp1000",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T21:29:57.120077+00:00"
+      }
+    }
+  },
+  "accounting": "19671|lava-replay-1107-sp25|FAILED|1:0|2|1|node03\n19678|lava-replay-1107-sp25-a2|COMPLETED|0:0|59877|1|node07\n19975|lava-replay-1107-sp20|COMPLETED|0:0|23680|1|node07\n19976|lava-replay-1107-kp1000|COMPLETED|0:0|14553|1|node09\n19977|lava-replay-1107-sp15|COMPLETED|0:0|9237|1|node07\n19978|lava-replay-1107-cfl50|COMPLETED|0:0|2756|1|node09\n19979|lava-replay-1107-sp10|COMPLETED|0:0|2366|1|node09\n",
+  "markers": {
+    "parity.json": {
+      "batches": [
+        {
+          "indices": [
+            29,
+            327,
+            256,
+            398,
+            212,
+            334,
+            149,
+            409,
+            102,
+            264,
+            479,
+            125,
+            475,
+            417,
+            451,
+            221,
+            24,
+            97,
+            130,
+            222,
+            438,
+            467,
+            30,
+            266,
+            485,
+            383,
+            40,
+            261,
+            477,
+            47,
+            105,
+            198
+          ],
+          "loss": 0.048329081386327744,
+          "parameter_gradient_norms": [
+            0.825193464756012,
+            0.20542751252651215
+          ],
+          "position": 0,
+          "prediction_gradient_norm": 0.1881510466337204
+        },
+        {
+          "indices": [
+            468,
+            82,
+            5,
+            320,
+            331,
+            493,
+            305,
+            313,
+            155,
+            187,
+            290,
+            131,
+            87,
+            402,
+            443,
+            219,
+            434,
+            339,
+            182,
+            357,
+            177,
+            154,
+            464,
+            93,
+            282,
+            106,
+            269,
+            49,
+            272,
+            323,
+            484,
+            369
+          ],
+          "loss": 0.04772050306200981,
+          "parameter_gradient_norms": [
+            0.9107621908187866,
+            0.250410795211792
+          ],
+          "position": 7,
+          "prediction_gradient_norm": 0.24229931831359863
+        },
+        {
+          "indices": [
+            80,
+            23,
+            348,
+            152,
+            179,
+            270,
+            395,
+            373,
+            253,
+            433,
+            184,
+            194,
+            322,
+            431,
+            88,
+            353,
+            68,
+            447,
+            45,
+            101,
+            38,
+            294,
+            156,
+            456,
+            35,
+            406,
+            274,
+            151,
+            403,
+            428,
+            133,
+            139
+          ],
+          "loss": 0.08847245573997498,
+          "parameter_gradient_norms": [
+            0.8552144169807434,
+            0.24910783767700195
+          ],
+          "position": 14,
+          "prediction_gradient_norm": 0.28484711050987244
+        },
+        {
+          "indices": [
+            146,
+            344,
+            426,
+            235,
+            374,
+            384,
+            286,
+            273,
+            118,
+            489,
+            469,
+            379,
+            109,
+            185,
+            311,
+            3,
+            375,
+            497,
+            455,
+            211
+          ],
+          "loss": 0.07504185289144516,
+          "parameter_gradient_norms": [
+            1.3886165618896484,
+            0.4008541405200958
+          ],
+          "position": 15,
+          "prediction_gradient_norm": 0.3611401319503784
+        }
+      ],
+      "comparison": "exact equality of all collated tensors, loss, prediction and all parameter gradients",
+      "epoch_order": 1,
+      "host": "node07.cluster.local",
+      "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+      "optimizer_updates": 0,
+      "original_fit_id": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "slurm_job_id": "19678",
+      "status": "passed"
+    },
+    "COMPLETE.json": {
+      "epochs_each": 300,
+      "fits": 19,
+      "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+      "panels": 36,
+      "recorded_utc": "2026-11-08T05:55:07.711692+00:00"
+    }
+  },
+  "results": {
+    "lava_complete__3612427e518ddbe8fdb8aa37929a8c00": {
+      "N": 500,
+      "cpu_affinity": [
+        0
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_25x25__data151101/1794085848708565444.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+      "original_receipt_sha256": "cef167805c4964d9903f7524e3bf6705cb8de05d76260e0fe9c51662e85d0fb0",
+      "parameter_sha256_at_epoch300": "02a4362ea24652e290e6a37da46e7c2d0adc7c593942246268c2d642709e41bc",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_25x25",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 35.25150962499902,
+          "wall_seconds": 35.932136844843626
+        },
+        "one_time_loader": {
+          "cpu_seconds": 26.704349467996508,
+          "wall_seconds": 26.910196345299482
+        },
+        "parity": {
+          "cpu_seconds": 7.558385799999087,
+          "wall_seconds": 7.611787121742964
+        }
+      },
+      "slurm_job_id": "19678",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 1101.0958758910201,
+      "training_wall_seconds": 1106.6913070306182,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__e210597c3bc8475f5d9bf303c5249a4e": {
+      "N": 100,
+      "cpu_affinity": [
+        2
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_cfl_50x5__data151101/1794087482068665832.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__e210597c3bc8475f5d9bf303c5249a4e",
+      "original_receipt_sha256": "ad658f6f269c5b75b96a4fd98ba7e800e9b5006163a23a64f3a002bc9d961225",
+      "parameter_sha256_at_epoch300": "d19ee1733ea07c5ab3252b266e56fc65019d7469760626ef2b7d30927db81326",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_cfl_50x5",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 1.3428420440000082,
+          "wall_seconds": 1.727948386222124
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.5430811630000107,
+          "wall_seconds": 0.5458212234079838
+        }
+      },
+      "slurm_job_id": "19978",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 1129.2451085920013,
+      "training_wall_seconds": 1132.7508452832699,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__5ae4bb76d6b20402fa8d92c3cd8eae4d": {
+      "N": 100,
+      "cpu_affinity": [
+        4
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_10x10__data151101/1794089216878438302.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__5ae4bb76d6b20402fa8d92c3cd8eae4d",
+      "original_receipt_sha256": "a2e9cde2ce8d4e356cf2747a358686a23f8809873d799f706b6d116d6086af7b",
+      "parameter_sha256_at_epoch300": "d8e294991d2627d88b6c8d1a45b25a0669aecc96960f2ebde71325b88259ec1a",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_10x10",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 0.8123342019998745,
+          "wall_seconds": 1.7718554735183716
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.14862825699992754,
+          "wall_seconds": 0.1496100313961506
+        }
+      },
+      "slurm_job_id": "19979",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 7.066502939997918,
+      "training_wall_seconds": 7.100682158023119,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__d3024a219af5eff513c3286da348c955": {
+      "N": 300,
+      "cpu_affinity": [
+        4
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_10x10__data151101/1794089216878438302.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__d3024a219af5eff513c3286da348c955",
+      "original_receipt_sha256": "8c398939b7c2c09ffe20615de8506b9fabf8d17c612edb8c1ce9b3110ea70772",
+      "parameter_sha256_at_epoch300": "47151f4bd19fd640cb92cf972791bf4f44f0a1c5e065fbeccbe7455128f4ea9f",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_10x10",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 0.4077031430001625,
+          "wall_seconds": 0.41690998524427414
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.39661996999984694,
+          "wall_seconds": 0.3983561247587204
+        }
+      },
+      "slurm_job_id": "19979",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 20.93617644499591,
+      "training_wall_seconds": 21.03227773681283,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__fa783943b6f434c847c108f1d5a302e1": {
+      "N": 500,
+      "cpu_affinity": [
+        4
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_10x10__data151101/1794089216878438302.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__fa783943b6f434c847c108f1d5a302e1",
+      "original_receipt_sha256": "37433ebaf957065ebf37623fc72317214cc90a9517afcf315dfb874bd0057b0a",
+      "parameter_sha256_at_epoch300": "aa3371a8f493a2e6df07365ece86531aa6dd790c713550d6244f9e4e5b49c4b4",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_10x10",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 0.6362335530002383,
+          "wall_seconds": 0.6443655826151371
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.6254839490002269,
+          "wall_seconds": 0.6281909868121147
+        }
+      },
+      "slurm_job_id": "19979",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 35.07327967200399,
+      "training_wall_seconds": 35.23112167418003,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__de7bf4d3c509126e1bb9edb03820952b": {
+      "N": 1000,
+      "cpu_affinity": [
+        4
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_10x10__data151101/1794089216878438302.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__de7bf4d3c509126e1bb9edb03820952b",
+      "original_receipt_sha256": "78f76e8cc8c8e08572f9816f32f13aa5fadd45ee5452366041ba9e510127880a",
+      "parameter_sha256_at_epoch300": "65ff817f7401e240d6a12a706e174fb5104e915dfd3e7a9227047232f7d61bcf",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_10x10",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 1.1886982389996774,
+          "wall_seconds": 1.2074210233986378
+        },
+        "one_time_loader": {
+          "cpu_seconds": 1.1706793399998787,
+          "wall_seconds": 1.1759873367846012
+        }
+      },
+      "slurm_job_id": "19979",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 71.40122936499574,
+      "training_wall_seconds": 71.72253105789423,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__b95bcfe2ffc8afdc4d4ba762dcd7b546": {
+      "N": 100,
+      "cpu_affinity": [
+        2
+      ],
+      "depth": 1,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_cfl_50x5__data151101/1794087482068665832.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__b95bcfe2ffc8afdc4d4ba762dcd7b546",
+      "original_receipt_sha256": "98e0a2be6465730108c112b6f062d8a28e0b078d3d7399f9b8772207d88c0684",
+      "parameter_sha256_at_epoch300": "d7ac3a68ed6b366db78f16cb479d47e96a1a423187066c8db7be480077f0222b",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_cfl_50x5",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 0.4655223350000597,
+          "wall_seconds": 0.48193807527422905
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.4591820480000024,
+          "wall_seconds": 0.46164075657725334
+        }
+      },
+      "slurm_job_id": "19978",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 1129.0966268980003,
+      "training_wall_seconds": 1132.6573229208589,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__53018ecf3997ecbc94498dbf7f6e08ba": {
+      "N": 100,
+      "cpu_affinity": [
+        60
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_15x15__data151101/1794095660195601175.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__53018ecf3997ecbc94498dbf7f6e08ba",
+      "original_receipt_sha256": "0d567796fb3b3937a90f12e0fb44b214467b696a44df67d8d8860d700fd767e3",
+      "parameter_sha256_at_epoch300": "3b1a9f4b19753ae7915b78f8579f338ce2e0511652156548f046edae52d81a73",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_15x15",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 1.300730607999867,
+          "wall_seconds": 2.4479454830288887
+        },
+        "one_time_loader": {
+          "cpu_seconds": 0.6274968990001071,
+          "wall_seconds": 0.6307496465742588
+        }
+      },
+      "slurm_job_id": "19977",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 29.315684741999576,
+      "training_wall_seconds": 29.437169209122658,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__07cde7643b9fdce416ce7a672b230ade": {
+      "N": 300,
+      "cpu_affinity": [
+        60
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_15x15__data151101/1794095660195601175.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__07cde7643b9fdce416ce7a672b230ade",
+      "original_receipt_sha256": "4e9c44bb1265ca34286379303055902a49e023e711c2a0e95949ba0c697d230d",
+      "parameter_sha256_at_epoch300": "d37e14f22072fba7c8600313de708d454854d1444d6521a2a1cca4a69b927e8d",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_15x15",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 1.9991640560001542,
+          "wall_seconds": 2.031358063220978
+        },
+        "one_time_loader": {
+          "cpu_seconds": 1.9795418800003972,
+          "wall_seconds": 1.9891512542963028
+        }
+      },
+      "slurm_job_id": "19977",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 88.33647664198725,
+      "training_wall_seconds": 88.68693806231022,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__510056a909b24cc186950ddb2cccad2b": {
+      "N": 500,
+      "cpu_affinity": [
+        60
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_15x15__data151101/1794095660195601175.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__510056a909b24cc186950ddb2cccad2b",
+      "original_receipt_sha256": "92027479663654c182a3a078c64bdbddbf2affe118594c8b83c2a150dc316469",
+      "parameter_sha256_at_epoch300": "147d2aeae1d6320eb7d7c528c77893a8671b19febdab1e23dca21d00bf0ff367",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_15x15",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 3.4332376230013324,
+          "wall_seconds": 3.46230161935091
+        },
+        "one_time_loader": {
+          "cpu_seconds": 3.413793442001406,
+          "wall_seconds": 3.4300903640687466
+        }
+      },
+      "slurm_job_id": "19977",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 143.487956373021,
+      "training_wall_seconds": 144.04939949139953,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__f8e2c34e4a62e1274d8bf3ac2451069c": {
+      "N": 1000,
+      "cpu_affinity": [
+        60
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_15x15__data151101/1794095660195601175.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__f8e2c34e4a62e1274d8bf3ac2451069c",
+      "original_receipt_sha256": "750e918ab7ba45e64002e06dae69f41e54ab6234bb57c17afab52b8e20600d21",
+      "parameter_sha256_at_epoch300": "481efccbf1fb8fa60bb2326d39764911efdb693ea0475cfbc77cbb5f6be1b6b7",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_15x15",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 6.830580015999658,
+          "wall_seconds": 6.875995423644781
+        },
+        "one_time_loader": {
+          "cpu_seconds": 6.795672832000491,
+          "wall_seconds": 6.828058697283268
+        }
+      },
+      "slurm_job_id": "19977",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 290.422734189975,
+      "training_wall_seconds": 291.55256909132004,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44": {
+      "N": 1000,
+      "cpu_affinity": [
+        0
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_knapsack_1000x2__data151101/1794087288520269256.json",
+      "host": "node09.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44",
+      "original_receipt_sha256": "9b19fb5e82521c79fe4e125818f86f922470dabc4ef1bac4613d5d9ce1bd0b4d",
+      "parameter_sha256_at_epoch300": "455a2ddaa6bc44b84c2c3b0c2f48534483a1d4d0eaf364215e4d0188dc9172d3",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_knapsack_1000x2",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 19.549843915999986,
+          "wall_seconds": 20.943818893283606
+        },
+        "one_time_loader": {
+          "cpu_seconds": 18.634652510000024,
+          "wall_seconds": 18.72005319967866
+        }
+      },
+      "slurm_job_id": "19976",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 14173.641759867987,
+      "training_wall_seconds": 14236.401421643794,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__17caf572933bb58fc26050ce2e83c025": {
+      "N": 100,
+      "cpu_affinity": [
+        58
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_20x20__data151101/1794108879920460237.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__17caf572933bb58fc26050ce2e83c025",
+      "original_receipt_sha256": "088b297e7e1ebd1b730971a4d8fd98a650c0c14e8dedfa8ce64e600845d1c351",
+      "parameter_sha256_at_epoch300": "3ae8fa223590eac42f161d3235907eeed9e4dd42664ab5953f5917331e32d216",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_20x20",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 2.607122571000218,
+          "wall_seconds": 3.4332689233124256
+        },
+        "one_time_loader": {
+          "cpu_seconds": 1.9314744220027933,
+          "wall_seconds": 1.938777819275856
+        }
+      },
+      "slurm_job_id": "19975",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 98.32693784001822,
+      "training_wall_seconds": 98.69360258057714,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__45ea1edc38ee4bfdc1a16fe2da9a25e2": {
+      "N": 300,
+      "cpu_affinity": [
+        58
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_20x20__data151101/1794108879920460237.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__45ea1edc38ee4bfdc1a16fe2da9a25e2",
+      "original_receipt_sha256": "b6a5163304c78de76200cd2aa9d9bec56c1228a781e54fec9a5f32f503f0bcd1",
+      "parameter_sha256_at_epoch300": "085cc456d29232cc89a5c78d10ea950a9fb74669a48909abc72f0443acecaff6",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_20x20",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 6.051000292001845,
+          "wall_seconds": 6.083200242370367
+        },
+        "one_time_loader": {
+          "cpu_seconds": 6.019238803000917,
+          "wall_seconds": 6.040269669145346
+        }
+      },
+      "slurm_job_id": "19975",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 276.2785923100273,
+      "training_wall_seconds": 277.30441865324974,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__21f1dbbd1eaee7b3da3a1c104972e01a": {
+      "N": 500,
+      "cpu_affinity": [
+        58
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_20x20__data151101/1794108879920460237.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__21f1dbbd1eaee7b3da3a1c104972e01a",
+      "original_receipt_sha256": "6d7c875545d04504aff0db74bf3a761d029a576046984cc6a429d05372f6e3d9",
+      "parameter_sha256_at_epoch300": "c0f5b03127a0ae3bf97683d588d70a8e519b470650ede3a6c40adda52c7b8615",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_20x20",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 10.199905869001668,
+          "wall_seconds": 10.249908227473497
+        },
+        "one_time_loader": {
+          "cpu_seconds": 10.167347343001893,
+          "wall_seconds": 10.204254154115915
+        }
+      },
+      "slurm_job_id": "19975",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 463.07170778001455,
+      "training_wall_seconds": 464.81278923898935,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__23722eb677d0eb7fe4aaf8cd588d97cd": {
+      "N": 1000,
+      "cpu_affinity": [
+        58
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_20x20__data151101/1794108879920460237.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__23722eb677d0eb7fe4aaf8cd588d97cd",
+      "original_receipt_sha256": "709b267b7f01919d53e5650a8679115fe30cafb19c10da43f0778e427308efbe",
+      "parameter_sha256_at_epoch300": "633f84cc0f857ad0e0dfe37a9ca9867bf3009ec2ca0c1c736e9e0cd4a3ab61a2",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_20x20",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 20.688739377001184,
+          "wall_seconds": 20.778764694929123
+        },
+        "one_time_loader": {
+          "cpu_seconds": 20.63070953100032,
+          "wall_seconds": 20.707030437886715
+        }
+      },
+      "slurm_job_id": "19975",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 907.2687728999954,
+      "training_wall_seconds": 910.6716609969735,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__15ac4ebe6f6cbb54ad6a23d1b39acf64": {
+      "N": 100,
+      "cpu_affinity": [
+        0
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_25x25__data151101/1794114147900839533.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__15ac4ebe6f6cbb54ad6a23d1b39acf64",
+      "original_receipt_sha256": "6fb9dca231cdbe942ddbc693b7fae9fd8392a5dd92c836194889ed8c3f6cd592",
+      "parameter_sha256_at_epoch300": "2e2c3a542cc90c1a6edd3a68d690724e06f99ca470e51d0e5c55f3bc185728bc",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_25x25",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 5.5463737190002576,
+          "wall_seconds": 6.134958293288946
+        },
+        "one_time_loader": {
+          "cpu_seconds": 4.794375632998708,
+          "wall_seconds": 4.8131264969706535
+        }
+      },
+      "slurm_job_id": "19678",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 213.93424660700475,
+      "training_wall_seconds": 215.00755567848682,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__a5fcf882bca9ad478163b5dfe0786053": {
+      "N": 300,
+      "cpu_affinity": [
+        0
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_25x25__data151101/1794114147900839533.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__a5fcf882bca9ad478163b5dfe0786053",
+      "original_receipt_sha256": "6b6dcd9bca10a296dde9f2c2367e39a1068e0e409d713e68011f3a636c05cbef",
+      "parameter_sha256_at_epoch300": "fdfd04101e2c059ed16ace763ceac0b31f394d6aac37462fb57aea2e47768ce4",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_25x25",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 14.64248137499817,
+          "wall_seconds": 14.742181032896042
+        },
+        "one_time_loader": {
+          "cpu_seconds": 14.598761629000364,
+          "wall_seconds": 14.68813043832779
+        }
+      },
+      "slurm_job_id": "19678",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 650.6732929550017,
+      "training_wall_seconds": 653.9489962905645,
+      "validation_wall_seconds": 0.0
+    },
+    "lava_complete__55c410c5523fa39f0ce1ffdaf8b049dc": {
+      "N": 1000,
+      "cpu_affinity": [
+        0
+      ],
+      "depth": 0,
+      "epochs": 300,
+      "geometry_preparation_record": "preprocessing/dys_shortest_path_25x25__data151101/1794114147900839533.json",
+      "host": "node07.cluster.local",
+      "numpy": "2.3.5",
+      "original_fit_id": "lava_complete__55c410c5523fa39f0ce1ffdaf8b049dc",
+      "original_receipt_sha256": "7aafbff00f26d953512c2954aafff280888124cce8f68e5fd9d386168d70d915",
+      "parameter_sha256_at_epoch300": "bffc0c8919ba00d875fe27336287b1ebb29790d949b233ce96af9be650dd6256",
+      "regret_source": "unchanged original confirmation",
+      "route": "dys_shortest_path_25x25",
+      "seeds": {
+        "data": 151101,
+        "initialization": 161101,
+        "perturbation": 181101,
+        "shuffle": 171101,
+        "structural": 101
+      },
+      "setup": {
+        "before_optimizer_including_parity": {
+          "cpu_seconds": 48.93756147399836,
+          "wall_seconds": 49.17233922705054
+        },
+        "one_time_loader": {
+          "cpu_seconds": 48.845061468000495,
+          "wall_seconds": 49.066604778170586
+        }
+      },
+      "slurm_job_id": "19678",
+      "status": "complete",
+      "test_access": false,
+      "torch": "2.8.0+cpu",
+      "torch_threads": 1,
+      "training_cpu_seconds": 2204.5031376240186,
+      "training_wall_seconds": 2215.785273335874,
+      "validation_wall_seconds": 0.0
+    }
+  },
+  "valid_results": [
+    "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+    "lava_complete__e210597c3bc8475f5d9bf303c5249a4e",
+    "lava_complete__5ae4bb76d6b20402fa8d92c3cd8eae4d",
+    "lava_complete__d3024a219af5eff513c3286da348c955",
+    "lava_complete__fa783943b6f434c847c108f1d5a302e1",
+    "lava_complete__de7bf4d3c509126e1bb9edb03820952b",
+    "lava_complete__b95bcfe2ffc8afdc4d4ba762dcd7b546",
+    "lava_complete__53018ecf3997ecbc94498dbf7f6e08ba",
+    "lava_complete__07cde7643b9fdce416ce7a672b230ade",
+    "lava_complete__510056a909b24cc186950ddb2cccad2b",
+    "lava_complete__f8e2c34e4a62e1274d8bf3ac2451069c",
+    "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44",
+    "lava_complete__17caf572933bb58fc26050ce2e83c025",
+    "lava_complete__45ea1edc38ee4bfdc1a16fe2da9a25e2",
+    "lava_complete__21f1dbbd1eaee7b3da3a1c104972e01a",
+    "lava_complete__23722eb677d0eb7fe4aaf8cd588d97cd",
+    "lava_complete__15ac4ebe6f6cbb54ad6a23d1b39acf64",
+    "lava_complete__a5fcf882bca9ad478163b5dfe0786053",
+    "lava_complete__55c410c5523fa39f0ce1ffdaf8b049dc"
+  ],
+  "first_fit_id": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+  "shared_preparation": {
+    "seeded_banks_v2/dys_shortest_path_25x25__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 27145.9008695893,
+      "finished_unix": 1794114146.892591,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node07.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_shortest_path_25x25__data151101",
+      "maximum_training_samples": 1000,
+      "process_cpu_seconds": 26996.266189039,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [
+        100,
+        300,
+        500
+      ],
+      "route": "dys_shortest_path_25x25",
+      "samples_completed": 1000,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_shortest_path_25x25__data151101__init161101",
+      "slurm_job_id": "19678",
+      "source_observation_sha256": "89dec600c7c694ecb38c83d0d813509fd0c88a21f7ee3dd8ab3a9605389fb471",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_shortest_path_25x25__data151101/observations_n1000.npz",
+      "started_unix": 1794087000.988697,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    },
+    "seeded_banks_v2/dys_shortest_path_15x15__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 8657.95055668801,
+      "finished_unix": 1794095659.866237,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node07.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_shortest_path_15x15__data151101",
+      "maximum_training_samples": 1000,
+      "process_cpu_seconds": 8614.226774959001,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [],
+      "route": "dys_shortest_path_15x15",
+      "samples_completed": 1000,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_shortest_path_15x15__data151101__init161101",
+      "slurm_job_id": "19977",
+      "source_observation_sha256": "7bf17f61c87631b15a44c09293d21e65fd64d6520a0699f620cb6c249fa6ff20",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_shortest_path_15x15__data151101/observations_n1000.npz",
+      "started_unix": 1794087001.9135866,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    },
+    "seeded_banks_v2/dys_shortest_path_20x20__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 21877.026178888977,
+      "finished_unix": 1794108879.231115,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node07.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_shortest_path_20x20__data151101",
+      "maximum_training_samples": 1000,
+      "process_cpu_seconds": 21784.653555359,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [],
+      "route": "dys_shortest_path_20x20",
+      "samples_completed": 1000,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_shortest_path_20x20__data151101__init161101",
+      "slurm_job_id": "19975",
+      "source_observation_sha256": "4737b6f878a987a4d44a00d13bc60a614491b72582796a9313f83dd57154a43e",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_shortest_path_20x20__data151101/observations_n1000.npz",
+      "started_unix": 1794087002.2025423,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    },
+    "seeded_banks_v2/dys_cfl_50x5__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 478.1947841718793,
+      "finished_unix": 1794087481.0208938,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node09.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_cfl_50x5__data151101",
+      "maximum_training_samples": 100,
+      "process_cpu_seconds": 476.03577423400003,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [],
+      "route": "dys_cfl_50x5",
+      "samples_completed": 100,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_cfl_50x5__data151101__init161101",
+      "slurm_job_id": "19978",
+      "source_observation_sha256": "e135215cf6ef4a6a4de5033dcaa820d68cf0b935323458d5311913c18a06192c",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_cfl_50x5__data151101/observations_n100.npz",
+      "started_unix": 1794087002.8242998,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    },
+    "seeded_banks_v2/dys_shortest_path_10x10__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 2213.740246620029,
+      "finished_unix": 1794089216.8701038,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node09.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_shortest_path_10x10__data151101",
+      "maximum_training_samples": 1000,
+      "process_cpu_seconds": 2206.965204862,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [],
+      "route": "dys_shortest_path_10x10",
+      "samples_completed": 1000,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_shortest_path_10x10__data151101__init161101",
+      "slurm_job_id": "19979",
+      "source_observation_sha256": "c39e5f8d1b21111212373db93151e1773189dca5377e1500040fc60db8f117b8",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_shortest_path_10x10__data151101/observations_n1000.npz",
+      "started_unix": 1794087003.1272604,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    },
+    "seeded_banks_v2/dys_knapsack_1000x2__data151101__init161101/STATUS.json": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+      "builder_identity": {
+        "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+        "basis_enumeration_cap": 250,
+        "initialization_seed": 161101,
+        "schema": 2,
+        "vertex_tolerance": 0.0
+      },
+      "data_seed": 151101,
+      "elapsed_wall_seconds": 285.03533577919006,
+      "finished_unix": 1794087288.5005667,
+      "generator_called": false,
+      "geometry_rng_protocol": "seeded_numpy_resume_v2",
+      "highs_version": "1.12.0",
+      "host": "node09.cluster.local",
+      "initialization_seed": 161101,
+      "key": "dys_knapsack_1000x2__data151101",
+      "maximum_training_samples": 1000,
+      "process_cpu_seconds": 283.397811563,
+      "public_source_sha256": "9dba06da1514e7bf725ba0fc1f5bf86314425f643334a8ea951837c3a95dc0cd",
+      "python_recursion_limit": 20000,
+      "reused_completed_prefixes": [],
+      "route": "dys_knapsack_1000x2",
+      "samples_completed": 1000,
+      "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_knapsack_1000x2__data151101__init161101",
+      "slurm_job_id": "19976",
+      "source_observation_sha256": "b66d8bf1b636b49e5218b9af0f48833eae605b9d86cc5a5becc7d2bfe852d7e3",
+      "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_knapsack_1000x2__data151101/observations_n1000.npz",
+      "started_unix": 1794087003.4624438,
+      "status": "complete",
+      "test_opened": false,
+      "validation_opened": false,
+      "vertex_tolerance": 0.0
+    }
+  },
+  "attempts": {
+    "ops/cermics_20261107/attempts/sp25-19671-1794056833264363743/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19671",
+      "label": "sp25",
+      "node": "node03",
+      "started_utc": "2026-11-07T13:07:13.264955+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp25-19671-1794056833264363743/first.json": {
+      "MemAvailable_before_bytes": 129824583680,
+      "affinity": [
+        0
+      ],
+      "allocated_CPUs": 1,
+      "error": "Insufficient actual node-local scratch before starting route",
+      "finished_unix": 1794056833.2669313,
+      "host": "node03.cluster.local",
+      "job_id": "19671",
+      "memory_limit_bytes": 34359738368,
+      "partition": "defq",
+      "phase": "first",
+      "route": "sp25",
+      "scratch_free_before_bytes": 16233377792,
+      "started_unix": 1794056833.2660918,
+      "state": "failed",
+      "step_id": "0",
+      "wall_seconds": 0.0008394718170166016
+    },
+    "ops/cermics_20261107/attempts/sp25-19678-1794057431360545352/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19678",
+      "label": "sp25",
+      "node": "node07",
+      "started_utc": "2026-11-07T13:17:11.361146+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp25-19678-1794057431360545352/first.json": {
+      "MemAvailable_before_bytes": 264434704384,
+      "MemAvailable_bytes": 199601274880,
+      "actual_CPU_cores_interval": 0.995181773278563,
+      "actual_CPU_seconds": 29348.435514,
+      "affinity": [
+        0
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_shortest_path_25x25__data151101",
+        "first"
+      ],
+      "child_peak_RSS_bytes": 14165565440,
+      "current_RSS_bytes": 13747695616,
+      "finished_unix": 1794086997.0916412,
+      "host": "node07.cluster.local",
+      "job_id": "19678",
+      "memory_limit_bytes": 34359738368,
+      "observed_unix": 1794086987.087295,
+      "partition": "defq-gpu",
+      "phase": "first",
+      "pid": 3158418,
+      "returncode": 0,
+      "route": "sp25",
+      "sampled_peak_RSS_bytes": 14093574144,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 432094076928,
+      "scratch_free_bytes": 431405568000,
+      "started_unix": 1794057431.3634233,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 29565.728218078613
+    },
+    "ops/cermics_20261107/attempts/sp25-19678-1794057431360545352/GATE_RELEASE.json": {
+      "SP25_prefix500_present": true,
+      "dispatch_errors": {},
+      "node": "node07",
+      "parity_and_first_fit_verified": true,
+      "recorded_utc": "2026-11-07T21:29:57.150935+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp25-19678-1794057431360545352/remaining.json": {
+      "MemAvailable_before_bytes": 213298712576,
+      "MemAvailable_bytes": 238335324160,
+      "actual_CPU_cores_interval": 0.9954718588269491,
+      "actual_CPU_seconds": 30140.270663,
+      "affinity": [
+        0
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_shortest_path_25x25__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 26205097984,
+      "current_RSS_bytes": 26114781184,
+      "finished_unix": 1794117307.700592,
+      "host": "node07.cluster.local",
+      "job_id": "19678",
+      "memory_limit_bytes": 42949672960,
+      "observed_unix": 1794117302.6971092,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 3172582,
+      "returncode": 0,
+      "route": "sp25",
+      "sampled_peak_RSS_bytes": 26174939136,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 431405592576,
+      "scratch_free_bytes": 429327929344,
+      "started_unix": 1794086997.152064,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 30310.548528194427
+    },
+    "ops/cermics_20261107/attempts/sp25-19678-1794057431360545352/ROUTE_COMPLETE.json": {
+      "fits": 4,
+      "recorded_utc": "2026-11-08T05:55:07.704609+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp15-19977-1794086997665188480/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19977",
+      "label": "sp15",
+      "node": "node07",
+      "started_utc": "2026-11-07T21:29:57.665555+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp15-19977-1794086997665188480/remaining.json": {
+      "MemAvailable_before_bytes": 213178503168,
+      "MemAvailable_bytes": 252123639808,
+      "actual_CPU_cores_interval": 0.9944785340068906,
+      "actual_CPU_seconds": 9185.415081000001,
+      "affinity": [
+        60
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_shortest_path_15x15__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 3879849984,
+      "current_RSS_bytes": 3764506624,
+      "finished_unix": 1794096234.276121,
+      "host": "node07.cluster.local",
+      "job_id": "19977",
+      "memory_limit_bytes": 12884901888,
+      "observed_unix": 1794096209.2711737,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 3172668,
+      "returncode": 0,
+      "route": "sp15",
+      "sampled_peak_RSS_bytes": 3835088896,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 431405367296,
+      "scratch_free_bytes": 430355955712,
+      "started_unix": 1794086997.6686592,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 9236.607461929321
+    },
+    "ops/cermics_20261107/attempts/sp15-19977-1794086997665188480/ROUTE_COMPLETE.json": {
+      "fits": 4,
+      "recorded_utc": "2026-11-08T00:03:54.282198+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp20-19975-1794086997665259686/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19975",
+      "label": "sp20",
+      "node": "node07",
+      "started_utc": "2026-11-07T21:29:57.665774+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp20-19975-1794086997665259686/remaining.json": {
+      "MemAvailable_before_bytes": 213178503168,
+      "MemAvailable_bytes": 244579581952,
+      "actual_CPU_cores_interval": 0.9954719616536098,
+      "actual_CPU_seconds": 23575.890786,
+      "affinity": [
+        58
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_shortest_path_20x20__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 11210559488,
+      "current_RSS_bytes": 11080163328,
+      "finished_unix": 1794110677.0416625,
+      "host": "node07.cluster.local",
+      "job_id": "19975",
+      "memory_limit_bytes": 25769803776,
+      "observed_unix": 1794110672.0376801,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 3172667,
+      "returncode": 0,
+      "route": "sp20",
+      "sampled_peak_RSS_bytes": 11188203520,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 431405367296,
+      "scratch_free_bytes": 429425995776,
+      "started_unix": 1794086997.668611,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 23679.37305164337
+    },
+    "ops/cermics_20261107/attempts/sp20-19975-1794086997665259686/ROUTE_COMPLETE.json": {
+      "fits": 4,
+      "recorded_utc": "2026-11-08T04:04:37.045435+00:00"
+    },
+    "ops/cermics_20261107/attempts/cfl50-19978-1794086997723657182/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19978",
+      "label": "cfl50",
+      "node": "node09",
+      "started_utc": "2026-11-07T21:29:57.724258+00:00"
+    },
+    "ops/cermics_20261107/attempts/cfl50-19978-1794086997723657182/remaining.json": {
+      "MemAvailable_before_bytes": 264617299968,
+      "MemAvailable_bytes": 194154827776,
+      "actual_CPU_cores_interval": 0.9961551514943973,
+      "actual_CPU_seconds": 2741.105442,
+      "affinity": [
+        2
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_cfl_50x5__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 4863123456,
+      "current_RSS_bytes": 4551389184,
+      "finished_unix": 1794089753.2470448,
+      "host": "node09.cluster.local",
+      "job_id": "19978",
+      "memory_limit_bytes": 21474836480,
+      "observed_unix": 1794089728.240629,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 1500937,
+      "returncode": 0,
+      "route": "cfl50",
+      "sampled_peak_RSS_bytes": 4840640512,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 448741527552,
+      "scratch_free_bytes": 437658771456,
+      "started_unix": 1794086997.7295349,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 2755.517510175705
+    },
+    "ops/cermics_20261107/attempts/cfl50-19978-1794086997723657182/ROUTE_COMPLETE.json": {
+      "fits": 2,
+      "recorded_utc": "2026-11-07T22:15:53.251196+00:00"
+    },
+    "ops/cermics_20261107/attempts/kp1000-19976-1794086997723660444/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19976",
+      "label": "kp1000",
+      "node": "node09",
+      "started_utc": "2026-11-07T21:29:57.724509+00:00"
+    },
+    "ops/cermics_20261107/attempts/kp1000-19976-1794086997723660444/remaining.json": {
+      "MemAvailable_before_bytes": 264617299968,
+      "MemAvailable_bytes": 188232216576,
+      "actual_CPU_cores_interval": 0.995469976309496,
+      "actual_CPU_seconds": 14481.694722,
+      "affinity": [
+        0
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_knapsack_1000x2__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 94196764672,
+      "current_RSS_bytes": 76307210240,
+      "finished_unix": 1794101550.544155,
+      "host": "node09.cluster.local",
+      "job_id": "19976",
+      "memory_limit_bytes": 120259084288,
+      "observed_unix": 1794101520.5375304,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 1500935,
+      "returncode": 0,
+      "route": "kp1000",
+      "sampled_peak_RSS_bytes": 94192771072,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 448741527552,
+      "scratch_free_bytes": 437660491776,
+      "started_unix": 1794086997.7292676,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 14552.814887523651
+    },
+    "ops/cermics_20261107/attempts/kp1000-19976-1794086997723660444/ROUTE_COMPLETE.json": {
+      "fits": 1,
+      "recorded_utc": "2026-11-08T01:32:30.547736+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp10-19979-1794086997723836266/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19979",
+      "label": "sp10",
+      "node": "node09",
+      "started_utc": "2026-11-07T21:29:57.724809+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp10-19979-1794086997723836266/remaining.json": {
+      "MemAvailable_before_bytes": 264617299968,
+      "MemAvailable_bytes": 219061878784,
+      "actual_CPU_cores_interval": 0.9891583604273385,
+      "actual_CPU_seconds": 2349.533392,
+      "affinity": [
+        4
+      ],
+      "allocated_CPUs": 1,
+      "argv": [
+        "bash",
+        "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+        "dys_shortest_path_10x10__data151101",
+        "remaining"
+      ],
+      "child_peak_RSS_bytes": 1017184256,
+      "current_RSS_bytes": 996737024,
+      "finished_unix": 1794089363.1735044,
+      "host": "node09.cluster.local",
+      "job_id": "19979",
+      "memory_limit_bytes": 8589934592,
+      "observed_unix": 1794089338.1677337,
+      "partition": "defq-gpu",
+      "phase": "remaining",
+      "pid": 1500936,
+      "returncode": 0,
+      "route": "sp10",
+      "sampled_peak_RSS_bytes": 1009844224,
+      "scratch_filesystem": "xfs",
+      "scratch_free_before_bytes": 448741527552,
+      "scratch_free_bytes": 437658755072,
+      "started_unix": 1794086997.7292702,
+      "state": "complete",
+      "step_id": "0",
+      "stop_reason": null,
+      "wall_seconds": 2365.4442341327667
+    },
+    "ops/cermics_20261107/attempts/sp10-19979-1794086997723836266/ROUTE_COMPLETE.json": {
+      "fits": 4,
+      "recorded_utc": "2026-11-07T22:09:23.179677+00:00"
+    }
+  },
+  "recent_fit_progress": {
+    "lava_complete__07cde7643b9fdce416ce7a672b230ade": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 88.68693806231022,
+      "phase": "training",
+      "time": 1794095784.0773857
+    },
+    "lava_complete__15ac4ebe6f6cbb54ad6a23d1b39acf64": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 215.00755567848682,
+      "phase": "training",
+      "time": 1794114369.6377404
+    },
+    "lava_complete__17caf572933bb58fc26050ce2e83c025": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 98.69360258057714,
+      "phase": "training",
+      "time": 1794108982.550101
+    },
+    "lava_complete__21f1dbbd1eaee7b3da3a1c104972e01a": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 464.81278923898935,
+      "phase": "training",
+      "time": 1794109742.5244117
+    },
+    "lava_complete__23722eb677d0eb7fe4aaf8cd588d97cd": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 910.6716609969735,
+      "phase": "training",
+      "time": 1794110674.7597322
+    },
+    "lava_complete__3612427e518ddbe8fdb8aa37929a8c00": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 1106.6913070306182,
+      "phase": "training",
+      "time": 1794086991.845477
+    },
+    "lava_complete__45ea1edc38ee4bfdc1a16fe2da9a25e2": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 277.30441865324974,
+      "phase": "training",
+      "time": 1794109266.6625822
+    },
+    "lava_complete__510056a909b24cc186950ddb2cccad2b": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 144.04939949139953,
+      "phase": "training",
+      "time": 1794095932.3532212
+    },
+    "lava_complete__53018ecf3997ecbc94498dbf7f6e08ba": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 29.437169209122658,
+      "phase": "training",
+      "time": 1794095692.6626077
+    },
+    "lava_complete__55c410c5523fa39f0ce1ffdaf8b049dc": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 2215.785273335874,
+      "phase": "training",
+      "time": 1794117304.8810933
+    },
+    "lava_complete__5ae4bb76d6b20402fa8d92c3cd8eae4d": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 7.100682158023119,
+      "phase": "training",
+      "time": 1794089226.2257829
+    },
+    "lava_complete__a5fcf882bca9ad478163b5dfe0786053": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 653.9489962905645,
+      "phase": "training",
+      "time": 1794115039.0020692
+    },
+    "lava_complete__b95bcfe2ffc8afdc4d4ba762dcd7b546": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 1132.6573229208589,
+      "phase": "training",
+      "time": 1794089751.0827405
+    },
+    "lava_complete__d3024a219af5eff513c3286da348c955": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 21.03227773681283,
+      "phase": "training",
+      "time": 1794089248.335072
+    },
+    "lava_complete__de7bf4d3c509126e1bb9edb03820952b": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 71.72253105789423,
+      "phase": "training",
+      "time": 1794089358.5407646
+    },
+    "lava_complete__e210597c3bc8475f5d9bf303c5249a4e": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 1132.7508452832699,
+      "phase": "training",
+      "time": 1794088617.1830626
+    },
+    "lava_complete__f8e2c34e4a62e1274d8bf3ac2451069c": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 291.55256909132004,
+      "phase": "training",
+      "time": 1794096231.540556
+    },
+    "lava_complete__fa783943b6f434c847c108f1d5a302e1": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 35.23112167418003,
+      "phase": "training",
+      "time": 1794089284.8778658
+    },
+    "lava_recovery_serial__656cb2c65fa9b0ed154f26988e766b44": {
+      "_force_progress": true,
+      "epochs_completed": 300,
+      "optimization_seconds": 14236.401421643794,
+      "phase": "training",
+      "time": 1794101546.6682832
+    }
+  },
+  "runtime": {
+    "19678-3158422.json": {
+      "slurm_job_id": "19678",
+      "slurm_step_id": "0",
+      "host": "node07.cluster.local",
+      "affinity": [
+        0
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 432094076928,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19678-3172586.json": {
+      "slurm_job_id": "19678",
+      "slurm_step_id": "0",
+      "host": "node07.cluster.local",
+      "affinity": [
+        0
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 431405367296,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19977-3172676.json": {
+      "slurm_job_id": "19977",
+      "slurm_step_id": "0",
+      "host": "node07.cluster.local",
+      "affinity": [
+        60
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 431405367296,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19975-3172675.json": {
+      "slurm_job_id": "19975",
+      "slurm_step_id": "0",
+      "host": "node07.cluster.local",
+      "affinity": [
+        58
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 431405367296,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19978-1500948.json": {
+      "slurm_job_id": "19978",
+      "slurm_step_id": "0",
+      "host": "node09.cluster.local",
+      "affinity": [
+        2
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 448741527552,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19979-1500949.json": {
+      "slurm_job_id": "19979",
+      "slurm_step_id": "0",
+      "host": "node09.cluster.local",
+      "affinity": [
+        4
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 448741527552,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    },
+    "19976-1500947.json": {
+      "slurm_job_id": "19976",
+      "slurm_step_id": "0",
+      "host": "node09.cluster.local",
+      "affinity": [
+        0
+      ],
+      "versions": [
+        [
+          3,
+          13,
+          5
+        ],
+        "1.12.0",
+        "2.3.5",
+        "1.16.3",
+        "2.8.0+cpu",
+        "1.0.2"
+      ],
+      "scratch_free_bytes": 448741527552,
+      "environment_modified": false,
+      "cpu_model": "Intel(R) Xeon(R) 6730P"
+    }
+  },
+  "failures": {}
+}

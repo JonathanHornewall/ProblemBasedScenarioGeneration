@@ -1,0 +1,126 @@
+{
+  "state": "running_original_SP25_N500_preprocessing",
+  "verified_utc": "2026-11-07T13:17:56.007535+00:00",
+  "submission": {
+    "job_id": "19678",
+    "name": "lava-replay-1107-sp25-a2",
+    "recorded_utc": "2026-11-07T13:17:10.254078+00:00",
+    "reconciled": false
+  },
+  "initial_readback": "snapshots/2026-11-07T131729.156908+0000.json",
+  "productive_readback": "snapshots/2026-11-07T131756.007535+0000.json",
+  "slurm_queue": "19678|defq-gpu|RUNNING|1|40G|node07|lava-replay-1107-sp25-a2|1-18:00:00|None",
+  "slurm_details": "JobId=19678 JobName=lava-replay-1107-sp25-a2 UserId=jonathan.hornewall(758227476) GroupId=utilisateurs du domaine(758200513) MCS_label=N/A Priority=1 Nice=10000 Account=(null) QOS=normal JobState=RUNNING Reason=None Dependency=(null) Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0 RunTime=00:00:19 TimeLimit=1-18:00:00 TimeMin=N/A SubmitTime=2026-11-07T13:17:10 EligibleTime=2026-11-07T13:17:10 AccrueTime=2026-11-07T13:17:10 StartTime=2026-11-07T13:17:10 EndTime=2026-11-09T07:17:10 Deadline=2026-11-09T22:30:00 PreemptEligibleTime=2026-11-07T13:17:10 PreemptTime=None SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-11-07T13:17:10 Scheduler=Main Partition=defq-gpu AllocNode:Sid=master01-hpc:643743 ReqNodeList=node07 ExcNodeList=(null) NodeList=node07 BatchHost=node07 NumNodes=1 NumCPUs=1 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:* ReqTRES=cpu=1,mem=40G,node=1,billing=1 AllocTRES=cpu=1,node=1,billing=1 Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=* MinCPUsNode=1 MinMemoryNode=40G MinTmpDiskNode=0 Features=(null) DelayBoot=00:00:00 OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null) Command=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch WorkDir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107 StdErr=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/lava-replay-1107-sp25-a2-19678.err StdIn=/dev/null StdOut=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/lava-replay-1107-sp25-a2-19678.out Power= TresPerTask=cpu:1 \n",
+  "allocated_CPUs": 1,
+  "gpus_requested_or_allocated": 0,
+  "slurm_requested_memory_GiB": 40,
+  "first_phase_guard_GiB": 32,
+  "observed_phase_cpu_rss": {
+    "MemAvailable_before_bytes": 264434704384,
+    "MemAvailable_bytes": 260950847488,
+    "actual_CPU_cores_interval": 0.9138521906551981,
+    "actual_CPU_seconds": 27.42,
+    "affinity": [
+      0
+    ],
+    "allocated_CPUs": 1,
+    "argv": [
+      "bash",
+      "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/start_cermics.sh",
+      "dys_shortest_path_25x25__data151101",
+      "first"
+    ],
+    "current_RSS_bytes": 3565387776,
+    "host": "node07.cluster.local",
+    "job_id": "19678",
+    "memory_limit_bytes": 34359738368,
+    "observed_unix": 1794057461.3751123,
+    "partition": "defq-gpu",
+    "phase": "first",
+    "pid": 3158418,
+    "route": "sp25",
+    "sampled_peak_RSS_bytes": 3565387776,
+    "scratch_filesystem": "xfs",
+    "scratch_free_before_bytes": 432094076928,
+    "scratch_free_bytes": 432094179328,
+    "started_unix": 1794057431.3634233,
+    "state": "running",
+    "step_id": "0",
+    "stop_reason": null
+  },
+  "preparation": {
+    "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+    "basis_enumeration_cap": 250,
+    "binding_normals_storage": "lossless NPZ per exact anchor; lazy original arrays at training",
+    "builder_identity": {
+      "adapter_sha256": "1933a96df3236d548ba08440b6b5dda16ebdcbae95c7ca5983d611d0eeaaaf17",
+      "basis_enumeration_cap": 250,
+      "initialization_seed": 161101,
+      "schema": 2,
+      "vertex_tolerance": 0.0
+    },
+    "data_seed": 151101,
+    "generator_called": false,
+    "geometry_rng_protocol": "seeded_numpy_resume_v2",
+    "highs_version": "1.12.0",
+    "host": "node07.cluster.local",
+    "initialization_seed": 161101,
+    "key": "dys_shortest_path_25x25__data151101",
+    "maximum_training_samples": 500,
+    "python_recursion_limit": 20000,
+    "reused_completed_prefixes": [],
+    "route": "dys_shortest_path_25x25",
+    "scratch": "/tmp/lava_timing_replay_20261107/seeded_banks_v2/dys_shortest_path_25x25__data151101__init161101",
+    "slurm_job_id": "19678",
+    "source_observation_sha256": "7449d8a6882bd50444c68c0503fb42545970a7fafe1c5e8235f6ec3138039ad3",
+    "source_training_file": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/frozen_data/dys_shortest_path_25x25__data151101/observations_n500.npz",
+    "started_unix": 1794057438.0366592,
+    "status": "running",
+    "test_opened": false,
+    "validation_opened": false,
+    "vertex_tolerance": 0.0
+  },
+  "runtime": {
+    "slurm_job_id": "19678",
+    "slurm_step_id": "0",
+    "host": "node07.cluster.local",
+    "affinity": [
+      0
+    ],
+    "versions": [
+      [
+        3,
+        13,
+        5
+      ],
+      "1.12.0",
+      "2.3.5",
+      "1.16.3",
+      "2.8.0+cpu",
+      "1.0.2"
+    ],
+    "scratch_free_bytes": 432094076928,
+    "environment_modified": false,
+    "cpu_model": "Intel(R) Xeon(R) 6730P"
+  },
+  "verified_parity": false,
+  "valid_fit_receipts": 0,
+  "follow_on_route_jobs_submitted": 0,
+  "frozen_fit_count": 19,
+  "first_fit_id": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+  "original_seed_bundle": {
+    "data": 151101,
+    "initialization": 161101,
+    "shuffle": 171101,
+    "perturbation": 181101,
+    "structural": 101
+  },
+  "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+  "package_sha256": "8012615ba29b6893bc5e4b8d00ebbb6f1b200618e3a0d42745261a12ffc510fb",
+  "cutoff_utc": "2026-11-09T22:30:00Z",
+  "prior_failed_attempt": {
+    "job_id": "19671",
+    "category": "pre-science scratch admission",
+    "receipt": "overlays/01-node03-19671/ADMISSION_FAILURE.json"
+  }
+}

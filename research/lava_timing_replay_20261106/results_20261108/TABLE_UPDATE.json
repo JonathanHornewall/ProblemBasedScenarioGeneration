@@ -1,0 +1,13 @@
+{
+  "previous_table": "lava_inclusive_regret_20261104/training_times_300_epochs.csv",
+  "new_table": "training_times_300_epochs_corrected.csv",
+  "updated_cells": 36,
+  "unique_replays": 19,
+  "seeds_per_replay": 1,
+  "other_rows_unchanged": true,
+  "historical_table_overwritten": false,
+  "regret_results_changed": false,
+  "old_loader_multi_seed_SD_reused": false,
+  "sum_optimizer_wall_hours": 6.42598274503731,
+  "sum_optimizer_CPU_hours": 6.398104472120575
+}

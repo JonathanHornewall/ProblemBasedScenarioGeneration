@@ -1,0 +1,104 @@
+{
+  "observed_utc": "2026-11-07T13:10:15.196954+00:00",
+  "scientific_processes_launched": 0,
+  "failed_job_reconciled": 19671,
+  "probes": {
+    "node01": {
+      "rc": 0,
+      "stdout": "19672\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node01",
+        "job_id": "19672",
+        "MemAvailable_bytes": 129966895104,
+        "scratch_free_bytes": 19738533888,
+        "scratch_total_bytes": 53619982336,
+        "scratch_free_inodes": 25773958,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) Gold 6334 CPU @ 3.60GHz"
+      }
+    },
+    "node02": {
+      "rc": 0,
+      "stdout": "19673\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node02",
+        "job_id": "19673",
+        "MemAvailable_bytes": 130002194432,
+        "scratch_free_bytes": 26393911296,
+        "scratch_total_bytes": 53619982336,
+        "scratch_free_inodes": 25871720,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) Gold 6334 CPU @ 3.60GHz"
+      }
+    },
+    "node04": {
+      "rc": 0,
+      "stdout": "19674\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node04",
+        "job_id": "19674",
+        "MemAvailable_bytes": 29838217216,
+        "scratch_free_bytes": 14081122304,
+        "scratch_total_bytes": 53619982336,
+        "scratch_free_inodes": 25736313,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "AMD EPYC 7351 16-Core Processor"
+      }
+    },
+    "node05": {
+      "rc": 0,
+      "stdout": "19675\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node05",
+        "job_id": "19675",
+        "MemAvailable_bytes": 29310939136,
+        "scratch_free_bytes": 28623118336,
+        "scratch_total_bytes": 53619982336,
+        "scratch_free_inodes": 25830930,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "AMD EPYC 7351 16-Core Processor"
+      }
+    },
+    "node07": {
+      "rc": 0,
+      "stdout": "19676\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node07",
+        "job_id": "19676",
+        "MemAvailable_bytes": 264454000640,
+        "scratch_free_bytes": 432093941760,
+        "scratch_total_bytes": 470007447552,
+        "scratch_free_inodes": 229211409,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) 6730P"
+      }
+    },
+    "node09": {
+      "rc": 0,
+      "stdout": "19677\n",
+      "stderr": "",
+      "metadata": {
+        "node": "node09",
+        "job_id": "19677",
+        "MemAvailable_bytes": 264704290816,
+        "scratch_free_bytes": 448744550400,
+        "scratch_total_bytes": 470007447552,
+        "scratch_free_inodes": 229348359,
+        "scratch_fstype": "xfs",
+        "new_scratch_exists": false,
+        "cpu_model": "Intel(R) Xeon(R) 6730P"
+      }
+    }
+  },
+  "live_probe_jobs": []
+}

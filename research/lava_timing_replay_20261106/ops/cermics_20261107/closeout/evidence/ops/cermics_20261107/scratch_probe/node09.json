@@ -1,0 +1,16 @@
+{
+  "rc": 0,
+  "stdout": "19677\n",
+  "stderr": "",
+  "metadata": {
+    "node": "node09",
+    "job_id": "19677",
+    "MemAvailable_bytes": 264704290816,
+    "scratch_free_bytes": 448744550400,
+    "scratch_total_bytes": 470007447552,
+    "scratch_free_inodes": 229348359,
+    "scratch_fstype": "xfs",
+    "new_scratch_exists": false,
+    "cpu_model": "Intel(R) Xeon(R) 6730P"
+  }
+}

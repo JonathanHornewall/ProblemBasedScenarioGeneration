@@ -1,0 +1,18 @@
+{
+  "N": 1000,
+  "already_prepared": false,
+  "geometry_construction": {
+    "cpu_seconds": 8614.601912593002,
+    "wall_seconds": 8658.369826760143
+  },
+  "identity_checks": {
+    "cpu_seconds": 0.3001377849996061,
+    "wall_seconds": 0.30153482407331467
+  },
+  "observations": {
+    "cpu_seconds": 1.304390762,
+    "wall_seconds": 1.3997826501727104
+  },
+  "original_vertices_checked": 977,
+  "training_included": false
+}

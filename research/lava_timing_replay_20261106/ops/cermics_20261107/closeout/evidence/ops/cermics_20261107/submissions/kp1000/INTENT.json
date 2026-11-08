@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "sbatch",
+    "--parsable",
+    "--job-name=lava-replay-1107-kp1000",
+    "--partition=defq-gpu",
+    "--nodelist=node09",
+    "--nodes=1",
+    "--ntasks=1",
+    "--cpus-per-task=1",
+    "--mem=112G",
+    "--nice=10000",
+    "--requeue",
+    "--time=1200",
+    "--deadline=2026-11-09T22:30:00",
+    "--open-mode=append",
+    "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+    "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+    "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+    "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+    "kp1000"
+  ],
+  "cutoff_utc": "2026-11-09T22:30:00Z",
+  "label": "kp1000",
+  "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+  "name": "lava-replay-1107-kp1000",
+  "started_utc": "2026-11-07T21:29:57.112368+00:00"
+}

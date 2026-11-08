@@ -1,0 +1,12 @@
+{
+  "nodes": [
+    "node01",
+    "node02",
+    "node04",
+    "node05",
+    "node07",
+    "node09"
+  ],
+  "deadline_utc": "2026-11-07T13:14:13Z",
+  "purpose": "Actual scratch and RAM metadata after 19671 admission failure. No reconstruction or training."
+}

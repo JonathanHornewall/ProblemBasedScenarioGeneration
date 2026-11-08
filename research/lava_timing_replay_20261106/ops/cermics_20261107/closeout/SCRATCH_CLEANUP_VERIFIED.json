@@ -1,0 +1,11 @@
+{
+  "state": "verified_absent_on_both_nodes",
+  "verified_utc": "2026-11-08T11:35:46.550357+00:00",
+  "target": "/tmp/lava_timing_replay_20261107",
+  "cleanup_job_ids": {
+    "node07": "19980",
+    "node09": "19981"
+  },
+  "accounting_name_note": "Slurm reported the stdin cleanup jobs as allocation. Exact IDs, host, exit status and successful deletion receipts agree.",
+  "readback": "SCRATCH_CLEANUP_READBACK.json"
+}

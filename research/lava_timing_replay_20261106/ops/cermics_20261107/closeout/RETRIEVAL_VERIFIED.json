@@ -1,0 +1,20 @@
+{
+  "state": "retrieved_and_verified",
+  "verified_utc": "2026-11-08T11:31:44.503585+00:00",
+  "destination": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_timing_replay_20261106/ops/cermics_20261107/closeout/evidence",
+  "archive_transport_sha256": "7478b9b554d2a9ebc9a310794a1e724d8fbb3ce7316036fdfed13816dc673bcf",
+  "transport_bytes": 1827023,
+  "files_verified": 195,
+  "unpacked_bytes": 4023225,
+  "file_checksums": "evidence/SHA256SUMS.json",
+  "remote_root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+  "source_sha256": "1375e613d7c97c15402f31d5a65d16af91cb5be8748fbabd1ece31ced119f8f0",
+  "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+  "valid_results": 19,
+  "table_entries": 36,
+  "banks": 6,
+  "geometry_build_stages": 7,
+  "original_SP25_parity_passed": true,
+  "completion_snapshot": "snapshots/2026-11-08T112755.194887+0000.json",
+  "weights_and_dense_caches_copied": false
+}

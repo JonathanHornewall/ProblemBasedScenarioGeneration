@@ -1,0 +1,20 @@
+{
+  "MemAvailable_before_bytes": 129824583680,
+  "affinity": [
+    0
+  ],
+  "allocated_CPUs": 1,
+  "error": "Insufficient actual node-local scratch before starting route",
+  "finished_unix": 1794056833.2669313,
+  "host": "node03.cluster.local",
+  "job_id": "19671",
+  "memory_limit_bytes": 34359738368,
+  "partition": "defq",
+  "phase": "first",
+  "route": "sp25",
+  "scratch_free_before_bytes": 16233377792,
+  "started_unix": 1794056833.2660918,
+  "state": "failed",
+  "step_id": "0",
+  "wall_seconds": 0.0008394718170166016
+}

@@ -1,0 +1,11 @@
+{
+  "state": "removed_and_absence_verified",
+  "root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+  "verified_utc": "2026-11-08T11:35:51.403672+00:00",
+  "scratch_cleanup_job_ids": {
+    "node07": "19980",
+    "node09": "19981"
+  },
+  "verified_retrieval_sha256": "7478b9b554d2a9ebc9a310794a1e724d8fbb3ce7316036fdfed13816dc673bcf",
+  "followed_symlinks": false
+}

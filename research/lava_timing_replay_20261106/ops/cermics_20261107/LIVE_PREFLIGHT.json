@@ -1,0 +1,70 @@
+{
+  "observed_utc": "2026-11-07T12:56:34.946311+00:00",
+  "login": "master01-hpc",
+  "user": "jonathan.hornewall",
+  "read_only": true,
+  "new_remote_root_exists": false,
+  "queries": {
+    "nodes": {
+      "rc": 0,
+      "stdout": "NodeName=node01 Arch=x86_64 CoresPerSocket=8  CPUAlloc=0 CPUEfctv=16 CPUTot=16 CPULoad=0.00 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node01 NodeHostName=node01 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=125000 AllocMem=0 FreeMem=50581 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq  BootTime=2026-01-21T10:45:08 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-07T11:16:07 ResumeAfterTime=None CfgTRES=cpu=16,mem=125000M,billing=16 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node02 Arch=x86_64 CoresPerSocket=8  CPUAlloc=0 CPUEfctv=16 CPUTot=16 CPULoad=0.01 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node02 NodeHostName=node02 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=125000 AllocMem=0 FreeMem=55156 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq  BootTime=2025-07-11T15:15:57 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-07T11:16:10 ResumeAfterTime=None CfgTRES=cpu=16,mem=125000M,billing=16 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node03 Arch=x86_64 CoresPerSocket=12  CPUAlloc=0 CPUEfctv=24 CPUTot=24 CPULoad=0.00 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node03 NodeHostName=node03 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=125000 AllocMem=0 FreeMem=69947 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq  BootTime=2026-01-22T10:55:50 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-07T11:16:08 ResumeAfterTime=None CfgTRES=cpu=24,mem=125000M,billing=24 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node04 Arch=x86_64 CoresPerSocket=16  CPUAlloc=1 CPUEfctv=32 CPUTot=32 CPULoad=0.00 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node04 NodeHostName=node04 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=31000 AllocMem=0 FreeMem=28505 Sockets=2 Boards=1 State=MIXED ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq,cermics  BootTime=2025-04-24T16:51:52 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-04T10:08:34 ResumeAfterTime=None CfgTRES=cpu=32,mem=31000M,billing=32 AllocTRES=cpu=1 CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node05 Arch=x86_64 CoresPerSocket=16  CPUAlloc=0 CPUEfctv=32 CPUTot=32 CPULoad=0.02 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node05 NodeHostName=node05 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=31000 AllocMem=0 FreeMem=21552 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq,cermics  BootTime=2026-03-02T09:50:11 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-07T02:44:13 ResumeAfterTime=None CfgTRES=cpu=32,mem=31000M,billing=32 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node06 Arch=x86_64 CoresPerSocket=16  CPUAlloc=32 CPUEfctv=32 CPUTot=32 CPULoad=32.70 AvailableFeatures=(null) ActiveFeatures=(null) Gres=(null) NodeAddr=node06 NodeHostName=node06 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=31000 AllocMem=0 FreeMem=424 Sockets=2 Boards=1 State=ALLOCATED ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq,cermics  BootTime=2026-02-24T17:24:33 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-06T17:15:43 ResumeAfterTime=None CfgTRES=cpu=32,mem=31000M,billing=32 AllocTRES=cpu=32 CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node07 Arch=x86_64 CoresPerSocket=32  CPUAlloc=0 CPUEfctv=64 CPUTot=64 CPULoad=0.01 AvailableFeatures=(null) ActiveFeatures=(null) Gres=gpu:l40s:1(S:0-1) NodeAddr=node07 NodeHostName=node07 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=250000 AllocMem=0 FreeMem=216799 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq-gpu,gpu-cermics  BootTime=2026-04-16T10:12:05 SlurmdStartTime=2026-04-16T10:12:45 LastBusyTime=2026-11-07T10:22:35 ResumeAfterTime=None CfgTRES=cpu=64,mem=250000M,billing=64 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node08 Arch=x86_64 CoresPerSocket=32  CPUAlloc=0 CPUEfctv=64 CPUTot=64 CPULoad=0.00 AvailableFeatures=(null) ActiveFeatures=(null) Gres=gpu:l40s:1(S:0-1) NodeAddr=node08 NodeHostName=node08 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=250000 AllocMem=0 FreeMem=221511 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq-gpu,gpu-cermics  BootTime=2026-03-02T17:12:32 SlurmdStartTime=2026-03-23T14:07:04 LastBusyTime=2026-11-07T10:23:14 ResumeAfterTime=None CfgTRES=cpu=64,mem=250000M,billing=64 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\nNodeName=node09 Arch=x86_64 CoresPerSocket=32  CPUAlloc=0 CPUEfctv=64 CPUTot=64 CPULoad=0.01 AvailableFeatures=(null) ActiveFeatures=(null) Gres=gpu:l40s:1(S:0-1) NodeAddr=node09 NodeHostName=node09 Version=23.11.10 OS=Linux 5.14.0-503.35.1.el9_5.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Apr 3 12:12:16 UTC 2025  RealMemory=250000 AllocMem=0 FreeMem=234809 Sockets=2 Boards=1 State=IDLE ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=defq-gpu  BootTime=2026-04-16T10:11:08 SlurmdStartTime=2026-04-16T10:11:46 LastBusyTime=2026-11-07T01:23:51 ResumeAfterTime=None CfgTRES=cpu=64,mem=250000M,billing=64 AllocTRES= CapWatts=n/a CurrentWatts=0 AveWatts=0 ExtSensorsJoules=n/a ExtSensorsWatts=0 ExtSensorsTemp=n/a\n",
+      "stderr": ""
+    },
+    "defq": {
+      "rc": 0,
+      "stdout": "PartitionName=defq AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL AllocNodes=ALL Default=YES QoS=N/A DefaultTime=NONE DisableRootJobs=NO ExclusiveUser=NO GraceTime=0 Hidden=NO MaxNodes=UNLIMITED MaxTime=UNLIMITED MinNodes=0 LLN=NO MaxCPUsPerNode=UNLIMITED MaxCPUsPerSocket=UNLIMITED Nodes=node[01-06] PriorityJobFactor=50 PriorityTier=50 RootOnly=NO ReqResv=NO OverSubscribe=NO OverTimeLimit=NONE PreemptMode=GANG,SUSPEND State=UP TotalCPUs=152 TotalNodes=6 SelectTypeParameters=NONE JobDefaults=(null) DefMemPerNode=UNLIMITED MaxMemPerNode=UNLIMITED TRES=cpu=152,mem=468000M,node=6,billing=152\n",
+      "stderr": ""
+    },
+    "defq_gpu": {
+      "rc": 0,
+      "stdout": "PartitionName=defq-gpu AllowGroups=ALL AllowAccounts=ALL AllowQos=ALL AllocNodes=ALL Default=NO QoS=N/A DefaultTime=NONE DisableRootJobs=NO ExclusiveUser=NO GraceTime=0 Hidden=NO MaxNodes=UNLIMITED MaxTime=UNLIMITED MinNodes=0 LLN=NO MaxCPUsPerNode=UNLIMITED MaxCPUsPerSocket=UNLIMITED Nodes=node[07-09] PriorityJobFactor=50 PriorityTier=50 RootOnly=NO ReqResv=NO OverSubscribe=NO OverTimeLimit=NONE PreemptMode=REQUEUE State=UP TotalCPUs=192 TotalNodes=3 SelectTypeParameters=NONE JobDefaults=(null) DefMemPerNode=UNLIMITED MaxMemPerNode=UNLIMITED TRES=cpu=192,mem=750000M,node=3,billing=192\n",
+      "stderr": ""
+    },
+    "queue": {
+      "rc": 0,
+      "stdout": "17646|cermics|R|1|2G|node04|3-11:14:00|None\n11214|defq|R|32|1G|node06|UNLIMITED|None\n",
+      "stderr": ""
+    },
+    "user_queue": {
+      "rc": 0,
+      "stdout": "17646|cermics|R|1|node04|codex-agent-20261103T003359Z|3-11:14:00|None\n",
+      "stderr": ""
+    },
+    "node_partition_view": {
+      "rc": 0,
+      "stdout": "node01|defq*|idle|16|0/16/0/16|125000|50581|0\nnode02|defq*|idle|16|0/16/0/16|125000|55156|0\nnode03|defq*|idle|24|0/24/0/24|125000|69947|0\nnode04|defq*|mixed|32|1/31/0/32|31000|28505|0\nnode04|cermics|mixed|32|1/31/0/32|31000|28505|0\nnode05|defq*|idle|32|0/32/0/32|31000|21552|0\nnode05|cermics|idle|32|0/32/0/32|31000|21552|0\nnode06|defq*|allocated|32|32/0/0/32|31000|424|0\nnode06|cermics|allocated|32|32/0/0/32|31000|424|0\nnode07|gpu-cermics|idle|64|0/64/0/64|250000|216799|0\nnode07|defq-gpu|idle|64|0/64/0/64|250000|216799|0\nnode08|gpu-cermics|idle|64|0/64/0/64|250000|221511|0\nnode08|defq-gpu|idle|64|0/64/0/64|250000|221511|0\nnode09|defq-gpu|idle|64|0/64/0/64|250000|234809|0\n",
+      "stderr": ""
+    },
+    "home_df": {
+      "rc": 0,
+      "stdout": "Filesystem         1B-blocks          Used    Available Use% Mounted on\n/dev/sdb       2877555998720 2758758608896 118797389824  96% /home\n",
+      "stderr": ""
+    },
+    "home_inodes": {
+      "rc": 0,
+      "stdout": "Filesystem        Inodes    IUsed     IFree IUse% Mounted on\n/dev/sdb       245915656 13887521 232028135    6% /home\n",
+      "stderr": ""
+    },
+    "slurm_config": {
+      "rc": 0,
+      "stdout": "AccountingStorageType   = accounting_storage/slurmdbd\nJobAcctGatherType       = (null)\nJobRequeue              = 1\nMaxArraySize            = 1001\nMinJobAge               = 300 sec\nProctrackType           = proctrack/cgroup\nSelectType              = select/cons_tres\nSelectTypeParameters    = CR_CPU\nTaskPlugin              = task/cgroup,task/affinity",
+      "stderr": ""
+    }
+  },
+  "venv": {
+    "path": "/home/jonathan.hornewall/runs/scaled_data_neural_20261021/venv",
+    "python_executable": true,
+    "python_resolved_path": "/home/jonathan.hornewall/runs/central_path_final_20260922/runtime/cpython-3.13.5-linux-x86_64-gnu/bin/python3.13",
+    "pyvenv_cfg": "home = /home/jonathan.hornewall/runs/central_path_final_20260922/runtime/cpython-3.13.5-linux-x86_64-gnu/bin\nimplementation = CPython\nuv = 0.12.17\nversion_info = 3.13.5\ninclude-system-site-packages = false\n",
+    "package_versions_from_dist_info": {
+      "highspy": "1.12.0",
+      "numpy": "2.3.5",
+      "pyepo": "1.0.2",
+      "scipy": "1.16.3",
+      "torch": "2.8.0+cpu"
+    },
+    "imports_executed": false
+  },
+  "node_local_scratch": "Slurm configured TmpDisk only; check actual free bytes, inodes and MemAvailable inside first allocated job before reconstruction",
+  "submitted_jobs": 0
+}

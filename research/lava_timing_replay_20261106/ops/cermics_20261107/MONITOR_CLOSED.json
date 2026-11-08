@@ -1,0 +1,44 @@
+{
+  "state": "closed",
+  "terminal_outcome": "all_19_timing_fits_complete",
+  "recorded_utc": "2026-11-08T11:38:00.459310+00:00",
+  "scientific_completion_utc": "2026-11-08T05:55:07.711692+00:00",
+  "cutoff_utc": "2026-11-09T22:30:00Z",
+  "valid_fits": 19,
+  "table_entries": 36,
+  "epochs_each": 300,
+  "original_SP25_N500_parity_passed": true,
+  "first_training_wall_seconds": 1106.6913070306182,
+  "allocated_science_CPU_seconds": 112469,
+  "measured_science_phase_CPU_seconds": 111822.3456,
+  "science_job_ids": [
+    "19678",
+    "19975",
+    "19976",
+    "19977",
+    "19978",
+    "19979"
+  ],
+  "pre_science_failed_job_id": "19671",
+  "owned_scratch_cleanup_job_ids": {
+    "node07": "19980",
+    "node09": "19981"
+  },
+  "live_owned_jobs": 0,
+  "remote_root_removed": true,
+  "node07_node09_scratch_removed": true,
+  "local_report": "closeout/REPORT.md",
+  "local_report_sha256": "028a39c532bee8925531299ba31039a6632585e592d5d436f7738519b475938c",
+  "local_retrieval_receipt": "closeout/RETRIEVAL_VERIFIED.json",
+  "verified_files": 195,
+  "launch_completion_snapshot": "snapshots/2026-11-08T112755.194887+0000.json",
+  "heartbeat_id": "monitor-lava-timing-replay",
+  "heartbeat_paused_utc": "2026-11-08T11:28:29.163000+00:00",
+  "heartbeat_deleted": true,
+  "heartbeat_deletion_verified_utc": "2026-11-08T11:38:43.615102+00:00",
+  "closeout_notifications": {
+    "main": "01a14a8b-3d7c-7d23-a8bb-2baa8f90c86c",
+    "analyzer": "01a167fc-0385-7502-b7aa-744fc489c456",
+    "confirmed_utc": "2026-11-08T11:39:35.047290+00:00"
+  }
+}

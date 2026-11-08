@@ -1,0 +1,16 @@
+{
+  "rc": 0,
+  "stdout": "19675\n",
+  "stderr": "",
+  "metadata": {
+    "node": "node05",
+    "job_id": "19675",
+    "MemAvailable_bytes": 29310939136,
+    "scratch_free_bytes": 28623118336,
+    "scratch_total_bytes": 53619982336,
+    "scratch_free_inodes": 25830930,
+    "scratch_fstype": "xfs",
+    "new_scratch_exists": false,
+    "cpu_model": "AMD EPYC 7351 16-Core Processor"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "observed_utc": "2026-11-08T11:34:29.821777+00:00",
+  "scratch": "/tmp/lava_timing_replay_20261107",
+  "deadline_utc": "2026-11-08T11:38:27.718905+00:00",
+  "receipts": {
+    "node07": {
+      "name": "ltr1107-close-node07",
+      "sbatch_rc": 0,
+      "stdout": "19980\n",
+      "stderr": "",
+      "out": "{\"node\": \"node07\", \"job_id\": \"19980\", \"target\": \"/tmp/lava_timing_replay_20261107\", \"outcome\": \"removed\", \"absent_verified\": true}\n",
+      "err": "",
+      "removal": {
+        "node": "node07",
+        "job_id": "19980",
+        "target": "/tmp/lava_timing_replay_20261107",
+        "outcome": "removed",
+        "absent_verified": true
+      }
+    },
+    "node09": {
+      "name": "ltr1107-close-node09",
+      "sbatch_rc": 0,
+      "stdout": "19981\n",
+      "stderr": "",
+      "out": "{\"node\": \"node09\", \"job_id\": \"19981\", \"target\": \"/tmp/lava_timing_replay_20261107\", \"outcome\": \"removed\", \"absent_verified\": true}\n",
+      "err": "",
+      "removal": {
+        "node": "node09",
+        "job_id": "19981",
+        "target": "/tmp/lava_timing_replay_20261107",
+        "outcome": "removed",
+        "absent_verified": true
+      }
+    }
+  },
+  "queue": "",
+  "accounting": "19980|allocation|COMPLETED|0:0|1|1|node07\n19981|allocation|COMPLETED|0:0|1|1|node09\n"
+}

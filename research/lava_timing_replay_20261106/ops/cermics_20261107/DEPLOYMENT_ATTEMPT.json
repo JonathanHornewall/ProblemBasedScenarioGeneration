@@ -1,0 +1,11 @@
+{
+  "files_sha256": {
+    "replay_package.tar.gz": "8012615ba29b6893bc5e4b8d00ebbb6f1b200618e3a0d42745261a12ffc510fb",
+    "ops/cermics_20261107/worker.sbatch": "39ab98dc96cc676adadaee517f8080d604d789592222c659a89fe646ba19a961",
+    "ops/cermics_20261107/slurm_replay.py": "a2fb862eab22f3175b4a3625d845c9d926796fa76cc5997378b421aed4bb70c2",
+    "ops/cermics_20261107/RUN_PLAN.json": "75d1457f543d0787ab95162877f14d79fa69a95b42cba94dc3a45ce744def067",
+    "ops/cermics_20261107/CERMICS_PACKAGE_READY.json": "7c0453efb619ae0e2fbd3816b300e282ea267b6f4f8f0816f5ebfc64e4aa411d"
+  },
+  "started_utc": "2026-11-07T13:05:32.977532+00:00",
+  "remote_root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107"
+}

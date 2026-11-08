@@ -1,0 +1,91 @@
+{
+  "observed_utc": "2026-11-07T13:08:04.069884+00:00",
+  "remote_root": "/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+  "root_exists": true,
+  "queue": "",
+  "submissions": {
+    "sp25": {
+      "INTENT.json": {
+        "argv": [
+          "sbatch",
+          "--parsable",
+          "--job-name=lava-replay-1107-sp25",
+          "--partition=defq",
+          "--nodelist=node03",
+          "--nodes=1",
+          "--ntasks=1",
+          "--cpus-per-task=1",
+          "--mem=40G",
+          "--nice=10000",
+          "--requeue",
+          "--time=2520",
+          "--deadline=2026-11-09T22:30:00",
+          "--open-mode=append",
+          "--chdir=/home/jonathan.hornewall/runs/lava_timing_replay_20261107",
+          "--output=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.out",
+          "--error=/home/jonathan.hornewall/runs/lava_timing_replay_20261107/logs/%x-%j.err",
+          "/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/worker.sbatch",
+          "sp25"
+        ],
+        "cutoff_utc": "2026-11-09T22:30:00Z",
+        "label": "sp25",
+        "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+        "name": "lava-replay-1107-sp25",
+        "started_utc": "2026-11-07T13:07:12.362782+00:00"
+      },
+      "RECEIPT.json": {
+        "job_id": "19671",
+        "name": "lava-replay-1107-sp25",
+        "reconciled": false,
+        "recorded_utc": "2026-11-07T13:07:12.369499+00:00"
+      }
+    },
+    "sp10": {},
+    "sp15": {},
+    "sp20": {},
+    "cfl50": {},
+    "kp1000": {}
+  },
+  "accounting": "19671|lava-replay-1107-sp25|FAILED|1:0|2|1|node03\n",
+  "markers": {},
+  "results": {},
+  "valid_results": [],
+  "first_fit_id": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+  "shared_preparation": {},
+  "attempts": {
+    "ops/cermics_20261107/attempts/sp25-19671-1794056833264363743/WORKER.json": {
+      "allocated_CPUs": 1,
+      "job_id": "19671",
+      "label": "sp25",
+      "node": "node03",
+      "started_utc": "2026-11-07T13:07:13.264955+00:00"
+    },
+    "ops/cermics_20261107/attempts/sp25-19671-1794056833264363743/first.json": {
+      "MemAvailable_before_bytes": 129824583680,
+      "affinity": [
+        0
+      ],
+      "allocated_CPUs": 1,
+      "error": "Insufficient actual node-local scratch before starting route",
+      "finished_unix": 1794056833.2669313,
+      "host": "node03.cluster.local",
+      "job_id": "19671",
+      "memory_limit_bytes": 34359738368,
+      "partition": "defq",
+      "phase": "first",
+      "route": "sp25",
+      "scratch_free_before_bytes": 16233377792,
+      "started_unix": 1794056833.2660918,
+      "state": "failed",
+      "step_id": "0",
+      "wall_seconds": 0.0008394718170166016
+    }
+  },
+  "recent_fit_progress": {},
+  "runtime": {},
+  "failures": {},
+  "job_details_UTC": {},
+  "log_tails": {
+    "logs/lava-replay-1107-sp25-19671.err": "Traceback (most recent call last):\nsrun: error: node03: task 0: Exited with exit code 1\n  File \"/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/slurm_replay.py\", line 324, in <module>\n    main()\n    ~~~~^^\n  File \"/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/slurm_replay.py\", line 318, in main\n    worker(plan, manifest, action[1])\n    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/slurm_replay.py\", line 282, in worker\n    run_phase(plan, label, \"first\", attempt)\n    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/jonathan.hornewall/runs/lava_timing_replay_20261107/ops/cermics_20261107/slurm_replay.py\", line 178, in run_phase\n    raise RuntimeError(\"Insufficient actual node-local scratch before starting route\")\nRuntimeError: Insufficient actual node-local scratch before starting route\n"
+  }
+}

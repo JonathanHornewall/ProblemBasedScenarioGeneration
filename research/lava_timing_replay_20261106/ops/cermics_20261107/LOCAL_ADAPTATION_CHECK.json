@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "scope": "CERMICS deployment adaptation only",
+  "unchanged_manifest_except_site": true,
+  "unchanged_numerical_functions": [
+    "prepare_inputs",
+    "verified_geometry",
+    "materialize",
+    "check_parity",
+    "completed_receipt",
+    "first_passed"
+  ],
+  "geometry_builder_path_changes_only": true,
+  "gate_requires_parity_and_complete_300_epochs": true,
+  "scientific_fits_run_locally": 0,
+  "actual_SP25_parity": "pending in Slurm",
+  "previous_synthetic_check_reused": "/Users/jonathanhornewall/Projects/Ph.D_Projects/ProblemBasedScenarioGeneration/research/lava_timing_replay_20261106/ops/hornewall_prelaunch_20261106/LOCAL_CHECK.json",
+  "package": {
+    "package": "replay_package.tar.gz",
+    "bytes": 7387360,
+    "sha256": "8012615ba29b6893bc5e4b8d00ebbb6f1b200618e3a0d42745261a12ffc510fb",
+    "manifest_sha256": "7d56d795fa3d215a40a5025c992174d428416cb046caffd66c4ed840cd62638a",
+    "unique_fits": 19,
+    "table_entries": 36,
+    "banks": 6,
+    "first": "lava_complete__3612427e518ddbe8fdb8aa37929a8c00",
+    "numerical_source_commit": "ed80f8b45fc291d27f9bf67b95b58fc9ee4642a9"
+  }
+}

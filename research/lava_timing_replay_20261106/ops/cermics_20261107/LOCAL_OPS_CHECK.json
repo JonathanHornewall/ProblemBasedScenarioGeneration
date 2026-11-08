@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "scope": "operational syntax, duplicate-submit protection, exact-name reconciliation and release after independent gate",
+  "scientific_fits_run": 0,
+  "enumerations_run": 0,
+  "real_submissions": 0
+}
