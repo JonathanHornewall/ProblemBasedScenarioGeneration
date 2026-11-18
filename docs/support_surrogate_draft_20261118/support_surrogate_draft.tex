@@ -1,0 +1,448 @@
+% Working draft, 18 November 2026. Prepared for discussion; not a submission.
+% Sources: handwritten outline (2 Nov 2026), docs/theory_reference/single_scenario_support_pedagogical.tex,
+% SUPPORT_LOSS_EXPERIMENTS_V1.md, experiments/support_scaling_20261026/reports/RESULTS_20261026_1434_LIVE.json.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=24mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,enumitem,xcolor}
+\usepackage[hidelinks]{hyperref}
+\setlist{nosep,leftmargin=*,topsep=3pt}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newcommand{\R}{\mathbb R}
+\newcommand{\E}{\mathbb E}
+\newcommand{\Z}{\mathcal Z}
+\newcommand{\hh}{\hat h}
+\newcommand{\Ls}{L_\sigma}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\todo}[1]{\textcolor{red!70!black}{[#1]}}
+
+\title{Decision-focused learning for linear recourse problems with random right-hand side:\\
+a convex support surrogate}
+\author{Jonathan Hornewall\\[2pt]{\normalsize Working draft for discussion, 18 November 2026}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Decision-focused learning (DFL) is well developed for contextual linear
+programs, where the unknown parameter is the cost vector. Contextual
+\emph{linear recourse} problems, where a second-stage decision is taken after
+the uncertainty is revealed, are a richer and practically more common family,
+but they lack a counterpart to the SPO+ loss. For two-stage problems with a
+random right-hand side (demand), we propose the \emph{support surrogate}: a loss
+on a predicted demand vector that (i) upper-bounds the true decision cost,
+(ii) is convex in the prediction when the first stage is continuous, (iii) has
+a subgradient given by two LP dual solutions, with no smoothing and no
+hyperparameter, and (iv) is consistent in a strong sense: \emph{every}
+minimiser of the expected surrogate induces a decision that is optimal for the
+true conditional stochastic program. On four small benchmark families with 100
+training pairs, the method has the lowest mean cost gap among eleven methods in
+all four; on a partial larger-scale campaign it is lowest in four of seven
+benchmarks and within noise of the best in a fifth. This note states the idea, the main
+guarantee with its short proof, and the current empirical evidence. It is a
+draft meant to convey the idea, not a finished manuscript.
+\end{abstract}
+
+\section{Motivation}
+
+Optimization problems often have parameters that are unknown at the time the
+decision has to be made. Frequently, machine learning is used to produce
+statistically accurate predictions of these parameters. Such predictions carry
+no general guarantee of producing high-quality decisions, which may require
+taking the full distribution of possible outcomes into account. This is the
+principal motivation for decision-focused learning, which trains prediction
+models to minimise decision regret rather than statistical deviation.
+
+Most work has focused on contextual linear programs: linear programs with an
+unknown cost vector. Contextual linear recourse problems add a second-stage
+decision taken after the unknown parameter is revealed, and allow uncertainty in
+the right-hand side and the constraint matrix as well. Attempts to extend DFL
+to this family date from early in the field's development, but two obstacles
+remain. A single predicted scenario cannot in general be the conditional mean
+and still give the right decision, so it is unclear what should be predicted;
+and the map from prediction to decision cost is piecewise constant or
+non-convex, so it is unclear how to train.
+
+Demand (right-hand-side) uncertainty is the most important special case:
+it is the most common form in applications, there is a lot of activity on it in
+applied fields, and it is where the foundations are least developed. This note
+treats that case.
+
+\paragraph{What is proposed.}
+A single convex surrogate for the decision cost of a demand prediction,
+obtained from the dual of the second stage, together with
+\begin{itemize}
+\item an upper bound on the true decision cost and a consistency theorem
+      stronger than Fisher consistency (Section~\ref{sec:surrogate});
+\item cheap exact subgradients, with no hyperparameter (Section~\ref{sec:training});
+\item experiments against ten baselines (Section~\ref{sec:empirics});
+\item a remark on integer first-stage decisions (Section~\ref{sec:integer}).
+\end{itemize}
+
+\paragraph{Closest prior art (to be written up properly).}
+Decision rules and predict-then-optimise approaches for contextual stochastic
+programming; SPO+ for cost vectors; Lex-SPO, SFGE and decision-focused scenario
+learning for recourse problems; the CO-augmented ML line and the survey of
+Bengio et al. The methods we compare against empirically are listed in
+Section~\ref{sec:empirics}. \todo{references and a careful positioning to add}
+
+\section{Setting}
+
+Given a context $x$, we choose a first-stage decision $z\in\Z$, then observe a
+demand vector $h$ and pay a linear recourse cost:
+\[
+ \min_{z\in\Z}\ c^\top z+\E\bigl[Q(z,h)\mid x\bigr],
+ \qquad
+ Q(z,h)=\min_{y\ge0}\{q^\top y:\ Wy=h-Tz\}.
+\]
+Here $c,T,W,q$ are known and fixed; only $h$ is random. By LP duality the
+recourse cost is the support function of the second-stage dual feasible set,
+\[
+ Q(z,h)=\sigma(h-Tz),\qquad
+ \sigma(r)=\sup_{\lambda\in\Delta}\lambda^\top r,\qquad
+ \Delta=\{\lambda:\ W^\top\lambda\le q\}.
+\]
+Write $G(z,h)=c^\top z+\sigma(h-Tz)$ for the total cost of decision $z$ under
+demand $h$, and $F_x(z)=\E[G(z,h)\mid x]$ for the conditional expected cost,
+with minimum $F_x^\star$ attained at some $z^\star$.
+
+\paragraph{Predict, then decide.}
+A model produces a single predicted demand $\hh=\hh(x)$. The decision is
+obtained by solving the \emph{single-scenario} problem
+\[
+ z^\star(\hh)\in\argmin_{z\in\Z}G(z,\hh),\qquad V(\hh)=\min_{z\in\Z}G(z,\hh).
+\]
+The quantity we care about is the realised cost of that decision,
+$G(z^\star(\hh),h)$; its regret is the difference to the best achievable cost.
+As a function of $\hh$ this is non-convex and its gradient is uninformative
+wherever the decision is locally constant.
+
+\section{The support surrogate}\label{sec:surrogate}
+
+A support function is sublinear: $\sigma(a+b)\le\sigma(a)+\sigma(b)$. Splitting
+the residual $h-Tz^\star(\hh)=(\hh-Tz^\star(\hh))+(h-\hh)$ gives
+\begin{align*}
+ G(z^\star(\hh),h)
+ &=c^\top z^\star(\hh)+\sigma\bigl(\hh-Tz^\star(\hh)+h-\hh\bigr)\\
+ &\le c^\top z^\star(\hh)+\sigma\bigl(\hh-Tz^\star(\hh)\bigr)+\sigma(h-\hh)
+ \;=\;V(\hh)+\sigma(h-\hh).
+\end{align*}
+We define the \textbf{support surrogate}
+\begin{equation}\label{eq:loss}
+ \boxed{\ \Ls(\hh,h)=V(\hh)+\sigma(h-\hh)
+        =\min_{z\in\Z}\bigl\{c^\top z+\sigma(\hh-Tz)\bigr\}+\sigma(h-\hh).\ }
+\end{equation}
+The first term is the cost of planning for the prediction; the second is the
+recourse cost of correcting the prediction to the realisation, priced by the
+problem's own second stage.
+
+\begin{proposition}[Upper bound]\label{prop:bound}
+For every prediction $\hh$, every realisation $h$ and every optimal
+single-scenario decision $z^\star(\hh)$,
+$\ G(z^\star(\hh),h)\le\Ls(\hh,h)$, with equality at $\hh=h$, where both equal
+the perfect-information cost $V(h)$.
+\end{proposition}
+
+So $\Ls(\hh,h)-V(h)\ge0$ upper-bounds the regret against perfect information and
+vanishes for a perfect prediction. In expectation, however, the surrogate is
+\emph{not} minimised by the conditional mean, and that is the point.
+
+\begin{theorem}[Minimisers of the surrogate are decision-optimal]\label{thm:main}
+Fix a context $x$ and let $z^\star\in\argmin_{z}F_x(z)$. Then
+\[
+ \min_{\hh}\ \E\bigl[\Ls(\hh,h)\mid x\bigr]=F_x^\star,
+ \quad\text{attained at }\hh^\star=Tz^\star,
+\]
+and for every $\hh$ and every optimal single-scenario decision $z^\star(\hh)$,
+\[
+ 0\ \le\ F_x\bigl(z^\star(\hh)\bigr)-F_x^\star\ \le\
+ \E\bigl[\Ls(\hh,h)\mid x\bigr]-F_x^\star .
+\]
+In particular, any prediction that minimises the expected surrogate has zero
+expected decision regret.
+\end{theorem}
+
+\begin{proof}
+Taking expectations in Proposition~\ref{prop:bound},
+$\E[\Ls(\hh,h)\mid x]\ge F_x(z^\star(\hh))\ge F_x^\star$ for all $\hh$. For the
+reverse inequality set $\hh^\star=Tz^\star$. Since $z^\star$ is feasible in the
+minimisation defining $V$ and $\sigma(0)=0$,
+\[
+ \Ls(\hh^\star,h)=V(Tz^\star)+\sigma(h-Tz^\star)
+ \le c^\top z^\star+\sigma(Tz^\star-Tz^\star)+\sigma(h-Tz^\star)=G(z^\star,h).
+\]
+Taking expectations gives $\E[\Ls(\hh^\star,h)\mid x]\le F_x^\star$.
+\end{proof}
+
+\begin{remark}[Stronger than Fisher consistency]
+The theorem does not only say that the surrogate minimiser minimises regret.
+It gives a calibration inequality with constant one: surrogate excess risk
+bounds decision regret for \emph{every} prediction, so approximate minimisation
+of the surrogate yields approximately optimal decisions. A predictor that
+minimises the surrogate therefore yields an optimal decision rule, which
+suggests DFL as an attractive alternative to learning decision rules directly.
+\end{remark}
+
+\begin{remark}[No tie-breaking assumption]
+Nothing is assumed about how the solver selects among multiple optima. Any
+decision that is optimal for a surrogate-minimising prediction is optimal for
+the true conditional problem. For LPs, where predictions routinely induce
+several optima, this is a useful guarantee.
+\end{remark}
+
+\begin{remark}[What is being predicted]
+The optimal report $\hh^\star=Tz^\star$ is the demand that the optimal decision
+serves exactly. It is generally neither the conditional mean nor a possible
+realisation of $h$. For the newsvendor it is the critical quantile. The
+surrogate is what tells a regression model to aim for this point: for the
+newsvendor $\Ls$ reduces to the pinball loss, and in general it plays the role
+that SPO+ plays for cost vectors.
+\end{remark}
+
+\begin{remark}[Scope and caveats]
+The statements require the losses to be finite on the set of admissible
+predictions: $\sigma(h-\hh)<\infty$ means that the second stage can absorb the
+prediction error in either direction (e.g.\ shortage and surplus variables).
+Without complete recourse the report must be restricted to a domain where
+this holds. The same argument extends to a random recourse cost $q$ (decode
+with an upper bound or with the conditional mean of $q$) and, under a
+containment condition on the dual sets, to a random $W$; these are not used in
+the experiments below.
+\end{remark}
+
+\section{Training}\label{sec:training}
+
+\begin{proposition}[Convexity and subgradient]
+If $\Z$ is a polyhedron, $\Ls(\cdot,h)$ is convex and piecewise linear. Let
+$\lambda_0$ be an optimal dual multiplier of the constraint $Wy=\hh-Tz$ in the
+single-scenario LP defining $V(\hh)$, and $\lambda_h$ an optimal dual
+solution of the residual LP $\min_{y\ge0}\{q^\top y:Wy=h-\hh\}$. Then
+\[
+ \lambda_0-\lambda_h\in\partial_{\hh}\Ls(\hh,h).
+\]
+\end{proposition}
+
+Training a predictor $\hh_w$ on pairs $(x_i,h_i)$ is then ordinary stochastic
+subgradient descent on $\frac1N\sum_i\Ls(\hh_w(x_i),h_i)$:
+\begin{enumerate}
+\item predict $\hh_i=\hh_w(x_i)$ and solve the single-scenario LP; keep its
+      value and $\lambda_{0,i}$;
+\item solve the residual LP for $h_i-\hh_i$; keep its value and $\lambda_{h,i}$;
+\item backpropagate $\lambda_{0,i}-\lambda_{h,i}$ through $\hh_w$.
+\end{enumerate}
+At deployment only the single-scenario problem is solved. Compared with the
+alternatives we tested, the loss needs one scenario-sized LP and one small
+recourse LP per sample, no differentiation through a solver, no smoothing or
+regularisation of the optimisation problem, no sampling, and no loss-specific
+hyperparameter. Convexity is in the prediction, not in neural-network weights.
+
+Two further facts, stated without proof here:
+\begin{itemize}
+\item \emph{Exact fitting.} For an affine predictor on fixed features, the
+      empirical surrogate minimisation is itself a single LP (a MILP if the
+      first stage is integer), so a global empirical minimiser is available.
+\item \emph{Error decomposition.} Expected regret of the deployed policy is
+      bounded by the predictor-class approximation error of the surrogate, plus
+      twice the uniform deviation between empirical and population surrogate
+      risk, plus the training and solver gaps. The first term vanishes when
+      the class can represent $x\mapsto Tz^\star(x)$.
+\end{itemize}
+
+\section{Empirical evidence}\label{sec:empirics}
+
+\subsection{Protocol}
+
+All benchmarks are two-stage LPs with continuous decisions and random demand
+only; $W$ and $q$ are the native recourse data of each model. Each fit sees
+\textbf{100 training pairs} $(x_i,h_i)$, one observed demand per context, and 32
+validation pairs. Predictors are affine or a two-hidden-layer MLP (width 64),
+trained with Adam for 300 epochs. Hyperparameters and architecture are chosen on
+one development seed using validation cost only, then frozen for ten
+independent confirmation seeds. Learners use only the supplied training data
+and the known optimisation structure.
+
+The metric is the cost gap of the deployed decision relative to a reference
+obtained by solving a 100-scenario conditional SAA at each of 100 test
+contexts, as a percentage: per seed,
+$100\times\mathrm{mean}_i(C_i-V_i)/\mathrm{mean}_i|V_i|$. It is a
+finite-sample proxy for regret, shared by all methods, not an exact population
+regret.
+
+\paragraph{Baselines.}
+Non-contextual SAA; $k$NN SAA; ER-SAA (empirical-residual SAA); MSE regression
+followed by the single-scenario problem; a differentiable quadratic-regularised
+solver layer trained on decision cost; SFGE (score-function gradient
+estimation, authors' code); Lex-SPO (authors' formulation); a static
+contextual scenario-generation method of Islip et al.\ (authors' code); and two
+direct policies that output a first-stage decision, one projected at inference
+and one trained through a differentiable projection.
+\todo{exact citations}
+
+\subsection{Four small benchmark families (complete)}
+
+The families are resource procurement, a shipment network, a two-layer network
+inventory problem and capacity assignment: 12--37 first-stage variables, 12--26
+recourse variables, six demand and six context coordinates, with a nonlinear
+context-dependent demand law. Table~\ref{tab:v1} reports all eleven methods.
+
+\begin{table}[h]
+\centering\small
+\caption{Cost gap (\%), mean $\pm$ standard error over ten confirmation seeds,
+$N=100$ training pairs. Architecture selected per method on the development
+seed (A affine, M MLP, S not applicable). Bold: lowest mean.}\label{tab:v1}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & Resource proc. & Shipment netw. & Netw. inventory & Capacity assign.\\
+\midrule
+Non-contextual SAA & $61.30\pm1.31$ & $48.93\pm2.34$ & $80.07\pm1.69$ & $79.15\pm0.79$\\
+$k$NN SAA & $22.84\pm0.82$ & $27.34\pm1.76$ & $36.70\pm0.94$ & $46.43\pm2.20$\\
+ER-SAA & $5.29\pm1.00$ (M) & $13.40\pm1.96$ (M) & $13.69\pm0.76$ (M) & $11.66\pm0.60$ (M)\\
+MSE + single scenario & $5.31\pm0.45$ (M) & $25.62\pm1.45$ (M) & $19.50\pm1.21$ (M) & $16.33\pm0.82$ (M)\\
+Quadratic solver layer & $5.42\pm0.30$ (A) & $10.58\pm1.08$ (M) & $17.91\pm0.88$ (M) & $11.81\pm0.35$ (M)\\
+SFGE & $5.67\pm0.35$ (A) & $11.71\pm0.97$ (M) & $16.48\pm0.78$ (M) & $15.27\pm0.59$ (M)\\
+Lex-SPO & $7.22\pm0.27$ (A) & $11.05\pm1.23$ (A) & $18.73\pm0.38$ (A) & $17.06\pm0.51$ (A)\\
+Islip et al.\ (static) & $4.95\pm0.29$ (M) & $24.59\pm4.73$ (M) & $17.53\pm0.42$ (A) & $11.50\pm0.37$ (M)\\
+Affine policy, projected & $8.98\pm0.39$ (A) & $12.08\pm1.17$ (A) & $19.17\pm0.38$ (A) & $17.40\pm0.46$ (A)\\
+Direct policy, diff.\ proj. & $5.15\pm0.29$ (A) & $11.03\pm1.08$ (M) & $13.74\pm0.65$ (M) & $13.12\pm0.52$ (M)\\
+\midrule
+\textbf{Support surrogate} & $\mathbf{2.39\pm0.09}$ (A) & $\mathbf{10.00\pm1.01}$ (M) & $\mathbf{11.69\pm0.77}$ (M) & $\mathbf{10.73\pm0.36}$ (M)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Reading the table.}
+The support surrogate has the lowest mean gap in all four families. How
+decisive this is varies:
+\begin{itemize}
+\item \emph{Resource procurement:} the gap is roughly halved relative to the
+      best competitor ($2.39$ vs.\ $4.95$), and the paired difference against
+      every method excludes zero, with the surrogate better on all ten seeds
+      in every pairing.
+\item \emph{Network inventory:} clear against all methods except ER-SAA, where
+      the paired 95\% interval just includes zero ($-2.0$ pp,
+      $[-4.0,\,0.03]$; better on 9 of 10 seeds).
+\item \emph{Capacity assignment:} clear against most methods, including the
+      quadratic layer ($-1.1$ pp, 10/10 seeds); not resolved against ER-SAA and
+      Islip et al.\ (differences below one point).
+\item \emph{Shipment network:} lowest mean, but \emph{not} statistically
+      separated from the quadratic layer, SFGE, Lex-SPO, ER-SAA or the direct
+      policies; it is clearly better only than MSE, $k$NN, SAA and Islip et al.
+\end{itemize}
+The improvement over MSE regression with the same architecture and the same
+single-scenario decoder ($2.4$ vs.\ $5.3$, $10.0$ vs.\ $25.6$, $11.7$ vs.\
+$19.5$, $10.7$ vs.\ $16.3$) isolates the effect of the loss: the model class
+and the deployed optimisation problem are identical, only the training target
+differs.
+
+\subsection{Larger instances (partial campaign)}
+
+A scaling campaign over problem size and training-set size was launched on
+26 October and is \textbf{incomplete}: the compute window closed before most
+cells finished, and continuation on the CERMICS cluster is planned. What exists
+is the first cell: the ``large'' instances (e.g.\ 64 resources, 96 demand
+classes, 32 suppliers; 50-product newsvendor) and the two original benchmarks
+of our scenario-generation paper, all at $N=100$. Lex-SPO, the quadratic layer
+and the direct policies are missing for most benchmarks in this snapshot, so
+Table~\ref{tab:scale} is a comparison against a reduced roster.
+
+\begin{table}[h]
+\centering\small
+\caption{Cost gap (\%), mean $\pm$ standard error over ten seeds, large
+instances and original benchmarks, $N=100$. Snapshot of 26 October; partial
+campaign. Architecture selected on the development seed. Bold: lowest mean
+among the methods shown.}\label{tab:scale}
+\setlength{\tabcolsep}{2.5pt}\footnotesize
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+ & Res. & Shipm. & Netw. & Capac. & News- & Res.\ alloc. & Shipment\\
+Method & proc. & netw. & invent. & assign. & vendor & (orig.) & (orig.)\\
+\midrule
+Non-contextual SAA & $68.7$ & $54.0$ & $78.8$ & $82.4$ & $348.7$ & $42.0$ & $61.5$\\
+$k$NN SAA & $34.8$ & $33.0$ & $40.6$ & $38.7$ & $154.7$ & $7.8$ & $19.1$\\
+MSE + single scenario & $7.4$ & $27.8$ & $15.8$ & $15.5$ & $65.2$ & $2.1$ & $12.7$\\
+SFGE & $21.3$ & $58.9$ & $85.1$ & $91.7$ & $276.0$ & $7.0$ & $11.8$\\
+ER-SAA & $\mathbf{4.00\pm0.32}$ & $7.04\pm0.49$ & $11.38\pm0.47$ & $10.50\pm0.29$ & $49.7\pm2.1$ & $\mathbf{0.75\pm0.12}$ & $3.12\pm0.94$\\
+Islip et al.\ (static) & $4.96\pm0.19$ & $6.74\pm0.58$ & $10.36\pm0.38$ & $9.56\pm0.22$ & $41.5\pm1.6$ & $1.03\pm0.14$ & $2.72\pm0.40$\\
+\midrule
+\textbf{Support surrogate} & $5.31\pm0.21$ & $\mathbf{5.55\pm0.65}$ & $\mathbf{9.96\pm0.41}$ & $\mathbf{9.23\pm0.16}$ & $41.9\pm2.4$ & $1.47\pm0.23$ & $\mathbf{1.94\pm0.40}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Reading the table.}
+The picture is more mixed than on the small instances, and I would rather show
+that than hide it.
+\begin{itemize}
+\item The surrogate has the lowest mean in four of seven benchmarks (both
+      shipment problems, network inventory, capacity assignment). Against
+      Islip et al.\ the paired differences are small ($0.3$--$1.2$ points) and
+      resolved only on the two shipment problems.
+\item On the newsvendor it is tied with Islip et al.\ and with the quadratic
+      layer ($41.3\pm1.9$, one of the two benchmarks where that method has
+      results); the percentages are large because the reference cost of this
+      benchmark is small.
+\item It \emph{loses} on resource procurement and on the original resource
+      allocation problem: ER-SAA is better by $1.3$ and $0.7$ points, with
+      paired intervals excluding zero. On resource procurement the surrogate's
+      selected architecture was affine; whether that selection is the cause is
+      not established.
+\item SFGE degrades sharply at this size, and MSE regression remains far
+      behind in the shipment problems.
+\end{itemize}
+Lex-SPO has results only on the two original benchmarks ($8.6$, on eight
+seeds, and $16.4$).
+
+\subsection{What the evidence does and does not show}
+
+Supported: with 100 training pairs, replacing MSE by the support surrogate,
+with everything else fixed, gives a large and consistent reduction in decision
+cost; and a method with no hyperparameter and two LP solves per sample is
+competitive with, and on the small instances at least as good as, methods that
+differentiate through solvers or fit conditional distributions.
+
+Not yet shown: superiority at scale (the larger cell is partial and ER-SAA and
+Islip et al.\ are close or ahead on some benchmarks); behaviour as $N$ grows;
+training-time comparisons on a controlled machine; any real-data benchmark; and
+anything outside random demand with fixed $W$ and $q$. All instances are
+constructed synthetic problems from related families.
+
+\section{Comment: integer first-stage decisions}\label{sec:integer}
+
+Proposition~\ref{prop:bound} and Theorem~\ref{thm:main} use only the
+sublinearity of the continuous second stage. They make no use of convexity of
+$\Z$, so they hold verbatim when the first stage is integer or mixed-integer:
+the surrogate still upper-bounds the decision cost, $\hh^\star=Tz^\star$ still
+minimises its expectation, and every decoder optimum at a minimiser is
+optimal. This is in contrast to approaches that need to differentiate through
+the first-stage problem.
+
+What is lost is convexity of $V$ in $\hh$, and with it the guarantee that the LP
+multiplier is a global subgradient. Two routes are open: use the dual of the
+LP relaxation (or of the LP with the integer variables fixed at their optimum)
+as a heuristic gradient, or use the exact-fitting result, which for an affine
+predictor turns empirical surrogate minimisation into a single MILP. No
+experiments exist for the integer case yet; a bank of candidate
+integer benchmarks from the literature has been compiled. I would treat this as
+the natural second paper or a final section, depending on how the experiments
+turn out.
+
+\section{Points for discussion}
+\begin{itemize}
+\item Is the surrogate, with Theorem~\ref{thm:main}, known in this form? The
+      newsvendor special case is the pinball loss; I have not found the
+      general recourse statement.
+\item Which baselines and benchmarks would make the empirical section
+      convincing to this community, and are any of the current ones misapplied?
+\item Whether the integer first-stage case belongs in the same paper.
+\item Completing the scaling study: sizes, training-set sizes, and a real-data
+      benchmark.
+\end{itemize}
+
+\end{document}
