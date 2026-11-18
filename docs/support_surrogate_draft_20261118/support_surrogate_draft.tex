@@ -45,7 +45,8 @@ minimiser of the expected surrogate induces a decision that is optimal for the
 true conditional stochastic program. On four small benchmark families with 100
 training pairs, the method has the lowest mean cost gap among eleven methods in
 all four; on a partial larger-scale campaign it is lowest in four of seven
-benchmarks and level with the best in a fifth. This note states the idea, the main
+benchmarks and level with the best in a fifth. With an integer first stage, on the
+benchmark of the SFGE paper, it reduces test cost by 11--35\% relative to SFGE. This note states the idea, the main
 guarantee with its short proof, and the current empirical evidence. It is a
 draft meant to convey the idea, not a finished manuscript.
 \end{abstract}
@@ -83,7 +84,7 @@ obtained from the dual of the second stage, together with
       stronger than Fisher consistency (Section~\ref{sec:surrogate});
 \item cheap exact subgradients, with no hyperparameter (Section~\ref{sec:training});
 \item experiments against ten baselines (Section~\ref{sec:empirics});
-\item a remark on integer first-stage decisions (Section~\ref{sec:integer}).
+\item the extension to integer first-stage decisions, with experiments on the SFGE paper's benchmark (Section~\ref{sec:integer}).
 \end{itemize}
 
 \paragraph{Closest prior art (to be written up properly).}
@@ -379,50 +380,58 @@ Islip et al.\ (static) & $4.96\pm0.19$ & $6.74\pm0.58$ & $10.36\pm0.38$ & $9.56\
 Lex-SPO has results only on the two original benchmarks ($8.6$, on eight
 seeds, and $16.4$).
 
-\subsection{What the evidence does and does not show}
-
-Supported: with 100 training pairs, replacing MSE by the support surrogate,
-with everything else fixed, gives a large and consistent reduction in decision
-cost; and a method with no hyperparameter and two LP solves per sample is
-competitive with, and on the small instances at least as good as, methods that
-differentiate through solvers or fit conditional distributions.
-
-Not yet shown: superiority at scale (the larger cell is partial and ER-SAA and
-Islip et al.\ are close or ahead on some benchmarks); behaviour as $N$ grows;
-training-time comparisons on a controlled machine; any real-data benchmark; and
-anything outside random demand with fixed $W$ and $q$. All instances are
-constructed synthetic problems from related families.
-
-\section{Comment: integer first-stage decisions}\label{sec:integer}
+\section{Integer first-stage decisions}\label{sec:integer}
 
 Proposition~\ref{prop:bound} and Theorem~\ref{thm:main} use only the
 sublinearity of the continuous second stage. They make no use of convexity of
 $\Z$, so they hold verbatim when the first stage is integer or mixed-integer:
 the surrogate still upper-bounds the decision cost, $\hh^\star=Tz^\star$ still
 minimises its expectation, and every decoder optimum at a minimiser is
-optimal. This is in contrast to approaches that need to differentiate through
-the first-stage problem.
+optimal. What is lost is convexity of $V$ in $\hh$, and with it the guarantee
+that the multiplier is a global subgradient. In practice we use the recourse
+dual at the integer optimum, $\lambda_0$ evaluated at $\hat z(\hh)$, in place of
+the LP multiplier.
 
-What is lost is convexity of $V$ in $\hh$, and with it the guarantee that the LP
-multiplier is a global subgradient. Two routes are open: use the dual of the
-LP relaxation (or of the LP with the integer variables fixed at their optimum)
-as a heuristic gradient, or use the exact-fitting result, which for an affine
-predictor turns empirical surrogate minimisation into a single MILP. No
-experiments exist for the integer case yet; a bank of candidate
-integer benchmarks from the literature has been compiled. I would treat this as
-the natural second paper or a final section, depending on how the experiments
-turn out.
+\paragraph{Benchmark.}
+We use the weighted set multi-cover problem of the SFGE paper, with its
+generator and its 800/100/100 train/validation/test split. The first stage
+chooses integer cover counts $z$; unmet demand is penalised:
+\[
+ \min_{z\in\mathbb Z_+^{n}}\ c^\top z+\E\bigl[p^\top(H-Az)_+\mid x\bigr],
+\]
+so $\sigma(r)=p^\top r_+$ and the surrogate is
+$\Ls(\hh,h)=V(\hh)+p^\top(h-\hh)_+$. There are two sizes ($5$ demand
+coordinates and $25$ integer variables; $10$ and $50$) and three shortage-penalty
+multipliers, each with five generated instances and three splits: 90
+configurations in total. Predictors are linear or MLPs with one to three hidden
+layers of width 64, selected per method on validation cost.
 
-\section{Points for discussion}
-\begin{itemize}
-\item Is the surrogate, with Theorem~\ref{thm:main}, known in this form? The
-      newsvendor special case is the pinball loss; I have not found the
-      general recourse statement.
-\item Which baselines and benchmarks would make the empirical section
-      convincing to this community, and are any of the current ones misapplied?
-\item Whether the integer first-stage case belongs in the same paper.
-\item Completing the scaling study: sizes, training-set sizes, and a real-data
-      benchmark.
-\end{itemize}
+\begin{table}[h]
+\centering\small
+\caption{Weighted set multi-cover, integer first stage. Mean test cost
+(thousands) and change in test cost of the support surrogate relative to each
+baseline, averaged over paired configurations. Architecture selected on
+validation for each method.}\label{tab:wsmc}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Size / penalty & SFGE & $k$NN SAA & Support & vs.\ SFGE & vs.\ $k$NN\\
+\midrule
+$5\times25$ / 1  & 28.2 & 29.2 & \textbf{25.4} & $-11.1\%$ & $-15.8\%$\\
+$5\times25$ / 5  & 36.7 & 43.4 & \textbf{31.5} & $-15.3\%$ & $-29.5\%$\\
+$5\times25$ / 10 & 45.6 & 50.6 & \textbf{35.7} & $-21.2\%$ & $-27.3\%$\\
+$10\times50$ / 1  & 74.2 & 70.4 & \textbf{60.8} & $-18.5\%$ & $-13.9\%$\\
+$10\times50$ / 5  & 107.4 & 102.5 & \textbf{75.0} & $-29.7\%$ & $-26.8\%$\\
+$10\times50$ / 10 & 127.9 & 119.5 & \textbf{83.0} & $-34.6\%$ & $-29.7\%$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The surrogate has lower test cost than SFGE in 86 of the 90 configurations and
+lower than $k$NN SAA in 89 of 90, with reductions of 11--35\%. The advantage
+grows with the shortage penalty and with problem size. It depends on the
+predictor: with the linear predictor used in the SFGE paper the surrogate is
+5--19\% behind SFGE, while with one hidden layer or more it is ahead in all six
+settings at every depth. Validation never selects the linear model for the
+surrogate.
 
 \end{document}
