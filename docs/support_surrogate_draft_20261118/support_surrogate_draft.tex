@@ -117,21 +117,21 @@ with minimum $F_x^\star$ attained at some $z^\star$.
 A model produces a single predicted demand $\hh=\hh(x)$. The decision is
 obtained by solving the \emph{single-scenario} problem
 \[
- z^\star(\hh)\in\argmin_{z\in\Z}G(z,\hh),\qquad V(\hh)=\min_{z\in\Z}G(z,\hh).
+ \hat z(\hh)\in\argmin_{z\in\Z}G(z,\hh),\qquad V(\hh)=\min_{z\in\Z}G(z,\hh).
 \]
 The quantity we care about is the realised cost of that decision,
-$G(z^\star(\hh),h)$; its regret is the difference to the best achievable cost.
+$G(\hat z(\hh),h)$; its regret is the difference to the best achievable cost.
 As a function of $\hh$ this is non-convex and its gradient is uninformative
 wherever the decision is locally constant.
 
 \section{The support surrogate}\label{sec:surrogate}
 
 A support function is sublinear: $\sigma(a+b)\le\sigma(a)+\sigma(b)$. Splitting
-the residual $h-Tz^\star(\hh)=(\hh-Tz^\star(\hh))+(h-\hh)$ gives
+the residual $h-T\hat z(\hh)=(\hh-T\hat z(\hh))+(h-\hh)$ gives
 \begin{align*}
- G(z^\star(\hh),h)
- &=c^\top z^\star(\hh)+\sigma\bigl(\hh-Tz^\star(\hh)+h-\hh\bigr)\\
- &\le c^\top z^\star(\hh)+\sigma\bigl(\hh-Tz^\star(\hh)\bigr)+\sigma(h-\hh)
+ G(\hat z(\hh),h)
+ &=c^\top \hat z(\hh)+\sigma\bigl(\hh-T\hat z(\hh)+h-\hh\bigr)\\
+ &\le c^\top \hat z(\hh)+\sigma\bigl(\hh-T\hat z(\hh)\bigr)+\sigma(h-\hh)
  \;=\;V(\hh)+\sigma(h-\hh).
 \end{align*}
 We define the \textbf{support surrogate}
@@ -145,8 +145,8 @@ problem's own second stage.
 
 \begin{proposition}[Upper bound]\label{prop:bound}
 For every prediction $\hh$, every realisation $h$ and every optimal
-single-scenario decision $z^\star(\hh)$,
-$\ G(z^\star(\hh),h)\le\Ls(\hh,h)$, with equality at $\hh=h$, where both equal
+single-scenario decision $\hat z(\hh)$,
+$\ G(\hat z(\hh),h)\le\Ls(\hh,h)$, with equality at $\hh=h$, where both equal
 the perfect-information cost $V(h)$.
 \end{proposition}
 
@@ -160,9 +160,9 @@ Fix a context $x$ and let $z^\star\in\argmin_{z}F_x(z)$. Then
  \min_{\hh}\ \E\bigl[\Ls(\hh,H)\mid x\bigr]=F_x^\star,
  \quad\text{attained at }\hh^\star=Tz^\star,
 \]
-and for every $\hh$ and every optimal single-scenario decision $z^\star(\hh)$,
+and for every $\hh$ and every optimal single-scenario decision $\hat z(\hh)$,
 \[
- 0\ \le\ F_x\bigl(z^\star(\hh)\bigr)-F_x^\star\ \le\
+ 0\ \le\ F_x\bigl(\hat z(\hh)\bigr)-F_x^\star\ \le\
  \E\bigl[\Ls(\hh,H)\mid x\bigr]-F_x^\star .
 \]
 In particular, any prediction that minimises the expected surrogate has zero
@@ -171,7 +171,7 @@ expected decision regret.
 
 \begin{proof}
 Taking expectations in Proposition~\ref{prop:bound},
-$\E[\Ls(\hh,H)\mid x]\ge F_x(z^\star(\hh))\ge F_x^\star$ for all $\hh$. For the
+$\E[\Ls(\hh,H)\mid x]\ge F_x(\hat z(\hh))\ge F_x^\star$ for all $\hh$. For the
 reverse inequality set $\hh^\star=Tz^\star$. Since $z^\star$ is feasible in the
 minimisation defining $V$ and $\sigma(0)=0$,
 \[
