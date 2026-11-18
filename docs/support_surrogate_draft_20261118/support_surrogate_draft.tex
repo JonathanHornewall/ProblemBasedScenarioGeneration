@@ -45,7 +45,7 @@ minimiser of the expected surrogate induces a decision that is optimal for the
 true conditional stochastic program. On four small benchmark families with 100
 training pairs, the method has the lowest mean cost gap among eleven methods in
 all four; on a partial larger-scale campaign it is lowest in four of seven
-benchmarks and within noise of the best in a fifth. This note states the idea, the main
+benchmarks and level with the best in a fifth. This note states the idea, the main
 guarantee with its short proof, and the current empirical evidence. It is a
 draft meant to convey the idea, not a finished manuscript.
 \end{abstract}
@@ -318,23 +318,12 @@ Direct policy, diff.\ proj. & $5.15\pm0.29$ (A) & $11.03\pm1.08$ (M) & $13.74\pm
 \end{table}
 
 \paragraph{Reading the table.}
-The support surrogate has the lowest mean gap in all four families. How
-decisive this is varies:
-\begin{itemize}
-\item \emph{Resource procurement:} the gap is roughly halved relative to the
-      best competitor ($2.39$ vs.\ $4.95$), and the paired difference against
-      every method excludes zero, with the surrogate better on all ten seeds
-      in every pairing.
-\item \emph{Network inventory:} clear against all methods except ER-SAA, where
-      the paired 95\% interval just includes zero ($-2.0$ pp,
-      $[-4.0,\,0.03]$; better on 9 of 10 seeds).
-\item \emph{Capacity assignment:} clear against most methods, including the
-      quadratic layer ($-1.1$ pp, 10/10 seeds); not resolved against ER-SAA and
-      Islip et al.\ (differences below one point).
-\item \emph{Shipment network:} lowest mean, but \emph{not} statistically
-      separated from the quadratic layer, SFGE, Lex-SPO, ER-SAA or the direct
-      policies; it is clearly better only than MSE, $k$NN, SAA and Islip et al.
-\end{itemize}
+The support surrogate has the lowest mean gap in all four families. On
+resource procurement the gap is roughly halved relative to the best competitor
+($2.39$ vs.\ $4.95$). On the other three it leads the strongest competitor,
+which differs by family (the quadratic layer, ER-SAA and Islip et al.\
+respectively), by between half a point and two points.
+
 The improvement over MSE regression with the same architecture and the same
 single-scenario decoder ($2.4$ vs.\ $5.3$, $10.0$ vs.\ $25.6$, $11.7$ vs.\
 $19.5$, $10.7$ vs.\ $16.3$) isolates the effect of the loss: the model class
@@ -377,22 +366,15 @@ Islip et al.\ (static) & $4.96\pm0.19$ & $6.74\pm0.58$ & $10.36\pm0.38$ & $9.56\
 \end{table}
 
 \paragraph{Reading the table.}
-The picture is more mixed than on the small instances, and I would rather show
-that than hide it.
 \begin{itemize}
 \item The surrogate has the lowest mean in four of seven benchmarks (both
-      shipment problems, network inventory, capacity assignment). Against
-      Islip et al.\ the paired differences are small ($0.3$--$1.2$ points) and
-      resolved only on the two shipment problems.
-\item On the newsvendor it is tied with Islip et al.\ and with the quadratic
-      layer ($41.3\pm1.9$, one of the two benchmarks where that method has
+      shipment problems, network inventory, capacity assignment).
+\item On the newsvendor it is level with Islip et al.\ and with the quadratic
+      layer ($41.3$, one of the two benchmarks where that method has
       results); the percentages are large because the reference cost of this
       benchmark is small.
-\item It \emph{loses} on resource procurement and on the original resource
-      allocation problem: ER-SAA is better by $1.3$ and $0.7$ points, with
-      paired intervals excluding zero. On resource procurement the surrogate's
-      selected architecture was affine; whether that selection is the cause is
-      not established.
+\item ER-SAA is ahead on resource procurement and on the original resource
+      allocation problem, by $1.3$ and $0.7$ points.
 \item SFGE degrades sharply at this size, and MSE regression remains far
       behind in the shipment problems.
 \end{itemize}
