@@ -96,13 +96,13 @@ Section~\ref{sec:empirics}. \todo{references and a careful positioning to add}
 \section{Setting}
 
 Given a context $x$, we choose a first-stage decision $z\in\Z$, then observe a
-demand vector $h$ and pay a linear recourse cost:
+random demand vector $H$ and pay a linear recourse cost:
 \[
- \min_{z\in\Z}\ c^\top z+\E\bigl[Q(z,h)\mid x\bigr],
+ \min_{z\in\Z}\ c^\top z+\E\bigl[Q(z,H)\mid x\bigr],
  \qquad
  Q(z,h)=\min_{y\ge0}\{q^\top y:\ Wy=h-Tz\}.
 \]
-Here $c,T,W,q$ are known and fixed; only $h$ is random. By LP duality the
+Here $c,T,W,q$ are known and fixed; only the demand $H$ is random, and $h$ denotes a realisation of it. By LP duality the
 recourse cost is the support function of the second-stage dual feasible set,
 \[
  Q(z,h)=\sigma(h-Tz),\qquad
@@ -110,7 +110,7 @@ recourse cost is the support function of the second-stage dual feasible set,
  \Delta=\{\lambda:\ W^\top\lambda\le q\}.
 \]
 Write $G(z,h)=c^\top z+\sigma(h-Tz)$ for the total cost of decision $z$ under
-demand $h$, and $F_x(z)=\E[G(z,h)\mid x]$ for the conditional expected cost,
+demand $h$, and $F_x(z)=\E[G(z,H)\mid x]$ for the conditional expected cost,
 with minimum $F_x^\star$ attained at some $z^\star$.
 
 \paragraph{Predict, then decide.}
@@ -157,13 +157,13 @@ vanishes for a perfect prediction. In expectation, however, the surrogate is
 \begin{theorem}[Minimisers of the surrogate are decision-optimal]\label{thm:main}
 Fix a context $x$ and let $z^\star\in\argmin_{z}F_x(z)$. Then
 \[
- \min_{\hh}\ \E\bigl[\Ls(\hh,h)\mid x\bigr]=F_x^\star,
+ \min_{\hh}\ \E\bigl[\Ls(\hh,H)\mid x\bigr]=F_x^\star,
  \quad\text{attained at }\hh^\star=Tz^\star,
 \]
 and for every $\hh$ and every optimal single-scenario decision $z^\star(\hh)$,
 \[
  0\ \le\ F_x\bigl(z^\star(\hh)\bigr)-F_x^\star\ \le\
- \E\bigl[\Ls(\hh,h)\mid x\bigr]-F_x^\star .
+ \E\bigl[\Ls(\hh,H)\mid x\bigr]-F_x^\star .
 \]
 In particular, any prediction that minimises the expected surrogate has zero
 expected decision regret.
@@ -171,14 +171,14 @@ expected decision regret.
 
 \begin{proof}
 Taking expectations in Proposition~\ref{prop:bound},
-$\E[\Ls(\hh,h)\mid x]\ge F_x(z^\star(\hh))\ge F_x^\star$ for all $\hh$. For the
+$\E[\Ls(\hh,H)\mid x]\ge F_x(z^\star(\hh))\ge F_x^\star$ for all $\hh$. For the
 reverse inequality set $\hh^\star=Tz^\star$. Since $z^\star$ is feasible in the
 minimisation defining $V$ and $\sigma(0)=0$,
 \[
  \Ls(\hh^\star,h)=V(Tz^\star)+\sigma(h-Tz^\star)
  \le c^\top z^\star+\sigma(Tz^\star-Tz^\star)+\sigma(h-Tz^\star)=G(z^\star,h).
 \]
-Taking expectations gives $\E[\Ls(\hh^\star,h)\mid x]\le F_x^\star$.
+Taking expectations gives $\E[\Ls(\hh^\star,H)\mid x]\le F_x^\star$.
 \end{proof}
 
 \begin{remark}[Stronger than Fisher consistency]
@@ -200,7 +200,7 @@ several optima, this is a useful guarantee.
 \begin{remark}[What is being predicted]
 The optimal report $\hh^\star=Tz^\star$ is the demand that the optimal decision
 serves exactly. It is generally neither the conditional mean nor a possible
-realisation of $h$. For the newsvendor it is the critical quantile. The
+realisation of $H$. For the newsvendor it is the critical quantile. The
 surrogate is what tells a regression model to aim for this point: for the
 newsvendor $\Ls$ reduces to the pinball loss, and in general it plays the role
 that SPO+ plays for cost vectors.
