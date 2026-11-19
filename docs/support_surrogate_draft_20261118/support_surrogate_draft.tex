@@ -38,9 +38,9 @@ the uncertainty is revealed, are a richer and practically more common family,
 but they lack a counterpart to the SPO+ loss. For two-stage problems with a
 random right-hand side (demand), we propose the \emph{support surrogate}: a loss
 on a predicted demand vector that (i) upper-bounds the true decision cost,
-(ii) is convex in the prediction when the first stage is continuous, (iii) has
-a subgradient given by two LP dual solutions, with no smoothing and no
-hyperparameter, and (iv) is consistent in a strong sense: \emph{every}
+(ii) is convex in the prediction when the first stage is continuous, (iii) is
+the optimal value of a single LP whose dual solution is a subgradient, with no
+smoothing and no hyperparameter, and (iv) is consistent in a strong sense: \emph{every}
 minimiser of the expected surrogate induces a decision that is optimal for the
 true conditional stochastic program. On four small benchmark families with 100
 training pairs, the method has the lowest mean cost gap among eleven methods in
@@ -82,7 +82,7 @@ obtained from the dual of the second stage, together with
 \begin{itemize}
 \item an upper bound on the true decision cost and a consistency theorem
       stronger than Fisher consistency (Section~\ref{sec:surrogate});
-\item cheap exact subgradients, with no hyperparameter (Section~\ref{sec:training});
+\item a single-LP form of the loss, with exact subgradients from its dual and no hyperparameter (Section~\ref{sec:training});
 \item experiments against ten baselines (Section~\ref{sec:empirics});
 \item the extension to integer first-stage decisions, with experiments on the SFGE paper's benchmark (Section~\ref{sec:integer}).
 \end{itemize}
@@ -230,17 +230,34 @@ solution of the residual LP $\min_{y\ge0}\{q^\top y:Wy=h-\hh\}$. Then
 \]
 \end{proposition}
 
+\paragraph{The loss as a single LP.}
+Both terms of the loss are minimisations, so they combine into one problem:
+\begin{equation}\label{eq:singlelp}
+ \Ls(\hh,h)=\min_{z\in\Z,\ y_0\ge0,\ y_h\ge0}
+ \bigl\{\,c^\top z+q^\top y_0+q^\top y_h\ :\ Tz+Wy_0=\hh,\ \ Wy_h=h-\hh\,\bigr\}.
+\end{equation}
+This is the two-stage problem with two recourse blocks: $y_0$ serves the
+predicted demand and $y_h$ pays for the residual $h-\hh$. The prediction enters
+only through the right-hand side, so $\Ls(\cdot,h)$ is the value function of an
+LP in its right-hand side, which is convex and piecewise linear, and the
+proposition is LP sensitivity: if $(\lambda_0,\lambda_h)$ are optimal
+multipliers of the two constraint blocks, the derivative of the right-hand side
+with respect to $\hh$ is $(I,-I)$, which gives $\lambda_0-\lambda_h$. One solve
+of~\eqref{eq:singlelp} per sample therefore returns the loss, its subgradient
+and the decision. Because the two blocks share no variables, the solve also
+splits into the single-scenario problem and a small recourse LP, which is how
+we implement it.
+
 Training a predictor $\hh_w$ on pairs $(x_i,h_i)$ is then ordinary stochastic
 subgradient descent on $\frac1N\sum_i\Ls(\hh_w(x_i),h_i)$:
 \begin{enumerate}
-\item predict $\hh_i=\hh_w(x_i)$ and solve the single-scenario LP; keep its
-      value and $\lambda_{0,i}$;
-\item solve the residual LP for $h_i-\hh_i$; keep its value and $\lambda_{h,i}$;
+\item predict $\hh_i=\hh_w(x_i)$;
+\item solve~\eqref{eq:singlelp} for $(\hh_i,h_i)$; keep its value and the
+      multipliers $\lambda_{0,i}$, $\lambda_{h,i}$;
 \item backpropagate $\lambda_{0,i}-\lambda_{h,i}$ through $\hh_w$.
 \end{enumerate}
 At deployment only the single-scenario problem is solved. Compared with the
-alternatives we tested, the loss needs one scenario-sized LP and one small
-recourse LP per sample, no differentiation through a solver, no smoothing or
+alternatives we tested, the loss needs one LP per sample, of the size of a two-scenario problem, no differentiation through a solver, no smoothing or
 regularisation of the optimisation problem, no sampling, and no loss-specific
 hyperparameter. Convexity is in the prediction, not in neural-network weights.
 
@@ -387,10 +404,40 @@ sublinearity of the continuous second stage. They make no use of convexity of
 $\Z$, so they hold verbatim when the first stage is integer or mixed-integer:
 the surrogate still upper-bounds the decision cost, $\hh^\star=Tz^\star$ still
 minimises its expectation, and every decoder optimum at a minimiser is
-optimal. What is lost is convexity of $V$ in $\hh$, and with it the guarantee
-that the multiplier is a global subgradient. In practice we use the recourse
-dual at the integer optimum, $\lambda_0$ evaluated at $\hat z(\hh)$, in place of
-the LP multiplier.
+optimal. The single-problem form~\eqref{eq:singlelp} also carries over, as a MILP. What
+is lost is convexity of $V$ in $\hh$: $V$ is now a minimum over integer
+decisions of convex functions, and an LP multiplier is no longer a global
+subgradient.
+
+\paragraph{Differentiating the loss.}
+In the integer case we train a Gaussian predictor, as SFGE does:
+$\hh\sim\pi_w(\cdot\mid x)=\mathcal N(\mu_w(x),\mathrm{diag}(s^2))$ with a
+learned variance $s^2$, and we minimise the expected loss
+$\E_{\hh\sim\pi_w}[\Ls(\hh,h)]$. The decision deployed at test time is
+$\hat z(\mu_w(x))$. The two terms of the loss are differentiated separately.
+\begin{itemize}
+\item \emph{Residual term, by duality.} $\sigma(h-\hh)$ is a convex function of
+      $\hh$ with subgradient $-\lambda_h$, exactly as in the continuous case.
+      Writing $\hh=\mu_w(x)+s\,\varepsilon$ with $\varepsilon\sim\mathcal N(0,I)$,
+      this subgradient is backpropagated through the sample.
+\item \emph{Decoder term, by the score-function identity.} $V(\hh)$ is the
+      value of a MILP. Its expectation is differentiated without
+      differentiating the MILP:
+      \[
+       \nabla_w\,\E_{\hh\sim\pi_w}\bigl[V(\hh)\bigr]
+       =\E_{\hh\sim\pi_w}\Bigl[\bigl(V(\hh)-V(\mu_w(x))\bigr)\,
+         \nabla_w\log\pi_w(\hh\mid x)\Bigr],
+      \]
+      where the value at the mean, $V(\mu_w(x))$, is a baseline that reduces
+      variance. This needs only optimal values of the single-scenario MILP.
+\end{itemize}
+We call this estimator \emph{score}. In a second estimator, \emph{dual}, the
+decoder term is also differentiated by duality: with the integer decision fixed
+at $\hat z(\hh)$, the second stage is an LP in $\hh$, and its multiplier
+$\lambda_0$ is the gradient of $V$ on the piece selected by $\hat z(\hh)$; it
+is backpropagated through the same sample. SFGE applies the score-function
+identity to the whole decision regret. Here the identity is applied only to
+$V$, and the term that contains the observed demand has an exact gradient.
 
 \paragraph{Benchmark.}
 We use the weighted set multi-cover problem of the SFGE paper, with its
@@ -409,29 +456,33 @@ layers of width 64, selected per method on validation cost.
 \begin{table}[h]
 \centering\small
 \caption{Weighted set multi-cover, integer first stage. Mean test cost
-(thousands) and change in test cost of the support surrogate relative to each
-baseline, averaged over paired configurations. Architecture selected on
-validation for each method.}\label{tab:wsmc}
-\begin{tabular}{@{}lrrrrr@{}}
+(thousands) and change in test cost of the support surrogate relative to SFGE,
+averaged over paired configurations. Architecture selected on validation for
+each method. Bold: lowest mean cost.}\label{tab:wsmc}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-Size / penalty & SFGE & $k$NN SAA & Support & vs.\ SFGE & vs.\ $k$NN\\
+ & & & \multicolumn{2}{c}{Support, cost} & \multicolumn{2}{c}{Support vs.\ SFGE}\\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+Size / penalty & SFGE & $k$NN SAA & score & dual & score & dual\\
 \midrule
-$5\times25$ / 1  & 28.2 & 29.2 & \textbf{25.4} & $-11.1\%$ & $-15.8\%$\\
-$5\times25$ / 5  & 36.7 & 43.4 & \textbf{31.5} & $-15.3\%$ & $-29.5\%$\\
-$5\times25$ / 10 & 45.6 & 50.6 & \textbf{35.7} & $-21.2\%$ & $-27.3\%$\\
-$10\times50$ / 1  & 74.2 & 70.4 & \textbf{60.8} & $-18.5\%$ & $-13.9\%$\\
-$10\times50$ / 5  & 107.4 & 102.5 & \textbf{75.0} & $-29.7\%$ & $-26.8\%$\\
-$10\times50$ / 10 & 127.9 & 119.5 & \textbf{83.0} & $-34.6\%$ & $-29.7\%$\\
+$5\times25$ / 1  & 28.2 & 29.2 & 25.6 & \textbf{25.4} & $-11.1\%$ & $-11.1\%$\\
+$5\times25$ / 5  & 36.7 & 43.4 & \textbf{30.8} & 31.5 & $-17.3\%$ & $-15.3\%$\\
+$5\times25$ / 10 & 45.6 & 50.6 & \textbf{33.9} & 35.7 & $-24.8\%$ & $-21.2\%$\\
+$10\times50$ / 1  & 74.2 & 70.4 & 61.0 & \textbf{60.8} & $-18.3\%$ & $-18.5\%$\\
+$10\times50$ / 5  & 107.4 & 102.5 & 75.1 & \textbf{75.0} & $-29.5\%$ & $-29.7\%$\\
+$10\times50$ / 10 & 127.9 & 119.5 & \textbf{82.4} & 83.0 & $-35.5\%$ & $-34.6\%$\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The surrogate has lower test cost than SFGE in 86 of the 90 configurations and
-lower than $k$NN SAA in 89 of 90, with reductions of 11--35\%. The advantage
-grows with the shortage penalty and with problem size. It depends on the
-predictor: with the linear predictor used in the SFGE paper the surrogate is
-5--19\% behind SFGE, while with one hidden layer or more it is ahead in all six
-settings at every depth. Validation never selects the linear model for the
-surrogate.
+With the score estimator the surrogate has lower test cost than SFGE in 88 of
+the 90 configurations, and with the dual estimator in 86; both are lower than
+$k$NN SAA in 89 of 90. The reductions relative to SFGE are 11--35\%, and
+14--31\% relative to $k$NN SAA. The advantage grows with the shortage penalty
+and with problem size, and the two estimators give similar costs. The result
+depends on the predictor: with the linear predictor used in the SFGE paper the
+surrogate is 5--19\% behind SFGE, while with one hidden layer or more both
+estimators are ahead in all six settings at every depth. Validation never
+selects the linear model for the surrogate.
 
 \end{document}
